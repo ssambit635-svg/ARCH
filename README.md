@@ -12,7 +12,7 @@ responder → timeline collaboration → resolution → public status page updat
 | **Buyer** | CTO, VP Engineering, SRE lead, on-call lead at a 10–200 engineer company |
 | **User** | On-call engineer, SRE, support lead, engineering manager |
 | **Wedge** | Fast to set up, honest pricing, audit-ready trail — without the enterprise bloat |
-| **Status** | Pre-launch · v0.1.0 · documentation + architecture frozen, build starting at Milestone 1 |
+| **Status** | Pre-launch · v0.1.0 · P0 feature-complete (milestones 1–10 of AGENTS.md) |
 | **Model** | B2B SaaS subscription, per organization, tiered by seats + monitored services |
 
 ---
@@ -42,14 +42,13 @@ a CI/CD system, a Kubernetes manager, a billing system, or a replacement for Git
 | Validation | Zod |
 | Auth | Auth.js (NextAuth v5) |
 | Email | Adapter-based (console in dev, Resend in prod) |
-| Jobs | Added only when notifications/webhooks require it |
+| Jobs | Postgres-backed outbox + `npm run worker` (no Redis) |
 
 ---
 
 ## Repository map
 
-This repository is currently the **product blueprint** — the written spec the code is built from.
-It contains no application code yet, by design: agreement first, code second.
+The written spec and the implementation live side by side: documents in `docs/`, code in `src/`.
 
 ```
 ARCH/
@@ -60,6 +59,19 @@ ARCH/
 ├── CODE_OF_CONDUCT.md            # Contributor Covenant 2.1
 ├── SECURITY.md                   # Vulnerability disclosure policy
 ├── LICENSE                       # Proprietary — all rights reserved
+├── prisma/
+│   ├── schema.prisma             # Data model (AGENTS.md §4)
+│   └── migrations/               # SQL migrations, applied by scripts/db-migrate.mjs
+├── scripts/                      # setup, dev orchestrator, embedded Postgres, migration runner
+├── src/
+│   ├── app/                      # App Router: (marketing) (auth) dashboard status/[slug] api/
+│   ├── components/               # UI primitives, forms, dashboard + incident widgets
+│   ├── lib/                      # env, db, errors, permissions, validation, audit, api, session
+│   ├── server/
+│   │   ├── repositories/         # one per aggregate; every query is organization-scoped
+│   │   └── services/             # business rules (RBAC, state machine, tenancy)
+│   └── worker/                   # notification outbox drain loop
+├── tests/                        # vitest: permission matrix, transitions, tenancy, webhooks
 └── docs/
     ├── README.md                 # Documentation map — start here
     ├── EXPLAINED-SIMPLY.md       # The whole product in plain English
@@ -107,16 +119,70 @@ ARCH/
 
 ---
 
-## Local development (once Milestone 1 lands)
+## Local development
 
 ```bash
+cp .env.example .env          # then set AUTH_SECRET and AUTH_SECRET_WEBHOOK
 npm install
-docker compose up -d          # PostgreSQL on :5432
-npx prisma migrate dev
-npm run dev                   # http://localhost:3000
+npm run setup                 # starts Postgres, generates the Prisma client, applies migrations
+npm run db:seed               # optional: demo org, incidents, status page, webhook endpoint
+npm run dev:all               # http://localhost:3000
+npm run worker                # second terminal: drains the notification outbox
 ```
 
+`npm run setup` uses a **Docker** Postgres when one is available; in a sandbox without Docker it
+starts a local embedded PostgreSQL (data in `ARCH_DEV_DB_DIR`, default under `/tmp`) — same URL,
+same commands. Day-to-day:
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | Next.js only (assumes the database is already up) |
+| `npm run db:up` / `db:down` / `db:status` | Embedded Postgres lifecycle |
+| `npm run db:migrate` / `db:reset` | Apply migrations — `/` `--reset` drops and rebuilds |
+| `npm run db:seed` | Idempotent demo data (owner/admin/responder/viewer accounts) |
+| `npm run typecheck` | `tsc --noEmit` |
+| `npm test` | Vitest against a real, separate test database |
+| `npm run worker` | Outbox drain (add `-- --once` for a single pass) |
+
 Environment variables are documented in `AGENTS.md` §2. Never commit secrets — `.env` stays local.
+Production requires `AUTH_SECRET` and `AUTH_SECRET_WEBHOOK`; the app refuses to boot with the
+placeholder values.
+
+### API in one table
+
+Everything is JSON under `/api`. Success is `{ "data": ... }`; failures are
+`{ "error": { "code", "message", "issues?" } }` with `401` unauthenticated, `403` wrong role,
+`404` cross-tenant or missing, `409` illegal transition, `422` validation, `429` rate limited.
+
+| Area | Routes |
+|---|---|
+| Health | `GET /api/health` |
+| Auth | `/api/auth/*` (Auth.js), `POST /api/auth/register` |
+| Organizations | `/api/organizations`, `/api/organizations/{id}`, `/members`, `/invitations` |
+| Invitations | `GET /api/invitations/{token}`, `POST /api/invitations/{token}/accept` |
+| Projects & services | `/api/projects`, `/api/services` (+ `/{id}`), `?organizationId=` |
+| Incidents | `/api/incidents` (+ `/{id}`, `/{id}/events`) — filters `q`, `status`, `severity`, `open`, `projectId`, `page`, `pageSize` |
+| Status pages | `/api/status-pages` (+ `/{id}`, `/{id}/publish`), public `GET /api/status-pages/public/{slug}`, page `/status/{slug}` |
+| Webhooks | `POST /api/webhooks/{provider}?endpoint={externalId}` (HMAC only), `/api/webhook-endpoints` (+ `/{id}/rotate`, `/{id}/deliveries`) |
+| Audit | `GET /api/audit` (OWNER/ADMIN, paginated, `?summary=true`) |
+
+Webhook senders sign `"{timestamp}.{rawBody}"` with the endpoint secret and send
+`X-Arch-Signature: t=<unix>,v1=<hex>`; GitHub-style `X-Hub-Signature-256` is also accepted.
+Requests older than `WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS` are rejected, repeat deliveries are
+recorded once, and every attempt (accepted, duplicate, rejected, failed) lands in the delivery log.
+
+### Roles
+
+| Action | OWNER | ADMIN | RESPONDER | VIEWER |
+|---|---|---|---|---|
+| Read incidents, projects, services, status pages, members | ✅ | ✅ | ✅ | ✅ |
+| Change incidents, comment, assign | ✅ | ✅ | ✅ | — |
+| Manage projects/services, members, webhooks, publish status pages | ✅ | ✅ | — | — |
+| Organization settings, delete organization | ✅ | — | — | — |
+| Read audit log | ✅ | ✅ | — | — |
+
+Enforced server-side on every request (`src/lib/permissions.ts`); the UI only hides what the API
+would refuse anyway. Cross-tenant ids answer `404`, never `403`.
 
 ---
 

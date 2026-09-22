@@ -15,11 +15,62 @@ Rules for this file:
 
 ## [Unreleased]
 
-### Planned — v1.0, Milestone 1: Setup, database and authentication
-Dockerised PostgreSQL, Prisma schema and first migration, registration and login (email/password and
-GitHub), protected dashboard routes, and a public health endpoint.
+### Planned — v1.1, P1 features
+Slack notifications behind `FEATURE_SLACK_NOTIFICATIONS`, on-call schedules and escalation, custom
+status page domains, two-factor authentication, and the first monitoring integrations.
 
 See [`docs/product/ROADMAP.md`](docs/product/ROADMAP.md) for the full milestone plan.
+
+---
+
+## [0.2.0] — 2026-09-22
+
+**P0 feature-complete: ARCH now runs.** Milestones 1–10 of `AGENTS.md` are implemented and the whole
+P0 scope of `docs/product/FEATURES.md` works end to end — register, create an organization, invite
+your team, open an incident from the dashboard or from an incoming alert, resolve it, and let your
+customers watch on a status page.
+
+### Added
+- **Authentication** — email/password registration and login (bcrypt, JWT sessions via Auth.js v5),
+  optional GitHub OAuth, protected `/dashboard/*` routes, and a `GET /api/health` endpoint that
+  reports database reachability for uptime checks.
+- **Multi-tenancy** — organizations, memberships and invitations. The creator becomes OWNER; the last
+  OWNER can never be demoted or removed; invitations are single-use, expire after 7 days and can only
+  be accepted by the person they were sent to.
+- **Roles and permissions** — OWNER, ADMIN, RESPONDER, VIEWER, enforced server-side on every request
+  and asserted cell-by-cell in the test suite. Insufficient role is `403`; a resource belonging to
+  another organization is `404` so ids cannot be probed.
+- **Projects and services** — CRUD, with a service status (`OPERATIONAL`, `DEGRADED`, `PARTIAL_OUTAGE`,
+  `OUTAGE`, `MAINTENANCE`) that follows open incidents automatically and can be pinned manually.
+- **Incidents** — create, assign, triage, comment. Status moves through
+  `INVESTIGATING → IDENTIFIED → MONITORING → RESOLVED`, may skip forward, and can be reopened from
+  RESOLVED. Illegal transitions are rejected with `409` and a list of what *is* allowed. Every write
+  records a timeline event and an audit entry in the same database transaction.
+- **Timeline** — one chronological history per incident: creation, status changes, assignments,
+  comments, with the actor marked as a person or as `webhook:<provider>`.
+- **Filters and pagination** — search across title and description, filter by status, severity, open
+  state and project; paginated server-side.
+- **Public status page** — `/{slug}` with per-service components, active incidents and their latest
+  update. Publish and unpublish from the dashboard; an unpublished page is `404` for everyone.
+- **Webhook ingestion** — `POST /api/webhooks/{provider}` for GitHub, Sentry and Grafana payloads,
+  HMAC-verified before parsing, replay-protected by timestamp tolerance, idempotent by delivery id and
+  by provider dedupe key, and fully logged per endpoint so failures can be diagnosed.
+- **Email notifications** — a Postgres-backed outbox: incident and invitation emails are queued inside
+  the same transaction as the change that caused them, then delivered by `npm run worker` with retries
+  and a visible PENDING → SENT/FAILED state. Console adapter in development.
+- **Audit log** — an admin-only, paginated, append-only record of every meaningful action.
+- **Hardening** — rate limiting on registration, login, webhook ingestion and public status reads;
+  Zod validation on every input; loading, empty and error states throughout the dashboard and on the
+  public status page; structured error envelopes with stable codes.
+- **Developer experience** — `npm run setup` (embedded PostgreSQL when Docker is unavailable),
+  repeatable SQL migrations, `npm run db:seed` demo data for four roles, and 104 tests covering the
+  permission matrix, incident transitions, tenant isolation and webhook signatures.
+
+### Known limitations (disclosed, not hidden)
+- Notifications are email-only; Slack is behind a feature flag and not wired to a real workspace yet.
+- The background worker is a polling loop started with `npm run worker`; scheduling is the deployer's
+  job until the managed deployment exists.
+- No on-call schedules, escalation policies or SMS/voice paging — those are v1.2 scope.
 
 ---
 
