@@ -62,6 +62,9 @@ blob-report/
 .tmp/
 .temp/
 
+# ---- Next.js generated (regenerated on every dev/build run; do not commit) ----
+next-env.d.ts
+
 # ---- Editor & OS noise ----
 .DS_Store
 Thumbs.db
