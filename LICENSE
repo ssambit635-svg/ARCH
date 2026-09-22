@@ -1,0 +1,52 @@
+ARCH — Proprietary License
+Copyright (c) 2026 [LEGAL ENTITY NAME]. All rights reserved.
+
+This repository and all contents within it (including source code, database schemas, documentation,
+product specifications, pricing models, business plans, legal templates, brand assets, and any other
+materials) are the confidential and proprietary information of [LEGAL ENTITY NAME] ("the Owner").
+
+1. NO LICENSE GRANTED
+   No license, express or implied, is granted to any person or entity to use, copy, reproduce, modify,
+   adapt, translate, publish, distribute, sublicense, sell, rent, lease, or otherwise exploit any part
+   of this repository or its contents, except as expressly permitted in writing by the Owner.
+
+2. CONFIDENTIALITY
+   The contents of this repository are confidential. Access to this repository does not confer any
+   right to disclose its contents to any third party. You must not share, publish, or otherwise make
+   available any part of this repository without prior written permission from the Owner.
+
+3. NO WARRANTY
+   This repository is provided "as is", without warranty of any kind, express or implied, including
+   but not limited to the warranties of merchantability, fitness for a particular purpose, accuracy,
+   and non-infringement. The Owner does not warrant that any information herein is complete, current,
+   or suitable for any particular purpose, including any legal, security, or financial purpose.
+
+4. LIMITATION OF LIABILITY
+   In no event shall the Owner be liable for any claim, damages, or other liability, whether in an
+   action of contract, tort, or otherwise, arising from, out of, or in connection with this repository
+   or its contents.
+
+5. CONTRIBUTIONS
+   Any contribution submitted to this repository is subject to the terms of CONTRIBUTING.md. By
+   submitting a contribution, you confirm that you have the right to do so and you assign to the Owner
+   all rights necessary for the Owner to use, commercialise, and relicense that contribution.
+
+6. THIRD-PARTY MATERIALS
+   This repository may reference third-party names, products, and pricing for competitive analysis and
+   interoperability purposes. All such marks and materials remain the property of their respective
+   owners. Such references do not imply any affiliation with or endorsement by those owners.
+
+7. TRADEMARKS
+   "ARCH" and any associated logos or wordmarks are trademarks of the Owner. No right to use any
+   trademark of the Owner is granted by this license.
+
+8. LEGAL TEMPLATES
+   Documents in docs/legal/ are drafts provided for internal preparation. They do not constitute legal
+   advice, do not establish an attorney-client relationship, and must be reviewed by qualified legal
+   counsel and completed with accurate entity details before being published or relied upon.
+
+9. ENFORCEMENT
+   Any unauthorised use or disclosure of the contents of this repository may cause irreparable harm to
+   the Owner and may result in legal action, including injunctive relief and damages.
+
+For licensing enquiries, permissions, or partnership requests, contact: [LEGAL EMAIL]

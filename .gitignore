@@ -1,0 +1,85 @@
+# ---- Dependencies ----
+node_modules/
+.pnp
+.pnp.js
+.yarn/
+.yarn/cache
+.yarn/install-state.gz
+
+# ---- Build output ----
+.next/
+out/
+build/
+dist/
+.turbo/
+.vercel/
+.next-env.d.ts
+
+# ---- Environment & secrets (NEVER commit) ----
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets/
+credentials.json
+service-account*.json
+
+# ---- Database ----
+*.sqlite
+*.sqlite3
+*.db
+*.db-journal
+prisma/*.db
+postgres-data/
+pgdata/
+docker/volumes/
+
+# ---- Logs & debugging ----
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs/
+*.pid
+*.seed
+*.pid.lock
+
+# ---- Testing & coverage ----
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+blob-report/
+
+# ---- Tooling caches ----
+.eslintcache
+.stylelintcache
+.cache/
+.parcel-cache/
+.tmp/
+.temp/
+
+# ---- Editor & OS noise ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+*.swp
+*.swo
+*~
+
+# ---- Local data & exports (may contain customer data) ----
+tmp/
+local-data/
+exports/
+backups/
+*.dump
+*.sql.gz
+
+# ---- Generated assets ----
+*.tsbuildinfo
