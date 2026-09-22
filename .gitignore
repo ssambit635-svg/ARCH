@@ -83,3 +83,9 @@ backups/
 
 # ---- Generated assets ----
 *.tsbuildinfo
+
+# ---- ARCH additions ----
+# Generated Prisma client (recreated by `npm run db:generate`).
+src/generated/
+# Local embedded PostgreSQL cluster + dev logs (see scripts/dev-db.mjs).
+.dev-data/

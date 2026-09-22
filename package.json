@@ -1,0 +1,53 @@
+{
+  "name": "arch",
+  "version": "0.2.0",
+  "private": true,
+  "description": "ARCH \u2014 multi-tenant incident management + public status pages for developer teams.",
+  "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "next dev --hostname 0.0.0.0",
+    "build": "next build",
+    "start": "next start --hostname 0.0.0.0",
+    "dev:all": "node scripts/dev.mjs",
+    "worker": "tsx src/worker/main.ts",
+    "setup": "node scripts/setup.mjs",
+    "db:generate": "node scripts/prisma-cli.mjs generate",
+    "db:migrate": "node scripts/db-migrate.mjs",
+    "db:reset": "node scripts/db-migrate.mjs --reset",
+    "db:seed": "tsx scripts/seed.ts",
+    "db:up": "node scripts/dev-db.mjs start",
+    "db:down": "node scripts/dev-db.mjs stop",
+    "db:status": "node scripts/dev-db.mjs status",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.0",
+    "@prisma/client": "7.10.0",
+    "bcryptjs": "3.0.3",
+    "dotenv": "18.0.3",
+    "next": "16.3.6",
+    "next-auth": "5.0.0-beta.32",
+    "pg": "8.23.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "zod": "4.6.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "26.6.2",
+    "@types/pg": "8.23.1",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "embedded-postgres": "18.4.0-beta.17",
+    "prisma": "7.10.0",
+    "tailwindcss": "4.3.3",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "5.0.1"
+  }
+}
