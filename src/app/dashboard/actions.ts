@@ -1,0 +1,454 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { cookies } from 'next/headers';
+import { z } from 'zod';
+import { ORG_COOKIE, requireUser, resolveOrganization } from '@/lib/session';
+import { isAppError } from '@/lib/errors';
+import {
+  incidentCreateSchema,
+  incidentUpdateSchema,
+  inviteMemberSchema,
+  organizationUpdateSchema,
+  projectCreateSchema,
+  serviceCreateSchema,
+  statusPageCreateSchema,
+  statusPagePublishSchema,
+  updateMemberRoleSchema,
+  webhookEndpointCreateSchema,
+} from '@/lib/validation';
+import { createIncident, addIncidentComment, updateIncident } from '@/server/services/incident.service';
+import { createProject, createService, updateService } from '@/server/services/project.service';
+import { createStatusPage, setStatusPagePublished, updateStatusPage } from '@/server/services/statusPage.service';
+import { createOrganization, changeMemberRole, inviteMember, removeMember, updateOrganization } from '@/server/services/organization.service';
+import { createEndpoint, deleteEndpoint, rotateEndpointSecret, updateEndpoint } from '@/server/services/webhook.service';
+import { revalidateOrganizationStatusPages } from '@/server/revalidate';
+import { toFormObject } from './form-utils';
+
+/**
+ * Dashboard mutations.
+ *
+ * Every action follows the same path: session → resolve organization → parse with Zod → call the
+ * service (which re-checks permissions) → revalidate the affected path. Authorization is never
+ * decided here: this layer only decides which service to call.
+ */
+
+export type ActionResult =
+  | { ok: true; message?: string; data?: unknown }
+  | { ok: false; error: string; fieldErrors?: Record<string, string> };
+
+function fieldErrorsFrom(issues: readonly { path: string | readonly PropertyKey[]; message: string }[]): Record<string, string> {
+  const result: Record<string, string> = {};
+  for (const issue of issues) {
+    const key =
+      (typeof issue.path === 'string' ? issue.path : issue.path.map((segment) => String(segment)).join('.')) || 'form';
+    result[key] ??= issue.message;
+  }
+  return result;
+}
+
+function toFailure(error: unknown): ActionResult {
+  if (isAppError(error)) {
+    return { ok: false, error: error.message, ...(error.issues ? { fieldErrors: fieldErrorsFrom(error.issues) } : {}) };
+  }
+  console.error('[dashboard action] unhandled error', error);
+  return { ok: false, error: error instanceof Error ? error.message : 'Something went wrong.' };
+}
+
+async function context() {
+  const user = await requireUser();
+  const organization = await resolveOrganization(user.id);
+  return { user, organization };
+}
+
+async function parse<S extends z.ZodType>(schema: S, formData: FormData): Promise<z.infer<S>> {
+  return schema.parse(toFormObject(formData));
+}
+
+// ---------------------------------------------------------------- account & organization
+
+export async function switchOrganizationAction(formData: FormData): Promise<void> {
+  const user = await requireUser();
+  const organizationId = String(formData.get('organizationId') ?? '');
+  const organization = await resolveOrganization(user.id, organizationId);
+  const store = await cookies();
+  store.set(ORG_COOKIE, organization.id, { httpOnly: true, sameSite: 'lax', path: '/' });
+  revalidatePath('/dashboard', 'layout');
+}
+
+export async function createOrganizationAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const user = await requireUser();
+    const name = String(formData.get('name') ?? '').trim();
+    if (name.length < 2) return { ok: false, error: 'Organization name is too short.', fieldErrors: { name: 'At least 2 characters.' } };
+
+    const organization = await createOrganization({ userId: user.id, name });
+    const store = await cookies();
+    store.set(ORG_COOKIE, organization.id, { httpOnly: true, sameSite: 'lax', path: '/' });
+    revalidatePath('/dashboard', 'layout');
+    return { ok: true, message: `${organization.name} is ready.` };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function updateOrganizationAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const input = await parse(organizationUpdateSchema, formData);
+    await updateOrganization({ organizationId: organization.id, userId: user.id, name: input.name });
+    revalidatePath('/dashboard/settings');
+    return { ok: true, message: 'Organization updated.' };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+// ---------------------------------------------------------------- members
+
+export async function inviteMemberAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const input = await parse(inviteMemberSchema, formData);
+    const result = await inviteMember({ organizationId: organization.id, actorId: user.id, email: input.email, role: input.role });
+    revalidatePath('/dashboard/settings');
+
+    // The raw token is shown exactly once: it is the only copy that exists outside the hash.
+    return {
+      ok: true,
+      message: result.emailSent
+        ? `Invitation emailed to ${input.email}.`
+        : `Invitation created. Share this link with ${input.email}: ${result.inviteUrl}`,
+      data: { inviteUrl: result.inviteUrl },
+    };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function changeMemberRoleAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const input = await parse(updateMemberRoleSchema, formData);
+    const targetUserId = String(formData.get('userId') ?? '');
+    if (!targetUserId) return { ok: false, error: 'Missing member id.' };
+
+    await changeMemberRole({ organizationId: organization.id, actorId: user.id, targetUserId, role: input.role });
+    revalidatePath('/dashboard/settings');
+    return { ok: true, message: 'Role updated.' };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function removeMemberAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const targetUserId = String(formData.get('userId') ?? '');
+    if (!targetUserId) return { ok: false, error: 'Missing member id.' };
+
+    await removeMember({ organizationId: organization.id, actorId: user.id, targetUserId });
+    revalidatePath('/dashboard/settings');
+    return { ok: true, message: 'Member removed.' };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+// ---------------------------------------------------------------- projects & services
+
+export async function createProjectAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const input = await parse(projectCreateSchema, formData);
+    const project = await createProject({
+      organizationId: organization.id,
+      userId: user.id,
+      name: input.name,
+      slug: input.slug,
+      description: input.description ?? null,
+    });
+    revalidatePath('/dashboard/projects');
+    revalidatePath('/dashboard/incidents/new');
+    return { ok: true, message: `${project.name} created.` };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function createServiceAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const input = await parse(serviceCreateSchema, formData);
+    const service = await createService({
+      organizationId: organization.id,
+      userId: user.id,
+      projectId: input.projectId,
+      name: input.name,
+      slug: input.slug,
+      description: input.description ?? null,
+      status: input.status,
+      autoStatus: input.autoStatus,
+    });
+    revalidatePath('/dashboard/projects');
+    return { ok: true, message: `${service.name} added.` };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function updateServiceStatusAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const serviceId = String(formData.get('serviceId') ?? '');
+    const status = String(formData.get('status') ?? '');
+    const parsed = z.enum(['OPERATIONAL', 'DEGRADED', 'OUTAGE', 'MAINTENANCE']).safeParse(status);
+    if (!serviceId || !parsed.success) return { ok: false, error: 'Pick a status.' };
+
+    await updateService({
+      organizationId: organization.id,
+      userId: user.id,
+      serviceId,
+      status: parsed.data,
+      // Manual status changes imply the operator is taking over from auto-derivation.
+      autoStatus: false,
+    });
+    revalidatePath('/dashboard/projects');
+    await revalidateOrganizationStatusPages(organization.id);
+    return { ok: true, message: 'Service status updated.' };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function setServiceAutoStatusAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const serviceId = String(formData.get('serviceId') ?? '');
+    const autoStatus = String(formData.get('autoStatus') ?? '') === 'true';
+    if (!serviceId) return { ok: false, error: 'Missing service id.' };
+
+    await updateService({ organizationId: organization.id, userId: user.id, serviceId, autoStatus });
+    revalidatePath('/dashboard/projects');
+    return { ok: true, message: autoStatus ? 'Deriving status from incidents again.' : 'Status pinned manually.' };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+// ---------------------------------------------------------------- incidents
+
+export async function createIncidentAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const input = await parse(incidentCreateSchema, formData);
+    const incident = await createIncident({
+      organizationId: organization.id,
+      userId: user.id,
+      source: 'DASHBOARD',
+      input: {
+        title: input.title,
+        description: input.description ?? null,
+        severity: input.severity,
+        projectId: input.projectId,
+        serviceId: input.serviceId ?? null,
+        assignedToId: input.assignedToId ?? null,
+      },
+    });
+
+    revalidatePath('/dashboard');
+    revalidatePath('/dashboard/incidents');
+    await revalidateOrganizationStatusPages(organization.id);
+    return { ok: true, message: `Incident opened: ${incident?.title ?? input.title}`, data: { incidentId: incident?.id } };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function updateIncidentAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const incidentId = String(formData.get('incidentId') ?? '');
+    if (!incidentId) return { ok: false, error: 'Missing incident id.' };
+
+    const raw = toFormObject(formData);
+    const input = incidentUpdateSchema.parse(raw);
+
+    await updateIncident({
+      organizationId: organization.id,
+      userId: user.id,
+      incidentId,
+      input: {
+        ...(input.title !== undefined ? { title: input.title } : {}),
+        ...(input.description !== undefined ? { description: input.description } : {}),
+        ...(input.severity !== undefined ? { severity: input.severity } : {}),
+        ...(input.status !== undefined ? { status: input.status } : {}),
+        ...(input.assignedToId !== undefined ? { assignedToId: input.assignedToId } : {}),
+        ...(input.serviceId !== undefined ? { serviceId: input.serviceId } : {}),
+        ...(input.message !== undefined ? { message: input.message } : {}),
+      },
+    });
+
+    revalidatePath(`/dashboard/incidents/${incidentId}`);
+    revalidatePath('/dashboard/incidents');
+    revalidatePath('/dashboard');
+    await revalidateOrganizationStatusPages(organization.id);
+    return { ok: true, message: 'Incident updated.' };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function commentOnIncidentAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const incidentId = String(formData.get('incidentId') ?? '');
+    const body = String(formData.get('body') ?? '').trim();
+    if (!incidentId) return { ok: false, error: 'Missing incident id.' };
+    if (body.length === 0) return { ok: false, error: 'Write something first.', fieldErrors: { body: 'Required.' } };
+
+    await addIncidentComment({ organizationId: organization.id, userId: user.id, incidentId, body });
+    revalidatePath(`/dashboard/incidents/${incidentId}`);
+    return { ok: true, message: 'Comment added.' };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+// ---------------------------------------------------------------- status pages
+
+export async function createStatusPageAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const input = await parse(statusPageCreateSchema, formData);
+    const page = await createStatusPage({
+      organizationId: organization.id,
+      userId: user.id,
+      name: input.name,
+      slug: input.slug,
+      description: input.description ?? null,
+      serviceIds: input.serviceIds,
+    });
+    revalidatePath('/dashboard/status');
+    return { ok: true, message: `Status page created at /status/${page.slug}.` };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function updateStatusPageAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const statusPageId = String(formData.get('statusPageId') ?? '');
+    if (!statusPageId) return { ok: false, error: 'Missing status page id.' };
+
+    const raw = toFormObject(formData);
+    const serviceIds = Array.isArray(raw.serviceIds)
+      ? raw.serviceIds
+      : typeof raw.serviceIds === 'string' && raw.serviceIds.length > 0
+        ? [raw.serviceIds]
+        : [];
+
+    await updateStatusPage({
+      organizationId: organization.id,
+      userId: user.id,
+      statusPageId,
+      ...(typeof raw.name === 'string' && raw.name.length > 0 ? { name: raw.name } : {}),
+      ...(typeof raw.description === 'string' ? { description: raw.description } : {}),
+      serviceIds,
+    });
+
+    revalidatePath('/dashboard/status');
+    await revalidateOrganizationStatusPages(organization.id);
+    return { ok: true, message: 'Status page updated.' };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function publishStatusPageAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const statusPageId = String(formData.get('statusPageId') ?? '');
+    const input = statusPagePublishSchema.parse({ isPublished: String(formData.get('isPublished')) === 'true' });
+    if (!statusPageId) return { ok: false, error: 'Missing status page id.' };
+
+    const page = await setStatusPagePublished({
+      organizationId: organization.id,
+      userId: user.id,
+      statusPageId,
+      isPublished: input.isPublished,
+    });
+
+    revalidatePath('/dashboard/status');
+    await revalidateOrganizationStatusPages(organization.id);
+    return { ok: true, message: input.isPublished ? `Published at /status/${page?.slug}` : 'Status page unpublished.' };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+// ---------------------------------------------------------------- webhooks
+
+export async function createWebhookEndpointAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const input = await parse(webhookEndpointCreateSchema, formData);
+    const result = await createEndpoint({
+      organizationId: organization.id,
+      userId: user.id,
+      provider: input.provider,
+      projectId: input.projectId,
+      serviceId: input.serviceId ?? null,
+      description: input.description ?? null,
+    });
+
+    revalidatePath('/dashboard/settings');
+    return { ok: true, message: `Endpoint created. Signing secret (shown once): ${result.secret}`, data: { secret: result.secret, url: result.url } };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function rotateWebhookSecretAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const endpointId = String(formData.get('endpointId') ?? '');
+    if (!endpointId) return { ok: false, error: 'Missing endpoint id.' };
+
+    const result = await rotateEndpointSecret({ organizationId: organization.id, userId: user.id, endpointId });
+    revalidatePath('/dashboard/settings');
+    return { ok: true, message: `New signing secret (shown once): ${result.secret}`, data: { secret: result.secret } };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function toggleWebhookEndpointAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const endpointId = String(formData.get('endpointId') ?? '');
+    const isActive = String(formData.get('isActive')) === 'true';
+    if (!endpointId) return { ok: false, error: 'Missing endpoint id.' };
+
+    await updateEndpoint({ organizationId: organization.id, userId: user.id, endpointId, isActive });
+    revalidatePath('/dashboard/settings');
+    return { ok: true, message: isActive ? 'Endpoint enabled.' : 'Endpoint disabled.' };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function deleteWebhookEndpointAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const endpointId = String(formData.get('endpointId') ?? '');
+    if (!endpointId) return { ok: false, error: 'Missing endpoint id.' };
+
+    await deleteEndpoint({ organizationId: organization.id, userId: user.id, endpointId });
+    revalidatePath('/dashboard/settings');
+    return { ok: true, message: 'Endpoint deleted.' };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
