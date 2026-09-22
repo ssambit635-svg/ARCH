@@ -62,6 +62,9 @@ blob-report/
 .tmp/
 .temp/
 
+# ---- Next.js generated (regenerated on every dev/build run; do not commit) ----
+next-env.d.ts
+
 # ---- Editor & OS noise ----
 .DS_Store
 Thumbs.db
@@ -83,3 +86,9 @@ backups/
 
 # ---- Generated assets ----
 *.tsbuildinfo
+
+# ---- ARCH additions ----
+# Generated Prisma client (recreated by `npm run db:generate`).
+src/generated/
+# Local embedded PostgreSQL cluster + dev logs (see scripts/dev-db.mjs).
+.dev-data/

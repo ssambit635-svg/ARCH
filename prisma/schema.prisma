@@ -1,0 +1,461 @@
+// ARCH — data model (v1).
+//
+// Conventions that matter for correctness:
+//   * Every tenant-owned model carries `organizationId` (directly, or through a parent that does)
+//     and every repository query filters on it. There is no "global" list query.
+//   * Timestamps are UTC. `createdAt`/`updatedAt` are managed by Prisma; domain timestamps
+//     (`startedAt`, `resolvedAt`, `sentAt`) are managed by services.
+//   * Machine-originated rows (webhook ingestion, outbox worker) have no human actor, so
+//     `createdById` / `authorId` / `actorId` are nullable and provenance is stored explicitly
+//     (`source`, `actorLabel`). Human-originated rows always populate them.
+//
+// Prisma 7 note: the datasource URL lives in `prisma.config.ts` + the driver adapter
+// (`src/lib/db.ts`), not in this file.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  runtime  = "nodejs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- Enums ----------
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  RESPONDER
+  VIEWER
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum IncidentStatus {
+  INVESTIGATING
+  IDENTIFIED
+  MONITORING
+  RESOLVED
+}
+
+enum ServiceStatus {
+  OPERATIONAL
+  DEGRADED
+  OUTAGE
+  MAINTENANCE
+}
+
+enum IncidentEventType {
+  STATUS_CHANGED
+  SEVERITY_CHANGED
+  ASSIGNED
+  COMMENT
+  LINKED
+  CREATED
+}
+
+/// Where an incident came from. `WEBHOOK` rows have no human creator.
+enum IncidentSource {
+  DASHBOARD
+  API
+  WEBHOOK
+}
+
+enum NotificationChannel {
+  EMAIL
+  SLACK
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+enum NotificationReason {
+  INCIDENT_CREATED
+  INCIDENT_STATUS_CHANGED
+  INCIDENT_ASSIGNED
+  INCIDENT_COMMENT
+  MEMBER_INVITED
+  INVITATION_ACCEPTED
+}
+
+/// Outcome of one inbound webhook request. Kept for delivery logs / debugging.
+enum WebhookDeliveryStatus {
+  ACCEPTED
+  DUPLICATE
+  REJECTED
+  FAILED
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+// ---------- Auth (Auth.js compatible) ----------
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  passwordHash  String?
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts          Account[]
+  sessions          Session[]
+  memberships       Membership[]
+  incidentsCreated  Incident[]      @relation("IncidentCreator")
+  incidentsAssigned Incident[]      @relation("IncidentAssignee")
+  incidentEvents    IncidentEvent[]
+  auditLogs         AuditLog[]
+  notifications     Notification[]
+  invitationsSent   Invitation[]    @relation("InvitationInviter")
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ---------- Tenancy & RBAC ----------
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships      Membership[]
+  invitations      Invitation[]
+  projects         Project[]
+  incidents        Incident[]
+  statusPages      StatusPage[]
+  webhookEndpoints WebhookEndpoint[]
+  auditLogs        AuditLog[]
+  notifications    Notification[]
+
+  @@map("organizations")
+}
+
+model Membership {
+  id             String         @id @default(cuid())
+  userId         String
+  organizationId String
+  role           MembershipRole @default(VIEWER)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, organizationId])
+  @@index([organizationId])
+  @@map("memberships")
+}
+
+/// Email invitation. Token is the only thing emailed; the raw token is never stored.
+model Invitation {
+  id             String           @id @default(cuid())
+  organizationId String
+  email          String
+  role           MembershipRole   @default(RESPONDER)
+  status         InvitationStatus @default(PENDING)
+  tokenHash      String           @unique
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  invitedById    String?
+  createdAt      DateTime         @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invitedBy    User?        @relation("InvitationInviter", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@unique([organizationId, email])
+  @@index([organizationId, status])
+  @@map("invitations")
+}
+
+// ---------- Catalog ----------
+
+model Project {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  slug           String
+  description    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  services     Service[]
+  incidents    Incident[]
+  webhookEndpoints WebhookEndpoint[]
+
+  @@unique([organizationId, slug])
+  @@map("projects")
+}
+
+model Service {
+  id        String        @id @default(cuid())
+  projectId String
+  name      String
+  slug      String
+  description String?
+  status    ServiceStatus @default(OPERATIONAL)
+  /// When true, `status` is derived from open incidents by the incident service.
+  autoStatus Boolean      @default(true)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  project            Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  incidents          Incident[]
+  statusPageServices StatusPageService[]
+  webhookEndpoints   WebhookEndpoint[]
+
+  @@unique([projectId, slug])
+  @@index([projectId])
+  @@map("services")
+}
+
+// ---------- Incidents ----------
+
+model Incident {
+  id             String           @id @default(cuid())
+  organizationId String
+  projectId      String
+  serviceId      String?
+  title          String
+  description    String?
+  severity       IncidentSeverity @default(MEDIUM)
+  status         IncidentStatus   @default(INVESTIGATING)
+  source         IncidentSource   @default(DASHBOARD)
+  createdById    String?
+  assignedToId   String?
+  webhookEndpointId String?
+  /// Set by webhook ingestion when the sender supplies a stable alert key.
+  dedupeKey      String?
+  startedAt      DateTime         @default(now())
+  resolvedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  service      Service?     @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  createdBy    User?        @relation("IncidentCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  assignedTo   User?        @relation("IncidentAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  events       IncidentEvent[]
+  notifications Notification[]
+  webhookDeliveries WebhookDelivery[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt])
+  @@index([organizationId, severity])
+  @@index([organizationId, dedupeKey])
+  @@index([projectId])
+  @@map("incidents")
+}
+
+model IncidentEvent {
+  id         String            @id @default(cuid())
+  incidentId String
+  /// Null for machine-originated events (webhook ingestion).
+  authorId   String?
+  actorLabel String?
+  type       IncidentEventType
+  body       String?
+  metadata   Json?
+  createdAt  DateTime          @default(now())
+
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  author   User?    @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([incidentId, createdAt])
+  @@map("incident_events")
+}
+
+// ---------- Status pages ----------
+
+model StatusPage {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  slug           String   @unique
+  description    String?
+  isPublished    Boolean  @default(false)
+  publishedAt    DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  services     StatusPageService[]
+
+  @@index([organizationId])
+  @@map("status_pages")
+}
+
+model StatusPageService {
+  id           String  @id @default(cuid())
+  statusPageId String
+  serviceId    String
+  displayName  String?
+  /// Position in the public page listing.
+  position     Int     @default(0)
+
+  statusPage StatusPage @relation(fields: [statusPageId], references: [id], onDelete: Cascade)
+  service    Service    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([statusPageId, serviceId])
+  @@map("status_page_services")
+}
+
+// ---------- Webhooks (ingestion) ----------
+
+model WebhookEndpoint {
+  id             String   @id @default(cuid())
+  organizationId String
+  projectId      String
+  serviceId      String?
+  provider       String
+  /// Stable public identifier used in the endpoint URL (`?endpoint=<externalId>`).
+  externalId     String   @unique
+  description    String?
+  /// SHA-256 of the signing secret. Used for equality checks and log fingerprints.
+  secretHash     String
+  /// Signing secret, encrypted at rest (AES-256-GCM, key derived from AUTH_SECRET).
+  /// HMAC verification needs the raw key, so a one-way hash alone cannot work.
+  secretEncrypted String
+  isActive       Boolean  @default(true)
+  lastDeliveryAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  service      Service?     @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  deliveries   WebhookDelivery[]
+
+  @@unique([provider, externalId])
+  @@index([organizationId])
+  @@map("webhook_endpoints")
+}
+
+/// One row per inbound webhook request: the delivery log + the idempotency ledger.
+model WebhookDelivery {
+  id          String                @id @default(cuid())
+  endpointId  String
+  /// Dedupe key: `x-arch-delivery-id` (or a provider-specific header, else a body hash).
+  deliveryKey String
+  status      WebhookDeliveryStatus
+  httpStatus  Int
+  incidentId  String?
+  error       String?
+  payload     Json?
+  receivedAt  DateTime              @default(now())
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id], onDelete: Cascade)
+  incident Incident?       @relation(fields: [incidentId], references: [id], onDelete: SetNull)
+
+  @@unique([endpointId, deliveryKey])
+  @@index([endpointId, receivedAt])
+  @@map("webhook_deliveries")
+}
+
+// ---------- Observability ----------
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  /// Null for machine-originated actions (webhooks, worker).
+  actorId        String?
+  actorLabel     String?
+  action         String
+  entityType     String
+  entityId       String
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actor        User?        @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, action])
+  @@map("audit_logs")
+}
+
+/// Transactional outbox: written inside the same transaction as the domain change, drained by
+/// the worker process (`npm run worker`). No Redis, no in-process fire-and-forget.
+model Notification {
+  id             String               @id @default(cuid())
+  organizationId String
+  incidentId     String?
+  recipientId    String
+  channel        NotificationChannel   @default(EMAIL)
+  status         NotificationStatus    @default(PENDING)
+  reason         NotificationReason
+  subject        String
+  body           String
+  attempts       Int                  @default(0)
+  lastError      String?
+  sentAt         DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  incident     Incident?    @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  recipient    User         @relation(fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([organizationId, createdAt])
+  @@map("notifications")
+}
