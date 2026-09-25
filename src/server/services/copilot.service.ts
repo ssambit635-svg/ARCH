@@ -5,11 +5,14 @@ import { requirePermission } from '@/lib/permissions';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { writeAudit } from '@/lib/audit';
 import type { AiSuggestionStatus, AiSuggestionType } from '@/generated/prisma/client';
+import { buildKnowledge } from '../ai/arch-model/engine';
+import { detectLanguage, looksLikeStackTrace, scrubSecrets } from '../ai/code/analyzer';
 import { buildCopilotContext } from '../ai/context';
-import { CopilotCallError, callWithGuardrails } from '../ai/guardrails';
+import { CopilotCallError, LIMITS, callWithGuardrails, redact, truncate } from '../ai/guardrails';
 import { buildPrompt } from '../ai/prompts';
-import { copilotConfig, getAiProvider, type CopilotTask } from '../ai/provider';
+import { copilotAttempts, copilotConfig, copilotTimeoutMs, getAiProvider, type CopilotTask } from '../ai/provider';
 import {
+  parseCodeFix,
   parsePostmortem,
   parseStatusUpdate,
   parseSummary,
@@ -21,6 +24,7 @@ import {
 import { aiSuggestionRepository } from '../repositories/aiSuggestion.repository';
 import { incidentRepository } from '../repositories/incident.repository';
 import { organizationRepository } from '../repositories/organization.repository';
+import { getOrganizationModel } from './archModel.service';
 import { addIncidentCommentInTransaction, updateIncident } from './incident.service';
 
 /**
@@ -37,18 +41,19 @@ import { addIncidentCommentInTransaction, updateIncident } from './incident.serv
 
 export const COPILOT_RATE_LIMIT_WINDOW_MS = 60_000;
 
-const TASK_BY_TYPE: Record<AiSuggestionType, CopilotTask> = {
+const TASK_BY_TYPE: Record<AiSuggestionType, Exclude<CopilotTask, 'code_review'>> = {
   SUMMARY: 'summary',
   TRIAGE: 'triage',
   STATUS_UPDATE: 'status_update',
   POSTMORTEM: 'postmortem',
+  CODE_FIX: 'code_fix',
 };
 
 const FRIENDLY_FAILURE: Record<CopilotCallError['reason'], string> = {
   timeout: 'ARCH Copilot took too long to respond. Nothing was changed — please try again in a moment.',
   provider_error: 'ARCH Copilot could not reach the AI provider. Nothing was changed — please try again in a moment.',
   invalid_output: 'ARCH Copilot returned a draft it could not validate. Nothing was changed — please try again.',
-  not_configured: 'ARCH Copilot is not configured for this workspace. Ask an administrator to set AI_PROVIDER and AI_API_KEY.',
+  not_configured: 'ARCH Copilot is not configured for this workspace. Ask an administrator to check AI_PROVIDER (the default, "arch", needs no setup).',
 };
 
 export function copilotRateLimitKey(organizationId: string): string {
@@ -63,7 +68,7 @@ async function loadIncident(organizationId: string, incidentId: string) {
   return incident;
 }
 
-export async function generateSuggestion(params: Params & { incidentId: string; type: AiSuggestionType }) {
+export async function generateSuggestion(params: Params & { incidentId: string; type: AiSuggestionType; attachment?: string | null }) {
   const { organizationId, userId, incidentId, type } = params;
 
   await requirePermission(organizationId, userId, 'copilot.generate');
@@ -85,6 +90,27 @@ export async function generateSuggestion(params: Params & { incidentId: string; 
   }
 
   const { context, candidateRefs } = buildCopilotContext(incident, { members, openAssignmentsByUser });
+
+  if (type === 'CODE_FIX' && params.attachment?.trim()) {
+    const raw = params.attachment.trim();
+    const language = detectLanguage(raw);
+    context.attachment = {
+      kind: looksLikeStackTrace(raw) ? 'log' : 'code',
+      language,
+      text: truncate(redact(scrubSecrets(raw, language)), LIMITS.maxAttachmentChars),
+    };
+  }
+
+  // ARCH model knowledge: this organization's trained model (similar past incidents, category,
+  // severity). The incident itself is excluded so a resolved incident is not "similar to itself".
+  // A model problem must never block a responder, so failures fall back to no knowledge.
+  try {
+    const model = await getOrganizationModel(organizationId);
+    context.knowledge = buildKnowledge(model, context, { excludeIds: [`team:${incidentId}`] });
+  } catch (error) {
+    console.warn(`[copilot] ARCH model unavailable for ${organizationId}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
   const prompt = buildPrompt(task, context);
 
   const parse = (text: string): SuggestionOutput => {
@@ -97,6 +123,8 @@ export async function generateSuggestion(params: Params & { incidentId: string; 
         return parseStatusUpdate(text);
       case 'POSTMORTEM':
         return parsePostmortem(text);
+      case 'CODE_FIX':
+        return parseCodeFix(text);
     }
   };
 
@@ -108,8 +136,9 @@ export async function generateSuggestion(params: Params & { incidentId: string; 
       task,
       system: prompt.system,
       user: prompt.user,
-      maxTokens: env.AI_MAX_TOKENS,
-      timeoutMs: env.AI_TIMEOUT_MS,
+      maxTokens: type === 'CODE_FIX' || type === 'POSTMORTEM' ? Math.max(env.AI_MAX_TOKENS, 1500) : env.AI_MAX_TOKENS,
+      timeoutMs: copilotTimeoutMs(),
+      attempts: copilotAttempts(),
       parse,
     });
 
@@ -145,6 +174,9 @@ export async function generateSuggestion(params: Params & { incidentId: string; 
             completionTokens: call.completionTokens,
             attempts: call.attempts,
             latencyMs: call.latencyMs,
+            ...(context.knowledge
+              ? { knowledge: { category: context.knowledge.likelyCategory, similarIncidents: context.knowledge.similarIncidents.length } }
+              : {}),
           },
         },
         tx,

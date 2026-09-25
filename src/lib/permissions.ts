@@ -34,6 +34,9 @@ export const PERMISSIONS = {
   'copilot.read': ['OWNER', 'ADMIN', 'RESPONDER', 'VIEWER'],
   'copilot.generate': ['OWNER', 'ADMIN', 'RESPONDER'],
   'copilot.review': ['OWNER', 'ADMIN', 'RESPONDER'],
+  // V3 — retraining the organization's ARCH model changes what every responder sees, so it is an
+  // admin decision. (The worker also retrains automatically when incidents are resolved.)
+  'copilot.train': ['OWNER', 'ADMIN'],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type PermissionAction = keyof typeof PERMISSIONS;

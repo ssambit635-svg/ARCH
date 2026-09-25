@@ -29,9 +29,25 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   ERROR_TRACKING_DSN: z.string().optional(),
 
-  // ---- ARCH Copilot (V2, see AGENTS-V2.md) ----
-  // "mock" returns canned, context-derived drafts so dev and tests never need a real key.
-  AI_PROVIDER: z.enum(['mock', 'openai', 'anthropic']).default('mock'),
+  // ---- ARCH Copilot (V2, see AGENTS-V2.md) + ARCH Model (V3, see docs/engineering/ARCH-MODEL.md) ----
+  // "arch"        ARCH's own model, trained on your incidents. CPU only, no network. (default)
+  // "arch-hybrid" a local open-weights LLM (Ollama / llama.cpp) grounded by the ARCH model, with
+  //               the ARCH model as automatic fallback. Still no external API.
+  // "mock"        canned drafts for tests. "openai" / "anthropic" are external vendors and are
+  //               refused while ARCH_OFFLINE_ONLY is true.
+  AI_PROVIDER: z.enum(['arch', 'arch-hybrid', 'mock', 'openai', 'anthropic']).default('arch'),
+  // Privacy lock: refuse external AI vendors and non-private LLM URLs. Keep this on.
+  ARCH_OFFLINE_ONLY: booleanish.default(true),
+  LOCAL_LLM_URL: z.string().url().default('http://127.0.0.1:11434'),
+  LOCAL_LLM_API: z.enum(['ollama', 'openai']).default('ollama'),
+  LOCAL_LLM_MODEL: z.string().min(1).default('qwen2.5-coder:7b'),
+  // CPU inference is slow; the ARCH model answers instead if the LLM misses this deadline.
+  LOCAL_LLM_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(600_000).default(90_000),
+  LOCAL_LLM_CONTEXT: z.coerce.number().int().min(2048).max(131_072).default(8192),
+  // Where `npm run model:fetch-public` stores downloaded public postmortems (git-ignored).
+  ARCH_MODEL_DATA_DIR: z.string().default('model-data'),
+  // The worker retrains an organization's model when it has new resolved incidents. 0 = never.
+  ARCH_MODEL_RETRAIN_MINUTES: z.coerce.number().int().min(0).max(10_080).default(60),
   AI_API_KEY: z.string().optional(),
   // Ignored by "mock". Empty = provider default (gpt-4o-mini for OpenAI, claude-haiku-4-5 for Anthropic).
   AI_MODEL: z.string().optional(),

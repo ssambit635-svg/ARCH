@@ -319,6 +319,10 @@ change does not ship — including for the founders.
 | D11 | V2 Copilot output is a persisted draft (`AiSuggestion`), applied only on human approval | Trust: AI never changes an incident, status page or notification by itself; drafts are auditable | Never for customer-facing output |
 | D12 | Copilot context is whitelisted + redacted in `src/server/ai/context.ts`, which is pure (no DB access) | Tenancy stays enforced by repositories; nothing in `ai/` can read across orgs; triage uses opaque member refs | If a task genuinely needs more fields — add them to the whitelist explicitly |
 | D13 | Vendor adapters over plain `fetch`, `mock` provider as the default | No SDK lock-in; dev + tests run offline and deterministic | A vendor feature needs its SDK |
+| D14 | V3: ARCH's own model (`AI_PROVIDER="arch"`) is the default; external AI vendors are refused while `ARCH_OFFLINE_ONLY=true` | Incident data and code stay on the customer's server, at zero marginal cost and with no GPU | A customer explicitly opts into a vendor |
+| D15 | Native model = Naive Bayes + TF-IDF retrieval + templates in pure TypeScript, one JSON artifact per org in Postgres | Trains in under 1 s on CPU, is explainable, is measured on a holdout, and adds no new infrastructure or Python | Holdout accuracy plateaus below usefulness, or customers want generative quality without a local LLM |
+| D16 | Generative quality comes from an *optional local* LLM (Ollama / llama.cpp) behind the same provider interface, with native fallback | Fluent text and code rewrites without a vendor; Copilot never goes dark when the LLM server restarts | A small model can be bundled in-process with acceptable CPU latency |
+| D17 | No third-party postmortem text is committed; public corpora are fetched at run time into git-ignored `model-data/` | Upstream licences (none / GPL-3.0) do not permit redistribution | Licensed or original corpora become available |
 
 ---
 

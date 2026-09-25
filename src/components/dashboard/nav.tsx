@@ -8,6 +8,8 @@ const items = [
   { href: '/dashboard/incidents', label: 'Incidents' },
   { href: '/dashboard/projects', label: 'Projects & services' },
   { href: '/dashboard/status', label: 'Status pages' },
+  { href: '/dashboard/code', label: 'Code Assist' },
+  { href: '/dashboard/model', label: 'ARCH Model' },
   { href: '/dashboard/audit', label: 'Audit log' },
   { href: '/dashboard/settings', label: 'Settings' },
 ];

@@ -1,6 +1,6 @@
 {
   "name": "arch",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "ARCH \u2014 multi-tenant incident management + public status pages for developer teams.",
   "type": "module",
@@ -23,7 +23,11 @@
     "db:status": "node scripts/dev-db.mjs status",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "model:fetch-public": "node scripts/arch-model/fetch-public-incidents.mjs",
+    "model:train": "tsx scripts/arch-model/train.ts",
+    "model:eval": "tsx scripts/arch-model/eval.ts",
+    "model:export-finetune": "tsx scripts/arch-model/export-finetune.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.0",

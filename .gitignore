@@ -92,3 +92,8 @@ backups/
 src/generated/
 # Local embedded PostgreSQL cluster + dev logs (see scripts/dev-db.mjs).
 .dev-data/
+
+# ARCH Model — downloaded public corpora, fine-tune exports and local model files (may contain
+# third-party or customer text; never commit). See docs/engineering/ARCH-MODEL.md.
+model-data/
+*.gguf

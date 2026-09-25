@@ -18,6 +18,7 @@ import {
   webhookEndpointCreateSchema,
   copilotApproveSchema,
   copilotGenerateSchema,
+  codeReviewSchema,
 } from '@/lib/validation';
 import { createIncident, addIncidentComment, updateIncident } from '@/server/services/incident.service';
 import { createProject, createService, updateService } from '@/server/services/project.service';
@@ -25,6 +26,8 @@ import { createStatusPage, setStatusPagePublished, updateStatusPage } from '@/se
 import { createOrganization, changeMemberRole, inviteMember, removeMember, updateOrganization } from '@/server/services/organization.service';
 import { createEndpoint, deleteEndpoint, rotateEndpointSecret, updateEndpoint } from '@/server/services/webhook.service';
 import { approveSuggestion, dismissSuggestion, generateSuggestion } from '@/server/services/copilot.service';
+import { reviewCode, type CodeReviewResult } from '@/server/services/codeAssist.service';
+import { trainModel } from '@/server/services/archModel.service';
 import { revalidateOrganizationStatusPages } from '@/server/revalidate';
 import { toFormObject } from './form-utils';
 
@@ -463,13 +466,14 @@ const COPILOT_LABELS = {
   TRIAGE: 'Triage suggestion',
   STATUS_UPDATE: 'Status-update draft',
   POSTMORTEM: 'Postmortem draft',
+  CODE_FIX: 'Code fix suggestion',
 } as const;
 
 export async function generateCopilotDraftAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
   try {
     const { user, organization } = await context();
     const input = await parse(copilotGenerateSchema, formData);
-    await generateSuggestion({ organizationId: organization.id, userId: user.id, incidentId: input.incidentId, type: input.type });
+    await generateSuggestion({ organizationId: organization.id, userId: user.id, incidentId: input.incidentId, type: input.type, attachment: input.attachment });
     revalidatePath(`/dashboard/incidents/${input.incidentId}`);
     return { ok: true, message: `${COPILOT_LABELS[input.type]} drafted — review it below.` };
   } catch (error) {
@@ -500,6 +504,42 @@ export async function dismissCopilotDraftAction(_state: ActionResult | undefined
     const suggestion = await dismissSuggestion({ organizationId: organization.id, userId: user.id, suggestionId });
     if (suggestion) revalidatePath(`/dashboard/incidents/${suggestion.incidentId}`);
     return { ok: true, message: 'Draft dismissed.' };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+// ---------------------------------------------------------------- ARCH Code Assist + ARCH Model (V3)
+
+export type CodeReviewState = { ok: true; result: CodeReviewResult } | { ok: false; error: string; fieldErrors?: Record<string, string> };
+
+export async function reviewCodeAction(_state: CodeReviewState | undefined, formData: FormData): Promise<CodeReviewState> {
+  try {
+    const { user, organization } = await context();
+    // Read the code untrimmed: leading indentation matters (Python, YAML).
+    const input = codeReviewSchema.parse({
+      code: String(formData.get('code') ?? '').replace(/\s+$/, ''),
+      mode: formData.get('mode') || undefined,
+      language: formData.get('language') || undefined,
+    });
+    const result = await reviewCode({ organizationId: organization.id, userId: user.id, code: input.code, mode: input.mode, language: input.language });
+    return { ok: true, result };
+  } catch (error) {
+    if (error instanceof z.ZodError) return { ok: false, error: error.issues[0]?.message ?? 'Invalid input.' };
+    const failure = toFailure(error);
+    return failure.ok ? { ok: false, error: 'Something went wrong.' } : failure;
+  }
+}
+
+export async function trainModelAction(_state: ActionResult | undefined, _formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const result = await trainModel({ organizationId: organization.id, userId: user.id });
+    revalidatePath('/dashboard/model');
+    return {
+      ok: true,
+      message: `Model v${result.version} trained on ${result.teamDocuments} of your resolved incident${result.teamDocuments === 1 ? '' : 's'} (${result.totalDocuments} documents in ${result.metrics.trainingMs} ms).`,
+    };
   } catch (error) {
     return toFailure(error);
   }
