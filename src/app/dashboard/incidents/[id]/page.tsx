@@ -19,7 +19,10 @@ import { updateIncidentAction } from '@/app/dashboard/actions';
 import { ActionForm } from '@/components/dashboard/action-form';
 import { Field, Select } from '@/components/ui/form';
 import { CopilotPanel, type CopilotSuggestionView } from '@/components/incidents/copilot-panel';
+import { VerifiedFixPanel, type VerificationView, type RepoConnectionView } from '@/components/incidents/verified-fix-panel';
 import { listSuggestions } from '@/server/services/copilot.service';
+import { listVerifications } from '@/server/services/verifiedFix.service';
+import { listRepoConnections } from '@/server/services/repo.service';
 import { copilotConfig } from '@/server/ai/provider';
 import { suggestionTimelineText } from '@/server/ai/schemas';
 import { roleHasPermission } from '@/lib/permissions';
@@ -43,10 +46,12 @@ export default async function IncidentDetailPage({ params }: { params: Promise<{
 
   if (!incident) notFound();
 
-  const [members, services, suggestions] = await Promise.all([
+  const [members, services, suggestions, verifications, repoConnections] = await Promise.all([
     listMembers({ organizationId: organization.id, userId: user.id }),
     listServices({ organizationId: organization.id, userId: user.id }),
     listSuggestions({ organizationId: organization.id, userId: user.id, incidentId: incident.id }),
+    listVerifications({ organizationId: organization.id, userId: user.id, incidentId: incident.id }).catch(() => []),
+    listRepoConnections({ organizationId: organization.id, userId: user.id }).catch(() => []),
   ]);
 
   const memberName = (userId: string | null | undefined) => {
@@ -84,6 +89,32 @@ export default async function IncidentDetailPage({ params }: { params: Promise<{
   const assignable = members
     .filter((member) => member.role !== 'VIEWER')
     .map((member) => ({ id: member.userId, label: `${member.user.name ?? member.user.email} · ${member.role}` }));
+
+  const verificationViews: VerificationView[] = verifications.map((v) => ({
+    id: v.id,
+    status: v.status as VerificationView['status'],
+    patch: v.patch,
+    commitSha: v.commitSha,
+    testCommand: v.testCommand,
+    testOutput: v.testOutput,
+    evidence: v.evidence as VerificationView['evidence'],
+    durationMs: v.durationMs,
+    createdAt: v.createdAt.toISOString(),
+    createdAgo: timeAgo(v.createdAt),
+    repoConnection: v.repoConnection ? { id: v.repoConnection.id, fullName: v.repoConnection.fullName, pinnedCommitSha: v.repoConnection.pinnedCommitSha } : null,
+    pullRequest: v.pullRequest ? { id: v.pullRequest.id, externalUrl: v.pullRequest.externalUrl, branch: v.pullRequest.branch, status: v.pullRequest.status } : null,
+    suggestion: { id: v.suggestionId, type: 'CODE_FIX' },
+  }));
+
+  const repoConnectionViews: RepoConnectionView[] = repoConnections.map((rc) => ({
+    id: rc.id,
+    fullName: rc.fullName,
+    owner: rc.owner,
+    repo: rc.repo,
+    defaultBranch: rc.defaultBranch,
+    pinnedCommitSha: rc.pinnedCommitSha,
+    isActive: rc.isActive,
+  }));
 
   return (
     <div>
@@ -125,6 +156,14 @@ export default async function IncidentDetailPage({ params }: { params: Promise<{
             canReview={roleHasPermission(organization.role, 'copilot.review')}
             config={copilotConfig()}
             suggestions={copilotSuggestions}
+          />
+
+          <VerifiedFixPanel
+            incidentId={incident.id}
+            canGenerate={roleHasPermission(organization.role, 'copilot.generate')}
+            canApprove={roleHasPermission(organization.role, 'copilot.review')}
+            repoConnections={repoConnectionViews}
+            verifications={verificationViews}
           />
 
           <Card>

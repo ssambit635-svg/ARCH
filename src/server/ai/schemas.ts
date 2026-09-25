@@ -58,6 +58,17 @@ export const codeReviewRawSchema = z.object({
   explanation: z.string().trim().max(6000).default(''),
 });
 
+// V4 — Verified Fix: patch + test plan + evidence requirements, same EngineOutput pattern
+export const verifiedFixRawSchema = z.object({
+  diagnosis: line(1500),
+  likelyCause: line(1500),
+  suggestedFixes: z.array(line(500)).min(1).max(10),
+  patch: z.string().trim().min(1).max(50_000),
+  testPlan: z.array(line(300)).max(10).nullish(),
+  references: z.array(line(300)).max(8).nullish(),
+  commitSha: z.string().trim().max(40).nullish(),
+});
+
 // ---------- stored output ----------
 
 export type SummaryOutput = { bullets: string[] };
@@ -72,9 +83,18 @@ export type PostmortemOutput = {
 };
 
 export type CodeFixOutput = { diagnosis: string; likelyCause: string; suggestedFixes: string[]; patch?: string; references: string[] };
+export type VerifiedFixOutput = {
+  diagnosis: string;
+  likelyCause: string;
+  suggestedFixes: string[];
+  patch: string;
+  testPlan: string[];
+  references: string[];
+  commitSha?: string;
+};
 export type CodeReviewOutput = z.infer<typeof codeReviewRawSchema>;
 
-export type SuggestionOutput = SummaryOutput | TriageOutput | StatusUpdateOutput | PostmortemOutput | CodeFixOutput;
+export type SuggestionOutput = SummaryOutput | TriageOutput | StatusUpdateOutput | PostmortemOutput | CodeFixOutput | VerifiedFixOutput;
 
 /** Summary acceptance criterion: at most five bullets. */
 export const MAX_SUMMARY_BULLETS = 5;
@@ -137,6 +157,19 @@ export function parseCodeFix(text: string): CodeFixOutput {
   };
 }
 
+export function parseVerifiedFix(text: string): VerifiedFixOutput {
+  const raw = verifiedFixRawSchema.parse(extractJson(text));
+  return {
+    diagnosis: raw.diagnosis,
+    likelyCause: raw.likelyCause,
+    suggestedFixes: raw.suggestedFixes,
+    patch: raw.patch.trim(),
+    testPlan: raw.testPlan ?? [],
+    references: raw.references ?? [],
+    ...(raw.commitSha?.trim() ? { commitSha: raw.commitSha.trim() } : {}),
+  };
+}
+
 export function parseCodeReview(text: string): CodeReviewOutput {
   return codeReviewRawSchema.parse(extractJson(text));
 }
@@ -152,6 +185,27 @@ export function renderCodeFixText(output: CodeFixOutput): string {
     'Suggested fixes:',
     ...output.suggestedFixes.map((fix) => `- ${fix}`),
     ...(output.patch ? ['', 'Proposed patch:', '```', output.patch, '```'] : []),
+    ...(output.references.length ? ['', `Similar incidents: ${output.references.join(' · ')}`] : []),
+  ].join('\n');
+}
+
+export function renderVerifiedFixText(output: VerifiedFixOutput): string {
+  return [
+    'Verified fix suggestion',
+    '',
+    `Diagnosis: ${output.diagnosis}`,
+    '',
+    `Likely cause: ${output.likelyCause}`,
+    '',
+    'Suggested fixes:',
+    ...output.suggestedFixes.map((fix) => `- ${fix}`),
+    '',
+    'Proposed patch:',
+    '```',
+    output.patch,
+    '```',
+    ...(output.testPlan.length ? ['', 'Test plan:', ...output.testPlan.map((step) => `- ${step}`)] : []),
+    ...(output.commitSha ? ['', `Pinned commit: ${output.commitSha}`] : []),
     ...(output.references.length ? ['', `Similar incidents: ${output.references.join(' · ')}`] : []),
   ].join('\n');
 }
@@ -174,6 +228,18 @@ export function suggestionTimelineText(type: AiSuggestionType, output: unknown):
             suggestedFixes: record.suggestedFixes as string[],
             ...(typeof record.patch === 'string' ? { patch: record.patch } : {}),
             references: Array.isArray(record.references) ? (record.references as string[]) : [],
+          })
+        : null;
+    case 'VERIFIED_FIX':
+      return typeof record.diagnosis === 'string' && typeof record.patch === 'string'
+        ? renderVerifiedFixText({
+            diagnosis: record.diagnosis,
+            likelyCause: String(record.likelyCause ?? ''),
+            suggestedFixes: Array.isArray(record.suggestedFixes) ? (record.suggestedFixes as string[]) : [],
+            patch: record.patch as string,
+            testPlan: Array.isArray(record.testPlan) ? (record.testPlan as string[]) : [],
+            references: Array.isArray(record.references) ? (record.references as string[]) : [],
+            ...(typeof record.commitSha === 'string' ? { commitSha: record.commitSha } : {}),
           })
         : null;
     case 'TRIAGE':

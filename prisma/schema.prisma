@@ -111,6 +111,8 @@ enum AiSuggestionType {
   POSTMORTEM
   /// V3 — ARCH Code Assist inside an incident: diagnosis + fix for a stack trace / snippet.
   CODE_FIX
+  /// V4 — Verified Fix Loop: patch tested in isolated sandbox with evidence bundle.
+  VERIFIED_FIX
 }
 
 /// V2 — AI output is always a draft until a human approves or dismisses it.
@@ -207,6 +209,9 @@ model Organization {
   archModel        ArchModel?
   archModelVersions ArchModelVersion[]
   archModelJobs    ArchModelJob[]
+  repoConnections  RepoConnection[]
+  fixVerifications FixVerification[]
+  pullRequests     PullRequest[]
 
   @@map("organizations")
 }
@@ -321,6 +326,8 @@ model Incident {
   notifications Notification[]
   webhookDeliveries WebhookDelivery[]
   aiSuggestions AiSuggestion[]
+  fixVerifications FixVerification[]
+  pullRequests PullRequest[]
 
   @@index([organizationId, status])
   @@index([organizationId, createdAt])
@@ -513,6 +520,7 @@ model AiSuggestion {
   incident     Incident     @relation(fields: [incidentId], references: [id], onDelete: Cascade)
   createdBy    User?        @relation("AiSuggestionCreator", fields: [createdById], references: [id], onDelete: SetNull)
   reviewedBy   User?        @relation("AiSuggestionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  fixVerifications FixVerification[]
 
   @@index([organizationId, incidentId, createdAt])
   @@index([incidentId, status])
@@ -603,4 +611,102 @@ model ArchModelJob {
   @@index([status, createdAt])
   @@index([organizationId, createdAt])
   @@map("arch_model_jobs")
+}
+
+// ---------- V4 — Verified Fix Loop (GitHub repo connect + sandbox verification + PR) ----------
+
+/// V4 — GitHub repository linked to an organization. RBAC enforced: OWNER/ADMIN manage, all roles read.
+/// Commit pinning: `pinnedCommitSha` is the exact commit the fix was tested against (repo@commit checkout).
+model RepoConnection {
+  id             String   @id @default(cuid())
+  organizationId String
+  provider       String   @default("github")
+  owner          String
+  repo           String
+  fullName       String
+  defaultBranch  String   @default("main")
+  /// Exact commit SHA the organization pinned for verified fixes (40 hex chars, or short SHA for display).
+  pinnedCommitSha String?
+  isActive       Boolean  @default(true)
+  connectedById  String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  verifications FixVerification[]
+  pullRequests PullRequest[]
+
+  @@unique([organizationId, fullName])
+  @@index([organizationId])
+  @@index([organizationId, isActive])
+  @@map("repo_connections")
+}
+
+/// V4 — One sandbox run for a proposed patch. Isolated: no prod credentials, temporary container, timeout.
+/// Evidence bundle is stored in `evidence` JSON (diff, test results, timings, safety checks).
+model FixVerification {
+  id               String   @id @default(cuid())
+  organizationId   String
+  incidentId       String
+  suggestionId     String
+  repoConnectionId String?
+  /// Commit SHA this verification ran against (pinned at verification time).
+  commitSha        String?
+  /// Unified diff or improved code that was tested.
+  patch            String
+  /// PENDING | RUNNING | PASSED | FAILED | TIMEOUT | UNSAFE | ERROR
+  status           String   @default("PENDING")
+  testCommand      String?
+  testOutput       String?
+  /// Evidence bundle: { sandboxId, startedAt, finishedAt, durationMs, safetyChecks, commitSha, patchHash, testCommand, testResults, logs }
+  evidence         Json?
+  durationMs       Int?
+  createdById      String?
+  createdAt        DateTime @default(now())
+  finishedAt       DateTime?
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  incident       Incident        @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  suggestion     AiSuggestion    @relation(fields: [suggestionId], references: [id], onDelete: Cascade)
+  repoConnection RepoConnection? @relation(fields: [repoConnectionId], references: [id], onDelete: SetNull)
+  pullRequest    PullRequest?
+
+  @@index([organizationId, incidentId])
+  @@index([suggestionId])
+  @@index([repoConnectionId])
+  @@index([organizationId, status])
+  @@map("fix_verifications")
+}
+
+/// V4 — Pull request created only after human approval of a verified fix. Audit logged.
+model PullRequest {
+  id               String   @id @default(cuid())
+  organizationId   String
+  incidentId       String
+  suggestionId     String?
+  verificationId   String?  @unique
+  repoConnectionId String
+  title            String
+  body             String?
+  branch           String
+  baseBranch       String   @default("main")
+  commitSha        String?
+  patch            String?
+  /// CREATED | OPEN | MERGED | CLOSED
+  status           String   @default("OPEN")
+  /// Mock or real GitHub PR URL (offline mode returns a fake URL, still audited).
+  externalUrl      String?
+  createdById      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organization   Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  incident       Incident        @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  repoConnection RepoConnection  @relation(fields: [repoConnectionId], references: [id], onDelete: Cascade)
+  verification   FixVerification? @relation(fields: [verificationId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId])
+  @@index([incidentId])
+  @@index([repoConnectionId])
+  @@map("pull_requests")
 }

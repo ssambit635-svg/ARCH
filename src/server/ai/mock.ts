@@ -137,12 +137,34 @@ function codeFix(context: CopilotContext) {
   };
 }
 
+function verifiedFix(context: CopilotContext) {
+  const source = context.attachment?.text ?? comments(context).join('\n');
+  const patch = source
+    ? `// Verified fix for: ${source.split('\n')[0]!.slice(0, 80)}\n// This patch was generated as draft and will be tested in isolated sandbox\nfunction fixedFunction() {\n  // TODO: implement proper fix based on diagnosis\n  return true;\n}`
+    : `// Verified fix for incident: ${context.incident.title}\nfunction fix() { return true; }`;
+
+  return {
+    diagnosis: source ? `Mock verified fix diagnosis of ${source.split('\n')[0]!.slice(0, 80)}` : `Mock diagnosis for ${context.incident.title}`,
+    likelyCause: 'Mock provider — enable AI_PROVIDER="arch" for a real diagnosis with sandbox verification.',
+    suggestedFixes: [
+      'Reproduce the error locally with the same input.',
+      'Apply patch in isolated sandbox and run tests',
+      'Verify no regressions in related modules',
+    ],
+    patch,
+    testPlan: ['Run npm test', 'Verify fix against stack trace', 'Check for regressions'],
+    references: [],
+    commitSha: null,
+  };
+}
+
 const HANDLERS: Record<Exclude<CopilotTask, 'code_review'>, (context: CopilotContext) => unknown> = {
   summary,
   triage,
   status_update: statusUpdate,
   postmortem,
   code_fix: codeFix,
+  verified_fix: verifiedFix,
 };
 
 export function createMockProvider(): AiProvider {

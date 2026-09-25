@@ -10,6 +10,7 @@ const items = [
   { href: '/dashboard/status', label: 'Status pages' },
   { href: '/dashboard/code', label: 'Code Assist' },
   { href: '/dashboard/model', label: 'ARCH Model' },
+  { href: '/dashboard/repos', label: 'GitHub Repos · Verified Fix' },
   { href: '/dashboard/audit', label: 'Audit log' },
   { href: '/dashboard/settings', label: 'Settings' },
 ];

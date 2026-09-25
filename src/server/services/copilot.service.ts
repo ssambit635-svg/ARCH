@@ -17,6 +17,7 @@ import {
   parseStatusUpdate,
   parseSummary,
   parseTriage,
+  parseVerifiedFix,
   suggestionTimelineText,
   type SuggestionOutput,
   type TriageOutput,
@@ -47,6 +48,7 @@ const TASK_BY_TYPE: Record<AiSuggestionType, Exclude<CopilotTask, 'code_review'>
   STATUS_UPDATE: 'status_update',
   POSTMORTEM: 'postmortem',
   CODE_FIX: 'code_fix',
+  VERIFIED_FIX: 'verified_fix',
 };
 
 const FRIENDLY_FAILURE: Record<CopilotCallError['reason'], string> = {
@@ -91,7 +93,7 @@ export async function generateSuggestion(params: Params & { incidentId: string; 
 
   const { context, candidateRefs } = buildCopilotContext(incident, { members, openAssignmentsByUser });
 
-  if (type === 'CODE_FIX' && params.attachment?.trim()) {
+  if ((type === 'CODE_FIX' || type === 'VERIFIED_FIX') && params.attachment?.trim()) {
     const raw = params.attachment.trim();
     const language = detectLanguage(raw);
     context.attachment = {
@@ -106,9 +108,9 @@ export async function generateSuggestion(params: Params & { incidentId: string; 
   // A model problem must never block a responder, so failures fall back to no knowledge.
   try {
     const model = await getOrganizationModel(organizationId);
-    // CODE_FIX additionally consults the code-fix / code-review corpora; the incident tasks keep
+    // CODE_FIX + VERIFIED_FIX additionally consult the code-fix / code-review corpora; the incident tasks keep
     // the exact V2 knowledge mix (team history + pattern library + public postmortems).
-    context.knowledge = buildKnowledge(model, context, { excludeIds: [`team:${incidentId}`], includeCodeCorpus: type === 'CODE_FIX' });
+    context.knowledge = buildKnowledge(model, context, { excludeIds: [`team:${incidentId}`], includeCodeCorpus: type === 'CODE_FIX' || type === 'VERIFIED_FIX' });
   } catch (error) {
     console.warn(`[copilot] ARCH model unavailable for ${organizationId}: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -127,6 +129,8 @@ export async function generateSuggestion(params: Params & { incidentId: string; 
         return parsePostmortem(text);
       case 'CODE_FIX':
         return parseCodeFix(text);
+      case 'VERIFIED_FIX':
+        return parseVerifiedFix(text);
     }
   };
 
@@ -138,7 +142,7 @@ export async function generateSuggestion(params: Params & { incidentId: string; 
       task,
       system: prompt.system,
       user: prompt.user,
-      maxTokens: type === 'CODE_FIX' || type === 'POSTMORTEM' ? Math.max(env.AI_MAX_TOKENS, 1500) : env.AI_MAX_TOKENS,
+      maxTokens: type === 'CODE_FIX' || type === 'POSTMORTEM' || type === 'VERIFIED_FIX' ? Math.max(env.AI_MAX_TOKENS, 1500) : env.AI_MAX_TOKENS,
       timeoutMs: copilotTimeoutMs(),
       attempts: copilotAttempts(),
       parse,

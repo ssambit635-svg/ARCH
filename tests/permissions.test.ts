@@ -28,6 +28,12 @@ const EXPECTED: Record<PermissionAction, Record<Role, boolean>> = {
   'copilot.generate': { OWNER: true, ADMIN: true, RESPONDER: true, VIEWER: false },
   'copilot.review': { OWNER: true, ADMIN: true, RESPONDER: true, VIEWER: false },
   'copilot.train': { OWNER: true, ADMIN: true, RESPONDER: false, VIEWER: false },
+  'repo.read': { OWNER: true, ADMIN: true, RESPONDER: true, VIEWER: true },
+  'repo.manage': { OWNER: true, ADMIN: true, RESPONDER: false, VIEWER: false },
+  'fix.verify': { OWNER: true, ADMIN: true, RESPONDER: true, VIEWER: false },
+  'fix.approve': { OWNER: true, ADMIN: true, RESPONDER: true, VIEWER: false },
+  'pr.create': { OWNER: true, ADMIN: true, RESPONDER: true, VIEWER: false },
+  'pr.read': { OWNER: true, ADMIN: true, RESPONDER: true, VIEWER: true },
 };
 
 describe('permission matrix', () => {

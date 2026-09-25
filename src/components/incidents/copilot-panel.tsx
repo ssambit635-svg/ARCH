@@ -19,7 +19,7 @@ import {
 
 export type CopilotSuggestionView = {
   id: string;
-  type: 'SUMMARY' | 'TRIAGE' | 'STATUS_UPDATE' | 'POSTMORTEM' | 'CODE_FIX';
+  type: 'SUMMARY' | 'TRIAGE' | 'STATUS_UPDATE' | 'POSTMORTEM' | 'CODE_FIX' | 'VERIFIED_FIX';
   status: 'PENDING' | 'APPROVED' | 'DISMISSED';
   output: unknown;
   /** Exact text an approval would post (null for triage). */
@@ -44,6 +44,7 @@ const TYPE_LABELS: Record<CopilotSuggestionView['type'], string> = {
   STATUS_UPDATE: 'Status-update draft',
   POSTMORTEM: 'Postmortem draft',
   CODE_FIX: 'Code fix suggestion',
+  VERIFIED_FIX: 'Verified fix suggestion',
 };
 
 const APPROVE_LABELS: Record<CopilotSuggestionView['type'], string> = {
@@ -52,6 +53,7 @@ const APPROVE_LABELS: Record<CopilotSuggestionView['type'], string> = {
   STATUS_UPDATE: 'Approve & post update',
   POSTMORTEM: 'Approve & post to timeline',
   CODE_FIX: 'Approve & post to timeline',
+  VERIFIED_FIX: 'Approve & post to timeline',
 };
 
 const GENERATORS: { type: CopilotSuggestionView['type']; label: string; hint: string }[] = [

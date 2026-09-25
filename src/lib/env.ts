@@ -57,6 +57,11 @@ const envSchema = z.object({
 
   FEATURE_STATUS_PAGES: booleanish.default(true),
   FEATURE_SLACK_NOTIFICATIONS: booleanish.default(false),
+
+  // ---- V4 Verified Fix Loop (M1-M5) ----
+  GITHUB_TOKEN: z.string().optional(),
+  SANDBOX_TIMEOUT_MS: z.coerce.number().int().min(1000).max(300_000).default(30_000),
+  SANDBOX_MAX_OUTPUT_CHARS: z.coerce.number().int().min(1000).max(200_000).default(20_000),
 });
 
 export type Env = z.infer<typeof envSchema>;

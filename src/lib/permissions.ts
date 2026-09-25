@@ -37,6 +37,15 @@ export const PERMISSIONS = {
   // V3 — retraining the organization's ARCH model changes what every responder sees, so it is an
   // admin decision. (The worker also retrains automatically when incidents are resolved.)
   'copilot.train': ['OWNER', 'ADMIN'],
+  // V4 — Verified Fix Loop: GitHub repo connect + commit pinning + sandbox verification + PR.
+  // Repo linking is an admin decision (secrets, org permission). Verification reuses copilot
+  // permissions but gets its own gate so it can be audited separately.
+  'repo.read': ['OWNER', 'ADMIN', 'RESPONDER', 'VIEWER'],
+  'repo.manage': ['OWNER', 'ADMIN'],
+  'fix.verify': ['OWNER', 'ADMIN', 'RESPONDER'],
+  'fix.approve': ['OWNER', 'ADMIN', 'RESPONDER'],
+  'pr.create': ['OWNER', 'ADMIN', 'RESPONDER'],
+  'pr.read': ['OWNER', 'ADMIN', 'RESPONDER', 'VIEWER'],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type PermissionAction = keyof typeof PERMISSIONS;

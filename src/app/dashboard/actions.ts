@@ -19,6 +19,10 @@ import {
   copilotApproveSchema,
   copilotGenerateSchema,
   codeReviewSchema,
+  repoConnectionCreateSchema,
+  repoPinSchema,
+  verifiedFixGenerateSchema,
+  pullRequestCreateSchema,
 } from '@/lib/validation';
 import { createIncident, addIncidentComment, updateIncident } from '@/server/services/incident.service';
 import { createProject, createService, updateService } from '@/server/services/project.service';
@@ -28,6 +32,8 @@ import { createEndpoint, deleteEndpoint, rotateEndpointSecret, updateEndpoint } 
 import { approveSuggestion, dismissSuggestion, generateSuggestion } from '@/server/services/copilot.service';
 import { reviewCode, type CodeReviewResult } from '@/server/services/codeAssist.service';
 import { activateModelVersion, rollbackModel, trainModel } from '@/server/services/archModel.service';
+import { createRepoConnection, pinRepoCommit, deactivateRepoConnection } from '@/server/services/repo.service';
+import { generateVerifiedFix, verifyFix, approveAndCreatePr } from '@/server/services/verifiedFix.service';
 import { revalidateOrganizationStatusPages } from '@/server/revalidate';
 import { toFormObject } from './form-utils';
 
@@ -467,6 +473,7 @@ const COPILOT_LABELS = {
   STATUS_UPDATE: 'Status-update draft',
   POSTMORTEM: 'Postmortem draft',
   CODE_FIX: 'Code fix suggestion',
+  VERIFIED_FIX: 'Verified fix suggestion',
 } as const;
 
 export async function generateCopilotDraftAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
@@ -571,6 +578,131 @@ export async function activateModelVersionAction(_state: ActionResult | undefine
     const result = await activateModelVersion({ organizationId: organization.id, userId: user.id, versionId });
     revalidatePath('/dashboard/model');
     return { ok: true, message: `Version v${result.version} is now serving${result.previousVersion ? ` (was v${result.previousVersion})` : ''}. Recorded in the audit log.` };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+// ---------------------------------------------------------------- V4 — Verified Fix Loop (GitHub repo connect + sandbox + PR)
+
+export async function connectRepoAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const input = await parse(repoConnectionCreateSchema, formData);
+    const connection = await createRepoConnection({
+      organizationId: organization.id,
+      userId: user.id,
+      owner: input.owner,
+      repo: input.repo,
+      defaultBranch: input.defaultBranch,
+      pinnedCommitSha: input.pinnedCommitSha ?? null,
+    });
+    revalidatePath('/dashboard/repos');
+    revalidatePath('/dashboard/settings');
+    return { ok: true, message: `Connected ${connection.fullName} @ ${connection.pinnedCommitSha ?? connection.defaultBranch}` };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function pinCommitAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const repoConnectionId = String(formData.get('repoConnectionId') ?? '');
+    const input = await parse(repoPinSchema, formData);
+    if (!repoConnectionId) return { ok: false, error: 'Missing repo connection id.' };
+    const pinned = await pinRepoCommit({ organizationId: organization.id, userId: user.id, repoConnectionId, commitSha: input.commitSha });
+    revalidatePath('/dashboard/repos');
+    return { ok: true, message: `Pinned ${pinned.fullName} to ${pinned.pinnedCommitSha}` };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function deactivateRepoAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const repoConnectionId = String(formData.get('repoConnectionId') ?? '');
+    if (!repoConnectionId) return { ok: false, error: 'Missing repo connection id.' };
+    await deactivateRepoConnection({ organizationId: organization.id, userId: user.id, repoConnectionId });
+    revalidatePath('/dashboard/repos');
+    return { ok: true, message: 'Repository deactivated.' };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function generateVerifiedFixAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const incidentId = String(formData.get('incidentId') ?? '');
+    if (!incidentId) return { ok: false, error: 'Missing incident id.' };
+    const raw = toFormObject(formData);
+    const input = verifiedFixGenerateSchema.parse({
+      attachment: typeof raw.attachment === 'string' ? raw.attachment : undefined,
+      repoConnectionId: typeof raw.repoConnectionId === 'string' && raw.repoConnectionId ? raw.repoConnectionId : undefined,
+      commitSha: typeof raw.commitSha === 'string' && raw.commitSha ? raw.commitSha : undefined,
+      testCommand: typeof raw.testCommand === 'string' && raw.testCommand ? raw.testCommand : undefined,
+    });
+    const result = await generateVerifiedFix({
+      organizationId: organization.id,
+      userId: user.id,
+      incidentId,
+      attachment: input.attachment ?? null,
+      repoConnectionId: input.repoConnectionId ?? null,
+      commitSha: input.commitSha ?? null,
+      testCommand: input.testCommand ?? null,
+    });
+    revalidatePath(`/dashboard/incidents/${incidentId}`);
+    return { ok: true, message: `Verified fix drafted${result.verification ? ` — verification ${result.verification.status}` : ''}. Review diff + evidence below.` };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function verifySuggestionAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const suggestionId = String(formData.get('suggestionId') ?? '');
+    if (!suggestionId) return { ok: false, error: 'Missing suggestion id.' };
+    const repoConnectionId = String(formData.get('repoConnectionId') ?? '') || null;
+    const commitSha = String(formData.get('commitSha') ?? '') || null;
+    const testCommand = String(formData.get('testCommand') ?? '') || null;
+    const patch = String(formData.get('patch') ?? '').trim();
+    if (!patch) return { ok: false, error: 'Patch is required.' };
+
+    // Need incidentId — fetch suggestion via service? We'll require incidentId in form too
+    const incidentId = String(formData.get('incidentId') ?? '');
+    if (!incidentId) return { ok: false, error: 'Missing incident id.' };
+
+    const verification = await verifyFix({
+      organizationId: organization.id,
+      userId: user.id,
+      incidentId,
+      suggestionId,
+      repoConnectionId,
+      commitSha,
+      patch,
+      testCommand,
+    });
+    revalidatePath(`/dashboard/incidents/${incidentId}`);
+    return { ok: true, message: `Verification ${verification.status} — evidence bundle ready.` };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function approveVerificationAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const verificationId = String(formData.get('verificationId') ?? '');
+    if (!verificationId) return { ok: false, error: 'Missing verification id.' };
+    const title = String(formData.get('title') ?? '') || null;
+    const body = String(formData.get('body') ?? '') || null;
+    const pr = await approveAndCreatePr({ organizationId: organization.id, userId: user.id, verificationId, title, body });
+    revalidatePath(`/dashboard/incidents/${pr.incidentId}`);
+    revalidatePath('/dashboard/repos');
+    return { ok: true, message: `PR created: ${pr.branch} — ${pr.externalUrl ?? 'mock URL'} (audit logged)` };
   } catch (error) {
     return toFailure(error);
   }

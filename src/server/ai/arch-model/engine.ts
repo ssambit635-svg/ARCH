@@ -437,6 +437,21 @@ function codeFix(context: CopilotContext, knowledge: CopilotKnowledge) {
 
 export type IncidentTask = Exclude<CopilotTask, 'code_review'>;
 
+function verifiedFix(context: CopilotContext, knowledge: CopilotKnowledge) {
+  const base = codeFix(context, knowledge);
+  // Add test plan for verified fix loop
+  const testPlan = [
+    'Run existing unit tests for the affected module',
+    'Verify fix against the reported error (stack trace / reproduction)',
+    'Check for regressions in related services',
+  ];
+  return {
+    ...base,
+    patch: base.patch ?? `// Auto-generated fix for ${context.incident.title}\n// Pinned to commit: evidence bundle will include exact SHA\n${(context.attachment?.text ?? '').slice(0, 2000)}`,
+    testPlan,
+  };
+}
+
 export function archDraft(task: IncidentTask, context: CopilotContext, model?: ArchModelRuntime): unknown {
   const knowledge = knowledgeFor(context, model);
   switch (task) {
@@ -450,5 +465,7 @@ export function archDraft(task: IncidentTask, context: CopilotContext, model?: A
       return postmortem(context, knowledge);
     case 'code_fix':
       return codeFix(context, knowledge);
+    case 'verified_fix':
+      return verifiedFix(context, knowledge);
   }
 }
