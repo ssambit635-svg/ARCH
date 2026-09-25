@@ -3,10 +3,13 @@ import { AppError } from '@/lib/errors';
 import { requirePermission } from '@/lib/permissions';
 import { writeAudit } from '@/lib/audit';
 import { repoConnectionRepository } from '@/server/repositories/repoConnection.repository';
+import { enforceRateLimit } from '@/lib/rate-limit';
 
 const COMMIT_SHA_REGEX = /^[a-f0-9]{7,40}$/i;
 const OWNER_REGEX = /^[a-zA-Z0-9_.-]+$/;
 const REPO_REGEX = /^[a-zA-Z0-9_.-]+$/;
+const MAX_REPOS_PER_ORG = 20;
+const REPO_RATE_LIMIT = { limit: 20, windowMs: 60_000 };
 
 function normalizeFullName(owner: string, repo: string): string {
   return `${owner.trim()}/${repo.trim()}`;
@@ -20,19 +23,32 @@ function validateCommitSha(sha: string): void {
 
 function validateOwnerRepo(owner: string, repo: string): void {
   if (!OWNER_REGEX.test(owner) || !REPO_REGEX.test(repo)) {
-    throw AppError.badRequest('Invalid GitHub owner or repo name.');
+    throw AppError.badRequest('Invalid GitHub owner or repo name. Use letters, numbers, dash, dot, underscore.');
   }
   if (owner.length > 100 || repo.length > 100) {
-    throw AppError.badRequest('Owner or repo name too long.');
+    throw AppError.badRequest('Owner or repo name too long (max 100).');
+  }
+  // Prevent reserved names
+  if (['.', '..'].includes(owner) || ['.', '..'].includes(repo)) {
+    throw AppError.badRequest('Owner/repo cannot be . or ..');
   }
 }
 
 /**
  * V4 M1 — GitHub repo connect + org permission + commit pinning.
  *
- * RBAC: repo.manage (OWNER/ADMIN) to create/update/pin/deactivate, repo.read (all roles) to list.
- * Commit pinning: exact SHA the fix was tested against (repo@commit checkout).
- * Every mutation writes an audit entry with actor, action, entity, metadata.
+ * Architecture:
+ *   - Organization owns many RepoConnections (GitHub)
+ *   - Each connection has pinnedCommitSha = exact commit fix was tested against (repo@commit)
+ *   - RBAC: repo.manage (OWNER/ADMIN) to mutate, repo.read (all) to list
+ *   - Rate limited + max per org to prevent abuse
+ *   - Every mutation audited with actor, action, entity, metadata
+ *   - Cross-tenant isolation: findById always filters by organizationId → 404 if not in org
+ *
+ * Why commit pinning matters:
+ *   Without pinning, a patch generated against main today may not apply tomorrow.
+ *   With pinning, evidence bundle says "tested against acme/api @ abc123", so human reviewer
+ *   knows exact base, and PR can be created from that SHA.
  */
 
 export async function listRepoConnections(params: { organizationId: string; userId: string; includeInactive?: boolean }) {
@@ -56,6 +72,7 @@ export async function createRepoConnection(params: {
   pinnedCommitSha?: string | null;
 }) {
   await requirePermission(params.organizationId, params.userId, 'repo.manage');
+  enforceRateLimit(`repo-connect:${params.organizationId}`, REPO_RATE_LIMIT);
 
   const owner = params.owner.trim();
   const repo = params.repo.trim();
@@ -66,7 +83,11 @@ export async function createRepoConnection(params: {
     validateCommitSha(params.pinnedCommitSha);
   }
 
-  // Prevent duplicate connections for same repo in same org
+  const count = await repoConnectionRepository.countActive(params.organizationId);
+  if (count >= MAX_REPOS_PER_ORG) {
+    throw AppError.badRequest(`Too many connected repos (max ${MAX_REPOS_PER_ORG}). Deactivate unused ones first.`);
+  }
+
   const existing = await repoConnectionRepository.findByFullName(params.organizationId, fullName);
   if (existing) {
     throw AppError.conflict(`Repository ${fullName} is already connected.`, { fullName });
@@ -80,7 +101,7 @@ export async function createRepoConnection(params: {
         repo,
         fullName,
         defaultBranch: params.defaultBranch?.trim() || 'main',
-        pinnedCommitSha: params.pinnedCommitSha ?? null,
+        pinnedCommitSha: params.pinnedCommitSha ? params.pinnedCommitSha.toLowerCase() : null,
         connectedById: params.userId,
       },
       tx,
@@ -92,7 +113,14 @@ export async function createRepoConnection(params: {
         action: 'repo.connect',
         entityType: 'repo_connection',
         entityId: created.id,
-        metadata: { fullName, owner, repo, defaultBranch: created.defaultBranch, pinnedCommitSha: created.pinnedCommitSha ?? null },
+        metadata: {
+          fullName,
+          owner,
+          repo,
+          defaultBranch: created.defaultBranch,
+          pinnedCommitSha: created.pinnedCommitSha ?? null,
+          provider: 'github',
+        },
       },
       tx,
     );
@@ -110,15 +138,21 @@ export async function updateRepoConnection(params: {
   isActive?: boolean;
 }) {
   await requirePermission(params.organizationId, params.userId, 'repo.manage');
+  enforceRateLimit(`repo-connect:${params.organizationId}`, REPO_RATE_LIMIT);
 
   const connection = await repoConnectionRepository.findById(params.organizationId, params.repoConnectionId);
   if (!connection) throw AppError.notFound('Repository connection not found.');
+
+  if (params.defaultBranch !== undefined) {
+    const branch = params.defaultBranch.trim();
+    if (branch.length === 0 || branch.length > 100) throw AppError.badRequest('Invalid branch name.');
+  }
 
   const updated = await db.$transaction(async (tx) => {
     const result = await repoConnectionRepository.update(
       params.repoConnectionId,
       {
-        ...(params.defaultBranch !== undefined ? { defaultBranch: params.defaultBranch } : {}),
+        ...(params.defaultBranch !== undefined ? { defaultBranch: params.defaultBranch.trim() } : {}),
         ...(params.isActive !== undefined ? { isActive: params.isActive } : {}),
       },
       tx,
@@ -130,7 +164,7 @@ export async function updateRepoConnection(params: {
         action: 'repo.update',
         entityType: 'repo_connection',
         entityId: result.id,
-        metadata: { fullName: result.fullName, changes: params },
+        metadata: { fullName: result.fullName, changes: { defaultBranch: params.defaultBranch, isActive: params.isActive } },
       },
       tx,
     );
@@ -147,6 +181,7 @@ export async function pinRepoCommit(params: {
   commitSha: string;
 }) {
   await requirePermission(params.organizationId, params.userId, 'repo.manage');
+  enforceRateLimit(`repo-connect:${params.organizationId}`, REPO_RATE_LIMIT);
   validateCommitSha(params.commitSha);
 
   const connection = await repoConnectionRepository.findById(params.organizationId, params.repoConnectionId);
@@ -165,6 +200,7 @@ export async function pinRepoCommit(params: {
           fullName: result.fullName,
           previousSha: connection.pinnedCommitSha,
           newSha: result.pinnedCommitSha,
+          pinnedAt: new Date().toISOString(),
         },
       },
       tx,
@@ -190,7 +226,7 @@ export async function deactivateRepoConnection(params: { organizationId: string;
         action: 'repo.deactivate',
         entityType: 'repo_connection',
         entityId: result.id,
-        metadata: { fullName: result.fullName },
+        metadata: { fullName: result.fullName, deactivatedAt: new Date().toISOString() },
       },
       tx,
     );
