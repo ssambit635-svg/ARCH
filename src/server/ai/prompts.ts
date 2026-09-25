@@ -80,6 +80,17 @@ Return: {"diagnosis": string, "likelyCause": string, "suggestedFixes": string[],
 - "patch": corrected code ONLY if code was provided and you are confident; otherwise null.
 - "references": titles of similar past incidents from incident_context.knowledge, if relevant.`,
   },
+  verified_fix: {
+    label: 'SUGGEST_VERIFIED_FIX',
+    instructions: `Task: diagnose the error and propose a PATCH that will be tested in an isolated sandbox before human approval.
+Return: {"diagnosis": string, "likelyCause": string, "suggestedFixes": string[], "patch": string, "testPlan": string[], "references": string[], "commitSha": string | null}
+- This is a Verified Fix Loop: your patch will be applied in a temporary container (no prod credentials, timeout enforced) and tested.
+- "patch": MUST be a unified diff or complete fixed file. It will be applied in sandbox. Keep it minimal and safe.
+- "testPlan": 2-5 steps that sandbox will run to verify the fix (e.g., "run npm test for auth module", "reproduce error from stack trace").
+- Safety: NEVER include rm -rf, curl|bash, secrets, or absolute system paths. Patch must be safe to auto-test.
+- Include "commitSha" if you know the exact commit the fix is based on (from repo context).
+- Same evidence bundle pattern: diff + test results + evidence will be shown to human before PR creation.`,
+  },
 };
 
 export function taskLabel(task: CopilotTask): string {
@@ -134,13 +145,7 @@ const CODE_MODES: Record<CodeReviewInput['mode'], string> = {
 
 export function buildCodeReviewPrompt(input: CodeReviewInput): PromptPair {
   return {
-    system: `${CODE_PREAMBLE}
-
-Task: ${CODE_MODES[input.mode]}
-Return: {"summary": string, "findings": {"line": number | null, "severity": "error" | "warning" | "info", "message": string, "suggestion": string}[], "improvedCode": string | null, "explanation": string}
-- code_context.staticFindings and errorDiagnoses come from ARCH's built-in analyzer. Confirm or discard them; add what they missed.
-- "improvedCode": the full improved code (same language), or null when nothing should change or the input is only a log/stack trace.
-- "explanation": short, practical, markdown bullets allowed.`,
+    system: `${CODE_PREAMBLE}\n\nTask: ${CODE_MODES[input.mode]}\nReturn: {"summary": string, "findings": {"line": number | null, "severity": "error" | "warning" | "info", "message": string, "suggestion": string}[], "improvedCode": string | null, "explanation": string}\n- code_context.staticFindings and errorDiagnoses come from ARCH's built-in analyzer. Confirm or discard them; add what they missed.\n- "improvedCode": the full improved code (same language), or null when nothing should change or the input is only a log/stack trace.\n- "explanation": short, practical, markdown bullets allowed.`,
     user: `TASK: CODE_${input.mode.toUpperCase()}\n<code_context>\n${JSON.stringify(input, null, 2).replace(/</g, '\\u003c').replace(/>/g, '\\u003e')}\n</code_context>`,
   };
 }

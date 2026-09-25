@@ -195,8 +195,11 @@ export const webhookIngestSchema = z.object({
 
 // ---------- ARCH Copilot (V2) ----------
 
-export const aiSuggestionTypes = ['SUMMARY', 'TRIAGE', 'STATUS_UPDATE', 'POSTMORTEM', 'CODE_FIX'] as const;
+export const aiSuggestionTypes = ['SUMMARY', 'TRIAGE', 'STATUS_UPDATE', 'POSTMORTEM', 'CODE_FIX', 'VERIFIED_FIX'] as const;
 export const aiSuggestionStatuses = ['PENDING', 'APPROVED', 'DISMISSED'] as const;
+
+export const fixVerificationStatuses = ['PENDING', 'RUNNING', 'PASSED', 'FAILED', 'TIMEOUT', 'UNSAFE', 'ERROR'] as const;
+export const pullRequestStatuses = ['CREATED', 'OPEN', 'MERGED', 'CLOSED'] as const;
 
 export const copilotSuggestionListQuerySchema = z.object({
   status: z.enum(aiSuggestionStatuses).optional(),
@@ -229,4 +232,72 @@ export const codeReviewSchema = z.object({
 export const copilotApproveSchema = z.object({
   /** Reviewer-edited text for summary / status update / postmortem drafts. */
   text: z.string().trim().max(10_000).optional(),
+});
+
+// ---------- V4 — Verified Fix Loop (GitHub repo connect + sandbox + PR) ----------
+
+const githubOwner = z
+  .string()
+  .trim()
+  .min(1, 'GitHub owner is required.')
+  .max(100, 'Owner too long.')
+  .regex(/^[a-zA-Z0-9_.-]+$/, 'Owner may contain letters, numbers, dash, dot and underscore.');
+
+const githubRepo = z
+  .string()
+  .trim()
+  .min(1, 'Repository name is required.')
+  .max(100, 'Repo name too long.')
+  .regex(/^[a-zA-Z0-9_.-]+$/, 'Repo name may contain letters, numbers, dash, dot and underscore.');
+
+const commitSha = z
+  .string()
+  .trim()
+  .min(7, 'Commit SHA must be at least 7 characters.')
+  .max(40, 'Commit SHA must be at most 40 characters.')
+  .regex(/^[a-f0-9]+$/i, 'Commit SHA must be hex.');
+
+export const repoConnectionCreateSchema = z.object({
+  owner: githubOwner,
+  repo: githubRepo,
+  defaultBranch: z.string().trim().min(1).max(100).default('main'),
+  pinnedCommitSha: commitSha.optional(),
+});
+
+export const repoConnectionUpdateSchema = z.object({
+  defaultBranch: z.string().trim().min(1).max(100).optional(),
+  isActive: z.boolean().optional(),
+});
+
+export const repoPinSchema = z.object({
+  commitSha: commitSha,
+});
+
+export const verifiedFixGenerateSchema = z.object({
+  attachment: z.string().max(20_000).optional(),
+  repoConnectionId: id.optional(),
+  commitSha: commitSha.optional(),
+  testCommand: z.string().trim().max(200).optional(),
+});
+
+export const fixVerificationCreateSchema = z.object({
+  suggestionId: id,
+  repoConnectionId: id.optional(),
+  commitSha: commitSha.optional(),
+  patch: z.string().min(1).max(50_000),
+  testCommand: z.string().trim().max(200).optional(),
+});
+
+export const pullRequestCreateSchema = z.object({
+  verificationId: id,
+  title: shortText(200).optional(),
+  body: z.string().trim().max(5000).optional(),
+});
+
+export const repoConnectionListQuerySchema = z.object({
+  organizationId: id.optional(),
+  includeInactive: z
+    .union([z.boolean(), z.enum(['true', 'false'])])
+    .transform((v) => v === true || v === 'true')
+    .optional(),
 });

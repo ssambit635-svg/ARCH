@@ -14,7 +14,7 @@ import { createOpenAiProvider } from './openai';
  */
 
 /** What the draft is for. Lets the mock / native providers return a matching shape. */
-export type CopilotTask = 'summary' | 'triage' | 'status_update' | 'postmortem' | 'code_fix' | 'code_review';
+export type CopilotTask = 'summary' | 'triage' | 'status_update' | 'postmortem' | 'code_fix' | 'verified_fix' | 'code_review';
 
 export type GenerateOptions = {
   task: CopilotTask;
