@@ -29,6 +29,11 @@ export const PERMISSIONS = {
   'webhook.read': ['OWNER', 'ADMIN'],
   'webhook.manage': ['OWNER', 'ADMIN'],
   'audit.read': ['OWNER', 'ADMIN'],
+  // V2 — ARCH Copilot. Generating and reviewing drafts is a responder job; anyone who can read
+  // the incident can read its drafts.
+  'copilot.read': ['OWNER', 'ADMIN', 'RESPONDER', 'VIEWER'],
+  'copilot.generate': ['OWNER', 'ADMIN', 'RESPONDER'],
+  'copilot.review': ['OWNER', 'ADMIN', 'RESPONDER'],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type PermissionAction = keyof typeof PERMISSIONS;

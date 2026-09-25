@@ -103,6 +103,21 @@ enum InvitationStatus {
   EXPIRED
 }
 
+/// V2 — what an ARCH Copilot draft is for (AGENTS-V2.md).
+enum AiSuggestionType {
+  SUMMARY
+  TRIAGE
+  STATUS_UPDATE
+  POSTMORTEM
+}
+
+/// V2 — AI output is always a draft until a human approves or dismisses it.
+enum AiSuggestionStatus {
+  PENDING
+  APPROVED
+  DISMISSED
+}
+
 // ---------- Auth (Auth.js compatible) ----------
 
 model User {
@@ -124,6 +139,8 @@ model User {
   auditLogs         AuditLog[]
   notifications     Notification[]
   invitationsSent   Invitation[]    @relation("InvitationInviter")
+  aiSuggestionsCreated  AiSuggestion[] @relation("AiSuggestionCreator")
+  aiSuggestionsReviewed AiSuggestion[] @relation("AiSuggestionReviewer")
 
   @@map("users")
 }
@@ -184,6 +201,7 @@ model Organization {
   webhookEndpoints WebhookEndpoint[]
   auditLogs        AuditLog[]
   notifications    Notification[]
+  aiSuggestions    AiSuggestion[]
 
   @@map("organizations")
 }
@@ -297,6 +315,7 @@ model Incident {
   events       IncidentEvent[]
   notifications Notification[]
   webhookDeliveries WebhookDelivery[]
+  aiSuggestions AiSuggestion[]
 
   @@index([organizationId, status])
   @@index([organizationId, createdAt])
@@ -458,4 +477,39 @@ model Notification {
   @@index([status, createdAt])
   @@index([organizationId, createdAt])
   @@map("notifications")
+}
+
+// ---------- ARCH Copilot (V2) ----------
+
+/// One AI-generated draft. Never applied to an incident, status page or notification until a
+/// human with RESPONDER+ approves it. Dismissed drafts are kept for the audit trail.
+model AiSuggestion {
+  id               String             @id @default(cuid())
+  organizationId   String
+  incidentId       String
+  type             AiSuggestionType
+  status           AiSuggestionStatus @default(PENDING)
+  /// Provider + model that produced the draft ("mock", "openai", "anthropic").
+  provider         String
+  model            String
+  promptTokens     Int                @default(0)
+  completionTokens Int                @default(0)
+  latencyMs        Int?
+  /// Validated, post-processed draft. Shape depends on `type` (see src/server/ai/schemas.ts).
+  output           Json
+  createdById      String?
+  createdAt        DateTime           @default(now())
+  reviewedById     String?
+  reviewedAt       DateTime?
+  /// Timeline event created when an approved draft was posted to the incident.
+  appliedEventId   String?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  incident     Incident     @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  createdBy    User?        @relation("AiSuggestionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  reviewedBy   User?        @relation("AiSuggestionReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, incidentId, createdAt])
+  @@index([incidentId, status])
+  @@map("ai_suggestions")
 }

@@ -16,12 +16,15 @@ import {
   statusPagePublishSchema,
   updateMemberRoleSchema,
   webhookEndpointCreateSchema,
+  copilotApproveSchema,
+  copilotGenerateSchema,
 } from '@/lib/validation';
 import { createIncident, addIncidentComment, updateIncident } from '@/server/services/incident.service';
 import { createProject, createService, updateService } from '@/server/services/project.service';
 import { createStatusPage, setStatusPagePublished, updateStatusPage } from '@/server/services/statusPage.service';
 import { createOrganization, changeMemberRole, inviteMember, removeMember, updateOrganization } from '@/server/services/organization.service';
 import { createEndpoint, deleteEndpoint, rotateEndpointSecret, updateEndpoint } from '@/server/services/webhook.service';
+import { approveSuggestion, dismissSuggestion, generateSuggestion } from '@/server/services/copilot.service';
 import { revalidateOrganizationStatusPages } from '@/server/revalidate';
 import { toFormObject } from './form-utils';
 
@@ -448,6 +451,55 @@ export async function deleteWebhookEndpointAction(_state: ActionResult | undefin
     await deleteEndpoint({ organizationId: organization.id, userId: user.id, endpointId });
     revalidatePath('/dashboard/settings');
     return { ok: true, message: 'Endpoint deleted.' };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+// ---------------------------------------------------------------- ARCH Copilot (V2)
+
+const COPILOT_LABELS = {
+  SUMMARY: 'Summary',
+  TRIAGE: 'Triage suggestion',
+  STATUS_UPDATE: 'Status-update draft',
+  POSTMORTEM: 'Postmortem draft',
+} as const;
+
+export async function generateCopilotDraftAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const input = await parse(copilotGenerateSchema, formData);
+    await generateSuggestion({ organizationId: organization.id, userId: user.id, incidentId: input.incidentId, type: input.type });
+    revalidatePath(`/dashboard/incidents/${input.incidentId}`);
+    return { ok: true, message: `${COPILOT_LABELS[input.type]} drafted — review it below.` };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function approveCopilotDraftAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const suggestionId = String(formData.get('suggestionId') ?? '');
+    if (!suggestionId) return { ok: false, error: 'Missing draft id.' };
+    const input = await parse(copilotApproveSchema, formData);
+    const suggestion = await approveSuggestion({ organizationId: organization.id, userId: user.id, suggestionId, text: input.text });
+    if (suggestion) revalidatePath(`/dashboard/incidents/${suggestion.incidentId}`);
+    await revalidateOrganizationStatusPages(organization.id);
+    return { ok: true, message: suggestion?.type === 'TRIAGE' ? 'Triage applied.' : 'Posted to the timeline.' };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function dismissCopilotDraftAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const suggestionId = String(formData.get('suggestionId') ?? '');
+    if (!suggestionId) return { ok: false, error: 'Missing draft id.' };
+    const suggestion = await dismissSuggestion({ organizationId: organization.id, userId: user.id, suggestionId });
+    if (suggestion) revalidatePath(`/dashboard/incidents/${suggestion.incidentId}`);
+    return { ok: true, message: 'Draft dismissed.' };
   } catch (error) {
     return toFailure(error);
   }

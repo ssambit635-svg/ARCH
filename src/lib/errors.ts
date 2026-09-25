@@ -11,6 +11,7 @@ export type ErrorCode =
   | 'NOT_FOUND'
   | 'CONFLICT'
   | 'RATE_LIMITED'
+  | 'SERVICE_UNAVAILABLE'
   | 'INTERNAL';
 
 const STATUS_BY_CODE: Record<ErrorCode, number> = {
@@ -22,6 +23,7 @@ const STATUS_BY_CODE: Record<ErrorCode, number> = {
   CONFLICT: 409,
   RATE_LIMITED: 429,
   INTERNAL: 500,
+  SERVICE_UNAVAILABLE: 503,
 };
 
 export type FieldIssue = { path: string; message: string };
@@ -67,6 +69,11 @@ export class AppError extends Error {
 
   static rateLimited(message = 'Too many requests.', details?: unknown): AppError {
     return new AppError('RATE_LIMITED', message, { details });
+  }
+
+  /** A dependency we do not control (e.g. the AI provider) failed or timed out. */
+  static unavailable(message = 'A dependency is temporarily unavailable. Please try again.', details?: unknown): AppError {
+    return new AppError('SERVICE_UNAVAILABLE', message, { details });
   }
 
   static internal(message = 'Something went wrong on our side.'): AppError {

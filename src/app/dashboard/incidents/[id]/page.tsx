@@ -18,6 +18,11 @@ import {
 import { updateIncidentAction } from '@/app/dashboard/actions';
 import { ActionForm } from '@/components/dashboard/action-form';
 import { Field, Select } from '@/components/ui/form';
+import { CopilotPanel, type CopilotSuggestionView } from '@/components/incidents/copilot-panel';
+import { listSuggestions } from '@/server/services/copilot.service';
+import { copilotConfig } from '@/server/ai/provider';
+import { suggestionTimelineText } from '@/server/ai/schemas';
+import { roleHasPermission } from '@/lib/permissions';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,10 +43,43 @@ export default async function IncidentDetailPage({ params }: { params: Promise<{
 
   if (!incident) notFound();
 
-  const [members, services] = await Promise.all([
+  const [members, services, suggestions] = await Promise.all([
     listMembers({ organizationId: organization.id, userId: user.id }),
     listServices({ organizationId: organization.id, userId: user.id }),
+    listSuggestions({ organizationId: organization.id, userId: user.id, incidentId: incident.id }),
   ]);
+
+  const memberName = (userId: string | null | undefined) => {
+    if (!userId) return null;
+    const member = members.find((candidate) => candidate.userId === userId);
+    return member ? (member.user.name ?? member.user.email) : 'a former member';
+  };
+
+  const copilotSuggestions: CopilotSuggestionView[] = suggestions.map((suggestion) => ({
+    id: suggestion.id,
+    type: suggestion.type,
+    status: suggestion.status,
+    output: suggestion.output,
+    draftText: suggestionTimelineText(suggestion.type, suggestion.output),
+    model: suggestion.model,
+    provider: suggestion.provider,
+    promptTokens: suggestion.promptTokens,
+    completionTokens: suggestion.completionTokens,
+    createdBy: suggestion.createdBy?.name ?? suggestion.createdBy?.email ?? 'a former member',
+    createdAgo: timeAgo(suggestion.createdAt),
+    createdAt: suggestion.createdAt.toISOString(),
+    reviewedBy: suggestion.reviewedBy?.name ?? suggestion.reviewedBy?.email ?? null,
+    reviewedAgo: suggestion.reviewedAt ? timeAgo(suggestion.reviewedAt) : null,
+    ...(suggestion.type === 'TRIAGE'
+      ? {
+          triage: {
+            currentSeverity: incident.severity,
+            suggestedAssignee: memberName((suggestion.output as { assigneeId?: string }).assigneeId),
+            currentAssignee: memberName(incident.assignedToId),
+          },
+        }
+      : {}),
+  }));
 
   const assignable = members
     .filter((member) => member.role !== 'VIEWER')
@@ -80,6 +118,14 @@ export default async function IncidentDetailPage({ params }: { params: Promise<{
             <CardHeader title="Timeline" description="Every comment, status change and assignment, in order." />
             <IncidentTimeline events={incident.events} />
           </Card>
+
+          <CopilotPanel
+            incidentId={incident.id}
+            canGenerate={roleHasPermission(organization.role, 'copilot.generate')}
+            canReview={roleHasPermission(organization.role, 'copilot.review')}
+            config={copilotConfig()}
+            suggestions={copilotSuggestions}
+          />
 
           <Card>
             <CardHeader title="Add an update" description="Updates notify the responders and land in the audit trail." />

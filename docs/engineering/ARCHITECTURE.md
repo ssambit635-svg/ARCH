@@ -316,6 +316,9 @@ change does not ship — including for the founders.
 | D8 | Email behind an adapter, console in dev | Dev works offline; provider swap is a config change | Adding Slack (v1.1) |
 | D9 | No AI in v1 | Not the differentiator; adds data-handling risk before trust exists | Timeline data is rich and clean (v2, gated) |
 | D10 | Status page cached, invalidated on write | Fast for customers, correct for us | If invalidation proves flaky, move to short TTL + revalidate |
+| D11 | V2 Copilot output is a persisted draft (`AiSuggestion`), applied only on human approval | Trust: AI never changes an incident, status page or notification by itself; drafts are auditable | Never for customer-facing output |
+| D12 | Copilot context is whitelisted + redacted in `src/server/ai/context.ts`, which is pure (no DB access) | Tenancy stays enforced by repositories; nothing in `ai/` can read across orgs; triage uses opaque member refs | If a task genuinely needs more fields — add them to the whitelist explicitly |
+| D13 | Vendor adapters over plain `fetch`, `mock` provider as the default | No SDK lock-in; dev + tests run offline and deterministic | A vendor feature needs its SDK |
 
 ---
 
