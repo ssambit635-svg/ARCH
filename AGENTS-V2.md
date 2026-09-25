@@ -112,6 +112,14 @@ The external-vendor dependency is replaced; every V2 rule above still applies. F
   `GET /api/copilot/model`, `POST /api/copilot/model/train`. New pages: `/dashboard/code` and
   `/dashboard/model`.
 - The worker retrains stale org models every `ARCH_MODEL_RETRAIN_MINUTES`.
+- **V3.1 (registry + background training):** `ArchModelVersion` (registry) + `ArchModelJob`
+  (training queue), migration `20260925180000_v3_model_registry`. Retraining is enqueued from the
+  web layer (202) and executed by the worker: train → evaluate on holdout → promote only if the
+  candidate beats the active model; rollback via `POST /api/copilot/model/rollback` or
+  `POST /api/copilot/model/versions/:id/activate`. Every train/activate is audited with
+  from→to versions. `EngineOutput` unchanged; code tasks additionally retrieve from the optional
+  code/review corpora (`model:fetch-code` / `model:fetch-review`, licenses in
+  `docs/legal/TRAINING-DATA-LICENSES.md`; model license `docs/legal/ARCH-MODEL-LICENSE.md`).
 - Rules added:
   - Code Assist is stateless, and its audit entries hold metadata only.
   - LLMs only ever receive `scrubSecrets(code)`.

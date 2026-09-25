@@ -25,6 +25,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "model:fetch-public": "node scripts/arch-model/fetch-public-incidents.mjs",
+    "model:fetch-code": "node scripts/arch-model/fetch-code-corpus.mjs",
+    "model:fetch-review": "node scripts/arch-model/fetch-review-corpus.mjs",
+    "model:fetch-all": "npm run model:fetch-public && npm run model:fetch-code && npm run model:fetch-review",
     "model:train": "tsx scripts/arch-model/train.ts",
     "model:eval": "tsx scripts/arch-model/eval.ts",
     "model:export-finetune": "tsx scripts/arch-model/export-finetune.ts"

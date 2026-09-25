@@ -27,7 +27,7 @@ import { createOrganization, changeMemberRole, inviteMember, removeMember, updat
 import { createEndpoint, deleteEndpoint, rotateEndpointSecret, updateEndpoint } from '@/server/services/webhook.service';
 import { approveSuggestion, dismissSuggestion, generateSuggestion } from '@/server/services/copilot.service';
 import { reviewCode, type CodeReviewResult } from '@/server/services/codeAssist.service';
-import { trainModel } from '@/server/services/archModel.service';
+import { activateModelVersion, rollbackModel, trainModel } from '@/server/services/archModel.service';
 import { revalidateOrganizationStatusPages } from '@/server/revalidate';
 import { toFormObject } from './form-utils';
 
@@ -534,12 +534,43 @@ export async function reviewCodeAction(_state: CodeReviewState | undefined, form
 export async function trainModelAction(_state: ActionResult | undefined, _formData: FormData): Promise<ActionResult> {
   try {
     const { user, organization } = await context();
-    const result = await trainModel({ organizationId: organization.id, userId: user.id });
+    // V3: retraining is a background job — the click only queues it. The worker trains a
+    // candidate, evaluates it against the active model and promotes it only if it wins.
+    const job = await trainModel({ organizationId: organization.id, userId: user.id });
     revalidatePath('/dashboard/model');
     return {
       ok: true,
-      message: `Model v${result.version} trained on ${result.teamDocuments} of your resolved incident${result.teamDocuments === 1 ? '' : 's'} (${result.totalDocuments} documents in ${result.metrics.trainingMs} ms).`,
+      message:
+        job.status === 'PENDING' || job.status === 'RUNNING'
+          ? 'Training queued — the worker will train, evaluate, and promote the new model only if it beats the current one. Refresh in a moment to see the result.'
+          : 'Training queued.',
     };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function rollbackModelAction(_state: ActionResult | undefined, _formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const result = await rollbackModel({ organizationId: organization.id, userId: user.id });
+    revalidatePath('/dashboard/model');
+    return {
+      ok: true,
+      message: `Rolled back: v${result.version} is now serving (was v${result.previousVersion ?? '—'}). Recorded in the audit log.`,
+    };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function activateModelVersionAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const versionId = String(formData.get('versionId') ?? '');
+    const result = await activateModelVersion({ organizationId: organization.id, userId: user.id, versionId });
+    revalidatePath('/dashboard/model');
+    return { ok: true, message: `Version v${result.version} is now serving${result.previousVersion ? ` (was v${result.previousVersion})` : ''}. Recorded in the audit log.` };
   } catch (error) {
     return toFailure(error);
   }

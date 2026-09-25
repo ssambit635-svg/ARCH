@@ -32,9 +32,12 @@ export type CopilotCandidate = {
   isCurrentAssignee: boolean;
 };
 
-/** A past incident the ARCH model found similar (same organization, pattern library or public). */
+/**
+ * A past incident the ARCH model found similar (same organization, pattern library or public),
+ * or — for code tasks only — a real bug fix / code review from the downloaded corpora.
+ */
 export type SimilarIncidentHint = {
-  source: 'your_team' | 'pattern_library' | 'public_postmortem';
+  source: 'your_team' | 'pattern_library' | 'public_postmortem' | 'code_corpus' | 'review_corpus';
   title: string;
   category: string | null;
   severity?: IncidentSeverity;

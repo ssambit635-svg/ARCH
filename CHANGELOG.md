@@ -15,6 +15,44 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Added — V3.1 · Model registry, background training and more training data
+
+- **Retraining is now a background job.** "Retrain now" (and `POST /api/copilot/model/train`)
+  queues a job and returns `202 Accepted` immediately — training never runs inside a web request.
+  The worker claims the job, trains a candidate, evaluates it and promotes it **only if it beats
+  the model currently serving** the workspace. Losing runs are kept as `REJECTED` with the reason.
+- **Model registry.** Every training run is kept as a version (`arch_model_versions`, migration
+  `20260925180000_v3_model_registry`) with its artifact, metrics and evaluation. The new registry
+  table on `/dashboard/model` lists every version; OWNER/ADMIN can activate any of them
+  (**rollback**), via `POST /api/copilot/model/rollback` or
+  `POST /api/copilot/model/versions/:id/activate`.
+- **Version audit trail.** Every train/promote/reject and every activation writes an audit entry
+  including `fromVersion → version`, so the audit log shows which model version was serving at any
+  point in time.
+- **More training data** — the model gets smarter with every corpus you download (git-ignored,
+  fetched at run time, license texts and notices saved alongside):
+  - `npm run model:fetch-code` — real bug-fix knowledge: **SWE-bench / SWE-bench Verified (MIT)**
+    and **ManySStuBs4J (Apache-2.0)**. Feeds code-fix suggestions (stack trace → patch).
+  - `npm run model:fetch-review` — human code-review knowledge: **github-codereview (MIT)** and
+    **Microsoft CodeReviewer (Apache-2.0)**. Grounds Code Assist answers in what real reviewers said.
+  - `npm run model:fetch-public` now also indexes **saystone/awesome-postmortem (CC0)**.
+- **License documents.** `docs/legal/TRAINING-DATA-LICENSES.md` (every dataset, verified license,
+  commercial-use guidance) and `docs/legal/ARCH-MODEL-LICENSE.md` (the ARCH Model's own license /
+  model card: ownership, draft-only acceptable use, no warranty).
+
+### Compatibility — V3.1
+- **`EngineOutput` is unchanged.** The four V2 features (summary, triage, status update,
+  postmortem) keep their exact JSON contracts and knowledge mix; the code/review corpora enrich
+  only code tasks (`CODE_FIX`, Code Assist).
+- **Safeguards unchanged.** Everything stays draft-only with human approval, organization-scoped
+  data, redaction and audit trail. Code-fix patches are displayed and posted as text after
+  approval — never applied to a repository.
+
+### Migration notes — V3.1
+- Run `npm run db:migrate`. It adds `arch_model_versions` + `arch_model_jobs` and points
+  `arch_models` at the registry. Existing models keep serving; their first retrain registers v1.
+- Start the worker (`npm run worker`) — it now drains the training queue as well as notifications.
+
 ### Added — V3 · ARCH's own AI (no external AI vendors)
 - **ARCH Copilot now runs on ARCH's own model by default.** Summaries, triage, status-update drafts
   and postmortems are produced on your server. Incident data is no longer sent to OpenAI or

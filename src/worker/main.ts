@@ -1,6 +1,6 @@
 import 'dotenv/config';
 import { dispatchPendingNotifications } from '@/server/services/notification.service';
-import { retrainStaleModels } from '@/server/services/archModel.service';
+import { processTrainingJobs, retrainStaleModels } from '@/server/services/archModel.service';
 import { getEmailAdapter } from '@/server/adapters/email';
 import { db } from '@/lib/db';
 import { env } from '@/lib/env';
@@ -18,8 +18,11 @@ import { env } from '@/lib/env';
  * It is safe to run more than one instance: a row is only marked SENT after the adapter accepted
  * it, and each attempt is recorded (attempts, lastError) for operators.
  *
- * V3: it also keeps each organization's ARCH model fresh — every ARCH_MODEL_RETRAIN_MINUTES
- * (default 60, 0 = off) it retrains the models of organizations that resolved incidents since the
+ * V3: it also runs the ARCH model training pipeline. Retraining is a background job, never part
+ * of a web request: the dashboard/API enqueue rows in `arch_model_jobs`, this worker claims them,
+ * trains a candidate, evaluates it against the active model and promotes it only if it wins
+ * (rollback stays available through the registry). Every ARCH_MODEL_RETRAIN_MINUTES (default 60,
+ * 0 = off) it additionally enqueues jobs for organizations that resolved incidents since their
  * last training. Training is CPU-only and takes well under a second per organization.
  */
 
@@ -47,8 +50,16 @@ async function maybeRetrainModels(): Promise<void> {
   if (!RETRAIN_INTERVAL_MS || Date.now() < nextRetrainAt) return;
   nextRetrainAt = Date.now() + RETRAIN_INTERVAL_MS;
   const result = await retrainStaleModels();
-  if (result.trained.length || result.failed.length) {
-    log(`arch-model retrained=${result.trained.length} failed=${result.failed.length}`);
+  if (result.enqueued.length || result.skipped.length) {
+    log(`arch-model retrain enqueued=${result.enqueued.length} skipped=${result.skipped.length}`);
+  }
+}
+
+/** Drain the training queue every tick — cheap no-op when nothing is pending. */
+async function processModelJobs(): Promise<void> {
+  const result = await processTrainingJobs();
+  if (result.processed > 0) {
+    log(`arch-model jobs processed=${result.processed} promoted=${result.promoted} rejected=${result.rejected} failed=${result.failed}`);
   }
 }
 
@@ -71,6 +82,7 @@ async function main() {
 
   if (once) {
     const processed = await tick();
+    await processModelJobs();
     log(`single pass complete (${processed} notification${processed === 1 ? '' : 's'})`);
     await db.$disconnect().catch(() => undefined);
     return;
@@ -85,8 +97,9 @@ async function main() {
     }
     try {
       await maybeRetrainModels();
+      await processModelJobs();
     } catch (error) {
-      console.error(`[worker] arch-model retrain failed: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(`[worker] arch-model training failed: ${error instanceof Error ? error.message : String(error)}`);
     }
     await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
   }

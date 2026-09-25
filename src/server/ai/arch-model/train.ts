@@ -23,7 +23,21 @@ export const ARCH_MODEL_NAME = 'arch-native-1';
 
 export const SEVERITIES: IncidentSeverity[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'];
 
-export type TrainingSource = 'team' | 'pattern' | 'public';
+/**
+ * Where training documents come from:
+ *  - team    the organization's own resolved incidents (tenant-scoped, redacted);
+ *  - pattern the built-in failure pattern library (original ARCH content);
+ *  - public  public postmortems downloaded by `npm run model:fetch-public`;
+ *  - code    real bug-fix knowledge (SWE-bench, ManySStuBs4J) via `npm run model:fetch-code`;
+ *  - review  human code-review knowledge (github-codereview, CodeReviewer) via
+ *            `npm run model:fetch-review`.
+ * `code` and `review` only enrich retrieval for code tasks — never the incident classifiers'
+ * labels, and never another organization's model (they are shared, read-only corpora).
+ */
+export type TrainingSource = 'team' | 'pattern' | 'public' | 'code' | 'review';
+
+/** Bulk external corpora: their tokens only enter the vocabulary when seen in ≥2 documents. */
+export const EXTERNAL_SOURCES: TrainingSource[] = ['public', 'code', 'review'];
 
 export type TrainingDoc = {
   id: string;
@@ -75,7 +89,7 @@ export type IndexedDoc = {
 };
 
 export type ArchModelMetrics = {
-  documents: { team: number; pattern: number; public: number };
+  documents: { team: number; pattern: number; public: number; code: number; review: number };
   severity: { trainedOn: number; holdoutAccuracy: number | null; holdoutSize: number; baseline: number | null };
   category: { trainedOn: number; holdoutAccuracy: number | null; holdoutSize: number };
   team: {
@@ -266,7 +280,10 @@ export function trainArchModel(input: TrainingDoc[], options: { now?: Date } = {
   tokenized.forEach((tokens, index) => {
     const unique = new Set(tokens);
     for (const token of unique) documentFrequency.set(token, (documentFrequency.get(token) ?? 0) + 1);
-    if (docs[index]!.source !== 'public') for (const token of unique) keepAlways.add(token);
+    // Team + pattern tokens are always kept; bulk external corpora (public/code/review) only
+    // contribute vocabulary seen in at least two documents, so one download cannot blow up the
+    // vocabulary or drown the organization's own signal.
+    if (!EXTERNAL_SOURCES.includes(docs[index]!.source)) for (const token of unique) keepAlways.add(token);
   });
   const vocabulary = [...documentFrequency.entries()]
     .filter(([token, df]) => df >= 2 || keepAlways.has(token))
@@ -341,6 +358,8 @@ export function trainArchModel(input: TrainingDoc[], options: { now?: Date } = {
       team: team.length,
       pattern: indexed.filter((doc) => doc.source === 'pattern').length,
       public: indexed.filter((doc) => doc.source === 'public').length,
+      code: indexed.filter((doc) => doc.source === 'code').length,
+      review: indexed.filter((doc) => doc.source === 'review').length,
     },
     severity: {
       trainedOn: severityExamples.length,
@@ -376,4 +395,49 @@ export function trainArchModel(input: TrainingDoc[], options: { now?: Date } = {
     category,
     metrics,
   };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Promotion gate — a new version serves only if it beats the one it replaces
+// ---------------------------------------------------------------------------------------------
+
+export type PromotionCandidate = { metrics: ArchModelMetrics; teamDocuments: number; totalDocuments: number };
+export type PromotionIncumbent = { version: number; score: number; teamDocuments: number };
+export type PromotionDecision = { promote: boolean; score: number; reason: string };
+
+function round3(value: number): number {
+  return Math.round(value * 1000) / 1000;
+}
+
+/**
+ * One comparable number per model: weighted average of the measured holdout accuracies
+ * (severity 0.6 / category 0.4). Components that could not be measured are excluded; a model
+ * with nothing measured scores 0.
+ */
+export function modelScore(metrics: ArchModelMetrics): number {
+  const parts: [weight: number, accuracy: number][] = [];
+  if (metrics.severity.holdoutAccuracy !== null) parts.push([0.6, metrics.severity.holdoutAccuracy]);
+  if (metrics.category.holdoutAccuracy !== null) parts.push([0.4, metrics.category.holdoutAccuracy]);
+  if (parts.length === 0) return 0;
+  const weight = parts.reduce((sum, [w]) => sum + w, 0);
+  return round3(parts.reduce((sum, [w, accuracy]) => sum + w * accuracy, 0) / weight);
+}
+
+/**
+ * Promotion rule (V3): the first model always serves; afterwards a candidate serves only if it
+ * BEATS the active model's measured score. Exact ties fall back to data growth — a model trained
+ * on strictly more of the team's incidents is the better bet when accuracy is level.
+ */
+export function decidePromotion(candidate: PromotionCandidate, incumbent: PromotionIncumbent | null): PromotionDecision {
+  const score = modelScore(candidate.metrics);
+  if (!incumbent) {
+    return { promote: true, score, reason: 'First trained model for this workspace.' };
+  }
+  if (score > incumbent.score) {
+    return { promote: true, score, reason: `Beat active v${incumbent.version}: score ${score} vs ${incumbent.score}.` };
+  }
+  if (score === incumbent.score && candidate.teamDocuments > incumbent.teamDocuments) {
+    return { promote: true, score, reason: `Score level with active v${incumbent.version} (${score}) but trained on more team incidents (${candidate.teamDocuments} vs ${incumbent.teamDocuments}).` };
+  }
+  return { promote: false, score, reason: `Did not beat active v${incumbent.version}: score ${score} vs ${incumbent.score}.` };
 }

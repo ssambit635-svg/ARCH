@@ -22,6 +22,8 @@ const SOURCE_LABEL: Record<TrainingSource, SimilarIncidentHint['source']> = {
   team: 'your_team',
   pattern: 'pattern_library',
   public: 'public_postmortem',
+  code: 'code_corpus',
+  review: 'review_corpus',
 };
 
 function comments(context: CopilotContext): CopilotTimelineEntry[] {
@@ -37,7 +39,7 @@ export function incidentCorpus(context: CopilotContext): string {
 // Knowledge (retrieval + classification) — computed by the service, reused by every provider
 // ---------------------------------------------------------------------------------------------
 
-export function buildKnowledge(model: ArchModelRuntime, context: CopilotContext, options: { excludeIds?: string[] } = {}): CopilotKnowledge {
+export function buildKnowledge(model: ArchModelRuntime, context: CopilotContext, options: { excludeIds?: string[]; includeCodeCorpus?: boolean } = {}): CopilotKnowledge {
   // A pasted stack trace / snippet (CODE_FIX) is searched by what it MEANS ("connection refused"),
   // not by its file paths, so similar incidents match the failure rather than the incident title.
   const diagnosed = context.attachment ? analyzeCode(context.attachment.text).diagnoses.map((diagnosis) => `${diagnosis.title}. ${diagnosis.explanation}`) : [];
@@ -49,6 +51,14 @@ export function buildKnowledge(model: ArchModelRuntime, context: CopilotContext,
   const team = model.similar(corpus, { k: 3, sources: ['team'], excludeIds: options.excludeIds, minScore: 0.15 });
   const general = model.similar(corpus, { k: 3, sources: ['pattern', 'public'], excludeIds: options.excludeIds });
   const picked = [...team, ...general].slice(0, LIMITS.maxSimilarIncidents);
+
+  // Code tasks additionally consult the downloaded bug-fix / code-review corpora (SWE-bench,
+  // ManySStuBs4J, github-codereview, CodeReviewer). Incident tasks never do, so the four V2
+  // outputs (summary/triage/status/postmortem) keep their exact behaviour.
+  if (options.includeCodeCorpus) {
+    const codeKnowledge = model.similar(corpus, { k: 3, sources: ['code', 'review'], excludeIds: options.excludeIds, minScore: 0.12 });
+    picked.push(...codeKnowledge.filter((candidate) => !picked.some((existing) => existing.doc.id === candidate.doc.id)));
+  }
 
   return {
     model: model.name,
@@ -169,6 +179,11 @@ function describe(entry: CopilotTimelineEntry): string {
 
 function teamHints(knowledge: CopilotKnowledge): SimilarIncidentHint[] {
   return knowledge.similarIncidents.filter((hint) => hint.source === 'your_team');
+}
+
+/** Matches from the downloaded bug-fix / code-review corpora (code tasks only). */
+function codeHints(knowledge: CopilotKnowledge): SimilarIncidentHint[] {
+  return knowledge.similarIncidents.filter((hint) => hint.source === 'code_corpus' || hint.source === 'review_corpus');
 }
 
 function percent(value: number): string {
@@ -401,6 +416,8 @@ function codeFix(context: CopilotContext, knowledge: CopilotKnowledge) {
       ...analysis.diagnoses.flatMap((d) => d.fixes),
       ...errors.map((finding) => `Line ${finding.line}: ${finding.suggestion}`),
       ...teamHints(knowledge).flatMap((hint) => hint.fix ?? []),
+      // How real bugs like this were fixed elsewhere (SWE-bench, ManySStuBs4J, code reviews).
+      ...codeHints(knowledge).flatMap((hint) => hint.fix ?? []).slice(0, 4),
       deployed ? 'If the error started with the deploy, roll back first and debug on the previous version.' : '',
     ],
     8,

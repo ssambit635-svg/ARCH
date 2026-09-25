@@ -205,6 +205,8 @@ model Organization {
   notifications    Notification[]
   aiSuggestions    AiSuggestion[]
   archModel        ArchModel?
+  archModelVersions ArchModelVersion[]
+  archModelJobs    ArchModelJob[]
 
   @@map("organizations")
 }
@@ -518,12 +520,14 @@ model AiSuggestion {
 }
 
 /// V3 — ARCH's own model, trained per organization on its resolved incidents (plus the built-in
-/// pattern library and optional public postmortems). One row per organization, replaced on every
-/// training run. `artifact` holds redacted snippets only — see src/server/ai/arch-model/train.ts.
+/// pattern library, optional public postmortems and the code/review corpora). One row per
+/// organization holding the ACTIVE model; every training run is also kept in `ArchModelVersion`
+/// (the registry), so versions can be compared, rolled back and audited. `artifact` holds
+/// redacted snippets only — see src/server/ai/arch-model/train.ts.
 model ArchModel {
   id             String   @id @default(cuid())
   organizationId String   @unique
-  /// Incremented on every training run.
+  /// Registry version number of the model currently serving this organization.
   version        Int      @default(1)
   name           String
   format         Int
@@ -533,10 +537,70 @@ model ArchModel {
   metrics        Json
   artifact       Json
   trainedById    String?
+  /// Registry row currently serving this organization (null for pre-registry models).
+  activeVersionId String? @unique
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization  Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  activeVersion ArchModelVersion? @relation(fields: [activeVersionId], references: [id], onDelete: SetNull)
 
   @@map("arch_models")
+}
+
+/// V3 model registry — one row per training run. Versions are never overwritten: a new run adds a
+/// new row, is evaluated against the active model, and is promoted only if it beats it.
+/// `status`: ACTIVE (serving now) | SUPERSEDED (was active, replaced) | REJECTED (lost evaluation).
+model ArchModelVersion {
+  id             String   @id @default(cuid())
+  organizationId String
+  /// Per-organization counter, monotonically increasing.
+  version        Int
+  status         String
+  name           String
+  format         Int
+  trainedAt      DateTime
+  teamDocuments  Int      @default(0)
+  totalDocuments Int      @default(0)
+  metrics        Json
+  artifact       Json
+  /// Why this version exists and how it fared: { score, incumbentVersion, incumbentScore,
+  /// promoted, reason }.
+  evaluation     Json     @default("{}")
+  /// manual | scheduled | cli
+  trigger        String   @default("manual")
+  trainedById    String?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  activeFor    ArchModel?
+
+  @@unique([organizationId, version])
+  @@index([organizationId, createdAt])
+  @@map("arch_model_versions")
+}
+
+/// V3 background training queue (Postgres outbox, same pattern as notifications). The web process
+/// only enqueues; the worker claims PENDING rows, trains, evaluates and promotes — never inside a
+/// web request.
+model ArchModelJob {
+  id             String    @id @default(cuid())
+  organizationId String
+  /// PENDING | RUNNING | COMPLETED | FAILED
+  status         String    @default("PENDING")
+  /// manual | scheduled
+  trigger        String    @default("manual")
+  requestedById  String?
+  error          String?
+  /// Registry version produced by this job, once completed.
+  versionId      String?
+  createdAt      DateTime  @default(now())
+  startedAt      DateTime?
+  finishedAt     DateTime?
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([organizationId, createdAt])
+  @@map("arch_model_jobs")
 }
