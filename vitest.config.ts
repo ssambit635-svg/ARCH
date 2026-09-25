@@ -39,6 +39,9 @@ export default defineConfig({
       AI_PROVIDER: 'mock',
       AI_API_KEY: '',
       AI_TIMEOUT_MS: '300',
+      // ARCH model tests must not depend on a locally downloaded public corpus.
+      ARCH_MODEL_DATA_DIR: 'tests/.no-model-data',
+      ARCH_MODEL_RETRAIN_MINUTES: '0',
     },
   },
 });

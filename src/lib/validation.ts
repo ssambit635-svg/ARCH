@@ -195,7 +195,7 @@ export const webhookIngestSchema = z.object({
 
 // ---------- ARCH Copilot (V2) ----------
 
-export const aiSuggestionTypes = ['SUMMARY', 'TRIAGE', 'STATUS_UPDATE', 'POSTMORTEM'] as const;
+export const aiSuggestionTypes = ['SUMMARY', 'TRIAGE', 'STATUS_UPDATE', 'POSTMORTEM', 'CODE_FIX'] as const;
 export const aiSuggestionStatuses = ['PENDING', 'APPROVED', 'DISMISSED'] as const;
 
 export const copilotSuggestionListQuerySchema = z.object({
@@ -205,6 +205,25 @@ export const copilotSuggestionListQuerySchema = z.object({
 export const copilotGenerateSchema = z.object({
   incidentId: id,
   type: z.enum(aiSuggestionTypes),
+  /** CODE_FIX only: a stack trace, log excerpt or code snippet pasted by the responder. */
+  attachment: z.string().max(20_000).optional(),
+});
+
+export const copilotCodeFixSchema = z.object({
+  attachment: z.string().max(20_000).optional(),
+});
+
+// ---------- ARCH Code Assist + ARCH Model (V3) ----------
+
+export const codeLanguages = ['typescript', 'javascript', 'python', 'go', 'java', 'sql', 'ruby', 'php', 'csharp', 'shell', 'yaml', 'unknown'] as const;
+
+export const codeReviewSchema = z.object({
+  code: z.string().min(1, 'Paste some code or a stack trace.').max(20_000, 'Snippets are limited to 20,000 characters.'),
+  mode: z.enum(['review', 'fix', 'explain']).default('review'),
+  language: z
+    .union([z.enum(codeLanguages), z.literal('auto'), z.literal('')])
+    .optional()
+    .transform((value) => (value && value !== 'auto' ? value : null)),
 });
 
 export const copilotApproveSchema = z.object({

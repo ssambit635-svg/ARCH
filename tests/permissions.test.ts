@@ -27,6 +27,7 @@ const EXPECTED: Record<PermissionAction, Record<Role, boolean>> = {
   'copilot.read': { OWNER: true, ADMIN: true, RESPONDER: true, VIEWER: true },
   'copilot.generate': { OWNER: true, ADMIN: true, RESPONDER: true, VIEWER: false },
   'copilot.review': { OWNER: true, ADMIN: true, RESPONDER: true, VIEWER: false },
+  'copilot.train': { OWNER: true, ADMIN: true, RESPONDER: false, VIEWER: false },
 };
 
 describe('permission matrix', () => {

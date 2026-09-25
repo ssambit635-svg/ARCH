@@ -32,6 +32,37 @@ export type CopilotCandidate = {
   isCurrentAssignee: boolean;
 };
 
+/** A past incident the ARCH model found similar (same organization, pattern library or public). */
+export type SimilarIncidentHint = {
+  source: 'your_team' | 'pattern_library' | 'public_postmortem';
+  title: string;
+  category: string | null;
+  severity?: IncidentSeverity;
+  resolvedInMinutes?: number;
+  rootCause?: string;
+  fix?: string[];
+  prevention?: string[];
+  similarity: number;
+};
+
+/**
+ * What the organization's ARCH model thinks, computed on the server before any prompt is built.
+ * Every provider gets it: the built-in engine drafts from it directly, a local LLM uses it as
+ * retrieval-augmented grounding ("this looks like your March database incident").
+ */
+export type CopilotKnowledge = {
+  model: string;
+  likelyCategory: string;
+  categoryLabel: string;
+  categoryConfidence: number;
+  predictedSeverity: IncidentSeverity;
+  severityConfidence: number;
+  similarIncidents: SimilarIncidentHint[];
+};
+
+/** Optional code / stack trace a responder pasted for the CODE_FIX task (redacted, bounded). */
+export type CopilotAttachment = { kind: 'code' | 'log'; language: string; text: string };
+
 export type CopilotContext = {
   incident: {
     title: string;
@@ -46,6 +77,8 @@ export type CopilotContext = {
   /** Number of timeline entries left out to respect the size limit. */
   omittedTimelineEntries: number;
   candidates?: CopilotCandidate[];
+  knowledge?: CopilotKnowledge;
+  attachment?: CopilotAttachment;
 };
 
 export type IncidentForContext = {

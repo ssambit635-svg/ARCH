@@ -109,6 +109,8 @@ enum AiSuggestionType {
   TRIAGE
   STATUS_UPDATE
   POSTMORTEM
+  /// V3 — ARCH Code Assist inside an incident: diagnosis + fix for a stack trace / snippet.
+  CODE_FIX
 }
 
 /// V2 — AI output is always a draft until a human approves or dismisses it.
@@ -202,6 +204,7 @@ model Organization {
   auditLogs        AuditLog[]
   notifications    Notification[]
   aiSuggestions    AiSuggestion[]
+  archModel        ArchModel?
 
   @@map("organizations")
 }
@@ -512,4 +515,28 @@ model AiSuggestion {
   @@index([organizationId, incidentId, createdAt])
   @@index([incidentId, status])
   @@map("ai_suggestions")
+}
+
+/// V3 — ARCH's own model, trained per organization on its resolved incidents (plus the built-in
+/// pattern library and optional public postmortems). One row per organization, replaced on every
+/// training run. `artifact` holds redacted snippets only — see src/server/ai/arch-model/train.ts.
+model ArchModel {
+  id             String   @id @default(cuid())
+  organizationId String   @unique
+  /// Incremented on every training run.
+  version        Int      @default(1)
+  name           String
+  format         Int
+  trainedAt      DateTime
+  teamDocuments  Int      @default(0)
+  totalDocuments Int      @default(0)
+  metrics        Json
+  artifact       Json
+  trainedById    String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@map("arch_models")
 }

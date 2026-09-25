@@ -167,6 +167,7 @@ Everything is JSON under `/api`. Success is `{ "data": ... }`; failures are
 | Webhooks | `POST /api/webhooks/{provider}?endpoint={externalId}` (HMAC only), `/api/webhook-endpoints` (+ `/{id}/rotate`, `/{id}/deliveries`) |
 | Audit | `GET /api/audit` (OWNER/ADMIN, paginated, `?summary=true`) |
 | Copilot (V2) | `POST /api/incidents/{id}/copilot/{summary,triage,status-draft,postmortem}`, `GET /api/incidents/{id}/copilot/suggestions?status=`, `POST /api/copilot/suggestions/{id}/{approve,dismiss}` |
+| ARCH Model + Code Assist (V3) | `POST /api/incidents/{id}/copilot/code-fix` (`{attachment?}`), `POST /api/copilot/code-review` (`{code, mode?, language?}`), `GET /api/copilot/model`, `POST /api/copilot/model/train` (OWNER/ADMIN) |
 
 Webhook senders sign `"{timestamp}.{rawBody}"` with the endpoint secret and send
 `X-Arch-Signature: t=<unix>,v1=<hex>`; GitHub-style `X-Hub-Signature-256` is also accepted.
@@ -184,6 +185,8 @@ recorded once, and every attempt (accepted, duplicate, rejected, failed) lands i
 | Read audit log | ✅ | ✅ | — | — |
 | Read ARCH Copilot drafts | ✅ | ✅ | ✅ | ✅ |
 | Request, approve or dismiss ARCH Copilot drafts | ✅ | ✅ | ✅ | — |
+| Use Code Assist | ✅ | ✅ | ✅ | — |
+| Retrain the ARCH model | ✅ | ✅ | — | — |
 
 Enforced server-side on every request (`src/lib/permissions.ts`); the UI only hides what the API
 would refuse anyway. Cross-tenant ids answer `404`, never `403`.
@@ -205,9 +208,33 @@ incident page a responder can ask for a **summary** (≤ 5 bullets), a **triage*
 - **Guardrails.** 15 s timeout per attempt, one retry, schema-validated output, then a friendly
   `503`. Status drafts are scrubbed of hostnames/IPs/URLs after generation. 20 calls/min per org.
   Every generate, failure, approve and dismiss writes an audit entry with token usage.
-- **Providers.** `AI_PROVIDER="mock"` (default — no key, no network, used by all tests),
-  `"openai"` or `"anthropic"` with `AI_API_KEY`. Code lives in `src/server/ai/`; prompts only in
-  `src/server/ai/prompts.ts`.
+- **Providers.** Since V3 the default is **ARCH's own model** (`AI_PROVIDER="arch"`), see below.
+  `"mock"` is used by the tests. `"openai"` / `"anthropic"` still exist but are refused while
+  `ARCH_OFFLINE_ONLY="true"`. Code lives in `src/server/ai/`; prompts only in `src/server/ai/prompts.ts`.
+
+### ARCH Model + Code Assist (V3): no external AI
+
+Copilot runs on **ARCH's own AI**, on your server: free, CPU-only, no API key. Incident data and
+code never go to OpenAI or Anthropic. Full guide: [`docs/engineering/ARCH-MODEL.md`](docs/engineering/ARCH-MODEL.md).
+
+- **ARCH native model (default).** Classifiers and similar-incident retrieval trained on *your*
+  resolved incidents, a built-in library of 44 failure patterns, and optionally about 340 public
+  postmortems. It retrains automatically (worker) or on demand (`/dashboard/model`, OWNER/ADMIN).
+  Drafts cite what fixed similar incidents before.
+- **Optional local LLM** (`AI_PROVIDER="arch-hybrid"`). An open-source model such as
+  `qwen2.5-coder:7b` runs via Ollama or llama.cpp on the same machine (8–16 GB RAM, no GPU) for
+  fluent drafts and code rewrites. If it is slow or down, the ARCH model answers.
+- **Code fix in the incident panel.** Paste a stack trace or snippet to get a diagnosis, the first
+  frame in your code, fixes and a patch.
+- **Code Assist** (`/dashboard/code`). Paste code to get a review, a safer version, or a
+  stack-trace explanation. Secrets are detected and never echoed, and code is not stored.
+
+```bash
+npm run model:fetch-public     # optional: download public postmortems (git-ignored, check licences)
+npm run model:train            # train every workspace now (the worker also does this hourly)
+npm run model:eval             # offline accuracy report, no database needed
+npm run model:export-finetune -- --org <slug>   # JSONL to fine-tune the local LLM
+```
 
 ---
 

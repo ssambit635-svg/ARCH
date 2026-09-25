@@ -34,6 +34,30 @@ export const postmortemRawSchema = z.object({
   actionItems: z.array(line(400)).min(1).max(20),
 });
 
+export const codeFixRawSchema = z.object({
+  diagnosis: line(1500),
+  likelyCause: line(1500),
+  suggestedFixes: z.array(line(500)).min(1).max(10),
+  patch: z.string().trim().max(8000).nullish(),
+  references: z.array(line(300)).max(8).nullish(),
+});
+
+export const codeReviewRawSchema = z.object({
+  summary: line(2000),
+  findings: z
+    .array(
+      z.object({
+        line: z.number().int().min(0).max(100_000).nullish(),
+        severity: z.enum(['error', 'warning', 'info']).catch('info'),
+        message: line(600),
+        suggestion: z.string().trim().max(1200).default(''),
+      }),
+    )
+    .max(60),
+  improvedCode: z.string().max(40_000).nullish(),
+  explanation: z.string().trim().max(6000).default(''),
+});
+
 // ---------- stored output ----------
 
 export type SummaryOutput = { bullets: string[] };
@@ -47,7 +71,10 @@ export type PostmortemOutput = {
   markdown: string;
 };
 
-export type SuggestionOutput = SummaryOutput | TriageOutput | StatusUpdateOutput | PostmortemOutput;
+export type CodeFixOutput = { diagnosis: string; likelyCause: string; suggestedFixes: string[]; patch?: string; references: string[] };
+export type CodeReviewOutput = z.infer<typeof codeReviewRawSchema>;
+
+export type SuggestionOutput = SummaryOutput | TriageOutput | StatusUpdateOutput | PostmortemOutput | CodeFixOutput;
 
 /** Summary acceptance criterion: at most five bullets. */
 export const MAX_SUMMARY_BULLETS = 5;
@@ -99,6 +126,36 @@ export function parsePostmortem(text: string): PostmortemOutput {
   return { ...raw, markdown: renderPostmortemMarkdown(raw) };
 }
 
+export function parseCodeFix(text: string): CodeFixOutput {
+  const raw = codeFixRawSchema.parse(extractJson(text));
+  return {
+    diagnosis: raw.diagnosis,
+    likelyCause: raw.likelyCause,
+    suggestedFixes: raw.suggestedFixes,
+    ...(raw.patch?.trim() ? { patch: raw.patch.trim() } : {}),
+    references: raw.references ?? [],
+  };
+}
+
+export function parseCodeReview(text: string): CodeReviewOutput {
+  return codeReviewRawSchema.parse(extractJson(text));
+}
+
+export function renderCodeFixText(output: CodeFixOutput): string {
+  return [
+    'Code fix suggestion',
+    '',
+    `Diagnosis: ${output.diagnosis}`,
+    '',
+    `Likely cause: ${output.likelyCause}`,
+    '',
+    'Suggested fixes:',
+    ...output.suggestedFixes.map((fix) => `- ${fix}`),
+    ...(output.patch ? ['', 'Proposed patch:', '```', output.patch, '```'] : []),
+    ...(output.references.length ? ['', `Similar incidents: ${output.references.join(' · ')}`] : []),
+  ].join('\n');
+}
+
 /** The text an approved draft posts to the incident timeline. Triage posts nothing: it is applied. */
 export function suggestionTimelineText(type: AiSuggestionType, output: unknown): string | null {
   const record = (output ?? {}) as Record<string, unknown>;
@@ -109,6 +166,16 @@ export function suggestionTimelineText(type: AiSuggestionType, output: unknown):
       return typeof record.body === 'string' ? record.body : null;
     case 'POSTMORTEM':
       return typeof record.markdown === 'string' ? `Postmortem draft\n\n${record.markdown}` : null;
+    case 'CODE_FIX':
+      return typeof record.diagnosis === 'string' && Array.isArray(record.suggestedFixes)
+        ? renderCodeFixText({
+            diagnosis: record.diagnosis,
+            likelyCause: String(record.likelyCause ?? ''),
+            suggestedFixes: record.suggestedFixes as string[],
+            ...(typeof record.patch === 'string' ? { patch: record.patch } : {}),
+            references: Array.isArray(record.references) ? (record.references as string[]) : [],
+          })
+        : null;
     case 'TRIAGE':
     default:
       return null;

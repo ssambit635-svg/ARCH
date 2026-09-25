@@ -1,0 +1,227 @@
+'use client';
+
+import { useActionState, useState } from 'react';
+import { Select, SubmitButton, Textarea } from '@/components/ui/form';
+import { reviewCodeAction, type CodeReviewState } from '@/app/dashboard/actions';
+
+/**
+ * ARCH Code Assist — paste code or a stack trace, get a review / fix / explanation from ARCH's
+ * own model (and the local LLM in arch-hybrid mode). The server re-checks permissions and rate
+ * limits; nothing is stored.
+ */
+
+const SAMPLE = `async function getUser(id) {
+  const res = await fetch("https://api.internal/users/" + id);
+  if (res.status == 200) {
+    const q = "SELECT * FROM orders WHERE user_id = " + id;
+    return db.query(q).then(rows => rows[0]);
+  }
+  try { audit(id) } catch (e) {}
+}`;
+
+const SEVERITY_STYLE = {
+  error: 'bg-rose-500/15 text-rose-300 ring-rose-500/30',
+  warning: 'bg-amber-500/15 text-amber-200 ring-amber-500/30',
+  info: 'bg-slate-800 text-slate-300 ring-slate-700',
+} as const;
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800"
+      onClick={() => {
+        void navigator.clipboard?.writeText(text).then(() => {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        });
+      }}
+    >
+      {copied ? 'Copied' : 'Copy'}
+    </button>
+  );
+}
+
+function Result({ state }: { state: CodeReviewState }) {
+  if (!state.ok) {
+    return (
+      <p className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-200" role="alert">
+        {state.error}
+      </p>
+    );
+  }
+  const result = state.result;
+  return (
+    <div className="space-y-5" aria-live="polite">
+      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm font-medium text-white">{result.summary}</p>
+          <span className="arch-mono text-xs text-slate-500">
+            {result.language} · {result.model} · {result.latencyMs} ms
+          </span>
+        </div>
+        {result.topFrame ? (
+          <p className="mt-2 text-xs text-slate-400">
+            First frame in your code:{' '}
+            <span className="arch-mono text-slate-200">
+              {result.topFrame.file}:{result.topFrame.line}
+              {result.topFrame.fn ? ` (${result.topFrame.fn})` : ''}
+            </span>
+          </p>
+        ) : null}
+      </div>
+
+      {result.diagnoses.length ? (
+        <div className="space-y-3">
+          <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">What went wrong</h3>
+          {result.diagnoses.map((diagnosis) => (
+            <div key={diagnosis.id} className="rounded-lg border border-rose-500/30 bg-rose-500/5 p-4">
+              <p className="text-sm font-semibold text-rose-200">{diagnosis.title}</p>
+              <p className="mt-1 text-sm text-slate-300">{diagnosis.explanation}</p>
+              <p className="arch-mono mt-2 truncate text-xs text-slate-500" title={diagnosis.evidence}>
+                {diagnosis.evidence}
+              </p>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-200">
+                {diagnosis.fixes.map((fix) => (
+                  <li key={fix}>{fix}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {result.findings.length ? (
+        <div className="space-y-2">
+          <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Findings ({result.findings.length})</h3>
+          <ul className="divide-y divide-slate-800 rounded-lg border border-slate-800">
+            {result.findings.map((finding, index) => (
+              <li key={`${finding.line}-${index}`} className="flex gap-3 px-4 py-3">
+                <span className={`h-fit shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${SEVERITY_STYLE[finding.severity]}`}>{finding.severity}</span>
+                <div className="min-w-0 space-y-1">
+                  <p className="text-sm text-slate-100">
+                    {finding.line ? <span className="arch-mono mr-2 text-xs text-slate-500">L{finding.line}</span> : null}
+                    {finding.message}
+                  </p>
+                  {finding.suggestion ? <p className="text-xs text-slate-400">{finding.suggestion}</p> : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+
+      {result.improvedCode ? (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Improved code</h3>
+            <CopyButton text={result.improvedCode} />
+          </div>
+          {result.appliedFixes.length && result.provider === 'arch' ? (
+            <p className="text-xs text-emerald-300">Safe fixes applied: {result.appliedFixes.join(' · ')}</p>
+          ) : null}
+          <pre className="arch-mono max-h-[28rem] overflow-auto rounded-lg border border-slate-800 bg-slate-950/80 p-4 text-xs leading-relaxed text-slate-200">
+            {result.improvedCode}
+          </pre>
+        </div>
+      ) : null}
+
+      {result.explanation ? (
+        <div className="space-y-2">
+          <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Explanation</h3>
+          <pre className="whitespace-pre-wrap rounded-lg border border-slate-800 bg-slate-950/40 p-4 text-sm leading-relaxed text-slate-300">{result.explanation}</pre>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export function CodeAssist({ canUse, engineLabel }: { canUse: boolean; engineLabel: string }) {
+  const [state, formAction] = useActionState<CodeReviewState | undefined, FormData>(reviewCodeAction, undefined);
+  const [code, setCode] = useState('');
+
+  return (
+    <div className="grid gap-6 xl:grid-cols-2">
+      <form action={formAction} className="space-y-3">
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="space-y-1.5">
+            <label htmlFor="code-mode" className="block text-xs font-medium text-slate-400">
+              What should ARCH do?
+            </label>
+            <Select id="code-mode" name="mode" defaultValue="review" disabled={!canUse}>
+              <option value="review">Review — find bugs &amp; risks</option>
+              <option value="fix">Fix — give me better code</option>
+              <option value="explain">Explain — this error / stack trace</option>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <label htmlFor="code-language" className="block text-xs font-medium text-slate-400">
+              Language
+            </label>
+            <Select id="code-language" name="language" defaultValue="auto" disabled={!canUse}>
+              <option value="auto">Auto-detect</option>
+              <option value="typescript">TypeScript</option>
+              <option value="javascript">JavaScript</option>
+              <option value="python">Python</option>
+              <option value="go">Go</option>
+              <option value="java">Java</option>
+              <option value="sql">SQL</option>
+              <option value="csharp">C#</option>
+              <option value="php">PHP</option>
+              <option value="ruby">Ruby</option>
+            </Select>
+          </div>
+          <button
+            type="button"
+            className="ml-auto text-xs text-indigo-300 hover:text-indigo-200"
+            onClick={() => setCode(SAMPLE)}
+            disabled={!canUse}
+          >
+            Try a sample
+          </button>
+        </div>
+        <label htmlFor="code-input" className="sr-only">
+          Code or stack trace
+        </label>
+        <Textarea
+          id="code-input"
+          name="code"
+          rows={22}
+          maxLength={20_000}
+          value={code}
+          onChange={(event) => setCode(event.target.value)}
+          placeholder="Paste code, a stack trace or an error log…"
+          className="arch-mono text-xs leading-relaxed"
+          spellCheck={false}
+          disabled={!canUse}
+          required
+        />
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-slate-500">
+            {code.length.toLocaleString('en-US')} / 20,000 · analyzed by <span className="arch-mono">{engineLabel}</span> on this server · not stored
+          </p>
+          <fieldset disabled={!canUse} className="contents">
+            <SubmitButton pendingLabel="Analyzing…">Analyze</SubmitButton>
+          </fieldset>
+        </div>
+      </form>
+
+      <div>
+        {state ? (
+          <Result state={state} />
+        ) : (
+          <div className="flex h-full min-h-64 items-center justify-center rounded-xl border border-dashed border-slate-800 p-8 text-center">
+            <div className="max-w-sm space-y-2">
+              <p className="text-sm font-medium text-slate-200">Your code never leaves this server</p>
+              <p className="text-sm text-slate-400">
+                ARCH looks for the problems that cause incidents: missing timeouts, swallowed errors, SQL injection, hard-coded secrets, unsafe retries. It
+                explains stack traces and applies safe fixes automatically.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

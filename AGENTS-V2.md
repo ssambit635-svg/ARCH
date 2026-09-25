@@ -100,6 +100,26 @@ Implementation notes:
 - Extra env knob: `AI_RATE_LIMIT_PER_MINUTE` (default 20). `AI_PROVIDER` defaults to `mock`.
 - Permissions: `copilot.read` (all roles), `copilot.generate` + `copilot.review` (OWNER/ADMIN/RESPONDER).
 
+## V3 addendum: ARCH's own AI (implemented)
+The external-vendor dependency is replaced; every V2 rule above still applies. Full spec:
+`docs/engineering/ARCH-MODEL.md`.
+- `AI_PROVIDER`: `arch` (default: ARCH native model, no LLM, no network) · `arch-hybrid` (local LLM
+  via Ollama or an OpenAI-compatible server, with native fallback) · `mock` · `openai` ·
+  `anthropic`. `ARCH_OFFLINE_ONLY=true` (default) refuses vendors and non-private `LOCAL_LLM_URL`s.
+- New: `ArchModel` (one per org, `arch_models`, migration `20260925120000_v3_arch_model`),
+  `AiSuggestionType.CODE_FIX`, permission `copilot.train` (OWNER/ADMIN).
+- New routes: `POST /api/incidents/:id/copilot/code-fix`, `POST /api/copilot/code-review`,
+  `GET /api/copilot/model`, `POST /api/copilot/model/train`. New pages: `/dashboard/code` and
+  `/dashboard/model`.
+- The worker retrains stale org models every `ARCH_MODEL_RETRAIN_MINUTES`.
+- Rules added:
+  - Code Assist is stateless, and its audit entries hold metadata only.
+  - LLMs only ever receive `scrubSecrets(code)`.
+  - Training never reads Copilot-authored timeline entries, so the model does not learn from itself.
+  - Nothing in `src/server/ai/` touches the DB or the filesystem.
+- "Code generation, debugging" is no longer out of scope, but only as **drafts and suggestions**:
+  nothing is applied to a repository.
+
 ## Out of scope for V2
 AI auto-resolving incidents, auto-publishing status updates, code
 generation, debugging, hosting, billing, microservices, mobile apps.

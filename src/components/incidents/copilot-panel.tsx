@@ -19,7 +19,7 @@ import {
 
 export type CopilotSuggestionView = {
   id: string;
-  type: 'SUMMARY' | 'TRIAGE' | 'STATUS_UPDATE' | 'POSTMORTEM';
+  type: 'SUMMARY' | 'TRIAGE' | 'STATUS_UPDATE' | 'POSTMORTEM' | 'CODE_FIX';
   status: 'PENDING' | 'APPROVED' | 'DISMISSED';
   output: unknown;
   /** Exact text an approval would post (null for triage). */
@@ -36,13 +36,14 @@ export type CopilotSuggestionView = {
   triage?: { currentSeverity: string; suggestedAssignee: string | null; currentAssignee: string | null };
 };
 
-type Config = { enabled: boolean; provider: string; model: string; reason?: string };
+type Config = { enabled: boolean; provider: string; model: string; onPremise?: boolean; reason?: string };
 
 const TYPE_LABELS: Record<CopilotSuggestionView['type'], string> = {
   SUMMARY: 'Summary',
   TRIAGE: 'Triage suggestion',
   STATUS_UPDATE: 'Status-update draft',
   POSTMORTEM: 'Postmortem draft',
+  CODE_FIX: 'Code fix suggestion',
 };
 
 const APPROVE_LABELS: Record<CopilotSuggestionView['type'], string> = {
@@ -50,6 +51,7 @@ const APPROVE_LABELS: Record<CopilotSuggestionView['type'], string> = {
   TRIAGE: 'Approve & apply',
   STATUS_UPDATE: 'Approve & post update',
   POSTMORTEM: 'Approve & post to timeline',
+  CODE_FIX: 'Approve & post to timeline',
 };
 
 const GENERATORS: { type: CopilotSuggestionView['type']; label: string; hint: string }[] = [
@@ -87,6 +89,36 @@ function GenerateButton({ incidentId, type, label, hint, disabled }: { incidentI
         </SubmitButton>
       </fieldset>
       <p className="text-xs text-slate-500">{hint}</p>
+      <Outcome state={state} />
+    </form>
+  );
+}
+
+/** CODE_FIX: optional stack trace / snippet. Without one, errors in the timeline are used. */
+function CodeFixGenerator({ incidentId, disabled }: { incidentId: string; disabled: boolean }) {
+  const [state, formAction] = useActionState<ActionResult | undefined, FormData>(generateCopilotDraftAction, undefined);
+  return (
+    <form action={formAction} className="flex flex-col gap-2 rounded-lg border border-slate-800 bg-slate-950/40 p-3 sm:col-span-2">
+      <input type="hidden" name="incidentId" value={incidentId} />
+      <input type="hidden" name="type" value="CODE_FIX" />
+      <label htmlFor={`code-fix-${incidentId}`} className="text-xs font-medium text-slate-400">
+        Stack trace, error log or code (optional — secrets are scrubbed before analysis)
+      </label>
+      <Textarea
+        id={`code-fix-${incidentId}`}
+        name="attachment"
+        rows={4}
+        maxLength={20_000}
+        placeholder={"TypeError: Cannot read properties of undefined (reading 'id')\n    at getUser (src/services/user.ts:42:18)"}
+        className="arch-mono text-xs"
+        disabled={disabled}
+      />
+      <fieldset disabled={disabled} className="contents">
+        <SubmitButton variant="secondary" pendingLabel="Analyzing…">
+          Suggest code fix
+        </SubmitButton>
+      </fieldset>
+      <p className="text-xs text-slate-500">Diagnosis · likely cause · fix steps · patch when safe</p>
       <Outcome state={state} />
     </form>
   );
@@ -140,7 +172,7 @@ function PendingDraft({ suggestion, canReview }: { suggestion: CopilotSuggestion
   const [approveState, approveAction] = useActionState<ActionResult | undefined, FormData>(approveCopilotDraftAction, undefined);
   const [dismissState, dismissAction] = useActionState<ActionResult | undefined, FormData>(dismissCopilotDraftAction, undefined);
   const textareaId = `copilot-text-${suggestion.id}`;
-  const rows = suggestion.type === 'POSTMORTEM' ? 16 : suggestion.type === 'SUMMARY' ? 7 : 5;
+  const rows = suggestion.type === 'POSTMORTEM' || suggestion.type === 'CODE_FIX' ? 16 : suggestion.type === 'SUMMARY' ? 7 : 5;
 
   return (
     <li className="space-y-3 border-b border-slate-800/70 px-5 py-4 last:border-0">
@@ -215,16 +247,26 @@ export function CopilotPanel({
           </h2>
           <p className="mt-1 text-sm text-slate-400">AI drafts only. Nothing is posted or changed until a responder approves it.</p>
         </div>
-        <span className="arch-mono shrink-0 text-xs text-slate-500" title="AI provider · model">
-          {config.provider} · {config.model}
-        </span>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <span className="arch-mono text-xs text-slate-500" title="AI provider · model">
+            {config.provider} · {config.model}
+          </span>
+          {config.onPremise ? (
+            <span
+              className="inline-flex items-center rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-300 ring-1 ring-inset ring-emerald-500/30"
+              title="Runs on your ARCH server. Incident data is not sent to any AI vendor."
+            >
+              on-premise · no data leaves
+            </span>
+          ) : null}
+        </div>
       </div>
 
       <div className="space-y-3 px-5 py-4">
         {!config.enabled ? (
           <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200" role="status">
-            Copilot is not configured: {config.reason ?? 'missing AI settings.'} Set <span className="arch-mono">AI_PROVIDER=&quot;mock&quot;</span> for local
-            development.
+            Copilot is not configured: {config.reason ?? 'missing AI settings.'} Set <span className="arch-mono">AI_PROVIDER=&quot;arch&quot;</span> to use
+            ARCH&apos;s own model (no setup, no external API).
           </p>
         ) : null}
         {canGenerate ? (
@@ -232,6 +274,7 @@ export function CopilotPanel({
             {GENERATORS.map((generator) => (
               <GenerateButton key={generator.type} incidentId={incidentId} {...generator} disabled={!config.enabled} />
             ))}
+            <CodeFixGenerator incidentId={incidentId} disabled={!config.enabled} />
           </div>
         ) : (
           <p className="text-sm text-slate-400">Your role can read Copilot drafts but not request or review them.</p>

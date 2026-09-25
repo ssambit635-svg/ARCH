@@ -15,6 +15,35 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Added — V3 · ARCH's own AI (no external AI vendors)
+- **ARCH Copilot now runs on ARCH's own model by default.** Summaries, triage, status-update drafts
+  and postmortems are produced on your server. Incident data is no longer sent to OpenAI or
+  Anthropic. No API key, no GPU and no per-call cost.
+- **It learns from your team.** Each workspace gets its own model, trained on its resolved incidents
+  and approved postmortems (never on another workspace's data). Drafts point to similar past
+  incidents, what fixed them and how long they took. The model retrains automatically as incidents
+  are resolved; admins can retrain on demand and see its measured accuracy on the new
+  **ARCH Model** page.
+- **Code fix suggestions** in the incident Copilot panel. Paste a stack trace, error log or code
+  snippet to get a diagnosis, the likely cause, fix steps and a patch when a safe fix exists. It is
+  a draft, like everything else.
+- **Code Assist** (new page). Review code for the bugs that cause incidents (missing timeouts,
+  swallowed errors, SQL injection, hard-coded secrets, retry storms), get a safer version, or get a
+  stack trace explained. Code is not stored, and secrets are never echoed back.
+- **Optional local LLM.** Point ARCH at a free open-source model on your own machine (for example
+  Qwen2.5-Coder-7B via Ollama, which runs on CPU with 16 GB RAM) for more fluent drafts and code
+  rewrites. ARCH falls back to its own model if the LLM is slow or unavailable.
+- **Privacy lock.** `ARCH_OFFLINE_ONLY` (on by default) refuses external AI vendors and any
+  non-private model URL.
+
+### Changed
+- `AI_PROVIDER` now defaults to `arch` (was `mock`). The external `openai` / `anthropic` providers
+  require `ARCH_OFFLINE_ONLY="false"`.
+
+### Migration notes
+- Run `npm run db:migrate`. It adds the `arch_models` table and the `CODE_FIX` suggestion type.
+- No configuration is required. To use a local LLM, see `docs/engineering/ARCH-MODEL.md`.
+
 ### Added — V2 · ARCH Copilot (milestones M1–M3 of `AGENTS-V2.md`)
 - **AI drafts in the incident workspace.** Ask ARCH Copilot for an incident summary (at most five
   bullets), a triage suggestion (severity and assignee), a customer-safe status-page update, or a

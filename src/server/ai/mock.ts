@@ -1,5 +1,5 @@
 import type { CopilotContext, CopilotTimelineEntry } from './context';
-import { parseContextFromPrompt } from './prompts';
+import { parseCodeContextFromPrompt, parseContextFromPrompt } from './prompts';
 import { DEFAULT_MODELS, estimateTokens, type AiProvider, type CopilotTask, type GenerateOptions, type GenerateResult } from './provider';
 
 /**
@@ -126,11 +126,23 @@ function postmortem(context: CopilotContext) {
   };
 }
 
-const HANDLERS: Record<CopilotTask, (context: CopilotContext) => unknown> = {
+function codeFix(context: CopilotContext) {
+  const source = context.attachment?.text ?? comments(context).join('\n');
+  return {
+    diagnosis: source ? `Mock diagnosis of ${source.split('\n')[0]!.slice(0, 80)}` : 'No stack trace or code was provided.',
+    likelyCause: 'Mock provider — enable AI_PROVIDER="arch" for a real diagnosis.',
+    suggestedFixes: ['Reproduce the error locally with the same input.', 'Add a regression test for the failing path.'],
+    patch: null,
+    references: [],
+  };
+}
+
+const HANDLERS: Record<Exclude<CopilotTask, 'code_review'>, (context: CopilotContext) => unknown> = {
   summary,
   triage,
   status_update: statusUpdate,
   postmortem,
+  code_fix: codeFix,
 };
 
 export function createMockProvider(): AiProvider {
@@ -139,9 +151,22 @@ export function createMockProvider(): AiProvider {
     model: DEFAULT_MODELS.mock,
     async generate(system: string, user: string, options: GenerateOptions): Promise<GenerateResult> {
       if (options.signal.aborted) throw new Error('aborted');
-      const context = parseContextFromPrompt(user);
-      if (!context) throw new Error('mock provider: prompt has no incident_context block');
-      const text = JSON.stringify(HANDLERS[options.task](context));
+      let output: unknown;
+      if (options.task === 'code_review') {
+        const input = parseCodeContextFromPrompt(user);
+        if (!input) throw new Error('mock provider: prompt has no code_context block');
+        output = {
+          summary: `Mock review of ${input.code.split('\n').length} line(s) of ${input.language}.`,
+          findings: input.staticFindings.map((finding) => ({ line: finding.line, severity: finding.severity, message: finding.message, suggestion: '' })),
+          improvedCode: null,
+          explanation: 'Mock provider — enable AI_PROVIDER="arch" for a real review.',
+        };
+      } else {
+        const context = parseContextFromPrompt(user);
+        if (!context) throw new Error('mock provider: prompt has no incident_context block');
+        output = HANDLERS[options.task](context);
+      }
+      const text = JSON.stringify(output);
       return {
         text,
         promptTokens: estimateTokens(system) + estimateTokens(user),
