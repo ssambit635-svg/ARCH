@@ -5,7 +5,7 @@
  *   npm run model:fetch-public            # writes model-data/public-incidents.jsonl
  *   npm run model:fetch-public -- --out some/dir
  *
- * Sources (researched on GitHub, see docs/engineering/ARCH-MODEL.md → "Training data"):
+ * Sources (researched on GitHub, see docs/legal/TRAINING-DATA-LICENSES.md):
  *
  *   danluu/post-mortems          ~450 one-paragraph summaries of public postmortems, grouped by
  *                                cause (Config Errors, Hardware/Power, Conflicts, Time, Database,
@@ -15,6 +15,9 @@
  *   hayorov/kubernetes-failure-stories
  *                                Kubernetes failure stories (k8s.af) with "involved" + "impact"
  *                                tags. Repository has NO license file.
+ *   saystone/awesome-postmortem  Curated index of outage reports (title + date + company + link;
+ *                                CC0 per the repository's listing). We store the index entry only
+ *                                — the write-ups themselves stay on the publishers' sites.
  *
  * Why this is a download step and not files in the repo: none of these corpora are licensed for
  * redistribution inside a proprietary product. The script fetches them onto YOUR machine, into a
@@ -29,6 +32,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { spawnSync } from 'node:child_process';
+import { updateManifest } from './lib/datasets.mjs';
 
 const args = process.argv.slice(2);
 const outIndex = args.indexOf('--out');
@@ -40,6 +44,7 @@ const OUT_FILE = path.join(OUT_DIR, 'public-incidents.jsonl');
 const DANLUU = 'https://api.github.com/repos/danluu/post-mortems/readme';
 const K8S = 'https://api.github.com/repos/hayorov/kubernetes-failure-stories/readme';
 const ICCO_TARBALL = 'https://api.github.com/repos/icco/postmortems/tarball';
+const AWESOME = 'https://api.github.com/repos/saystone/awesome-postmortem/readme';
 
 const DANLUU_SECTIONS = {
   'Config Errors': 'config',
@@ -181,6 +186,25 @@ async function fetchIcco() {
   return rows;
 }
 
+/** "- 2021-06-08: [Title](url) by [Company](site)" — an index entry, not the write-up itself. */
+function parseAwesomeEntry(line) {
+  const match = /^[*-]\s+(\d{4}-\d{2}-\d{2}):\s+\[([^\]]+)\]\(([^)]+)\)\s+by\s+\[([^\]]+)\]/.exec(line.trim());
+  if (!match) return null;
+  const [, date, title, url, company] = match;
+  return { company, url, text: `${company} published a postmortem titled "${title}" on ${date}. Production outage post-incident analysis.` };
+}
+
+async function fetchAwesomePostmortems() {
+  const markdown = await (await get(AWESOME)).text();
+  const rows = [];
+  for (const line of markdown.split('\n')) {
+    const entry = parseAwesomeEntry(line);
+    if (!entry) continue;
+    rows.push({ source: 'saystone/awesome-postmortem', ...entry, category: null });
+  }
+  return rows;
+}
+
 async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const all = [];
@@ -188,6 +212,7 @@ async function main() {
     ['danluu/post-mortems', fetchDanluu],
     ['icco/postmortems', fetchIcco],
     ['kubernetes-failure-stories', fetchKubernetesStories],
+    ['saystone/awesome-postmortem', fetchAwesomePostmortems],
   ]) {
     try {
       const rows = await fetcher();
@@ -209,7 +234,53 @@ async function main() {
 
   fs.writeFileSync(OUT_FILE, unique.map((row) => JSON.stringify(row)).join('\n') + '\n');
   log(`wrote ${unique.length} entries → ${path.relative(process.cwd(), OUT_FILE)}`);
-  log('Licenses: danluu + k8s stories have no license file, icco is GPL-3.0. Data stays local (git-ignored).');
+
+  const bySource = (name) => unique.filter((row) => row.source === name).length;
+  updateManifest(OUT_DIR, [
+    {
+      id: 'danluu-post-mortems',
+      name: 'danluu/post-mortems',
+      url: 'https://github.com/danluu/post-mortems',
+      license: 'none (all rights reserved)',
+      licenseNote: 'review before commercial use; ARCH keeps one-paragraph summaries + links',
+      retention: 'short summary snippet + source URL per postmortem',
+      file: path.relative(process.cwd(), OUT_FILE),
+      documents: bySource('danluu/post-mortems'),
+    },
+    {
+      id: 'icco-postmortems',
+      name: 'icco/postmortems',
+      url: 'https://github.com/icco/postmortems',
+      license: 'GPL-3.0',
+      licenseNote: 'copyleft source; ARCH keeps short factual snippets + links, not the text',
+      retention: 'short summary snippet + source URL per postmortem',
+      file: path.relative(process.cwd(), OUT_FILE),
+      documents: bySource('icco/postmortems'),
+    },
+    {
+      id: 'kubernetes-failure-stories',
+      name: 'hjacobs/kubernetes-failure-stories',
+      url: 'https://github.com/hjacobs/kubernetes-failure-stories',
+      license: 'none (all rights reserved)',
+      licenseNote: 'index entries only (title + involved + impact tags)',
+      retention: 'generated one-line index entry + source URL',
+      file: path.relative(process.cwd(), OUT_FILE),
+      documents: bySource('kubernetes-failure-stories'),
+    },
+    {
+      id: 'saystone-awesome-postmortem',
+      name: 'saystone/awesome-postmortem',
+      url: 'https://github.com/saystone/awesome-postmortem',
+      license: 'CC0 (per repository listing)',
+      licenseNote: 'index entries only; the write-ups stay on the publishers\u2019 sites',
+      retention: 'generated one-line index entry + source URL',
+      file: path.relative(process.cwd(), OUT_FILE),
+      documents: bySource('saystone/awesome-postmortem'),
+    },
+  ]);
+
+  log('Licenses: danluu + k8s stories have no license file, icco is GPL-3.0, awesome-postmortem is CC0.');
+  log('Data stays local (git-ignored). Notices: model-data/THIRD-PARTY-NOTICES.md');
   log('Next: npm run model:train');
 }
 

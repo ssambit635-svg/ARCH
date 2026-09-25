@@ -22,6 +22,11 @@ export function created<T>(data: T): NextResponse {
   return NextResponse.json({ data }, { status: 201 });
 }
 
+/** 202 — the request was accepted and the work continues in the background (V3 training jobs). */
+export function accepted<T>(data: T): NextResponse {
+  return NextResponse.json({ data }, { status: 202 });
+}
+
 export function fail(error: unknown): NextResponse {
   if (isAppError(error)) {
     const body: ApiFailure = {

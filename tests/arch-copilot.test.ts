@@ -5,7 +5,7 @@ import { createMockProvider } from '@/server/ai/mock';
 import { createArchNativeProvider } from '@/server/ai/arch-native';
 import { approveSuggestion, generateSuggestion } from '@/server/services/copilot.service';
 import { reviewCode } from '@/server/services/codeAssist.service';
-import { getModelStatus, getOrganizationModel, resetArchModelCache, retrainStaleModels, trainModel } from '@/server/services/archModel.service';
+import { getModelStatus, getOrganizationModel, processTrainingJobs, resetArchModelCache, retrainStaleModels, trainModel } from '@/server/services/archModel.service';
 import { addMember, createTenant, createTestIncident, createTestUser, db, resetDatabase } from './helpers/db';
 
 /**
@@ -53,6 +53,13 @@ const LEDGER_NOTES = [
   'Pinned the kafka client version and restarted ledger-writer; lag draining.',
 ];
 
+/** V3 flow: the dashboard/API only enqueues; the worker trains. This helper does both steps. */
+async function trainAndDrain(tenant: Awaited<ReturnType<typeof setup>>, userId?: string) {
+  const job = await trainModel({ organizationId: tenant.organization.id, userId: userId ?? tenant.owner.id });
+  const processed = await processTrainingJobs();
+  return { job, processed };
+}
+
 describe('ARCH model (V3)', () => {
   beforeEach(async () => {
     await resetDatabase();
@@ -72,18 +79,29 @@ describe('ARCH model (V3)', () => {
 
     await expect(trainModel({ organizationId: acme.organization.id, userId: acme.responder.id })).rejects.toMatchObject({ status: 403 });
 
-    const first = await trainModel({ organizationId: acme.organization.id, userId: acme.owner.id });
-    expect(first).toMatchObject({ version: 1, teamDocuments: 1 });
-    const second = await trainModel({ organizationId: acme.organization.id, userId: acme.owner.id });
-    expect(second.version).toBe(2);
+    // Retraining is a background job: the call returns the queued job, the worker does the work.
+    const { job } = await trainAndDrain(acme);
+    expect(job).toMatchObject({ status: 'PENDING', trigger: 'manual' });
+    const completed = await db.archModelJob.findUniqueOrThrow({ where: { id: job.id } });
+    expect(completed).toMatchObject({ status: 'COMPLETED', requestedById: acme.owner.id });
 
     const row = await db.archModel.findUniqueOrThrow({ where: { organizationId: acme.organization.id } });
+    expect(row.version).toBe(1);
+    expect(row.activeVersionId).toBe(completed.versionId);
     expect(JSON.stringify(row.artifact)).not.toContain('Still open');
     const audit = await db.auditLog.findFirstOrThrow({ where: { organizationId: acme.organization.id, action: 'arch_model.train' } });
     expect(audit.actorId).toBe(acme.owner.id);
+    expect(audit.metadata).toMatchObject({ version: 1, promoted: true });
+
+    // A retrain with no new data registers a second version but must NOT replace the active one.
+    await trainAndDrain(acme);
+    const versions = await db.archModelVersion.findMany({ where: { organizationId: acme.organization.id }, orderBy: { version: 'asc' } });
+    expect(versions.map((version) => version.status)).toEqual(['ACTIVE', 'REJECTED']);
+    expect((versions[1]!.evaluation as { reason?: string }).reason).toMatch(/did not beat/i);
 
     const status = await getModelStatus({ organizationId: acme.organization.id, userId: acme.viewer.id });
-    expect(status.model).toMatchObject({ trained: true, version: 2, teamDocuments: 1 });
+    expect(status.model).toMatchObject({ trained: true, version: 1, teamDocuments: 1 });
+    expect(status.versions.map((version) => version.status)).toEqual(['REJECTED', 'ACTIVE']); // newest first
     expect(status.config.onPremise).toBe(true);
   });
 
@@ -92,8 +110,8 @@ describe('ARCH model (V3)', () => {
     const globex = await setup('Globex');
     await resolvedIncident(acme, 'Acme secret project outage', ['acme-only hostname zeta-7 failed']);
     await resolvedIncident(globex, 'Globex CDN purge failed', ['cdn purge api returned 500']);
-    await trainModel({ organizationId: acme.organization.id, userId: acme.owner.id });
-    await trainModel({ organizationId: globex.organization.id, userId: globex.owner.id });
+    await trainAndDrain(acme);
+    await trainAndDrain(globex);
 
     const globexArtifact = JSON.stringify((await db.archModel.findUniqueOrThrow({ where: { organizationId: globex.organization.id } })).artifact);
     expect(globexArtifact).not.toContain('zeta-7');
@@ -107,10 +125,17 @@ describe('ARCH model (V3)', () => {
     const acme = await setup('Acme');
     const globex = await setup('Globex');
     await resolvedIncident(acme, 'Payouts delayed', LEDGER_NOTES);
-    expect((await retrainStaleModels()).trained).toEqual([acme.organization.id]);
-    expect((await retrainStaleModels()).trained).toEqual([]);
+
+    // The scheduler enqueues; the worker trains. A second pass enqueues nothing while the first
+    // job is still open.
+    expect((await retrainStaleModels()).enqueued).toEqual([acme.organization.id]);
+    expect((await retrainStaleModels()).enqueued).toEqual([]);
+    expect((await processTrainingJobs()).processed).toBe(1);
+    expect((await retrainStaleModels()).enqueued).toEqual([]); // trained, nothing new
+
     await resolvedIncident(globex, 'Globex API down', ['api 503']);
-    expect((await retrainStaleModels()).trained).toEqual([globex.organization.id]);
+    expect((await retrainStaleModels()).enqueued).toEqual([globex.organization.id]);
+    expect((await processTrainingJobs()).processed).toBe(1);
     const audit = await db.auditLog.findFirstOrThrow({ where: { organizationId: globex.organization.id, action: 'arch_model.train' } });
     expect(audit).toMatchObject({ actorId: null, actorLabel: 'system:arch-model' });
   });
@@ -118,7 +143,7 @@ describe('ARCH model (V3)', () => {
   it('Copilot drafts use what the team learned: similar past incident + its root cause', async () => {
     const acme = await setup();
     await resolvedIncident(acme, 'Payouts delayed: ledger consumer lag', LEDGER_NOTES, 'CRITICAL');
-    await trainModel({ organizationId: acme.organization.id, userId: acme.owner.id });
+    await trainAndDrain(acme);
 
     const incident = await createTestIncident({ organizationId: acme.organization.id, projectId: acme.project.id, serviceId: acme.service.id, createdById: acme.owner.id, title: 'Payouts stuck again — ledger-writer lag', severity: 'MEDIUM' });
     await db.incidentEvent.create({ data: { incidentId: incident.id, authorId: acme.responder.id, type: 'COMMENT', body: 'kafka consumer lag on ledger-writer climbing' } });

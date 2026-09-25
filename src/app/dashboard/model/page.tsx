@@ -4,10 +4,11 @@ import { roleHasPermission } from '@/lib/permissions';
 import { formatDateTime, timeAgo } from '@/lib/format';
 import { CATEGORIES, type CategoryId } from '@/server/ai/arch-model/knowledge';
 import { formatDuration } from '@/server/ai/arch-model/text';
-import { getModelStatus } from '@/server/services/archModel.service';
+import { getModelStatus, type VersionSummary } from '@/server/services/archModel.service';
 import { Alert, Badge, Card, CardBody, CardHeader, DefinitionList, PageHeader } from '@/components/ui';
 import { ActionForm } from '@/components/dashboard/action-form';
-import { trainModelAction } from '@/app/dashboard/actions';
+import { RefreshWhile } from '@/components/dashboard/refresh-while';
+import { activateModelVersionAction, rollbackModelAction, trainModelAction } from '@/app/dashboard/actions';
 
 export const metadata: Metadata = { title: 'ARCH Model' };
 export const dynamic = 'force-dynamic';
@@ -20,17 +21,84 @@ function Code({ children }: { children: string }) {
   return <pre className="arch-mono overflow-x-auto rounded-lg border border-slate-800 bg-slate-950/70 p-3 text-xs leading-relaxed text-slate-300">{children}</pre>;
 }
 
+const STATUS_TONE: Record<VersionSummary['status'], 'success' | 'neutral' | 'danger'> = {
+  ACTIVE: 'success',
+  SUPERSEDED: 'neutral',
+  REJECTED: 'danger',
+};
+
+const STATUS_HINT: Record<VersionSummary['status'], string> = {
+  ACTIVE: 'serving now',
+  SUPERSEDED: 'was active',
+  REJECTED: 'lost evaluation',
+};
+
+function VersionRegistry({ versions, activeVersionId, canManage }: { versions: VersionSummary[]; activeVersionId: string | null; canManage: boolean }) {
+  if (versions.length === 0) {
+    return <p className="text-sm text-slate-400">No training runs yet. The first trained model becomes active automatically.</p>;
+  }
+  return (
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[640px] text-left text-sm">
+        <thead>
+          <tr className="text-xs uppercase tracking-wide text-slate-500">
+            <th className="py-2 pr-3 font-medium">Version</th>
+            <th className="py-2 pr-3 font-medium">Status</th>
+            <th className="py-2 pr-3 font-medium">Trained</th>
+            <th className="py-2 pr-3 font-medium">Trigger</th>
+            <th className="py-2 pr-3 font-medium">Docs</th>
+            <th className="py-2 pr-3 font-medium">Severity / category</th>
+            <th className="py-2 font-medium">Evaluation</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-slate-800/70">
+          {versions.map((version) => (
+            <tr key={version.id} className="align-top text-slate-300">
+              <td className="py-2 pr-3 font-medium">v{version.version}</td>
+              <td className="py-2 pr-3">
+                <Badge tone={STATUS_TONE[version.status]}>{version.status.toLowerCase()}</Badge>
+                <p className="mt-1 text-xs text-slate-500">{STATUS_HINT[version.status]}</p>
+              </td>
+              <td className="py-2 pr-3 text-xs text-slate-400">{timeAgo(new Date(version.trainedAt))}</td>
+              <td className="py-2 pr-3 text-xs text-slate-400">{version.trigger}</td>
+              <td className="py-2 pr-3 text-xs text-slate-400">
+                {version.teamDocuments} team
+                <br />
+                <span className="text-slate-500">{version.totalDocuments} total</span>
+              </td>
+              <td className="py-2 pr-3 text-xs text-slate-400">
+                {pct(version.severityAccuracy)} / {pct(version.categoryAccuracy)}
+              </td>
+              <td className="py-2 text-xs text-slate-400">
+                {version.reason || `score ${version.score}`}
+                {canManage && version.id !== activeVersionId ? (
+                  <ActionForm action={activateModelVersionAction} submitLabel="Activate" variant="secondary" inline className="mt-1">
+                    <input type="hidden" name="versionId" value={version.id} />
+                  </ActionForm>
+                ) : null}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default async function ModelPage() {
   const user = await requireUser();
   const organization = await resolveOrganization(user.id);
   const status = await getModelStatus({ organizationId: organization.id, userId: user.id });
   const canTrain = roleHasPermission(organization.role, 'copilot.train');
-  const { model, config } = status;
+  const { model, config, jobs } = status;
   const metrics = model.metrics;
   const severityCounts = Object.entries(metrics.team.severityCounts);
+  const jobInProgress = jobs.open > 0;
+  const lastJob = jobs.last;
 
   return (
     <div className="space-y-6">
+      <RefreshWhile active={jobInProgress} />
       <PageHeader
         title="ARCH Model"
         description="ARCH's own AI, trained on this workspace's incidents. It runs on your server: no OpenAI, no Anthropic, no GPU bill."
@@ -73,6 +141,8 @@ export default async function ModelPage() {
                 { label: 'Your resolved incidents', value: String(model.teamDocuments) },
                 { label: 'Pattern library', value: `${metrics.documents.pattern} failure patterns (built in)` },
                 { label: 'Public postmortems', value: metrics.documents.public ? String(metrics.documents.public) : 'not loaded' },
+                { label: 'Code-fix knowledge', value: metrics.documents.code ? `${metrics.documents.code} real bug fixes` : 'not loaded' },
+                { label: 'Code-review knowledge', value: metrics.documents.review ? `${metrics.documents.review} review comments` : 'not loaded' },
                 { label: 'Vocabulary', value: `${metrics.vocabularySize.toLocaleString('en-US')} terms` },
                 { label: 'Last trained', value: model.trainedAt ? formatDateTime(new Date(model.trainedAt)) : '—' },
                 {
@@ -81,8 +151,23 @@ export default async function ModelPage() {
                 },
               ]}
             />
+            {jobInProgress ? (
+              <Alert tone="info">Training job {jobs.open === 1 ? 'is' : 's are'} running in the background — this page refreshes automatically until it finishes.</Alert>
+            ) : lastJob ? (
+              lastJob.status === 'FAILED' ? (
+                <Alert tone="error">Last training job failed: {lastJob.error ?? 'unknown error'}</Alert>
+              ) : lastJob.status === 'COMPLETED' && lastJob.finishedAt ? (
+                <p className="text-xs text-slate-500">Last training job completed {timeAgo(lastJob.finishedAt)}.</p>
+              ) : null
+            ) : null}
             {canTrain ? (
-              <ActionForm action={trainModelAction} submitLabel={model.trained ? 'Retrain now' : 'Train on our incidents'} pendingLabel="Training…" />
+              <div className="space-y-2">
+                <ActionForm action={trainModelAction} submitLabel={model.trained ? 'Retrain now' : 'Train on our incidents'} pendingLabel="Queueing…" />
+                <p className="text-xs text-slate-500">
+                  Retraining runs as a background job: queue → train → evaluate → promote only if the new model beats the current one. Nothing is applied in the
+                  web request.
+                </p>
+              </div>
             ) : (
               <p className="text-xs text-slate-500">Only OWNER or ADMIN can retrain the model.</p>
             )}
@@ -140,6 +225,21 @@ export default async function ModelPage() {
         </Card>
       </div>
 
+      <Card>
+        <CardHeader
+          title="Model registry"
+          description="Every training run is kept. A new version serves only if it beats the active one; anything older can be reactivated (rollback). Every activation is written to the audit log."
+          action={
+            canTrain && status.versions.some((version) => version.status === 'SUPERSEDED') ? (
+              <ActionForm action={rollbackModelAction} submitLabel="Roll back to previous" variant="secondary" inline />
+            ) : undefined
+          }
+        />
+        <CardBody>
+          <VersionRegistry versions={status.versions} activeVersionId={model.activeVersionId} canManage={canTrain} />
+        </CardBody>
+      </Card>
+
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader
@@ -182,17 +282,29 @@ LOCAL_LLM_MODEL="qwen2.5-coder:7b"`}</Code>
         </Card>
 
         <Card>
-          <CardHeader title="More training data" description="Teach the model how the industry fails, not only your team." />
+          <CardHeader title="More training data" description="Teach the model how the industry fails — postmortems, real bug fixes and human code reviews." />
           <CardBody className="space-y-3">
             <p className="text-sm text-slate-400">
               {status.publicCorpus.available
                 ? `${status.publicCorpus.documents} public postmortems are loaded from ${status.publicCorpus.file}.`
-                : 'Download ~340 public postmortems (danluu/post-mortems, icco/postmortems, Kubernetes failure stories) to this server, then retrain:'}
+                : 'Download public postmortems (danluu/post-mortems, awesome-postmortem, icco/postmortems, Kubernetes failure stories) to this server:'}
             </p>
-            <Code>{`npm run model:fetch-public   # stored locally, git-ignored
-npm run model:train          # retrain every workspace`}</Code>
+            <Code>{`npm run model:fetch-public   # postmortems → ${status.publicCorpus.file}`}</Code>
+            <p className="text-sm text-slate-400">
+              {status.codeCorpus.available
+                ? `${status.codeCorpus.documents} real bug-fix cases are loaded (SWE-bench, ManySStuBs4J).`
+                : 'Download real bug-fix knowledge (SWE-bench Verified · MIT, ManySStuBs4J · Apache-2.0) for code-fix suggestions:'}
+            </p>
+            <Code>{`npm run model:fetch-code     # stack trace → patch knowledge`}</Code>
+            <p className="text-sm text-slate-400">
+              {status.reviewCorpus.available
+                ? `${status.reviewCorpus.documents} code-review examples are loaded (github-codereview, CodeReviewer).`
+                : 'Download human code-review knowledge (github-codereview · MIT, Microsoft CodeReviewer · Apache-2.0) for Code Assist:'}
+            </p>
+            <Code>{`npm run model:fetch-review   # review comment ↔ code-change pairs`}</Code>
             <p className="text-xs text-slate-500">
-              Those corpora have no license or are GPL-3.0 — review before commercial use. ARCH keeps only short snippets and the source link.
+              Downloads run on your server into a git-ignored folder; nothing third-party is committed or redistributed — ARCH keeps short snippets and source
+              links only. Licenses: docs/legal/TRAINING-DATA-LICENSES.md. Then retrain above.
             </p>
             <p className="text-sm text-slate-400">Want to fine-tune the local LLM on your incidents? Export a training set:</p>
             <Code>{`npm run model:export-finetune -- --org <organization-slug>`}</Code>

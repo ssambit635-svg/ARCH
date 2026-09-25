@@ -47,6 +47,14 @@ Training happens in `src/server/ai/arch-model/train.ts`. It is pure: no DB and n
 | **Your resolved incidents** | `incidents` + human timeline notes (Copilot-generated entries are excluded) + *approved* postmortems | severity classifier, similar-incident retrieval (root cause, fix, time to resolve), team statistics |
 | **Pattern library** | `arch-model/knowledge.ts`: 44 failure patterns across 22 categories, written for ARCH (original text) | category classifier, fixes and prevention, and knowledge on day one |
 | **Public postmortems** (optional) | `npm run model:fetch-public` → `model-data/public-incidents.jsonl` (git-ignored) | category classifier, "this looks like the 2017 X outage" references |
+| **Code-fix knowledge** (optional) | `npm run model:fetch-code` → `model-data/code-corpus.jsonl` — SWE-bench / SWE-bench Verified (MIT) + ManySStuBs4J | code-fix drafts: "how real bugs like this were fixed" references and fix steps (code tasks only) |
+| **Code-review knowledge** (optional) | `npm run model:fetch-review` → `model-data/review-corpus.jsonl` — ronantakizawa/github-codereview (MIT) + Microsoft CodeReviewer (Apache-2.0) | Code Assist grounding: what human reviewers said about similar code (code tasks only) |
+
+The code/review corpora enrich retrieval for code tasks only (`CODE_FIX`, Code Assist). The four
+incident tasks (summary / triage / status update / postmortem) always use the exact V2 knowledge
+mix — team history + pattern library + public postmortems — so their behaviour and JSON contracts
+(`EngineOutput`) are unchanged. Licenses and compliance: `docs/legal/TRAINING-DATA-LICENSES.md`;
+the model's own license: `docs/legal/ARCH-MODEL-LICENSE.md`.
 
 Models:
 - **Category**: multinomial Naive Bayes over 22 categories (deploy, database, dns, certificate, …).
@@ -59,14 +67,45 @@ Models:
 With 342 public postmortems the category holdout accuracy is about **77% across 22 classes**. Training
 takes about 200 ms and the artifact is about 550 KB of JSON, stored in `arch_models.artifact`.
 
-**Tenancy:** every organization has its own row, trained only on its own incidents. The public
-corpus and pattern library are shared, read-only and contain no customer data. A test asserts that
-one organization's text never appears in another's artifact.
+**Tenancy:** every organization has its own model, trained only on its own incidents. The shared
+corpora and pattern library are read-only and contain no customer data. A test asserts that one
+organization's text never appears in another's artifact.
 
-**Retraining:** the worker retrains organizations that resolved incidents since their last training,
-every `ARCH_MODEL_RETRAIN_MINUTES` (default 60). OWNER/ADMIN can also click **Retrain now** on
-`/dashboard/model`. The CLI equivalent is `npm run model:train`. Each training run writes an
-`arch_model.train` audit entry.
+### Retraining is a background job (never inside a web request)
+
+```
+/dashboard/model "Retrain now"  ──or──  POST /api/copilot/model/train
+        │  permission copilot.train + per-org rate limit
+        ▼
+  arch_model_jobs  (PENDING)            ← web request returns 202 here, nothing trained yet
+        │  npm run worker claims the row (atomic update, multi-worker safe)
+        ▼
+  train candidate → score = 0.6·severityAcc + 0.4·categoryAcc (holdout)
+        │
+        ├─ beats the active model  → version ACTIVE, serves immediately
+        └─ does not beat it        → version REJECTED (kept in the registry)
+        ▼
+  audit arch_model.train {version, promoted, score, previousVersion…}
+```
+
+**Model registry** (`arch_model_versions`): every training run is a row with its artifact, metrics
+and evaluation. `status` is `ACTIVE` (serving), `SUPERSEDED` (was serving) or `REJECTED` (lost the
+evaluation). `arch_models` is the pointer to the active version.
+
+**Promotion rule:** the first trained model always serves; afterwards a candidate serves only if
+its holdout score strictly beats the active model's (exact ties promote when the candidate was
+trained on strictly more of the team's incidents). A losing run is still registered, so admins can
+see *why* nothing changed.
+
+**Rollback / manual activation:** any registry version can be put back in service —
+`POST /api/copilot/model/rollback` (previous version) or
+`POST /api/copilot/model/versions/:id/activate` (any version). Both write an `arch_model.activate`
+audit entry with `fromVersion → version`, so the audit log shows which version was serving at any
+time.
+
+**Scheduled:** every `ARCH_MODEL_RETRAIN_MINUTES` (default 60) the worker enqueues jobs for
+organizations that resolved incidents since their last training, then drains the queue. The CLI
+equivalent is `npm run model:train`, which trains synchronously (a CLI process, not a web request).
 
 ## 3. What each Copilot task does on the ARCH model
 
@@ -136,18 +175,27 @@ GPU for an hour), convert it to GGUF and point `FROM` in `ai/Modelfile` at it.
 
 ## 7. Public data: sources and licences
 
-`npm run model:fetch-public` downloads to your server at run time. **Nothing third-party is
-committed to this repository.**
+`npm run model:fetch-public|fetch-code|fetch-review` (or `model:fetch-all`) download to your
+server at run time. **Nothing third-party is committed to this repository.** Every fetch writes
+`model-data/datasets-manifest.json`, regenerates `model-data/THIRD-PARTY-NOTICES.md` and saves the
+datasets' license texts under `model-data/licenses/`.
 
-| Source | Licence | Note |
+| Source | Licence | Used for |
 |---|---|---|
-| [danluu/post-mortems](https://github.com/danluu/post-mortems) | **none** (all rights reserved) | ~12k-star curated list of summaries |
-| [icco/postmortems](https://github.com/icco/postmortems) | **GPL-3.0** | 240+ structured entries with categories |
-| [hjacobs/kubernetes-failure-stories](https://github.com/hjacobs/kubernetes-failure-stories) | **none** | Kubernetes-specific incidents |
+| [danluu/post-mortems](https://github.com/danluu/post-mortems) | **none** (all rights reserved) | postmortem summaries + links |
+| [icco/postmortems](https://github.com/icco/postmortems) | **GPL-3.0** | structured postmortem entries |
+| [hjacobs/kubernetes-failure-stories](https://github.com/hjacobs/kubernetes-failure-stories) | **none** | Kubernetes failure index |
+| [saystone/awesome-postmortem](https://github.com/saystone/awesome-postmortem) | **CC0** (per listing; index entries only) | famous outages index |
+| [SWE-bench](https://github.com/princeton-nlp/SWE-bench) (+ Verified) | **MIT** | real issue→PR bug fixes (code-fix drafts) |
+| [ManySStuBs4J](https://zenodo.org/records/3653444) | tool **Apache-2.0**; verify Zenodo record | Java buggy→fixed line pairs |
+| [ronantakizawa/github-codereview](https://huggingface.co/datasets/ronantakizawa/github-codereview) | **MIT** | human review comments |
+| [Microsoft CodeReviewer](https://huggingface.co/microsoft/codereviewer) | **Apache-2.0** | review comment ↔ code-change pairs |
 
 The trained artifact keeps a 280-character snippet and the source URL per document. **Check these
-licences before using the public corpus commercially.** The model works without it: the pattern
-library is original ARCH text, and your own incidents are yours.
+licences before using the corpora commercially** — full analysis in
+[`docs/legal/TRAINING-DATA-LICENSES.md`](../legal/TRAINING-DATA-LICENSES.md); the model's own
+license is [`docs/legal/ARCH-MODEL-LICENSE.md`](../legal/ARCH-MODEL-LICENSE.md). The model works
+without any of it: the pattern library is original ARCH text, and your own incidents are yours.
 
 ## 8. Environment
 
@@ -180,12 +228,16 @@ src/server/ai/
   code/review.ts            Code Assist input/output
   arch-native.ts            AI_PROVIDER="arch" and the hybrid fallback wrapper
   local-llm.ts              Ollama / OpenAI-compatible local client, isLocalEndpoint, health check
-src/server/services/archModel.service.ts   training data, train/retrain, cache, status
-src/server/services/codeAssist.service.ts  Code Assist
-src/server/repositories/archModel.repository.ts
-scripts/arch-model/  fetch-public-incidents.mjs · train.ts · eval.ts · export-finetune.ts
-tests/arch-model.test.ts (pure) · tests/arch-copilot.test.ts (real DB)
+src/server/services/archModel.service.ts   corpora, train/eval/promote, jobs, registry, status
+src/server/services/codeAssist.service.ts  Code Assist (+ retrieval over the code corpora)
+src/server/repositories/archModel.repository.ts  active model + versions registry + job queue
+scripts/arch-model/  fetch-public-incidents.mjs · fetch-code-corpus.mjs · fetch-review-corpus.mjs
+                     · lib/datasets.mjs · train.ts · eval.ts · export-finetune.ts
+tests/arch-model.test.ts (pure) · tests/arch-copilot.test.ts + tests/arch-model-registry.test.ts (real DB)
 ```
+
+Database tables (V3): `arch_models` (active pointer), `arch_model_versions` (registry —
+migration `20260925180000_v3_model_registry`), `arch_model_jobs` (background training queue).
 
 The rule from V2 still holds: **nothing in `src/server/ai/` touches the database or reads files.**
 Services load data through tenant-scoped repositories and pass it in.

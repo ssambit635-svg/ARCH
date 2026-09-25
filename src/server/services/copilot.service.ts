@@ -106,7 +106,9 @@ export async function generateSuggestion(params: Params & { incidentId: string; 
   // A model problem must never block a responder, so failures fall back to no knowledge.
   try {
     const model = await getOrganizationModel(organizationId);
-    context.knowledge = buildKnowledge(model, context, { excludeIds: [`team:${incidentId}`] });
+    // CODE_FIX additionally consults the code-fix / code-review corpora; the incident tasks keep
+    // the exact V2 knowledge mix (team history + pattern library + public postmortems).
+    context.knowledge = buildKnowledge(model, context, { excludeIds: [`team:${incidentId}`], includeCodeCorpus: type === 'CODE_FIX' });
   } catch (error) {
     console.warn(`[copilot] ARCH model unavailable for ${organizationId}: ${error instanceof Error ? error.message : String(error)}`);
   }

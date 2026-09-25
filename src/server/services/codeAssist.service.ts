@@ -10,6 +10,7 @@ import { buildCodeReviewPrompt } from '../ai/prompts';
 import { copilotAttempts, copilotConfig, copilotTimeoutMs, getAiProvider } from '../ai/provider';
 import { parseCodeReview, type CodeReviewOutput } from '../ai/schemas';
 import { COPILOT_RATE_LIMIT_WINDOW_MS, copilotRateLimitKey } from './copilot.service';
+import { getOrganizationModel } from './archModel.service';
 
 /**
  * ARCH Code Assist — "make this code better" / "explain this stack trace", on your own server.
@@ -62,6 +63,26 @@ export async function reviewCode(params: { organizationId: string; userId: strin
 
   if (config.provider === 'arch') {
     output = parseCodeReview(JSON.stringify(buildCodeReviewOutput({ ...buildCodeReviewInput(code, mode, analysis), code })));
+
+    // Ground the answer in what similar real bugs and code reviews said (downloaded corpora:
+    // SWE-bench, ManySStuBs4J, github-codereview, CodeReviewer). The output contract is
+    // unchanged — this only adds references to `explanation`. A model problem never breaks a review.
+    try {
+      const organizationModel = await getOrganizationModel(organizationId);
+      const query = [...analysis.diagnoses.map((diagnosis) => `${diagnosis.title}. ${diagnosis.explanation}`), analysis.summary].join(' ');
+      const hits = organizationModel.similar(query, { k: 3, sources: ['code', 'review'], minScore: 0.12 });
+      if (hits.length > 0) {
+        const references = hits.map(
+          (hit, index) => `(${index + 1}) ${hit.doc.title}${hit.doc.rootCause ? ` — ${hit.doc.rootCause}` : ''}${hit.doc.url ? ` [source: ${hit.doc.url}]` : ''}`,
+        );
+        output = {
+          ...output,
+          explanation: [output.explanation, '', 'Similar issues seen in the bug-fix / code-review knowledge base:', ...references].join('\n').trim().slice(0, 6000),
+        };
+      }
+    } catch (error) {
+      console.warn(`[code-assist] ARCH model unavailable for ${organizationId}: ${error instanceof Error ? error.message : String(error)}`);
+    }
   } else {
     const scrubbed = scrubSecrets(code, analysis.language);
     const prompt = buildCodeReviewPrompt(buildCodeReviewInput(scrubbed, mode, analysis));
