@@ -702,7 +702,11 @@ export async function approveVerificationAction(_state: ActionResult | undefined
     const pr = await approveAndCreatePr({ organizationId: organization.id, userId: user.id, verificationId, title, body });
     revalidatePath(`/dashboard/incidents/${pr.incidentId}`);
     revalidatePath('/dashboard/repos');
-    return { ok: true, message: `PR created: ${pr.branch} — ${pr.externalUrl ?? 'mock URL'} (audit logged)` };
+    // Tell the truth about which world we are in: an offline record is not a pull request.
+    const githubLine = pr.externalUrl
+      ? `PR opened: ${pr.branch} → ${pr.externalUrl}`
+      : `No PR created — offline mode (GITHUB_TOKEN unset or GITHUB_MODE="mock"). Recorded branch ${pr.branch} and audited.`;
+    return { ok: true, message: githubLine };
   } catch (error) {
     return toFailure(error);
   }

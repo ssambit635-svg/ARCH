@@ -1,10 +1,12 @@
 import type { Metadata } from 'next';
 import { requireUser, resolveOrganization } from '@/lib/session';
 import { listRepoConnections } from '@/server/services/repo.service';
+import { describeGithubConfig } from '@/server/services/github.service';
 import { roleHasPermission } from '@/lib/permissions';
 import { timeAgo } from '@/lib/format';
 import { Card, CardBody, CardHeader, PageHeader } from '@/components/ui';
 import { ConnectRepoForm, RepoConnectionsList } from '@/components/dashboard/repo-connections';
+import { GithubConnectionPanel } from '@/components/dashboard/github-connection';
 
 export const metadata: Metadata = { title: 'Repositories' };
 export const dynamic = 'force-dynamic';
@@ -14,6 +16,7 @@ export default async function ReposPage() {
   const organization = await resolveOrganization(user.id);
 
   const canManage = roleHasPermission(organization.role, 'repo.manage');
+  const github = describeGithubConfig();
   const connections = await listRepoConnections({ organizationId: organization.id, userId: user.id, includeInactive: true }).catch(() => []);
 
   const views = connections.map((c) => ({
@@ -38,9 +41,25 @@ export default async function ReposPage() {
         <CardHeader title="Connected repositories" description={`${views.length} repo${views.length === 1 ? '' : 's'} · RBAC enforced: OWNER/ADMIN manage, all roles read.`} />
         <CardBody className="space-y-4">
           <RepoConnectionsList connections={views} />
-          {canManage ? <ConnectRepoForm /> : <p className="text-sm text-slate-400">Only OWNER/ADMIN can connect repositories.</p>}
+          {canManage ? (
+            <ConnectRepoForm />
+          ) : (
+            <p className="text-sm text-slate-400">Only OWNER/ADMIN can connect repositories.</p>
+          )}
         </CardBody>
       </Card>
+
+      {canManage ? (
+        <Card>
+          <CardHeader
+            title="GitHub token"
+            description="Approve & create PR pushes to GitHub only when a token is configured. Test it here, before an approval is the first thing that touches the network."
+          />
+          <CardBody>
+            <GithubConnectionPanel config={github} />
+          </CardBody>
+        </Card>
+      ) : null}
 
       <Card>
         <CardHeader title="How Verified Fix Loop uses repos" description="M1 → M2 → M3 → M4 → M5" />

@@ -63,6 +63,22 @@ export const pullRequestRepository = {
     });
   },
 
+  /** Used by the PR sync: GitHub is the source of truth for OPEN/MERGED/CLOSED. */
+  updateStatus(
+    id: string,
+    data: { status: string; externalUrl?: string | null; commitSha?: string | null },
+    client: DbClient = db,
+  ) {
+    return client.pullRequest.update({
+      where: { id },
+      data: {
+        status: data.status,
+        ...(data.externalUrl !== undefined ? { externalUrl: data.externalUrl } : {}),
+        ...(data.commitSha !== undefined ? { commitSha: data.commitSha } : {}),
+      },
+    });
+  },
+
   listForOrg(organizationId: string, client: DbClient = db) {
     return client.pullRequest.findMany({
       where: { organizationId },

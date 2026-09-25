@@ -9,6 +9,14 @@ const booleanish = z
   .union([z.boolean(), z.string()])
   .transform((value) => (typeof value === 'boolean' ? value : !['false', '0', 'no', ''].includes(value.toLowerCase())));
 
+/** "" and unset must mean the same thing, otherwise a blank line in .env silently "configures" a secret. */
+function optionalTrimmed() {
+  return z
+    .string()
+    .optional()
+    .transform((value) => value?.trim() || undefined);
+}
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 
@@ -59,7 +67,21 @@ const envSchema = z.object({
   FEATURE_SLACK_NOTIFICATIONS: booleanish.default(false),
 
   // ---- V4 Verified Fix Loop (M1-M5) ----
-  GITHUB_TOKEN: z.string().optional(),
+  // GitHub PAT used to push ARCH branches and open pull requests. Empty string counts as unset.
+  GITHUB_TOKEN: optionalTrimmed(),
+  // "auto"  real PRs when GITHUB_TOKEN is set, mocked PRs when it is not (default).
+  // "mock"  always offline — no network at all (tests, CI, air-gapped demos).
+  // "real"  always call GitHub and fail loudly if the token is missing or broken.
+  // Deliberately independent of ARCH_OFFLINE_ONLY: that flag is the *AI* privacy lock (which model
+  // may see incident data). Opening a PR is an explicit, human-approved action, so it does not
+  // require letting an external LLM vendor read your incidents.
+  GITHUB_MODE: z.enum(['auto', 'real', 'mock']).default('auto'),
+  // GitHub Enterprise Server: point at https://ghe.example.com/api/v3. Never plain http in production.
+  GITHUB_API_BASE_URL: z.string().url().default('https://api.github.com'),
+  // Per-request deadline for every GitHub API call (branches, blobs, PR creation).
+  GITHUB_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(120_000).default(20_000),
+  // ARCH PRs start as drafts: a human has to mark them ready before a reviewer is pinged.
+  GITHUB_PR_DRAFT: booleanish.default(true),
   SANDBOX_TIMEOUT_MS: z.coerce.number().int().min(1000).max(300_000).default(30_000),
   SANDBOX_MAX_OUTPUT_CHARS: z.coerce.number().int().min(1000).max(200_000).default(20_000),
 });
@@ -83,6 +105,18 @@ function loadEnv(): Env {
     if (value.AUTH_SECRET.startsWith('replace-with')) {
       throw new Error('Refusing to start in production with placeholder secrets.');
     }
+    // A placeholder PAT would make every "Approve" fail mid-flight, after the human already clicked.
+    if (value.GITHUB_TOKEN?.startsWith('replace-with')) {
+      throw new Error('Refusing to start in production with a placeholder GITHUB_TOKEN.');
+    }
+    if (!value.GITHUB_API_BASE_URL.startsWith('https://')) {
+      throw new Error('GITHUB_API_BASE_URL must be https:// in production (a PAT over plain http leaks the token).');
+    }
+  }
+
+  // "real" is a promise that PRs are actually opened; fail at boot instead of at approval time.
+  if (value.GITHUB_MODE === 'real' && !value.GITHUB_TOKEN) {
+    throw new Error('GITHUB_MODE="real" needs GITHUB_TOKEN. Set a GitHub PAT or use GITHUB_MODE="auto"/"mock".');
   }
 
   return value;

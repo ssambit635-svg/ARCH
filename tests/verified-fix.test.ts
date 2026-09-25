@@ -406,13 +406,18 @@ describe('V4 Verified Fix Loop', () => {
 
       expect(pr).toBeDefined();
       expect(pr.branch).toMatch(/^arch\/fix-/);
-      expect(pr.externalUrl).toBeTruthy();
-      expect(pr.status).toBe('OPEN');
       expect(pr.title).toContain('Fix:');
+
+      // Offline mode (no GITHUB_TOKEN in the test env): a record is written, but it must NOT claim a
+      // pull request exists — that dead link used to be stored as a real-looking github.com URL.
+      expect(pr.externalUrl).toBeFalsy();
+      expect(pr.status).toBe('MOCK');
 
       // Audit logs: pr.create + copilot.approve + fix.verify
       const audits = await db.auditLog.findMany({ where: { organizationId: acme.organization.id } });
       expect(audits.some((a) => a.action === 'pr.create')).toBe(true);
+      const prAudit = audits.find((a) => a.action === 'pr.create');
+      expect((prAudit?.metadata as { githubMode?: string } | null)?.githubMode).toBe('mock');
       expect(audits.some((a) => a.action === 'copilot.approve')).toBe(true);
       expect(audits.some((a) => a.action.startsWith('fix.verify'))).toBe(true);
 

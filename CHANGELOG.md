@@ -15,6 +15,64 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Added — V4.1 · Real GitHub PR creation (M1 + M4 completed)
+
+- **"Approve & create PR" actually opens a pull request now.** Previously `createPullRequest`
+  returned a fabricated `https://github.com/{org}/{repo}/pull/{random}` URL *in every mode* —
+  including when a real token was configured — so the dashboard and the audit log claimed a PR
+  existed that never did. With `GITHUB_TOKEN` set, ARCH now runs the real flow via Octokit:
+  resolve the base (pinned commit SHA, the M1 `repo@commit` guarantee, falling back to the base
+  branch head), read every file the patch touches **at that commit**, apply the hunks, then push
+  one blob per file → one tree → one commit → `refs/heads/arch/fix-*` → a **draft pull request**
+  (`GITHUB_PR_DRAFT="true"`).
+- **The patch is turned into real file contents in-process** (`src/server/services/github-patch.ts`),
+  because GitHub's Git Data API takes blobs, not diffs. Hunks that don't fit the pinned commit abort
+  with a conflict the human can act on — nothing is pushed, and the audit log gets a
+  `pr.create_failed` entry. A `\ No newline at end of file` marker, multi-file diffs, markdown
+  fences around the patch and ±120-line hunk drift are all handled.
+- **Repo connect and commit pinning are now validated against GitHub.** Connecting a repo the
+  token cannot see fails at connect time (404 with the reason), short commit pins are resolved to
+  full 40-char SHAs (a 7-char pin used to explode at approval time, because `git createRef` only
+  takes full SHAs), the repository's actual default branch is used instead of a blind `main`
+  guess, archived repos are refused, and a read-only token is recorded as a warning in the
+  audit note. Duplicate connections are matched case-insensitively (`Acme/Api` IS `acme/api`).
+- **New configuration:** `GITHUB_MODE` (`auto`/`mock`/`real`; `auto` = real when a token is set),
+  `GITHUB_API_BASE_URL` (GitHub Enterprise), `GITHUB_TIMEOUT_MS`, `GITHUB_PR_DRAFT`. This is
+  deliberately **independent of `ARCH_OFFLINE_ONLY`**: that flag is the AI privacy lock (which
+  model may see incident data), while opening a PR is an explicit human-approved push. You no
+  longer have to permit external AI vendors to get real pull requests — the AI lock stays ON.
+- **See the problem before the approval depends on it:** `/dashboard/repos` gains a GitHub token
+  panel (mode, masked token, live token probe, repo-access check), `GET/POST /api/github`
+  reports the same (`repo.manage` required to probe a repo), and
+  `npm run github:check` runs the whole diagnosis from the command line — including
+  `--preview-patch fix.patch`, which proves a patch still applies to the pinned commit **without
+  pushing anything**.
+- **PR state sync from GitHub:** `POST /api/incidents/:id/copilot/pull-requests/sync`
+  re-reads every PR ARCH opened for an incident and stores `MERGED`/`CLOSED`, so the UI stops
+  claiming "OPEN" for a PR a human merged last week (audited as `pr.sync`).
+- **Offline mode is honest.** Mock PRs are recorded with status `MOCK` and *no* URL instead of a
+  dead github.com link; the incident panel says so plainly.
+
+### Security — V4.1
+
+- **A live `ghp_…` PAT was committed in `.env.example`** (the one file users are told to copy)
+  and is in git history on the default branch — treat it as leaked: revoke it at
+  <https://github.com/settings/tokens>. New `tests/secret-hygiene.test.ts` fails CI if any
+  token-shaped string appears in tracked files again, and `.env.example` carries placeholders
+  only, with a "never put the real token here" warning. In production ARCH now refuses to boot
+  with a `replace-with…` placeholder token, refuses `GITHUB_MODE="real"` without a token, and
+  requires an `https://` GitHub API base URL.
+- Error messages from GitHub are scrubbed of token-shaped strings (`ghp_…`, `github_pat_…`,
+  `x-access-token:…@`) before they are logged or returned — a failing request used to echo the
+  credential back into ARCH's logs.
+
+### Compatibility — V4.1
+- Existing tests, mock mode and the draft→approve flow are unchanged; the suite runs hermetically
+  (it pins `GITHUB_MODE=mock`/`GITHUB_TOKEN=""`, so an exported token on the developer machine can
+  no longer make tests hit api.github.com). Default behaviour with no token configured is still the
+  offline record, exactly as before.
+
+
 ### Added — V3.1 · Model registry, background training and more training data
 
 - **Retraining is now a background job.** "Retrain now" (and `POST /api/copilot/model/train`)

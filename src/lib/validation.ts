@@ -260,7 +260,10 @@ const commitSha = z
 export const repoConnectionCreateSchema = z.object({
   owner: githubOwner,
   repo: githubRepo,
-  defaultBranch: z.string().trim().min(1).max(100).default('main'),
+  // No `.default('main')`: a hard 'main' would (a) be stored blindly for repos whose default is
+  // master/develop and (b) in real mode make GitHub return 404 for a branch that never existed.
+  // Omit it and ARCH asks GitHub for the repository's actual default branch.
+  defaultBranch: z.string().trim().min(1).max(100).optional(),
   pinnedCommitSha: commitSha.optional(),
 });
 
@@ -299,5 +302,18 @@ export const repoConnectionListQuerySchema = z.object({
   includeInactive: z
     .union([z.boolean(), z.enum(['true', 'false'])])
     .transform((v) => v === true || v === 'true')
+    .optional(),
+});
+
+/** GET /api/github needs no body; POST may probe a specific repo + commit. */
+export const githubCheckSchema = z.object({
+  owner: githubOwner.optional(),
+  repo: githubRepo.optional(),
+  defaultBranch: z.string().trim().min(1).max(100).optional(),
+  commitSha: commitSha.optional(),
+  /** Skip the network entirely and only report what .env says. */
+  configOnly: z
+    .union([z.boolean(), z.enum(['true', 'false'])])
+    .transform((value) => value === true || value === 'true')
     .optional(),
 });
