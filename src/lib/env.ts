@@ -29,6 +29,16 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   ERROR_TRACKING_DSN: z.string().optional(),
 
+  // ---- ARCH Copilot (V2, see AGENTS-V2.md) ----
+  // "mock" returns canned, context-derived drafts so dev and tests never need a real key.
+  AI_PROVIDER: z.enum(['mock', 'openai', 'anthropic']).default('mock'),
+  AI_API_KEY: z.string().optional(),
+  // Ignored by "mock". Empty = provider default (gpt-4o-mini for OpenAI, claude-haiku-4-5 for Anthropic).
+  AI_MODEL: z.string().optional(),
+  AI_MAX_TOKENS: z.coerce.number().int().min(64).max(8000).default(1000),
+  AI_TIMEOUT_MS: z.coerce.number().int().min(50).max(120_000).default(15_000),
+  AI_RATE_LIMIT_PER_MINUTE: z.coerce.number().int().min(1).max(10_000).default(20),
+
   FEATURE_STATUS_PAGES: booleanish.default(true),
   FEATURE_SLACK_NOTIFICATIONS: booleanish.default(false),
 });

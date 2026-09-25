@@ -192,3 +192,22 @@ export const webhookIngestSchema = z.object({
   timestamp: z.union([z.string(), z.number()]).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
+
+// ---------- ARCH Copilot (V2) ----------
+
+export const aiSuggestionTypes = ['SUMMARY', 'TRIAGE', 'STATUS_UPDATE', 'POSTMORTEM'] as const;
+export const aiSuggestionStatuses = ['PENDING', 'APPROVED', 'DISMISSED'] as const;
+
+export const copilotSuggestionListQuerySchema = z.object({
+  status: z.enum(aiSuggestionStatuses).optional(),
+});
+
+export const copilotGenerateSchema = z.object({
+  incidentId: id,
+  type: z.enum(aiSuggestionTypes),
+});
+
+export const copilotApproveSchema = z.object({
+  /** Reviewer-edited text for summary / status update / postmortem drafts. */
+  text: z.string().trim().max(10_000).optional(),
+});

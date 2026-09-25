@@ -29,6 +29,10 @@ function metadataSummary(metadata: unknown): string | null {
   return null;
 }
 
+function isCopilotEntry(metadata: unknown): boolean {
+  return Boolean(metadata && typeof metadata === 'object' && (metadata as Record<string, unknown>).source === 'copilot');
+}
+
 export function IncidentTimeline({ events }: { events: TimelineEvent[] }) {
   if (events.length === 0) {
     return <p className="px-5 py-6 text-sm text-slate-400">No timeline entries yet.</p>;
@@ -46,6 +50,14 @@ export function IncidentTimeline({ events }: { events: TimelineEvent[] }) {
                 <span className="font-medium text-white">{actor}</span>{' '}
                 <span className="text-slate-400">{typeLabels[event.type]}</span>{' '}
                 {summary && event.type !== 'COMMENT' ? <span className="arch-mono text-xs text-slate-400">({summary})</span> : null}
+                {isCopilotEntry(event.metadata) ? (
+                  <span
+                    className="ml-1 inline-flex items-center rounded-full bg-indigo-500/15 px-2 py-0.5 text-xs font-medium text-indigo-300 ring-1 ring-inset ring-indigo-500/30"
+                    title="Drafted by ARCH Copilot, reviewed and approved by this person"
+                  >
+                    Copilot draft · approved
+                  </span>
+                ) : null}
               </p>
               <time className="text-xs text-slate-500" dateTime={event.createdAt.toISOString()} title={formatDateTime(event.createdAt)}>
                 {timeAgo(event.createdAt)}

@@ -53,6 +53,7 @@ The written spec and the implementation live side by side: documents in `docs/`,
 ```
 ARCH/
 ├── AGENTS.md                     # Engineering contract for coding agents (stack, schema, rules)
+├── AGENTS-V2.md                  # V2 contract: ARCH Copilot + Slack/status-page improvements
 ├── README.md                     # You are here
 ├── CHANGELOG.md                  # Version history, Keep-a-Changelog format
 ├── CONTRIBUTING.md               # How to work in this repo
@@ -165,6 +166,7 @@ Everything is JSON under `/api`. Success is `{ "data": ... }`; failures are
 | Status pages | `/api/status-pages` (+ `/{id}`, `/{id}/publish`), public `GET /api/status-pages/public/{slug}`, page `/status/{slug}` |
 | Webhooks | `POST /api/webhooks/{provider}?endpoint={externalId}` (HMAC only), `/api/webhook-endpoints` (+ `/{id}/rotate`, `/{id}/deliveries`) |
 | Audit | `GET /api/audit` (OWNER/ADMIN, paginated, `?summary=true`) |
+| Copilot (V2) | `POST /api/incidents/{id}/copilot/{summary,triage,status-draft,postmortem}`, `GET /api/incidents/{id}/copilot/suggestions?status=`, `POST /api/copilot/suggestions/{id}/{approve,dismiss}` |
 
 Webhook senders sign `"{timestamp}.{rawBody}"` with the endpoint secret and send
 `X-Arch-Signature: t=<unix>,v1=<hex>`; GitHub-style `X-Hub-Signature-256` is also accepted.
@@ -180,9 +182,32 @@ recorded once, and every attempt (accepted, duplicate, rejected, failed) lands i
 | Manage projects/services, members, webhooks, publish status pages | ✅ | ✅ | — | — |
 | Organization settings, delete organization | ✅ | — | — | — |
 | Read audit log | ✅ | ✅ | — | — |
+| Read ARCH Copilot drafts | ✅ | ✅ | ✅ | ✅ |
+| Request, approve or dismiss ARCH Copilot drafts | ✅ | ✅ | ✅ | — |
 
 Enforced server-side on every request (`src/lib/permissions.ts`); the UI only hides what the API
 would refuse anyway. Cross-tenant ids answer `404`, never `403`.
+
+### ARCH Copilot (V2)
+
+AI assistance inside the incident workspace — spec in [`AGENTS-V2.md`](AGENTS-V2.md). From an
+incident page a responder can ask for a **summary** (≤ 5 bullets), a **triage** suggestion
+(severity + assignee), a customer-safe **status-update draft**, or a **postmortem** draft
+(Timeline / Impact / Root cause / Action items).
+
+- **Always a draft.** Output is stored as a `PENDING` `AiSuggestion`. Nothing touches the incident,
+  the status page or notifications until a RESPONDER+ approves it (text can be edited first).
+  Approving posts to the timeline — or, for triage, applies severity/assignee through the normal
+  incident service. Dismissed drafts are kept for the audit trail.
+- **Minimal, redacted context.** Only the incident title, severity, status, times, affected service
+  name and timeline entries are sent — after credentials, emails and long hex tokens are redacted.
+  No ids, names or other tenants' data; triage candidates are opaque refs mapped back server-side.
+- **Guardrails.** 15 s timeout per attempt, one retry, schema-validated output, then a friendly
+  `503`. Status drafts are scrubbed of hostnames/IPs/URLs after generation. 20 calls/min per org.
+  Every generate, failure, approve and dismiss writes an audit entry with token usage.
+- **Providers.** `AI_PROVIDER="mock"` (default — no key, no network, used by all tests),
+  `"openai"` or `"anthropic"` with `AI_API_KEY`. Code lives in `src/server/ai/`; prompts only in
+  `src/server/ai/prompts.ts`.
 
 ---
 

@@ -55,6 +55,16 @@ export const incidentRepository = {
     return client.incident.groupBy({ by: ['status'], where: { organizationId }, _count: { _all: true } });
   },
 
+  /** Open incidents per assignee — Copilot triage uses it as a workload signal. */
+  async countOpenByAssignee(organizationId: string, client: DbClient = db): Promise<Map<string, number>> {
+    const rows = await client.incident.groupBy({
+      by: ['assignedToId'],
+      where: { organizationId, status: { not: 'RESOLVED' }, assignedToId: { not: null } },
+      _count: { _all: true },
+    });
+    return new Map(rows.filter((row) => row.assignedToId).map((row) => [row.assignedToId as string, row._count._all]));
+  },
+
   countBySeverity(organizationId: string, client: DbClient = db) {
     return client.incident.groupBy({ by: ['severity'], where: { organizationId }, _count: { _all: true } });
   },

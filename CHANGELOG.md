@@ -15,6 +15,27 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Added — V2 · ARCH Copilot (milestones M1–M3 of `AGENTS-V2.md`)
+- **AI drafts in the incident workspace.** Ask ARCH Copilot for an incident summary (at most five
+  bullets), a triage suggestion (severity and assignee), a customer-safe status-page update, or a
+  blameless postmortem with Timeline / Impact / Root cause / Action items.
+- **Humans stay in charge.** Every draft waits for review. Responders, admins and owners can edit
+  and approve it — which posts it to the timeline (and therefore to your status page, for status
+  updates) or applies the triage — or dismiss it. Viewers can read drafts but not act on them.
+  Reviewer and time are recorded, and dismissed drafts stay in the audit trail.
+- **Privacy by default.** Only the incident title, severity, status, timing, affected service and
+  timeline entries are sent to the AI provider, after passwords, API keys, tokens, connection-string
+  credentials and email addresses are redacted. Names, ids and other organizations' data are never
+  sent. Status drafts are scrubbed of internal hostnames, IP addresses and URLs.
+- **Predictable behaviour.** 15-second timeout, one automatic retry, then a friendly error; a limit
+  of 20 AI calls per minute per organization; token usage recorded on every draft and audit entry.
+- **Bring your own provider.** OpenAI or Anthropic via `AI_PROVIDER` / `AI_API_KEY`; the default
+  `mock` provider works offline with no key.
+
+### Changed
+- New `503 SERVICE_UNAVAILABLE` error code for failures of external dependencies (the AI provider).
+- Database migration `20260925000000_v2_ai_suggestions` adds the `ai_suggestions` table.
+
 ### Planned — v1.1, P1 features
 Slack notifications behind `FEATURE_SLACK_NOTIFICATIONS`, on-call schedules and escalation, custom
 status page domains, two-factor authentication, and the first monitoring integrations.

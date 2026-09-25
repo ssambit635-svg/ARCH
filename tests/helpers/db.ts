@@ -9,7 +9,7 @@ import type { MembershipRole, IncidentSeverity } from '@/generated/prisma/client
 export async function resetDatabase(): Promise<void> {
   await db.$executeRawUnsafe(`
     TRUNCATE TABLE
-      "notifications", "audit_logs", "webhook_deliveries", "webhook_endpoints",
+      "ai_suggestions", "notifications", "audit_logs", "webhook_deliveries", "webhook_endpoints",
       "incident_events", "incidents", "status_page_services", "status_pages",
       "services", "projects", "invitations", "memberships", "sessions",
       "accounts", "verification_tokens", "organizations", "users"

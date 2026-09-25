@@ -90,6 +90,17 @@ export async function readJson(request: Request): Promise<unknown> {
   }
 }
 
+/** Like `readJson`, but an empty body is `{}` (for endpoints whose body is optional). */
+export async function readOptionalJson(request: Request): Promise<unknown> {
+  const text = await request.text();
+  if (!text.trim()) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw AppError.badRequest('Request body must be valid JSON.');
+  }
+}
+
 /** Wrap a handler so every thrown error becomes a well-formed response. */
 export function handleRoute<C = unknown>(handler: (request: NextRequest, context: C) => Promise<NextResponse>) {
   return async (request: NextRequest, context: C): Promise<NextResponse> => {

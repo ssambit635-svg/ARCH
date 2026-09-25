@@ -461,6 +461,41 @@ export async function updateIncident(params: {
   return incidentRepository.findByIdWithTimeline(organizationId, incident.id);
 }
 
+type CommentIncident = NonNullable<Awaited<ReturnType<typeof incidentRepository.findById>>>;
+
+/**
+ * Timeline comment + audit row + notification outbox, inside the caller's transaction.
+ * Shared by `addIncidentComment` and by ARCH Copilot when an approved draft is posted.
+ * The caller has already authorized the actor and loaded `incident` scoped to the organization.
+ */
+export async function addIncidentCommentInTransaction(
+  tx: DbClient,
+  params: { organizationId: string; userId: string; incident: CommentIncident; body: string; metadata?: Record<string, unknown> | null },
+) {
+  const { organizationId, userId, incident, body, metadata } = params;
+  const event = await incidentRepository.addEvent({ incidentId: incident.id, authorId: userId, type: 'COMMENT', body, metadata: metadata ?? null }, tx);
+  await writeAudit(
+    { organizationId, actorId: userId, action: 'incident.comment', entityType: 'incident', entityId: incident.id, metadata: null },
+    tx,
+  );
+
+  const organization = await organizationRepository.findById(organizationId, tx);
+  const project = await projectRepository.findById(organizationId, incident.projectId, tx);
+  const recipients = await notificationRecipients(organizationId, userId, incident.assignedToId, tx);
+  await notificationRepository.enqueueMany(
+    buildIncidentNotifications(
+      incidentContext(organization?.name ?? 'Organization', project?.name ?? '—', incident.service?.name ?? null, incident, 'a teammate', {
+        message: body,
+      }),
+      recipients,
+      'INCIDENT_COMMENT',
+      organizationId,
+    ),
+    tx,
+  );
+  return event;
+}
+
 export async function addIncidentComment(params: {
   organizationId: string;
   userId: string;
@@ -474,28 +509,7 @@ export async function addIncidentComment(params: {
   const existing = await incidentRepository.findById(organizationId, incidentId);
   if (!existing) throw AppError.notFound('Incident not found.');
 
-  await db.$transaction(async (tx) => {
-    await incidentRepository.addEvent({ incidentId, authorId: userId, type: 'COMMENT', body, metadata: metadata ?? null }, tx);
-    await writeAudit(
-      { organizationId, actorId: userId, action: 'incident.comment', entityType: 'incident', entityId: incidentId, metadata: null },
-      tx,
-    );
-
-    const organization = await organizationRepository.findById(organizationId, tx);
-    const project = await projectRepository.findById(organizationId, existing.projectId, tx);
-    const recipients = await notificationRecipients(organizationId, userId, existing.assignedToId, tx);
-    await notificationRepository.enqueueMany(
-      buildIncidentNotifications(
-        incidentContext(organization?.name ?? 'Organization', project?.name ?? '—', existing.service?.name ?? null, existing, 'a teammate', {
-          message: body,
-        }),
-        recipients,
-        'INCIDENT_COMMENT',
-        organizationId,
-      ),
-      tx,
-    );
-  });
+  await db.$transaction((tx) => addIncidentCommentInTransaction(tx, { organizationId, userId, incident: existing, body, metadata: metadata ?? null }));
 
   return incidentRepository.findByIdWithTimeline(organizationId, incidentId);
 }

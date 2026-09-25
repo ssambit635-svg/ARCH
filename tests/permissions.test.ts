@@ -24,6 +24,9 @@ const EXPECTED: Record<PermissionAction, Record<Role, boolean>> = {
   'webhook.read': { OWNER: true, ADMIN: true, RESPONDER: false, VIEWER: false },
   'webhook.manage': { OWNER: true, ADMIN: true, RESPONDER: false, VIEWER: false },
   'audit.read': { OWNER: true, ADMIN: true, RESPONDER: false, VIEWER: false },
+  'copilot.read': { OWNER: true, ADMIN: true, RESPONDER: true, VIEWER: true },
+  'copilot.generate': { OWNER: true, ADMIN: true, RESPONDER: true, VIEWER: false },
+  'copilot.review': { OWNER: true, ADMIN: true, RESPONDER: true, VIEWER: false },
 };
 
 describe('permission matrix', () => {
