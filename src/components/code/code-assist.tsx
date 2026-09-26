@@ -140,6 +140,7 @@ function Result({ state }: { state: CodeReviewState }) {
 export function CodeAssist({ canUse, engineLabel }: { canUse: boolean; engineLabel: string }) {
   const [state, formAction] = useActionState<CodeReviewState | undefined, FormData>(reviewCodeAction, undefined);
   const [code, setCode] = useState('');
+  const [files, setFiles] = useState<{ name: string; size: number }[]>([]);
 
   return (
     <div className="grid gap-6 xl:grid-cols-2">
@@ -195,11 +196,29 @@ export function CodeAssist({ canUse, engineLabel }: { canUse: boolean; engineLab
           className="arch-mono text-xs leading-relaxed"
           spellCheck={false}
           disabled={!canUse}
-          required
         />
+        <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <label htmlFor="code-attachments" className="block text-sm font-medium text-slate-200">Add screenshots or context files</label>
+              <p className="mt-1 text-xs text-slate-500">Local OCR for PNG/JPEG/WebP/GIF/BMP; also supports Markdown, logs, config and source files. Up to 6 files, 1 MB each.</p>
+            </div>
+            <input
+              id="code-attachments"
+              name="attachments"
+              type="file"
+              multiple
+              accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,.md,.markdown,.txt,.log,.json,.yaml,.yml,.toml,.ini,.js,.jsx,.ts,.tsx,.py,.go,.java,.kt,.cs,.rb,.php,.sql,.sh,.diff,.patch,.html,.css,.xml,.graphql"
+              disabled={!canUse}
+              onChange={(event) => setFiles(Array.from(event.currentTarget.files ?? []).map((file) => ({ name: file.name, size: file.size })))}
+              className="max-w-full text-xs text-slate-400 file:mr-3 file:rounded-md file:border-0 file:bg-slate-800 file:px-3 file:py-2 file:text-xs file:font-medium file:text-slate-200 hover:file:bg-slate-700"
+            />
+          </div>
+          {files.length ? <p className="mt-2 break-words text-xs text-slate-400">Selected: {files.map((file) => `${file.name} (${(file.size / 1024).toFixed(0)} KB)`).join(' · ')}</p> : null}
+        </div>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-slate-500">
-            {code.length.toLocaleString('en-US')} / 20,000 · analyzed by <span className="arch-mono">{engineLabel}</span> on this server · not stored
+            {code.length.toLocaleString('en-US')} / 20,000 typed characters · extracted text shares the 20,000-character limit · <span className="arch-mono">{engineLabel}</span> · not stored
           </p>
           <fieldset disabled={!canUse} className="contents">
             <SubmitButton pendingLabel="Analyzing…">Analyze</SubmitButton>
