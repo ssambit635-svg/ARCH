@@ -67,8 +67,8 @@ function toFailure(error: unknown): ActionResult {
   if (isAppError(error)) {
     return { ok: false, error: error.message, ...(error.issues ? { fieldErrors: fieldErrorsFrom(error.issues) } : {}) };
   }
-  console.error('[dashboard action] unhandled error', error);
-  return { ok: false, error: error instanceof Error ? error.message : 'Something went wrong.' };
+  console.error('[dashboard action] unhandled error', error instanceof Error ? error.name : 'unknown');
+  return { ok: false, error: 'Something went wrong. Please try again.' };
 }
 
 async function context() {

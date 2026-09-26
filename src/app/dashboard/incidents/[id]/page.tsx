@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
-import { requireUser, resolveOrganization } from '@/lib/session';
+import { requireDashboardContext } from '@/lib/session';
 import { getIncident } from '@/server/services/incident.service';
 import { listMembers } from '@/server/services/organization.service';
 import { listServices } from '@/server/services/project.service';
@@ -38,8 +38,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 
 export default async function IncidentDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const user = await requireUser();
-  const organization = await resolveOrganization(user.id);
+  const { user, organization } = await requireDashboardContext();
 
   const incident = await getIncident({ organizationId: organization.id, userId: user.id, incidentId: id }).catch((error: unknown) => {
     if (isAppError(error) && error.code === 'NOT_FOUND') return null;

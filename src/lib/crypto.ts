@@ -10,7 +10,8 @@ import crypto from 'node:crypto';
  *  - comparison is constant-time.
  */
 
-const ENCRYPTION_VERSION = 'v1';
+type EncryptionVersion = 'v1' | 'v2';
+const ENCRYPTION_VERSION: EncryptionVersion = 'v1';
 
 export function sha256(value: string): string {
   return crypto.createHash('sha256').update(value).digest('hex');
@@ -31,25 +32,28 @@ export function timingSafeEqualStrings(a: string, b: string): boolean {
   return crypto.timingSafeEqual(bufferA, bufferB);
 }
 
-function encryptionKey(keyMaterial: string): Buffer {
-  return crypto.createHash('sha256').update(`arch:secret:v1:${keyMaterial}`).digest();
+function encryptionKey(keyMaterial: string, version: EncryptionVersion): Buffer {
+  return crypto.createHash('sha256').update(`arch:secret:${version}:${keyMaterial}`).digest();
 }
 
-/** AES-256-GCM encrypt with a random IV; output is `v1.iv.tag.ciphertext` (base64url). */
-export function encryptSecret(plaintext: string, keyMaterial: string): string {
+/**
+ * AES-256-GCM with a random IV; output is `version.iv.tag.ciphertext` (base64url).
+ * v1 (legacy) uses AUTH_SECRET; new webhook endpoint secrets use v2 + AUTH_SECRET_WEBHOOK.
+ */
+export function encryptSecret(plaintext: string, keyMaterial: string, version: EncryptionVersion = ENCRYPTION_VERSION): string {
   const iv = crypto.randomBytes(12);
-  const cipher = crypto.createCipheriv('aes-256-gcm', encryptionKey(keyMaterial), iv);
+  const cipher = crypto.createCipheriv('aes-256-gcm', encryptionKey(keyMaterial, version), iv);
   const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
   const tag = cipher.getAuthTag();
-  return [ENCRYPTION_VERSION, iv.toString('base64url'), tag.toString('base64url'), ciphertext.toString('base64url')].join('.');
+  return [version, iv.toString('base64url'), tag.toString('base64url'), ciphertext.toString('base64url')].join('.');
 }
 
 export function decryptSecret(payload: string, keyMaterial: string): string {
   const [version, ivPart, tagPart, dataPart] = payload.split('.');
-  if (version !== ENCRYPTION_VERSION || !ivPart || !tagPart || !dataPart) {
+  if ((version !== 'v1' && version !== 'v2') || !ivPart || !tagPart || !dataPart) {
     throw new Error('Unsupported encrypted secret format.');
   }
-  const decipher = crypto.createDecipheriv('aes-256-gcm', encryptionKey(keyMaterial), Buffer.from(ivPart, 'base64url'));
+  const decipher = crypto.createDecipheriv('aes-256-gcm', encryptionKey(keyMaterial, version), Buffer.from(ivPart, 'base64url'));
   decipher.setAuthTag(Buffer.from(tagPart, 'base64url'));
   return Buffer.concat([decipher.update(Buffer.from(dataPart, 'base64url')), decipher.final()]).toString('utf8');
 }

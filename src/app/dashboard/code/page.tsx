@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { requireUser, resolveOrganization } from '@/lib/session';
+import { requireDashboardContext } from '@/lib/session';
 import { roleHasPermission } from '@/lib/permissions';
 import { copilotConfig } from '@/server/ai/provider';
 import { Alert, PageHeader } from '@/components/ui';
@@ -9,8 +9,7 @@ export const metadata: Metadata = { title: 'Code Assist' };
 export const dynamic = 'force-dynamic';
 
 export default async function CodeAssistPage() {
-  const user = await requireUser();
-  const organization = await resolveOrganization(user.id);
+  const { user, organization } = await requireDashboardContext();
   const canUse = roleHasPermission(organization.role, 'copilot.generate');
   const config = copilotConfig();
 

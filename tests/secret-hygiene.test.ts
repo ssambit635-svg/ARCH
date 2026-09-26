@@ -69,8 +69,10 @@ describe('secret hygiene', () => {
     expect(offenders, `.env.example must not carry a real-looking secret: ${JSON.stringify(offenders)}`).toEqual([]);
   });
 
-  it('does not commit the live .env file', () => {
-    expect(files).not.toContain('.env');
-    expect(files.filter((file) => file === '.env.local' || file.endsWith('.env.production'))).toEqual([]);
+  it('does not commit any live .env file, including nested and staging variants', () => {
+    expect(files.filter((file) => {
+      const name = path.basename(file);
+      return (name === '.env' || name.startsWith('.env.')) && name !== '.env.example';
+    })).toEqual([]);
   });
 });

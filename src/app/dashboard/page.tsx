@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { requireUser, resolveOrganization } from '@/lib/session';
+import { requireDashboardContext } from '@/lib/session';
 import { incidentRepository } from '@/server/repositories/incident.repository';
 import { serviceRepository } from '@/server/repositories/service.repository';
 import { auditRepository } from '@/server/repositories/audit.repository';
@@ -25,8 +25,7 @@ function StatCard({ label, value, hint, tone = 'neutral' }: { label: string; val
 }
 
 export default async function DashboardOverview() {
-  const user = await requireUser();
-  const organization = await resolveOrganization(user.id);
+  const { user, organization } = await requireDashboardContext();
 
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const [open, critical, resolvedThisWeek, services, members, recentIncidents, recentAudit] = await Promise.all([

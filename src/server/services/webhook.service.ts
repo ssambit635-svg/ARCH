@@ -200,7 +200,7 @@ export async function createEndpoint(params: {
         externalId,
         description: params.description ?? null,
         secretHash: sha256(secret),
-        secretEncrypted: encryptSecret(secret, env.AUTH_SECRET),
+        secretEncrypted: encryptSecret(secret, env.AUTH_SECRET_WEBHOOK, 'v2'),
       },
       tx,
     );
@@ -278,7 +278,7 @@ export async function rotateEndpointSecret(params: { organizationId: string; use
     await webhookRepository.updateEndpoint(
       params.organizationId,
       params.endpointId,
-      { secretHash: sha256(secret), secretEncrypted: encryptSecret(secret, env.AUTH_SECRET) },
+      { secretHash: sha256(secret), secretEncrypted: encryptSecret(secret, env.AUTH_SECRET_WEBHOOK, 'v2') },
       tx,
     );
     await writeAudit(
@@ -367,7 +367,10 @@ export async function ingest(params: {
   enforceRateLimit(`webhook:endpoint:${endpoint.id}`, { limit: 120, windowMs: 60_000 });
   enforceRateLimit(`webhook:ip:${params.clientIp}`, { limit: 240, windowMs: 60_000 });
 
-  const secret = decryptSecret(endpoint.secretEncrypted, env.AUTH_SECRET);
+  // Endpoints created before the key separation used AUTH_SECRET (v1). Keep them usable until
+  // their secret is rotated/re-encrypted; all newly created/rotated endpoints use the webhook key.
+  const key = endpoint.secretEncrypted.startsWith('v2.') ? env.AUTH_SECRET_WEBHOOK : env.AUTH_SECRET;
+  const secret = decryptSecret(endpoint.secretEncrypted, key);
   const check = verifySignature({
     secret,
     rawBody: params.rawBody,

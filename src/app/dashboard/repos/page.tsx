@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { requireUser, resolveOrganization } from '@/lib/session';
+import { requireDashboardContext } from '@/lib/session';
 import { listRepoConnections } from '@/server/services/repo.service';
 import { describeGithubConfig } from '@/server/services/github.service';
 import { roleHasPermission } from '@/lib/permissions';
@@ -12,8 +12,7 @@ export const metadata: Metadata = { title: 'Repositories' };
 export const dynamic = 'force-dynamic';
 
 export default async function ReposPage() {
-  const user = await requireUser();
-  const organization = await resolveOrganization(user.id);
+  const { user, organization } = await requireDashboardContext();
 
   const canManage = roleHasPermission(organization.role, 'repo.manage');
   const github = describeGithubConfig();

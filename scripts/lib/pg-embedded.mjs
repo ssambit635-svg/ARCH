@@ -17,6 +17,10 @@ import EmbeddedPostgres from 'embedded-postgres';
 
 export const DEFAULT_DATABASE_URL = 'postgresql://arch:arch@localhost:5432/arch';
 
+function localHost(host) {
+  return host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host === '::1';
+}
+
 /** Parse DATABASE_URL (falling back to the documented local default). */
 export function connectionFromEnv(env = process.env) {
   const url = env.DATABASE_URL || DEFAULT_DATABASE_URL;
@@ -91,6 +95,10 @@ export async function startEmbeddedPostgres({ quiet = false, port, database } = 
     log(`already running on ${conn.host}:${resolvedPort}\n`);
     return { ...conn, port: resolvedPort, database: resolvedDatabase, url, external: true, stop: async () => {} };
   }
+  // A managed/non-local database going down must not silently start a *different* local database.
+  if (!localHost(conn.host)) {
+    throw new Error('Remote DATABASE_URL is unreachable; check the managed database. Embedded PostgreSQL is only for localhost.');
+  }
 
   const pg = new EmbeddedPostgres({
     databaseDir: dataDir,
@@ -133,6 +141,7 @@ export async function startEmbeddedPostgres({ quiet = false, port, database } = 
 /** Stop a running embedded cluster with pg_ctl (works from any process). */
 export function stopEmbeddedPostgres({ port } = {}) {
   const conn = connectionFromEnv();
+  if (!localHost(conn.host)) throw new Error('Refusing to stop a non-local database.');
   const dataDir = dataDirFor(port ?? conn.port);
   const bin = pgBinDir();
   if (!bin) throw new Error('embedded-postgres binaries not found — run `npm install` first.');

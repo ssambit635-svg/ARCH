@@ -1,9 +1,10 @@
 import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
-import GitHub from 'next-auth/providers/github';
 import { compare } from 'bcryptjs';
 import { db } from './db';
 import { env } from './env';
+import { authAdapter } from './auth-adapter';
+import { githubProvider } from './github-oauth';
 import { authConfig } from './auth.config';
 import { enforceRateLimit } from './rate-limit';
 import { loginSchema } from './validation';
@@ -11,15 +12,16 @@ import { loginSchema } from './validation';
 /**
  * Auth.js (NextAuth v5) — credentials first, GitHub optional.
  *
- * Sessions are JWTs (no DB round-trip per request). Users are created by /api/auth/register or, for
- * OAuth sign-ins, by the `signIn` callback below — which upserts the local row so RBAC,
- * memberships and audit logs always have a real `users.id` to point at.
+ * Both methods issue a JWT with the local users.id. The Prisma adapter persists only the GitHub
+ * account identity (not its OAuth tokens). Auth.js refuses to auto-link a matching email: an
+ * existing password user must sign in first and explicitly link GitHub in Settings.
  */
 
 const githubEnabled = Boolean(env.AUTH_GITHUB_ID && env.AUTH_GITHUB_SECRET);
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
+  adapter: authAdapter,
   secret: env.AUTH_SECRET,
   providers: [
     Credentials({
@@ -43,40 +45,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return { id: user.id, email: user.email, name: user.name ?? undefined, image: user.image ?? undefined };
       },
     }),
-    ...(githubEnabled
-      ? [GitHub({ clientId: env.AUTH_GITHUB_ID, clientSecret: env.AUTH_GITHUB_SECRET, allowDangerousEmailAccountLinking: true })]
-      : []),
+    ...(githubEnabled ? [githubProvider(env.AUTH_GITHUB_ID!, env.AUTH_GITHUB_SECRET!)] : []),
   ],
+  events: {
+    // GitHub's /user/emails is checked for verified=true before Auth.js creates the account.
+    // Auth.js defaults new OAuth users to emailVerified=null; record the checked identity.
+    async createUser({ user }) {
+      await db.user.update({ where: { id: user.id }, data: { emailVerified: new Date() } });
+    },
+  },
   callbacks: {
     ...authConfig.callbacks,
-    async signIn({ user, account }) {
-      // OAuth users have no local row until we create one. Credentials sign-ins already exist.
-      if (account?.provider !== 'credentials' && user.email) {
-        await db.user.upsert({
-          where: { email: user.email.toLowerCase() },
-          update: { name: user.name ?? undefined, image: user.image ?? undefined },
-          create: {
-            email: user.email.toLowerCase(),
-            name: user.name ?? null,
-            image: user.image ?? null,
-            emailVerified: new Date(),
-          },
-        });
-      }
-      return true;
-    },
-    async jwt({ token, user, account }) {
+    // With the adapter the OAuth `user` is the persisted user, not a GitHub numeric id.
+    // Credentials' `user.id` is also our DB id. No email-based lookup on subsequent requests.
+    jwt({ token, user }) {
       if (user?.id) token.sub = user.id;
-      // For OAuth, swap the provider id for our own users.id so session.user.id is usable.
-      if (account && account.provider !== 'credentials' && user?.email) {
-        const local = await db.user.findUnique({ where: { email: user.email.toLowerCase() }, select: { id: true } });
-        if (local) token.sub = local.id;
-      }
       return token;
-    },
-    session({ session, token }) {
-      if (token.sub) session.user.id = token.sub;
-      return session;
     },
   },
 });

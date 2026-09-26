@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { requireUser, resolveOrganization } from '@/lib/session';
+import { requireDashboardContext } from '@/lib/session';
 import { listIncidents } from '@/server/services/incident.service';
 import { listProjects } from '@/server/services/project.service';
 import { timeAgo } from '@/lib/format';
@@ -17,8 +17,7 @@ function first(value: string | string[] | undefined): string | undefined {
 }
 
 export default async function IncidentsPage({ searchParams }: { searchParams: SearchParams }) {
-  const user = await requireUser();
-  const organization = await resolveOrganization(user.id);
+  const { user, organization } = await requireDashboardContext();
   const params = await searchParams;
 
   const query = incidentListQuerySchema.parse({

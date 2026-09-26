@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { requireUser, resolveOrganization } from '@/lib/session';
+import { requireDashboardContext } from '@/lib/session';
 import { listProjects, listServices } from '@/server/services/project.service';
 import { listMembers } from '@/server/services/organization.service';
 import { Card, CardHeader, CardBody, PageHeader } from '@/components/ui';
@@ -10,8 +10,7 @@ export const metadata: Metadata = { title: 'Declare incident' };
 export const dynamic = 'force-dynamic';
 
 export default async function NewIncidentPage() {
-  const user = await requireUser();
-  const organization = await resolveOrganization(user.id);
+  const { user, organization } = await requireDashboardContext();
 
   const [projects, services, members] = await Promise.all([
     listProjects({ organizationId: organization.id, userId: user.id }),

@@ -8,7 +8,8 @@
  * published status page with a live incident, a webhook endpoint, and a second organization that
  * must stay invisible (cross-tenant isolation).
  *
- * Credentials created here are printed at the end. Never run this against production.
+ * Credentials created here are printed at the end. Requires an explicit SEED_PASSWORD;
+ * never run this against production or use real customer data in the local demo database.
  */
 import 'dotenv/config';
 import { hash } from 'bcryptjs';
@@ -21,7 +22,16 @@ import { createEndpoint } from '../src/server/services/webhook.service';
 import { writeAudit } from '../src/lib/audit';
 import type { MembershipRole } from '../src/generated/prisma/client';
 
-const DEMO_PASSWORD = process.env.SEED_PASSWORD ?? 'arch-incident-2024';
+function demoPassword(): string {
+  if (process.env.NODE_ENV === 'production') throw new Error('[seed] refusing to seed production');
+  const password = process.env.SEED_PASSWORD?.trim();
+  if (!password || password.length < 12 || password === 'arch-incident-2024' || /replace-with|change-?me|placeholder|example/i.test(password)) {
+    throw new Error('[seed] set a unique SEED_PASSWORD (12+ characters) in your ignored .env before seeding demo users');
+  }
+  return password;
+}
+
+const DEMO_PASSWORD = demoPassword();
 
 const people: { email: string; name: string; role: MembershipRole }[] = [
   { email: 'owner@arch.dev', name: 'Ada Okafor', role: 'OWNER' },

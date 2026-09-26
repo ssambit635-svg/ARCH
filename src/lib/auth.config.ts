@@ -1,11 +1,10 @@
 import type { NextAuthConfig } from 'next-auth';
 
 /**
- * Edge-safe Auth.js configuration.
+ * Lightweight Auth.js config shared with the Next.js proxy.
  *
- * `src/middleware.ts` runs on the edge runtime and may only import this file: it carries no
- * database client and no password hashing. The Node-only pieces (credentials provider, Prisma
- * lookups) live in `src/lib/auth.ts`, which extends this config.
+ * `src/proxy.ts` checks JWTs without importing Prisma or password hashing. The Node-only pieces
+ * (credentials provider, OAuth adapter and DB lookups) live in `src/lib/auth.ts`.
  */
 export const authConfig = {
   trustHost: true,

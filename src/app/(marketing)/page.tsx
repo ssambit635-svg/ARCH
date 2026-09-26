@@ -57,13 +57,13 @@ export default function MarketingHome() {
           <Link className="rounded-lg bg-indigo-600 px-5 py-2.5 font-medium text-white hover:bg-indigo-500" href="/register">
             Create your organization
           </Link>
-          <Link className="rounded-lg border border-slate-700 px-5 py-2.5 font-medium text-slate-200 hover:bg-slate-800" href="/status/demo">
-            See a live status page
+          <Link className="rounded-lg border border-slate-700 px-5 py-2.5 font-medium text-slate-200 hover:bg-slate-800" href="#how-it-works">
+            How it works
           </Link>
         </div>
       </section>
 
-      <section className="mt-20 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <section id="how-it-works" className="mt-20 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {steps.map((step, index) => (
           <div key={step.title} className="rounded-xl border border-slate-800 bg-slate-900/60 p-5">
             <span className="arch-mono text-xs text-indigo-400">0{index + 1}</span>

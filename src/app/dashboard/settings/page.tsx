@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { requireUser, resolveOrganization } from '@/lib/session';
+import { requireDashboardContext } from '@/lib/session';
 import { listInvitations, listMembers } from '@/server/services/organization.service';
 import { listEndpoints, listDeliveries } from '@/server/services/webhook.service';
 import { listProjects, listServices } from '@/server/services/project.service';
@@ -9,6 +9,8 @@ import { Alert, Badge, Card, CardBody, CardHeader, DefinitionList, PageHeader, T
 import { ActionForm } from '@/components/dashboard/action-form';
 import { ApiTokenManager } from '@/components/dashboard/api-token-manager';
 import { db } from '@/lib/db';
+import { env } from '@/lib/env';
+import { githubLoginAction } from '@/app/(auth)/actions';
 import { Field, Input, Select } from '@/components/ui/form';
 import {
   changeMemberRoleAction,
@@ -25,12 +27,15 @@ export const metadata: Metadata = { title: 'Settings' };
 export const dynamic = 'force-dynamic';
 
 export default async function SettingsPage() {
-  const user = await requireUser();
-  const organization = await resolveOrganization(user.id);
+  const { user, organization } = await requireDashboardContext();
 
   const canManageMembers = roleHasPermission(organization.role, 'member.manage');
   const canManageWebhooks = roleHasPermission(organization.role, 'webhook.manage');
   const canEditOrganization = roleHasPermission(organization.role, 'org.settings');
+  const githubEnabled = Boolean(env.AUTH_GITHUB_ID && env.AUTH_GITHUB_SECRET);
+  const githubLinked = githubEnabled
+    ? await db.account.findFirst({ where: { userId: user.id, provider: 'github' }, select: { id: true } })
+    : null;
 
   const [members, invitations, endpoints, projects, services] = await Promise.all([
     listMembers({ organizationId: organization.id, userId: user.id }),
@@ -58,6 +63,27 @@ export default async function SettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Settings" description="Organization profile, people, and the integrations that open incidents for you." />
+
+      <Card>
+        <CardHeader title="Sign-in methods" description="GitHub OAuth is for logging in; the separate GitHub token on Repositories is for creating pull requests." />
+        <CardBody className="space-y-3 text-sm text-slate-300">
+          {!githubEnabled ? (
+            <p>GitHub sign-in is off. Add AUTH_GITHUB_ID and AUTH_GITHUB_SECRET to the server environment to enable it.</p>
+          ) : githubLinked ? (
+            <p>GitHub account linked. You can use Continue with GitHub on the sign-in page.</p>
+          ) : (
+            <>
+              <p>Already using an email/password account? Link GitHub while signed in; we never link an account just because the email matches.</p>
+              <form action={githubLoginAction}>
+                <input type="hidden" name="callbackUrl" value="/dashboard/settings" />
+                <button type="submit" className="rounded-lg border border-slate-700 px-3.5 py-2 text-sm text-slate-200 hover:bg-slate-800">
+                  Link GitHub account
+                </button>
+              </form>
+            </>
+          )}
+        </CardBody>
+      </Card>
 
       <Card>
         <CardHeader title="Organization" description={`Slug: ${organization.slug} · your role: ${organization.role}`} />

@@ -2,7 +2,7 @@
   "name": "arch",
   "version": "0.3.0",
   "private": true,
-  "description": "ARCH \u2014 multi-tenant incident management + public status pages for developer teams.",
+  "description": "ARCH — multi-tenant incident management + public status pages for developer teams.",
   "type": "module",
   "engines": {
     "node": ">=20.19"
@@ -18,13 +18,14 @@
     "db:migrate": "node scripts/db-migrate.mjs",
     "db:reset": "node scripts/db-migrate.mjs --reset",
     "db:seed": "tsx scripts/seed.ts",
+    "webhooks:rekey": "tsx scripts/rekey-webhooks.ts",
     "db:up": "node scripts/dev-db.mjs start",
     "db:down": "node scripts/dev-db.mjs stop",
     "db:status": "node scripts/dev-db.mjs status",
     "github:check": "tsx scripts/github-check.ts",
     "github:debug": "tsx scripts/github/repo-debug.mjs",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "node scripts/run-tests.mjs",
     "test:watch": "vitest",
     "model:fetch-public": "node scripts/arch-model/fetch-public-incidents.mjs",
     "model:fetch-code": "node scripts/arch-model/fetch-code-corpus.mjs",
@@ -36,6 +37,7 @@
     "model:export-finetune": "tsx scripts/arch-model/export-finetune.ts"
   },
   "dependencies": {
+    "@auth/prisma-adapter": "2.11.3",
     "@octokit/rest": "22.0.1",
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",

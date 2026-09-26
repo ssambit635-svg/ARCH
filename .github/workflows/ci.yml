@@ -4,14 +4,19 @@ on:
   pull_request:
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
           cache: npm
       - run: sudo apt-get update && sudo apt-get install -y libpq5
+      - run: |
+          if git ls-files --error-unmatch .env >/dev/null 2>&1; then
+            echo 'ERROR: .env is tracked. Remove it from Git before merging.' >&2
+            exit 1
+          fi
       - run: npm ci
       - run: npm run db:generate
       - run: npm run typecheck
@@ -23,7 +28,7 @@ jobs:
           APP_URL: http://localhost:3000
       - run: npm test
       - run: npm audit --omit=dev --audit-level=high
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
       - run: pip install -e clients/python pytest && pytest clients/python/tests

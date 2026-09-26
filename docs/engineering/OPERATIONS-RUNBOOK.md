@@ -28,8 +28,12 @@ EMAIL_API_KEY=""
 ERROR_TRACKING_DSN=""
 ```
 
-Rotation: `AUTH_SECRET` rotation invalidates all sessions (planned maintenance); `AUTH_SECRET_WEBHOOK`
-rotation invalidates inbound webhooks until senders are updated — coordinate with customers.
+Rotation: `AUTH_SECRET` rotation invalidates all sessions; legacy v1 webhook endpoint secrets were
+also encrypted with it. Back up the DB, set a new `AUTH_SECRET_WEBHOOK`, run `npm run webhooks:rekey`
+then `npm run webhooks:rekey -- --apply` before rotating `AUTH_SECRET`. New v2 endpoint secrets
+are encrypted with `AUTH_SECRET_WEBHOOK`; rotating that key without a rekey/reissue makes their
+webhook signatures unverifiable. Senders HMAC-sign with an individual endpoint secret, not the
+environment encryption key. Coordinate any endpoint reissue with senders.
 
 ---
 
@@ -135,7 +139,7 @@ policy true.
 |---|---|---|
 | "Everyone is logged out" | `AUTH_SECRET` changed or redeployed without env | Set env correctly; notify users; avoid rotating during business hours |
 | "Status page shows OPERATIONAL during an outage" | Cache not invalidated on write | **S1 correctness bug.** Invalidate, patch the write path, add a regression test |
-| "Webhooks stopped working" | Customer rotated their secret, or our `AUTH_SECRET_WEBHOOK` changed | Verify signatures against the customer's secret; check recent rotations |
+| "Webhooks stopped working" | Sender rotated the per-endpoint secret, or the DB encryption key changed before rekey | Check endpoint key version (v1/v2) and recent key rotations; rekey/reissue |
 | "We're getting duplicate incidents" | Idempotency key not being honoured for that provider | Check event id extraction for that provider's payload shape |
 | "Emails are not arriving" | Provider key expired, domain reputation, or notifications stuck `PENDING` | Check provider dashboard, then the `notifications` table by status |
 | "Dashboard is slow" | Missing index or an unbounded query | Check slow query log; confirm composite indexes exist |

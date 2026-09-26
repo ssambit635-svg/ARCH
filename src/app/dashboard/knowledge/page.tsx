@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { requireUser, resolveOrganization } from '@/lib/session';
+import { requireDashboardContext } from '@/lib/session';
 import { roleHasPermission } from '@/lib/permissions';
 import { env } from '@/lib/env';
 import { listKnowledgeSources } from '@/server/services/knowledge.service';
@@ -18,8 +18,7 @@ export const dynamic = 'force-dynamic';
  * embeddings are produced in-process.
  */
 export default async function KnowledgePage() {
-  const user = await requireUser();
-  const organization = await resolveOrganization(user.id);
+  const { user, organization } = await requireDashboardContext();
 
   const canManage = roleHasPermission(organization.role, 'knowledge.manage');
   const canDelete = roleHasPermission(organization.role, 'knowledge.delete');

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { z } from 'zod';
-import { requireUser, resolveOrganization } from '@/lib/session';
+import { requireDashboardContext } from '@/lib/session';
 import { auditActionSummary, listAuditLogs } from '@/server/services/audit.service';
 import { roleHasPermission } from '@/lib/permissions';
 import { isAppError } from '@/lib/errors';
@@ -18,8 +18,7 @@ const filtersSchema = paginationSchema.extend({
 });
 
 export default async function AuditPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const user = await requireUser();
-  const organization = await resolveOrganization(user.id);
+  const { user, organization } = await requireDashboardContext();
   const params = await searchParams;
   const first = (value: string | string[] | undefined) => (Array.isArray(value) ? value[0] : value);
 

@@ -7,6 +7,7 @@ import { env } from '@/lib/env';
 import { registerSchema } from '@/lib/validation';
 import { registerUser } from '@/server/services/auth.service';
 import { zodIssues } from '@/lib/api';
+import { isAppError } from '@/lib/errors';
 
 /**
  * Auth server actions.
@@ -76,6 +77,7 @@ export async function githubLoginAction(formData: FormData): Promise<void> {
 }
 
 export async function registerAction(_state: AuthFormState, formData: FormData): Promise<AuthFormState> {
+  const callbackUrl = safeCallbackUrl(formData.get('callbackUrl'));
   const parsed = registerSchema.safeParse({
     email: formData.get('email'),
     name: formData.get('name') || undefined,
@@ -95,13 +97,17 @@ export async function registerAction(_state: AuthFormState, formData: FormData):
       organizationName: parsed.data.organizationName ?? null,
     });
   } catch (error) {
-    const appError = error as { code?: string; message?: string; issues?: { path: string; message: string }[] };
-    if (appError.issues) return { error: appError.message, fieldErrors: fieldErrorsFrom(appError.issues.map((issue) => ({ path: [issue.path], message: issue.message }))) };
-    return { error: appError.message ?? 'Could not create your account.' };
+    if (isAppError(error)) {
+      if (error.issues) return { error: error.message, fieldErrors: fieldErrorsFrom(error.issues.map((issue) => ({ path: [issue.path], message: issue.message }))) };
+      return { error: error.message };
+    }
+    // Database/driver errors sometimes contain connection strings; never send one to a form.
+    console.error('[register] unexpected error', error instanceof Error ? error.name : 'unknown');
+    return { error: 'Could not create your account. Please try again.' };
   }
 
   try {
-    await signIn('credentials', { email: parsed.data.email, password: parsed.data.password, redirectTo: '/dashboard' });
+    await signIn('credentials', { email: parsed.data.email, password: parsed.data.password, redirectTo: callbackUrl });
     return undefined;
   } catch (error) {
     rethrowRedirect(error);

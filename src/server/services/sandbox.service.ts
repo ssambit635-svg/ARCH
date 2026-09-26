@@ -181,6 +181,12 @@ async function createTempSandbox(): Promise<{ sandboxId: string; dir: string }> 
   return { sandboxId, dir };
 }
 
+/** Containment check must compare whole path segments, not a prefix (sibling dirs may share one). */
+function isInsideSandbox(dir: string, target: string): boolean {
+  const relative = path.relative(dir, target);
+  return relative === '' || (relative !== '..' && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative));
+}
+
 async function cleanupSandbox(dir: string): Promise<void> {
   try {
     await fs.rm(dir, { recursive: true, force: true });
@@ -226,7 +232,7 @@ async function applyPatchToDir(
   if (originalFiles) {
     for (const [filePath, content] of Object.entries(originalFiles)) {
       const fullPath = path.resolve(dir, filePath);
-      if (!fullPath.startsWith(path.resolve(dir))) {
+      if (!isInsideSandbox(dir, fullPath)) {
         logs.push(`Blocked file outside sandbox: ${filePath}`);
         continue;
       }
@@ -241,7 +247,7 @@ async function applyPatchToDir(
   if (diffHeader) {
     const targetFile = (diffHeader[2] || diffHeader[1] || 'patched-file.txt').trim().replace(/^\//, '');
     const fullPath = path.resolve(dir, targetFile);
-    if (!fullPath.startsWith(path.resolve(dir))) {
+    if (!isInsideSandbox(dir, fullPath)) {
       logs.push(`Blocked patch targeting outside sandbox: ${targetFile}`);
       return { applied: false, logs };
     }
@@ -610,7 +616,7 @@ export async function verifyPatchWithReproduction(params: {
 
   const safeEnv = buildSafeEnv();
   const sandboxTestPath = path.join(dir, testPath);
-  if (!sandboxTestPath.startsWith(path.resolve(dir))) {
+  if (!isInsideSandbox(dir, sandboxTestPath)) {
     await cleanupSandbox(dir);
     return { status: 'UNSAFE', reproduction: { ran: false, reason: 'Test path escapes the sandbox.' }, testOutput: 'Blocked test path.', durationMs: 0 };
   }
@@ -621,7 +627,7 @@ export async function verifyPatchWithReproduction(params: {
     // 1. Repo + generated test, WITHOUT the patch: the test must fail.
     for (const [filePath, content] of Object.entries(params.originalFiles)) {
       const fullPath = path.resolve(dir, filePath);
-      if (!fullPath.startsWith(path.resolve(dir))) continue;
+      if (!isInsideSandbox(dir, fullPath)) continue;
       await fs.mkdir(path.dirname(fullPath), { recursive: true });
       await fs.writeFile(fullPath, content, 'utf8');
     }
@@ -695,6 +701,7 @@ export const _testing = {
   checkSafety,
   isUnsafe,
   buildSafeEnv,
+  isInsideSandbox,
   PROD_CREDENTIAL_KEYS,
   UNSAFE_PATTERNS,
   SANDBOX_ESCAPE_PATTERNS,
