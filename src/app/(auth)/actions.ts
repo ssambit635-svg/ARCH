@@ -3,6 +3,7 @@
 import { AuthError } from 'next-auth';
 import { redirect } from 'next/navigation';
 import { signIn, signOut } from '@/lib/auth';
+import { env } from '@/lib/env';
 import { registerSchema } from '@/lib/validation';
 import { registerUser } from '@/server/services/auth.service';
 import { zodIssues } from '@/lib/api';
@@ -50,6 +51,26 @@ export async function loginAction(_state: AuthFormState, formData: FormData): Pr
     if (error instanceof AuthError) {
       return { error: error.type === 'CredentialsSignin' ? 'Invalid email or password.' : 'Sign-in failed. Please try again.' };
     }
+    throw error;
+  }
+}
+
+/**
+ * "Continue with GitHub" — starts the OAuth flow. Same redirect discipline as `loginAction`:
+ * Auth.js throws a redirect on success, and NEXT_REDIRECT must pass through untouched.
+ * Guarded so a provider that is not configured (blank AUTH_GITHUB_ID/SECRET) fails as a clean
+ * no-op instead of an AuthError deep inside the callback.
+ */
+export async function githubLoginAction(formData: FormData): Promise<void> {
+  const callbackUrl = safeCallbackUrl(formData.get('callbackUrl'));
+  if (!(env.AUTH_GITHUB_ID && env.AUTH_GITHUB_SECRET)) redirect('/login');
+  try {
+    await signIn('github', { redirectTo: callbackUrl });
+  } catch (error) {
+    rethrowRedirect(error);
+    // Auth.js already routes provider-side failures to /login?error=…; this catches the
+    // failures that happen before the redirect leaves our server (misconfiguration, etc.).
+    if (error instanceof AuthError) redirect('/login?error=github');
     throw error;
   }
 }
