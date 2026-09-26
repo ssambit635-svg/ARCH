@@ -68,6 +68,15 @@ Rules for this file:
 - Model artifacts stay **format 1**: an already-trained model keeps serving, and picks up
   calibration on its next retrain (a missing calibration defaults to a temperature of 1).
 
+### Added — developer tooling
+
+- **`npm run github:debug -- --repo owner/name --symptom "…"` explores a repository and ranks the
+  files most likely to hold your bug.** It reads the real commit tree from GitHub, drops
+  vendored/generated/lock paths, scores the rest against your symptom (or `--issue N`), then runs
+  the same `analyzeCode()` rules Code Assist uses and ranks the findings by how close they sit to a
+  line that mentions the symptom. Output is Markdown (stdout or `--out report.md`) or `--json`.
+  Reads only — a `contents:read` token, no model in the loop, independent of `ARCH_OFFLINE_ONLY`.
+
 ### Fixed
 
 - **A live-looking GitHub PAT was committed in `.env.example` again.** It is back to a placeholder.
