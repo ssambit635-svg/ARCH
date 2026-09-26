@@ -238,6 +238,42 @@ describe('ARCH model (V3)', () => {
       expect(result.topFrame).toMatchObject({ file: 'app/handlers.py', line: 12 });
     });
 
+    it('ARCH native analyzes OCR text and Markdown context without sending or storing file contents', async () => {
+      const acme = await setup();
+      const result = await reviewCode({
+        organizationId: acme.organization.id,
+        userId: acme.responder.id,
+        mode: 'explain',
+        code: '',
+        attachments: [
+          { name: 'terminal.png', kind: 'image', content: 'Error: connect ECONNREFUSED 127.0.0.1:5432' },
+          { name: 'notes.md', kind: 'text', content: '```js\nconst query = "SELECT * FROM users WHERE id = " + userId;\n```' },
+        ],
+      });
+      expect(result.provider).toBe('arch');
+      expect(result.diagnoses.some((diagnosis) => /Connection refused/i.test(diagnosis.title))).toBe(true);
+      expect(result.findings.some((finding) => /SQL/i.test(finding.message))).toBe(true);
+      expect(result.improvedCode).toBeNull();
+      const audit = await db.auditLog.findFirstOrThrow({ where: { organizationId: acme.organization.id, action: 'copilot.code_review' } });
+      expect(JSON.stringify(audit.metadata)).not.toContain('ECONNREFUSED');
+      expect(JSON.stringify(audit.metadata)).not.toContain('SELECT');
+    });
+
+    it('scrubs secrets in uploaded context before any non-native provider sees them', async () => {
+      const acme = await setup();
+      const spy = spyingProvider(createMockProvider());
+      setAiProviderForTesting(spy.provider);
+      const result = await reviewCode({
+        organizationId: acme.organization.id,
+        userId: acme.responder.id,
+        mode: 'review',
+        code: 'See attached config',
+        attachments: [{ name: 'config.md', kind: 'text', content: 'api_key = "sk-live-abcdef1234567890abcdef"' }],
+      });
+      expect(spy.calls[0]!.user).not.toContain('sk-live-abcdef1234567890abcdef');
+      expect(result.findings.some((finding) => /secret|credential/i.test(finding.message))).toBe(true);
+    });
+
     it('VIEWER cannot use it; empty and oversized input is rejected', async () => {
       const acme = await setup();
       await expect(reviewCode({ organizationId: acme.organization.id, userId: acme.viewer.id, code: CODE, mode: 'review' })).rejects.toMatchObject({ status: 403 });

@@ -221,7 +221,8 @@ export const copilotCodeFixSchema = z.object({
 export const codeLanguages = ['typescript', 'javascript', 'python', 'go', 'java', 'sql', 'ruby', 'php', 'csharp', 'shell', 'yaml', 'unknown'] as const;
 
 export const codeReviewSchema = z.object({
-  code: z.string().min(1, 'Paste some code or a stack trace.').max(20_000, 'Snippets are limited to 20,000 characters.'),
+  // Attachments can be the entire request, so emptiness is checked after server-side extraction.
+  code: z.string().max(20_000, 'Snippets are limited to 20,000 characters.').default(''),
   mode: z.enum(['review', 'fix', 'explain']).default('review'),
   language: z
     .union([z.enum(codeLanguages), z.literal('auto'), z.literal('')])

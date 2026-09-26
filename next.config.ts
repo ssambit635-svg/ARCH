@@ -14,8 +14,8 @@ const nextConfig: NextConfig = {
   serverExternalPackages: ['@prisma/client', '@prisma/adapter-pg', 'pg'],
   allowedDevOrigins: ['*.e2b.app', '*.e2b.dev', '*.vercel.app', 'localhost', '127.0.0.1'],
   experimental: {
-    // Server Actions are used for dashboard mutations; keep bodies small and validated.
-    serverActions: { bodySizeLimit: '1mb' },
+    // File-aware Code Assist accepts at most 5 MB of validated attachments; reject larger bodies.
+    serverActions: { bodySizeLimit: '6mb' },
   },
 };
 

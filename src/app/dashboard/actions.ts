@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
 import { ORG_COOKIE, requireUser, resolveOrganization } from '@/lib/session';
+import { requirePermission } from '@/lib/permissions';
 import { isAppError } from '@/lib/errors';
 import {
   incidentCreateSchema,
@@ -526,13 +527,17 @@ export type CodeReviewState = { ok: true; result: CodeReviewResult } | { ok: fal
 export async function reviewCodeAction(_state: CodeReviewState | undefined, formData: FormData): Promise<CodeReviewState> {
   try {
     const { user, organization } = await context();
-    // Read the code untrimmed: leading indentation matters (Python, YAML).
+    // Reject unauthorized requests before spending CPU on OCR; the service re-checks permission too.
+    await requirePermission(organization.id, user.id, 'copilot.generate');
+    // Read the code untrimmed: leading indentation matters (Python, YAML). Upload bytes are
+    // bounded, type-checked and OCR'd locally before the service sees any extracted text.
     const input = codeReviewSchema.parse({
       code: String(formData.get('code') ?? '').replace(/\s+$/, ''),
       mode: formData.get('mode') || undefined,
       language: formData.get('language') || undefined,
     });
-    const result = await reviewCode({ organizationId: organization.id, userId: user.id, code: input.code, mode: input.mode, language: input.language });
+    const files = formData.getAll('attachments').filter((value): value is File => typeof value !== 'string' && value.size > 0);
+    const result = await reviewCode({ organizationId: organization.id, userId: user.id, code: input.code, mode: input.mode, language: input.language, uploads: files });
     return { ok: true, result };
   } catch (error) {
     if (error instanceof z.ZodError) return { ok: false, error: error.issues[0]?.message ?? 'Invalid input.' };
