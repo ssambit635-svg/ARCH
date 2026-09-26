@@ -66,7 +66,8 @@ export const POST = handleRoute(async (request) => {
   }
 
   const check = await verifyGithubCredentials();
-  if (!body.owner || !body.repo) return ok({ config, check, repository: null });
+  // A dead token is the answer. Don't continue into a repo probe that would only repeat the 401.
+  if (!check.ok || !body.owner || !body.repo) return ok({ config, check, repository: null });
 
   const repository = await checkRepoAccess({
     owner: body.owner,

@@ -5,6 +5,8 @@ import {
   _testing,
   buildBranchName,
   checkRepoAccess,
+  classifyGithubToken,
+  commitSubjectTitle,
   createPullRequest,
   describeGithubConfig,
   fetchPullRequestState,
@@ -215,7 +217,24 @@ describe('github.service — mode selection', () => {
     expect(config.mode).toBe('mock');
     expect(config.tokenConfigured).toBe(false);
     expect(config.tokenHint).toBeNull();
+    expect(config.tokenKind).toBe('missing');
     expect(config.reason).toMatch(/No GITHUB_TOKEN/);
+  });
+
+  it('a placeholder copied from .env.example does not flip GitHub into real mode', () => {
+    env.GITHUB_MODE = 'auto';
+    env.GITHUB_TOKEN = 'replace-with-a-github-pat';
+    expect(githubMode()).toBe('mock');
+    expect(describeGithubConfig().tokenKind).toBe('missing');
+    expect(describeGithubConfig().reason).toMatch(/placeholder/);
+  });
+
+  it('classifies token prefixes without echoing the secret', () => {
+    expect(classifyGithubToken('ghp_abcdefghijklmnopqrstuvwxyz0123456789')).toBe('classic');
+    expect(classifyGithubToken('github_pat_11AAAAA_bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb')).toBe('fine-grained');
+    expect(classifyGithubToken('ghs_installationtokenvalue123456')).toBe('github-app');
+    expect(classifyGithubToken('not-a-token')).toBe('unknown');
+    expect(classifyGithubToken(undefined)).toBe('missing');
   });
 
   it('token + GITHUB_MODE=auto goes live — the AI privacy lock no longer blocks PRs', () => {
@@ -315,6 +334,9 @@ describe('github.service — real mode via fake client', () => {
     expect(pr.head).toBe(result.branch);
     expect(pr.draft).toBe(true);
     expect(pr.title).toBe('Fix: payment timeout');
+    const commit = fake.created.commit as { message: string };
+    expect(commit.message.split('\n')[0]).toBe('fix(arch): payment timeout');
+    expect(commit.message).not.toMatch(/fix\(arch\):\s*fix\(arch\)/);
     expect(pr.body).toContain('acme/api');
     expect(pr.body).toContain(FULL_SHA_A.slice(0, 12));
     expect(pr.body).toContain('`src/payments/service.ts`');
@@ -431,7 +453,7 @@ describe('github.service — real mode via fake client', () => {
     const cases: Array<[string, { status: number; message: string; headers?: Record<string, string> }, number, RegExp]> = [
       ['repos.getCommit', { status: 401, message: 'Bad credentials' }, 503, /rejected GITHUB_TOKEN/],
       ['repos.getCommit', { status: 404, message: 'Not Found' }, 404, /has no repository acme\/api/],
-      ['repos.getCommit', { status: 403, message: 'Resource not accessible by integration' }, 503, /cannot open PRs for users; use a PAT with Contents/],
+      ['repos.getCommit', { status: 403, message: 'Resource not accessible by integration' }, 503, /Contents: Read and write/],
       ['repos.getCommit', { status: 403, message: 'Resource forbidden' }, 403, /not allowed to reach acme\/api/],
       ['repos.getCommit', { status: 403, message: 'missing permission', headers: { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 600) } }, 429, /rate limit reached/],
       ['repos.getCommit', { status: 502, message: 'Bad gateway' }, 503, /GitHub returned 502/],
@@ -471,6 +493,15 @@ describe('github.service — real mode via fake client', () => {
     expect(result.scopes).toEqual(['repo', 'read:org']);
     expect(result.rateLimit.remaining).toBe(4988);
     expect(result.message).toMatch(/authenticated as arch-bot/);
+    expect(result.message).toMatch(/\[classic\]/);
+  });
+
+  it('verifyGithubCredentials reports a dead token instead of throwing', async () => {
+    const fake = createFakeGithub({ failOn: { 'rateLimit.get': { status: 401, message: 'Bad credentials' } } });
+    _testing.setClientFactory(async () => fake.client);
+    const result = await verifyGithubCredentials();
+    expect(result.ok).toBe(false);
+    expect(result.message).toMatch(/rejected GITHUB_TOKEN/);
   });
 
   it('verifyGithubCredentials survives a token that cannot read /user (GitHub App style)', async () => {
@@ -509,6 +540,15 @@ describe('github.service — real mode via fake client', () => {
     expect(result.message).toMatch(/Contents: Read and write/);
   });
 
+  it('does not claim the token is read-only when GitHub omitted permissions', async () => {
+    const fake = createFakeGithub({ repo: { permissions: undefined } });
+    _testing.setClientFactory(async () => fake.client);
+    const result = await checkRepoAccess({ owner: 'acme', repo: 'api' });
+    expect(result.permissionsKnown).toBe(false);
+    expect(result.canPush).toBe(false);
+    expect(result.message).not.toMatch(/Read and write/);
+  });
+
   it('fetchPullRequestState folds GitHub state into MERGED/CLOSED/OPEN and reads the number back out of a URL', async () => {
     const fake = createFakeGithub();
     _testing.setClientFactory(async () => fake.client);
@@ -524,6 +564,13 @@ describe('github.service — real mode via fake client', () => {
 });
 
 describe('github.service — helpers', () => {
+  it('commit subjects are prefixed once and stay within 72 characters', () => {
+    expect(commitSubjectTitle('Fix: payment timeout')).toBe('fix(arch): payment timeout');
+    expect(commitSubjectTitle('fix(arch): already prefixed')).toBe('fix(arch): already prefixed');
+    expect(commitSubjectTitle('x'.repeat(200)).length).toBeLessThanOrEqual(72);
+    expect(commitSubjectTitle('x'.repeat(200))).not.toMatch(/fix\(arch\):\s*fix\(arch\)/);
+  });
+
   it('branch names stay valid refs and unique per fix', () => {
     const a = buildBranchName('Fix: Payment service timeout!!');
     const b = buildBranchName('Fix: Payment service timeout!!');

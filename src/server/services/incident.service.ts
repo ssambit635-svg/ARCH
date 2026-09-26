@@ -112,7 +112,7 @@ function incidentContext(
   serviceName: string | null,
   incident: { id: string; title: string; severity: IncidentSeverity; status: IncidentStatus; description: string | null; startedAt: Date },
   actorLabel: string,
-  extra: { change?: { from: IncidentStatus; to: IncidentStatus } | null; message?: string | null } = {},
+  extra: { change?: { from: IncidentStatus; to: IncidentStatus } | null; message?: string | null; assigneeId?: string | null } = {},
 ) {
   return {
     organizationName,
@@ -120,6 +120,7 @@ function incidentContext(
     serviceName,
     incident,
     actorLabel,
+    assigneeId: extra.assigneeId ?? null,
     change: extra.change ?? null,
     message: extra.message ?? null,
   };
@@ -436,12 +437,21 @@ export async function updateIncident(params: {
     const service = updated.serviceId ? await serviceRepository.findById(organizationId, updated.serviceId, tx) : null;
 
     const recipients = await notificationRecipients(organizationId, userId, updated.assignedToId, tx);
-    const reason = input.message && !statusChange ? 'INCIDENT_COMMENT' : 'INCIDENT_STATUS_CHANGED';
+    const assignmentChanged = input.assignedToId !== undefined && input.assignedToId !== existing.assignedToId;
+    // Assignment-only updates used to be labeled as a status change, so the outbox reason lied.
+    const reason = statusChange
+      ? 'INCIDENT_STATUS_CHANGED'
+      : input.message
+        ? 'INCIDENT_COMMENT'
+        : assignmentChanged
+          ? 'INCIDENT_ASSIGNED'
+          : 'INCIDENT_STATUS_CHANGED';
     await notificationRepository.enqueueMany(
       buildIncidentNotifications(
         incidentContext(organization?.name ?? 'Organization', project?.name ?? '—', service?.name ?? null, updated, 'a teammate', {
           change: statusChange,
           message: input.message ?? null,
+          assigneeId: updated.assignedToId,
         }),
         recipients,
         reason,

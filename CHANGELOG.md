@@ -15,6 +15,28 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Fixed
+
+- **A live-looking GitHub PAT was committed in `.env.example` again.** It is back to a placeholder.
+  Any token that has been in git history should be treated as leaked and rotated at
+  <https://github.com/settings/tokens>. Placeholder values are ignored at runtime, so copying the
+  example file can no longer flip ARCH into "real" GitHub mode.
+- **Verified-fix commits were prefixed twice** (`fix(arch): fix(arch): …`). The subject is prefixed once
+  and stays within 72 characters.
+- **A 422 from GitHub that was not "branch already exists" force-updated the ref.** Only a leftover
+  branch is reused.
+- **Repo access checks warned "read-only" when GitHub omitted the permissions block.** That warning
+  now fires only when GitHub actually said `push: false`.
+- **A rejected GitHub token threw instead of returning a check the dashboard can show.** `GET /api/github`
+  and `npm run github:check` report the failure and exit non-zero.
+- **Assignment updates were stored as status-change emails.** Assignment-only changes now use
+  `INCIDENT_ASSIGNED`, and the inviter is notified when an invitation is accepted (`INVITATION_ACCEPTED`).
+- **`/api/health` reported version 0.2.0** and could echo a database URL. It now reports the package
+  version, a redacted database error, and whether GitHub is configured (no token, no network probe).
+- **Resend calls had no deadline** and unknown `EMAIL_PROVIDER` values failed silently. Requests time
+  out after 15s, provider errors are scrubbed, and a missing key falls back to the console adapter
+  with a warning.
+
 ### Added — V4.1 · Real GitHub PR creation (M1 + M4 completed)
 
 - **"Approve & create PR" actually opens a pull request now.** Previously `createPullRequest`

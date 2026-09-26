@@ -212,6 +212,9 @@ describe('incident service', () => {
     });
     expect(assigned?.assignedToId).toBe(responder.id);
     expect(await db.incidentEvent.count({ where: { incidentId: incident!.id, type: 'ASSIGNED' } })).toBe(1);
+    const assignmentMail = await db.notification.findFirst({ where: { incidentId: incident!.id, reason: 'INCIDENT_ASSIGNED' } });
+    expect(assignmentMail?.recipientId).toBe(responder.id);
+    expect(assignmentMail?.subject).toContain('Assigned to you');
 
     const commented = await addIncidentComment({
       organizationId: organization.id,

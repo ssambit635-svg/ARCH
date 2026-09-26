@@ -36,7 +36,7 @@ async function main(): Promise<number> {
   const config = describeGithubConfig();
   console.log('ARCH — GitHub configuration (from .env / process.env)\n');
   console.log(`  mode            ${config.mode}${config.mode === 'mock' ? '  (PRs are recorded, nothing is pushed)' : '  (approving a verified fix opens a real PR)'}`);
-  console.log(`  token           ${config.tokenConfigured ? `set (${config.tokenHint})` : 'NOT SET'}`);
+  console.log(`  token           ${config.tokenConfigured ? `set (${config.tokenHint}, ${config.tokenKind})` : `not set (${config.tokenKind})`}`);
   console.log(`  api base        ${config.baseUrl}`);
   console.log(`  timeout         ${config.timeoutMs}ms · drafts ${config.openAsDraft ? 'on' : 'off'} · max ${config.maxFiles} files/PR`);
   console.log(`  why             ${config.reason}\n`);
@@ -51,6 +51,10 @@ async function main(): Promise<number> {
     const credentials = await verifyGithubCredentials();
     console.log('  credential      ' + credentials.message);
     if (credentials.scopes.length) console.log(`  scopes          ${credentials.scopes.join(', ')}`);
+    if (!credentials.ok) {
+      console.error('\n✗ token probe failed');
+      return 1;
+    }
   } catch (error) {
     console.error(`\n✗ token probe failed: ${(error as Error).message}`);
     return 1;

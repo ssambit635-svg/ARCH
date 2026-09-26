@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
+import packageJson from '../../package.json';
 import { Prisma } from './db';
 import { env, isProduction } from './env';
 import { AppError, isAppError, type FieldIssue } from './errors';
@@ -123,5 +124,6 @@ export function clientIp(request: Request): string {
   return request.headers.get('x-real-ip') ?? 'unknown';
 }
 
-export const APP_VERSION = '0.2.0';
+/** Kept in lockstep with package.json so /api/health cannot drift behind a release. */
+export const APP_VERSION = packageJson.version;
 export const appUrl = env.APP_URL;

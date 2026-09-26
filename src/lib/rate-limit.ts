@@ -23,6 +23,9 @@ export type RateLimitResult = {
 
 export function rateLimit(key: string, options: { limit: number; windowMs: number; now?: number }): RateLimitResult {
   const now = options.now ?? Date.now();
+  // Expired keys are only removed when something touches them. A long-lived process otherwise
+  // keeps one entry per IP/email forever. Prune once the map is large enough to matter.
+  if (buckets.size > 256) pruneRateLimits(now);
   const existing = buckets.get(key);
 
   if (!existing || existing.resetAt <= now) {

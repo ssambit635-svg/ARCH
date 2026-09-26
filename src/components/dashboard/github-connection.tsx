@@ -7,6 +7,7 @@ type GithubConfig = {
   mode: 'real' | 'mock';
   tokenConfigured: boolean;
   tokenHint: string | null;
+  tokenKind?: string;
   baseUrl: string;
   timeoutMs: number;
   openAsDraft: boolean;
@@ -104,6 +105,7 @@ export function GithubConnectionPanel({ config: initial }: { config: GithubConfi
         <h3 className="text-sm font-medium text-white">GitHub connection</h3>
         <Badge tone={tone}>{shown.mode === 'real' ? 'real PRs' : 'offline (mock)'}</Badge>
         {shown.tokenConfigured ? <span className="arch-mono text-xs text-slate-500">{shown.tokenHint}</span> : <span className="text-xs text-slate-500">no token</span>}
+        {shown.tokenKind && shown.tokenKind !== 'missing' ? <span className="text-xs uppercase tracking-wide text-slate-500">{shown.tokenKind}</span> : null}
       </div>
 
       <p className="text-xs text-slate-400">{shown.reason}</p>

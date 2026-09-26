@@ -7,7 +7,7 @@ import { organizationRepository } from '../repositories/organization.repository'
 import { invitationRepository } from '../repositories/invitation.repository';
 import { userRepository } from '../repositories/user.repository';
 import { uniqueOrganizationSlug } from './slug.service';
-import { enqueueInvitationNotification, renderInvitation } from './notification.service';
+import { enqueueInvitationAcceptedNotification, enqueueInvitationNotification, renderInvitation, renderInvitationAccepted } from './notification.service';
 import type { MembershipRole } from '@/generated/prisma/client';
 
 /**
@@ -309,6 +309,17 @@ export async function acceptInvitation(params: { token: string; userId: string; 
       },
       tx,
     );
+    if (invitation.invitedById && invitation.invitedById !== params.userId) {
+      const notice = renderInvitationAccepted({
+        organizationName: invitation.organization.name,
+        acceptedByLabel: params.userEmail,
+        role: invitation.role,
+      });
+      await enqueueInvitationAcceptedNotification(
+        { organizationId: invitation.organizationId, recipientId: invitation.invitedById, subject: notice.subject, body: notice.body },
+        tx,
+      );
+    }
     return { organizationId: invitation.organizationId, role: invitation.role };
   });
 }

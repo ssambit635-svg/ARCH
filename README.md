@@ -157,7 +157,7 @@ Everything is JSON under `/api`. Success is `{ "data": ... }`; failures are
 
 | Area | Routes |
 |---|---|
-| Health | `GET /api/health` |
+| Health | `GET /api/health` (database + GitHub mode, no token) |
 | Auth | `/api/auth/*` (Auth.js), `POST /api/auth/register` |
 | Organizations | `/api/organizations`, `/api/organizations/{id}`, `/members`, `/invitations` |
 | Invitations | `GET /api/invitations/{token}`, `POST /api/invitations/{token}/accept` |
