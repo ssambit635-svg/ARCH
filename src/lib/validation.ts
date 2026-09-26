@@ -322,3 +322,37 @@ export const githubCheckSchema = z.object({
 export const dependencyCreateSchema = z.object({ fromServiceId: id, toServiceId: id, relationship: z.string().trim().min(2).max(40).default('DEPENDS_ON'), criticality: z.coerce.number().int().min(1).max(5).default(3) });
 export const changeCreateSchema = z.object({ serviceId: id.optional(), projectId: id.optional(), title: shortText(200), type: z.string().trim().max(40).default('DEPLOYMENT'), commitSha: z.string().trim().max(100).optional(), author: z.string().trim().max(120).optional(), occurredAt: z.union([z.string(), z.number()]).optional(), source: z.string().trim().max(40).default('MANUAL') }).refine(v => v.serviceId || v.projectId, { message: 'A service or project is required.' });
 export const sloUpsertSchema = z.object({ serviceId: id, targetPercent: z.coerce.number().min(90).max(99.999), windowDays: z.coerce.number().int().min(1).max(365), burnAlertPercent: z.coerce.number().min(1).max(1000).default(50), enabled: z.boolean().default(true) });
+
+// ---------- V6: RAG knowledge sources, similar incidents, change risk ----------
+const KNOWLEDGE_MAX_CHARS = 200_000;
+
+export const knowledgeSourceCreateSchema = z.object({
+  name: z.string().trim().min(2).max(160),
+  kind: z.enum(['RUNBOOK', 'DOC', 'NOTE', 'URL', 'INCIDENT_EXPORT']).default('DOC'),
+  text: z.string().trim().min(40, 'A knowledge source needs at least 40 characters.').max(KNOWLEDGE_MAX_CHARS),
+  sourceUrl: z.string().trim().url().max(2_000).optional(),
+});
+
+export const knowledgeSourceFetchSchema = z.object({
+  url: z.string().trim().url('Enter a full http(s) URL.').max(2_000),
+  name: z.string().trim().min(2).max(160).optional(),
+});
+
+export const knowledgeSourceReindexSchema = z.object({
+  text: z.string().trim().min(40).max(KNOWLEDGE_MAX_CHARS),
+});
+
+export const similarIncidentsQuerySchema = z.object({
+  incidentId: id.optional(),
+  q: z.string().trim().min(3).max(2_000).optional(),
+  k: z.coerce.number().int().min(1).max(10).default(5),
+});
+
+export const recurringQuerySchema = z.object({
+  sinceDays: z.coerce.number().int().min(7).max(730).default(90),
+});
+
+export const changeRiskQuerySchema = z.object({
+  serviceId: id.optional(),
+  take: z.coerce.number().int().min(1).max(25).default(8),
+});

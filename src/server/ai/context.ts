@@ -49,6 +49,21 @@ export type SimilarIncidentHint = {
 };
 
 /**
+ * V6 — a passage retrieved from the organization's own knowledge base (runbooks, docs, notes).
+ * Retrieved by ARCH's own embeddings on the organization's server; nothing is sent anywhere.
+ */
+export type KnowledgeChunkHint = {
+  id: string;
+  sourceName: string;
+  sourceKind: string;
+  heading: string | null;
+  text: string;
+  /** URL the document was fetched from, when it came from one. */
+  url?: string | null;
+  similarity: number;
+};
+
+/**
  * What the organization's ARCH model thinks, computed on the server before any prompt is built.
  * Every provider gets it: the built-in engine drafts from it directly, a local LLM uses it as
  * retrieval-augmented grounding ("this looks like your March database incident").
@@ -61,6 +76,8 @@ export type CopilotKnowledge = {
   predictedSeverity: IncidentSeverity;
   severityConfidence: number;
   similarIncidents: SimilarIncidentHint[];
+  /** V6 — runbook / doc passages retrieved for this incident (RAG). */
+  knowledgeChunks?: KnowledgeChunkHint[];
 };
 
 /** Optional code / stack trace a responder pasted for the CODE_FIX task (redacted, bounded). */

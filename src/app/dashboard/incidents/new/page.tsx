@@ -4,6 +4,7 @@ import { listProjects, listServices } from '@/server/services/project.service';
 import { listMembers } from '@/server/services/organization.service';
 import { Card, CardHeader, CardBody, PageHeader } from '@/components/ui';
 import { NewIncidentForm } from '@/components/incidents/new-incident-form';
+import { ChangeRiskPanel } from '@/components/incidents/change-risk';
 
 export const metadata: Metadata = { title: 'Declare incident' };
 export const dynamic = 'force-dynamic';
@@ -26,6 +27,15 @@ export default async function NewIncidentPage() {
         title="Declare an incident"
         description="Opening an incident records the first timeline event, notifies the responders and updates the service status."
       />
+      <Card className="mb-6 max-w-3xl">
+        <CardHeader
+          title="Recent change risk"
+          description="Changes most likely to have caused this, ranked by ARCH from your own incident history."
+        />
+        <CardBody>
+          <ChangeRiskPanel />
+        </CardBody>
+      </Card>
       <Card className="max-w-3xl">
         <CardHeader title="Incident details" description="Required: a title and a project." />
         <CardBody>

@@ -23,6 +23,8 @@ import {
   repoPinSchema,
   verifiedFixGenerateSchema,
   pullRequestCreateSchema,
+  knowledgeSourceCreateSchema,
+  knowledgeSourceFetchSchema,
 } from '@/lib/validation';
 import { createIncident, addIncidentComment, updateIncident } from '@/server/services/incident.service';
 import { createProject, createService, updateService } from '@/server/services/project.service';
@@ -34,6 +36,7 @@ import { reviewCode, type CodeReviewResult } from '@/server/services/codeAssist.
 import { activateModelVersion, rollbackModel, trainModel } from '@/server/services/archModel.service';
 import { createRepoConnection, pinRepoCommit, deactivateRepoConnection } from '@/server/services/repo.service';
 import { generateVerifiedFix, verifyFix, approveAndCreatePr } from '@/server/services/verifiedFix.service';
+import { deleteKnowledgeSource, fetchKnowledgeUrl, ingestKnowledgeSource } from '@/server/services/knowledge.service';
 import { revalidateOrganizationStatusPages } from '@/server/revalidate';
 import { toFormObject } from './form-utils';
 
@@ -710,4 +713,51 @@ export async function approveVerificationAction(_state: ActionResult | undefined
   } catch (error) {
     return toFailure(error);
   }
+}
+
+// ---------- V6 — knowledge base (RAG) ----------
+
+/** Index a pasted runbook / doc / note. Chunked and embedded on this server. */
+export async function ingestKnowledgeAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const body = await parse(knowledgeSourceCreateSchema, formData);
+    const result = await ingestKnowledgeSource({
+      organizationId: organization.id,
+      userId: user.id,
+      name: body.name,
+      kind: body.kind,
+      text: body.text,
+    });
+    revalidatePath('/dashboard/knowledge');
+    return {
+      ok: true,
+      message: result.created
+        ? `Indexed "${result.source.name}" into ${result.chunks} retrievable chunks. Copilot can now cite it.`
+        : `"${result.source.name}" is already indexed — nothing changed.`,
+    };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+/** Fetch a public document and index it (SSRF-guarded; disabled when ARCH_OFFLINE_ONLY). */
+export async function fetchKnowledgeAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const body = await parse(knowledgeSourceFetchSchema, formData);
+    const result = await fetchKnowledgeUrl({ organizationId: organization.id, userId: user.id, url: body.url, name: body.name });
+    revalidatePath('/dashboard/knowledge');
+    return { ok: true, message: `Fetched and indexed "${result.source.name}" into ${result.chunks} chunks.` };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+/** Remove a source and its chunks (OWNER/ADMIN). */
+export async function deleteKnowledgeAction(formData: FormData): Promise<void> {
+  const { user, organization } = await context();
+  const sourceId = String(formData.get('sourceId') ?? '');
+  if (sourceId) await deleteKnowledgeSource({ organizationId: organization.id, userId: user.id, sourceId });
+  revalidatePath('/dashboard/knowledge');
 }

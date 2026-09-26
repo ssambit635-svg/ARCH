@@ -34,6 +34,17 @@ export type VerificationView = {
   durationMs: number | null;
   createdAt: string;
   createdAgo: string;
+  /** V6 — the generated reproduction test, and whether it failed before the patch and passed after. */
+  reproductionTest: string | null;
+  reproduction: {
+    ran: boolean;
+    reason?: string;
+    failedBeforePatch?: boolean;
+    passedAfterPatch?: boolean;
+    beforeOutput?: string;
+    afterOutput?: string;
+    testPath?: string;
+  } | null;
   repoConnection: { id: string; fullName: string; pinnedCommitSha: string | null } | null;
   pullRequest: { id: string; externalUrl: string | null; branch: string; status: string } | null;
   suggestion: { id: string; type: string };
@@ -152,6 +163,7 @@ function VerificationItem({ verification, canApprove }: { verification: Verifica
           {showEvidence ? 'Hide evidence bundle' : 'Show evidence bundle'}
         </button>
         {showEvidence && <EvidenceBundle evidence={verification.evidence} />}
+        <ReproductionEvidence verification={verification} />
       </div>
 
       {verification.pullRequest ? (
@@ -213,6 +225,60 @@ function GenerateVerifiedFixForm({ incidentId, repoConnections, canGenerate }: {
       <Outcome state={state} />
       <p className="text-xs text-slate-500">Isolated sandbox: no prod credentials, temporary container, timeout enforced. Evidence bundle with proof.</p>
     </form>
+  );
+}
+
+/**
+ * V6 — reproduction evidence: the test had to fail before the patch and pass after it. When the run
+ * could not reproduce (no repository contents, or no test generated), it says so instead of implying
+ * proof that does not exist.
+ */
+function ReproductionEvidence({ verification }: { verification: VerificationView }) {
+  const [showTest, setShowTest] = useState(false);
+  const reproduction = verification.reproduction;
+  if (!reproduction) return null;
+
+  if (!reproduction.ran) {
+    return (
+      <div className="mt-3 rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+        <p className="text-xs font-medium text-slate-400">Reproduction: not run</p>
+        <p className="mt-1 text-xs text-slate-500">{reproduction.reason ?? 'No reproduction test was generated for this fix.'}</p>
+      </div>
+    );
+  }
+
+  const proven = reproduction.failedBeforePatch && reproduction.passedAfterPatch;
+  return (
+    <div className={`mt-3 rounded-lg border p-3 ${proven ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-amber-500/30 bg-amber-500/5'}`}>
+      <p className="text-xs font-medium text-slate-300">
+        {proven ? 'Reproduced before the patch, fixed after it' : 'Reproduction ran but did not prove the fix'}
+      </p>
+      <ul className="mt-2 space-y-1 text-xs text-slate-400">
+        <li>
+          {reproduction.failedBeforePatch ? '✓' : '✗'} Failed before the patch{' '}
+          {reproduction.testPath ? <span className="arch-mono text-slate-500">({reproduction.testPath})</span> : null}
+        </li>
+        <li>{reproduction.passedAfterPatch ? '✓' : '✗'} Passed with the patch applied</li>
+      </ul>
+      {!proven ? (
+        <p className="mt-2 text-xs text-amber-200/90">
+          A test that never failed is not evidence. Review the generated test and make it fail for the reported
+          reason before treating this fix as verified.
+        </p>
+      ) : null}
+      {verification.reproductionTest ? (
+        <>
+          <button type="button" onClick={() => setShowTest((value) => !value)} className="mt-2 text-xs text-sky-300 hover:text-sky-200">
+            {showTest ? 'Hide generated test' : 'Show generated test'}
+          </button>
+          {showTest ? (
+            <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded border border-slate-800 bg-slate-950 p-2 text-xs text-slate-300">
+              {verification.reproductionTest}
+            </pre>
+          ) : null}
+        </>
+      ) : null}
+    </div>
   );
 }
 

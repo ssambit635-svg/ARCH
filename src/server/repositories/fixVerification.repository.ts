@@ -13,6 +13,8 @@ export const fixVerificationRepository = {
       testCommand?: string | null;
       status?: string;
       createdById?: string | null;
+      /** V6 — the generated reproduction test that had to fail before the patch. */
+      reproductionTest?: string | null;
     },
     client: DbClient = db,
   ) {
@@ -27,6 +29,7 @@ export const fixVerificationRepository = {
         testCommand: data.testCommand ?? null,
         status: data.status ?? 'PENDING',
         createdById: data.createdById ?? null,
+        reproductionTest: data.reproductionTest ?? null,
       },
     });
   },
@@ -67,6 +70,8 @@ export const fixVerificationRepository = {
       evidence?: Prisma.InputJsonValue;
       durationMs?: number | null;
       finishedAt?: Date | null;
+      /** V6 — reproduction evidence: { ran, failedBeforePatch, passedAfterPatch, ... }. */
+      reproduction?: Prisma.InputJsonValue;
     },
     client: DbClient = db,
   ) {

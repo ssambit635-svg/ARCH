@@ -1,6 +1,6 @@
 # ARCH — Roadmap
 
-**Version:** 1.0 · **Owner:** Product · **Last reviewed:** 2026-09-23
+**Version:** 1.0 · **Owner:** Product · **Last reviewed:** 2026-09-26
 
 Three horizons: **v1** (the ten milestones), **v1.1–v1.3** (post-launch hardening and the features
 customers ask for first), **v2+** (only if the strategy still makes sense).
@@ -82,8 +82,33 @@ Each item below is **gated**: it does not start until the trigger condition is m
 | AI: incident summarisation and post-mortem drafts | Timeline data is rich and clean (post-v1.3) | **Explicitly deferred**; not a v1 differentiator and a data-handling liability |
 | Billing/payments inside the product | Manual invoicing becomes a bottleneck | Stripe does this better; keep it external |
 
-Note on AI: it is deliberately absent from v1 and gated in v2. ARCH's value is *process and trust*;
-adding a model before the data is structured invites cost, risk and distraction.
+### Where AI actually went (V2 → V6, shipped)
+
+The AI bet was taken earlier than this table planned, and it was taken as *ARCH's own model* rather
+than a vendor API — so the data-handling liability the note above worried about is bounded by design
+(`ARCH_OFFLINE_ONLY` is on by default; nothing leaves the deployment). Shipped:
+
+- **V2** Copilot drafts (summary / triage / status update / postmortem), draft-only with human
+  approval, redacted context, audited.
+- **V3** ARCH's own model (classifiers + similar-incident retrieval on your resolved incidents),
+  a model registry with background training, Code Assist, and an optional local LLM.
+- **V4** Verified fixes: patch → sandbox → evidence → human approval → real PR.
+- **V6** A knowledge base Copilot cites (RAG over your own runbooks, stored in your Postgres,
+  embedded on your server), calibrated confidence, learning from human corrections, drift
+  detection, recurring-incident detection, deploy-risk ranking, and reproduction-verified fixes.
+
+The original note still holds for the *next* step: **do not add a bigger model before the data is
+structured.** What remains is listed under V7 below, and each item is gated on evidence from V6.
+
+### V7 candidates (gated, none started)
+
+| Item | Trigger to start | Why it is not in yet |
+|---|---|---|
+| Conversational Copilot (multi-turn, remembers the incident) | ≥ 20% of drafts are edited before approval | Every turn is another context-assembly and audit decision; V6 drafts are one-shot and auditable |
+| Multi-file patches | Verified fixes with > 1 file are requested | A multi-file patch multiplies the reproduction surface and the review burden |
+| Vector index (pgvector ANN) | Knowledge bases past ~5 000 chunks | The current hybrid retrieval is exact and needs no extension; an index only pays off at scale |
+| LLM-assisted causal extraction | Golden-set category accuracy plateaus below 85% | A local LLM improves phrasing, not labelling; it is a cost and a latency, not a win |
+| Scheduled knowledge re-fetching | Customers maintain runbooks that change often | Re-fetching turns a human decision into a crawler, which is exactly the SSRF surface V6 bounded |
 
 ---
 
@@ -103,9 +128,17 @@ adding a model before the data is structured invites cost, risk and distraction.
 ## What we will *not* do (guards against drift)
 
 Reject — or answer with an integration instead:
-AI models · code generation · debugging tools · hosting customer applications · CI/CD pipelines ·
-Kubernetes management · payments inside the product · native mobile apps · microservices ·
-real-time chat · replacing GitHub / Slack / AWS / IDEs.
+hosting customer applications · CI/CD pipelines · Kubernetes management · payments inside the
+product · native mobile apps · microservices · real-time chat · replacing GitHub / Slack / AWS /
+IDEs.
+
+**On AI specifically** (this list used to say "AI models · code generation · debugging tools",
+written before V2): AI is in ARCH, but only as ARCH's own on-server model, only ever as a **draft a
+human approves**, and only with organization-scoped context — see
+[`docs/engineering/AI-GUARDRAILS.md`](../engineering/AI-GUARDRAILS.md). The things still rejected are
+the ones that follow from that: autonomous actions, sending incident data to an external vendor by
+default, and applying a generated patch to a repository without a sandbox, a reproduction and a
+reviewer.
 
 ---
 

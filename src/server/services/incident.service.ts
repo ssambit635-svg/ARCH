@@ -10,6 +10,8 @@ import { organizationRepository } from '../repositories/organization.repository'
 import { notificationRepository } from '../repositories/notification.repository';
 import { buildIncidentNotifications } from './notification.service';
 import { assertTransition, isReopen } from './incident-state';
+import { getOrganizationModel } from './archModel.service';
+import { recordSeverityCorrection } from './modelLearning.service';
 
 /**
  * Incident service — the heart of ARCH.
@@ -306,6 +308,37 @@ export async function createIncident(params: {
   return incidentRepository.findByIdWithTimeline(params.organizationId, incident.id);
 }
 
+/**
+ * V6 — record what ARCH would have predicted when a human overrides the severity.
+ *
+ * The prediction is computed *after* the transaction commits so the responder's severity change is
+ * never delayed by, or broken by, model work. Any failure is swallowed: learning is a side effect.
+ */
+async function learnFromSeverityChange(params: {
+  organizationId: string;
+  userId: string;
+  incidentId: string;
+  text: string;
+  actual: IncidentSeverity;
+}): Promise<void> {
+  try {
+    const model = await getOrganizationModel(params.organizationId);
+    const predicted = model.classifySeverity(params.text).severity;
+    if (predicted === params.actual) return; // agreement is not a correction
+    await recordSeverityCorrection({
+      organizationId: params.organizationId,
+      userId: params.userId,
+      incidentId: params.incidentId,
+      task: 'incident',
+      incidentText: params.text,
+      predicted,
+      actual: params.actual,
+    });
+  } catch (error) {
+    console.warn(`[arch-model] severity correction not recorded for ${params.incidentId}: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
 /** Update an incident: status transitions, severity, assignment, service/project link. */
 export async function updateIncident(params: {
   organizationId: string;
@@ -351,6 +384,16 @@ export async function updateIncident(params: {
     if (input.severity && input.severity !== existing.severity) {
       data.severity = input.severity;
       events.push({ incidentId, authorId: userId, type: 'SEVERITY_CHANGED', metadata: { from: existing.severity, to: input.severity } });
+      // V6 — a human overriding the severity is the clearest signal there is about what this
+      // workspace considers serious. ARCH re-classifies the incident to see what it would have
+      // said and records the disagreement. Never allowed to fail the severity change itself.
+      void learnFromSeverityChange({
+        organizationId,
+        userId,
+        incidentId,
+        text: `${existing.title}. ${existing.description ?? ''}`,
+        actual: input.severity,
+      });
       audits.push({
         organizationId,
         actorId: userId,

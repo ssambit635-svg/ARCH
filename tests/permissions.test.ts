@@ -34,6 +34,11 @@ const EXPECTED: Record<PermissionAction, Record<Role, boolean>> = {
   'fix.approve': { OWNER: true, ADMIN: true, RESPONDER: true, VIEWER: false },
   'pr.create': { OWNER: true, ADMIN: true, RESPONDER: true, VIEWER: false },
   'pr.read': { OWNER: true, ADMIN: true, RESPONDER: true, VIEWER: true },
+  'change.read': { OWNER: true, ADMIN: true, RESPONDER: true, VIEWER: true },
+  'change.write': { OWNER: true, ADMIN: true, RESPONDER: true, VIEWER: false },
+  'knowledge.read': { OWNER: true, ADMIN: true, RESPONDER: true, VIEWER: true },
+  'knowledge.manage': { OWNER: true, ADMIN: true, RESPONDER: true, VIEWER: false },
+  'knowledge.delete': { OWNER: true, ADMIN: true, RESPONDER: false, VIEWER: false },
 };
 
 describe('permission matrix', () => {

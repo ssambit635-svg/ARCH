@@ -9,20 +9,25 @@ import type { Prisma } from '@/generated/prisma/client';
 import { extractCausalSentences, extractMitigationSentences } from '../ai/arch-model/engine';
 import { CATEGORY_IDS, type CategoryId } from '../ai/arch-model/knowledge';
 import { baseArchModel, loadArchModel, type ArchModelRuntime } from '../ai/arch-model/runtime';
-import { clip } from '../ai/arch-model/text';
+import { clip, tokenize } from '../ai/arch-model/text';
 import {
   ARCH_MODEL_FORMAT,
+  SEVERITIES,
   decidePromotion,
   modelScore,
   trainArchModel,
   type ArchModelArtifact,
   type ArchModelMetrics,
+  type FeedbackExample,
   type TrainingDoc,
 } from '../ai/arch-model/train';
 import { redact } from '../ai/guardrails';
 import { checkLocalLlm, isLocalEndpoint, type LocalLlmHealth } from '../ai/local-llm';
+import { knowledgeFetchEnabled } from './knowledge.service';
 import { copilotConfig, localLlmConfig } from '../ai/provider';
 import { archModelRepository } from '../repositories/archModel.repository';
+import { knowledgeSourceRepository } from '../repositories/knowledgeSource.repository';
+import { modelFeedbackRepository } from '../repositories/modelFeedback.repository';
 
 /**
  * ARCH Model service — trains, registers, promotes and serves each organization's own model.
@@ -51,6 +56,11 @@ export const MAX_VERSIONS_IN_STATUS = 25;
 export const MAX_PUBLIC_DOCS = 2_000;
 export const MAX_CODE_DOCS = 1_000;
 export const MAX_REVIEW_DOCS = 1_000;
+/** V6 caps: knowledge chunks and human-feedback rows folded into one training run. */
+export const MAX_KNOWLEDGE_CHUNKS = 4_000;
+export const MAX_FEEDBACK_ROWS = 500;
+/** A retrained model that loses more than this much severity accuracy is flagged as drift. */
+export const DRIFT_TOLERANCE = 0.05;
 
 // ---------------------------------------------------------------------------------------------
 // External corpora (optional, read from disk; downloaded by scripts/arch-model/fetch-*.mjs)
@@ -182,10 +192,12 @@ export function normalizeMetrics(raw: unknown): ArchModelMetrics {
       public: documents.public ?? 0,
       code: documents.code ?? 0,
       review: documents.review ?? 0,
+      knowledge: documents.knowledge ?? 0,
     },
     severity: metrics.severity ?? { trainedOn: 0, holdoutAccuracy: null, holdoutSize: 0, baseline: null },
     category: metrics.category ?? { trainedOn: 0, holdoutAccuracy: null, holdoutSize: 0 },
     team: metrics.team ?? { severityCounts: {}, medianResolveMinutes: {}, topCategories: [] },
+    feedbackExamples: metrics.feedbackExamples ?? 0,
     vocabularySize: metrics.vocabularySize ?? 0,
     trainingMs: metrics.trainingMs ?? 0,
   };
@@ -234,6 +246,37 @@ export function incidentToTrainingDoc(incident: TrainingIncident, approvedPostmo
 }
 
 // ---------------------------------------------------------------------------------------------
+// V6 — drift detection: did the new model get worse at the things it used to get right?
+// ---------------------------------------------------------------------------------------------
+
+export type ModelDrift = {
+  metric: 'severityAccuracy' | 'categoryAccuracy';
+  previous: number;
+  current: number;
+  drop: number;
+};
+
+/**
+ * Compare a candidate against the serving model. Only *measured* accuracies are compared — a
+ * workspace with no holdout has nothing to drift from — and a small drop inside DRIFT_TOLERANCE is
+ * noise, not drift. The registry keeps the losing version either way, so drift never blocks
+ * serving, it only makes the regression visible.
+ */
+export function detectDrift(candidate: ArchModelMetrics, incumbent: ArchModelMetrics | null): ModelDrift | null {
+  if (!incumbent) return null;
+  const checks: [ModelDrift['metric'], number | null, number | null][] = [
+    ['severityAccuracy', incumbent.severity.holdoutAccuracy, candidate.severity.holdoutAccuracy],
+    ['categoryAccuracy', incumbent.category.holdoutAccuracy, candidate.category.holdoutAccuracy],
+  ];
+  for (const [metric, previous, current] of checks) {
+    if (previous === null || current === null) continue;
+    const drop = Math.round((previous - current) * 1000) / 1000;
+    if (drop > DRIFT_TOLERANCE) return { metric, previous, current, drop };
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------------------------
 // Training — train → evaluate → promote only if it beats the active model
 // ---------------------------------------------------------------------------------------------
 
@@ -252,6 +295,8 @@ export type TrainingRunResult = {
   teamDocuments: number;
   totalDocuments: number;
   metrics: ArchModelMetrics;
+  /** V6 — set when this run measured worse than the model it was compared against. */
+  drift: ModelDrift | null;
 };
 
 /** Assemble the organization's training corpus (tenant-scoped team data + shared read-only corpora). */
@@ -265,7 +310,54 @@ export async function buildTrainingCorpus(organizationId: string): Promise<Train
   for (const row of postmortems) if (!postmortemByIncident.has(row.incidentId)) postmortemByIncident.set(row.incidentId, row.output as Record<string, unknown>);
 
   const teamDocs = incidents.map((incident) => incidentToTrainingDoc(incident, postmortemByIncident.get(incident.id)));
-  return [...loadPublicDocs(), ...loadCodeDocs(), ...loadReviewDocs(), ...teamDocs];
+  // V6 — the organization's own runbooks / docs / notes, indexed as retrieval-only documents.
+  const knowledgeDocs = await knowledgeTrainingDocs(organizationId);
+  return [...loadPublicDocs(), ...loadCodeDocs(), ...loadReviewDocs(), ...knowledgeDocs, ...teamDocs];
+}
+
+/**
+ * Knowledge chunks as training documents. They enrich retrieval (so a draft can cite the runbook
+ * that already describes the failure) and never become classifier labels.
+ */
+export async function knowledgeTrainingDocs(organizationId: string): Promise<TrainingDoc[]> {
+  const rows = await knowledgeSourceRepository.listChunksForTraining(organizationId, MAX_KNOWLEDGE_CHUNKS);
+  return rows.map((row) => {
+    const doc: TrainingDoc = {
+      id: `knowledge:${row.id}`,
+      source: 'knowledge',
+      title: clip(row.source.name, 120),
+      text: clip(`${row.heading ? `${row.heading}. ` : ''}${row.text}`, 1_600),
+      url: row.source.sourceUrl ?? undefined,
+    };
+    return doc;
+  });
+}
+
+/**
+ * V6 active learning — turn what humans did into training labels. A responder who corrected a
+ * severity or rewrote a draft produced a better label than anything the model can infer, so those
+ * rows are weighted above the built-in examples.
+ */
+export async function buildFeedbackExamples(organizationId: string): Promise<FeedbackExample[]> {
+  const rows = await modelFeedbackRepository.listForTraining(organizationId, MAX_FEEDBACK_ROWS);
+  const examples: FeedbackExample[] = [];
+  for (const row of rows) {
+    const incident = row.incident;
+    if (!incident) continue;
+    const tokens = tokenize([incident.title, ...incident.events.map((event) => event.body ?? '')].filter(Boolean).join('. '));
+    if (tokens.length === 0) continue;
+    const corrected = (row.corrected ?? {}) as { severity?: string; category?: string };
+    const base = { id: `feedback:${row.id}`, tokens, weight: 3 };
+    if (row.kind === 'SEVERITY_CORRECTED' && corrected.severity && (SEVERITIES as string[]).includes(corrected.severity)) {
+      examples.push({ ...base, severity: corrected.severity as FeedbackExample['severity'] });
+    } else if (row.kind === 'CATEGORY_CORRECTED' && corrected.category && (CATEGORY_IDS as string[]).includes(corrected.category)) {
+      examples.push({ ...base, category: corrected.category as FeedbackExample['category'] });
+    } else if (row.kind === 'DRAFT_EDITED' && corrected.severity && (SEVERITIES as string[]).includes(corrected.severity)) {
+      // An edited triage draft that ended up applied is an implicit severity label.
+      examples.push({ ...base, severity: corrected.severity as FeedbackExample['severity'], weight: 2 });
+    }
+  }
+  return examples;
 }
 
 /**
@@ -274,10 +366,11 @@ export async function buildTrainingCorpus(organizationId: string): Promise<Train
  */
 export async function trainOrganizationModel(organizationId: string, options: { actorId?: string | null; trigger?: TrainTrigger } = {}): Promise<TrainingRunResult> {
   const trigger = options.trigger ?? 'manual';
-  const docs = await buildTrainingCorpus(organizationId);
-  const artifact = trainArchModel(docs);
+  const [docs, feedback] = await Promise.all([buildTrainingCorpus(organizationId), buildFeedbackExamples(organizationId)]);
+  const artifact = trainArchModel(docs, { feedback });
 
   const incumbent = await archModelRepository.findActiveVersion(organizationId);
+  const drift = detectDrift(artifact.metrics, incumbent ? normalizeMetrics(incumbent.metrics) : null);
   const decision = decidePromotion(
     { metrics: artifact.metrics, teamDocuments: artifact.metrics.documents.team, totalDocuments: artifact.docs.length },
     incumbent ? { version: incumbent.version, score: modelScore(normalizeMetrics(incumbent.metrics)), teamDocuments: incumbent.teamDocuments } : null,
@@ -288,6 +381,7 @@ export async function trainOrganizationModel(organizationId: string, options: { 
     score: decision.score,
     promoted: decision.promote,
     reason: decision.reason,
+    ...(drift ? { drift } : {}),
     ...(incumbent ? { incumbentVersion: incumbent.version, incumbentScore: modelScore(normalizeMetrics(incumbent.metrics)) } : {}),
   };
   const saved = await archModelRepository.createVersion({
@@ -332,8 +426,24 @@ export async function trainOrganizationModel(organizationId: string, options: { 
       severityAccuracy: artifact.metrics.severity.holdoutAccuracy,
       categoryAccuracy: artifact.metrics.category.holdoutAccuracy,
       trainingMs: artifact.metrics.trainingMs,
+      feedbackExamples: feedback.length,
+      knowledgeChunks: artifact.metrics.documents.knowledge ?? 0,
+      ...(drift ? { drift } : {}),
     },
   });
+
+  // Drift is written as its own audit entry: an admin should see it without diffing metrics.
+  if (drift) {
+    await writeAudit({
+      organizationId,
+      actorId: options.actorId ?? null,
+      actorLabel: options.actorId ? null : 'system:arch-model',
+      action: 'arch_model.drift',
+      entityType: 'arch_model',
+      entityId: saved.id,
+      metadata: { version: saved.version, ...drift },
+    });
+  }
 
   return {
     versionId: saved.id,
@@ -346,6 +456,7 @@ export async function trainOrganizationModel(organizationId: string, options: { 
     teamDocuments: saved.teamDocuments,
     totalDocuments: saved.totalDocuments,
     metrics: artifact.metrics,
+    drift,
   };
 }
 
@@ -589,6 +700,11 @@ export type VersionSummary = {
   categoryAccuracy: number | null;
   promoted: boolean;
   reason: string;
+  /** V6 — human labels folded into this run. */
+  feedbackExamples: number;
+  /** V6 — knowledge chunks indexed by this run. */
+  knowledgeChunks: number;
+  drift: ModelDrift | null;
 };
 
 export type ModelStatus = {
@@ -607,6 +723,12 @@ export type ModelStatus = {
   publicCorpus: { available: boolean; documents: number; file: string };
   codeCorpus: { available: boolean; documents: number; file: string };
   reviewCorpus: { available: boolean; documents: number; file: string };
+  /** V6 — the organization's own knowledge base (runbooks / docs) feeding retrieval. */
+  knowledge: { sources: number; chunks: number; ready: number; failed: number; fetchEnabled: boolean };
+  /** V6 — how many human labels (edits, corrections) the next retrain will learn from. */
+  feedback: { total: number; severityCorrections: number; editedDrafts: number; last: { task: string; kind: string; createdAt: string } | null };
+  /** V6 — the most recent drift finding, when the last run regressed. */
+  drift: (ModelDrift & { version: number; detectedAt: string }) | null;
   jobs: { open: number; last: TrainJobSummary | null };
   versions: VersionSummary[];
   localLlm: (LocalLlmHealth & { url: string; model: string; api: string; private: boolean }) | null;
@@ -625,7 +747,12 @@ function summarizeVersion(row: {
   evaluation: unknown;
 }): VersionSummary {
   const metrics = normalizeMetrics(row.metrics);
-  const evaluation = (row.evaluation ?? {}) as { score?: number; promoted?: boolean; reason?: string };
+  const evaluation = (row.evaluation ?? {}) as {
+    score?: number;
+    promoted?: boolean;
+    reason?: string;
+    drift?: ModelDrift;
+  };
   return {
     id: row.id,
     version: row.version,
@@ -639,6 +766,9 @@ function summarizeVersion(row: {
     categoryAccuracy: metrics.category.holdoutAccuracy,
     promoted: evaluation.promoted ?? row.status !== 'REJECTED',
     reason: evaluation.reason ?? '',
+    feedbackExamples: metrics.feedbackExamples,
+    knowledgeChunks: metrics.documents.knowledge ?? 0,
+    drift: evaluation.drift ?? null,
   };
 }
 
@@ -651,9 +781,12 @@ export async function getModelStatus(params: { organizationId: string; userId: s
   const publicDocs = loadPublicDocs();
   const codeDocs = loadCodeDocs();
   const reviewDocs = loadReviewDocs();
-  const [jobs, versions] = await Promise.all([
+  const [jobs, versions, knowledgeSources, knowledgeChunkCount, feedbackRows] = await Promise.all([
     archModelRepository.listJobs(params.organizationId, 5),
     archModelRepository.listVersions(params.organizationId, MAX_VERSIONS_IN_STATUS),
+    knowledgeSourceRepository.list(params.organizationId, 200),
+    knowledgeSourceRepository.countChunks(params.organizationId),
+    modelFeedbackRepository.list(params.organizationId, { take: 200 }),
   ]);
 
   return {
@@ -672,6 +805,30 @@ export async function getModelStatus(params: { organizationId: string; userId: s
     publicCorpus: { available: publicDocs.length > 0, documents: publicDocs.length, file: path.relative(process.cwd(), publicDataFile()) },
     codeCorpus: { available: codeDocs.length > 0, documents: codeDocs.length, file: path.relative(process.cwd(), codeDataFile()) },
     reviewCorpus: { available: reviewDocs.length > 0, documents: reviewDocs.length, file: path.relative(process.cwd(), reviewDataFile()) },
+    knowledge: {
+      sources: knowledgeSources.length,
+      chunks: knowledgeChunkCount,
+      ready: knowledgeSources.filter((source) => source.status === 'READY').length,
+      failed: knowledgeSources.filter((source) => source.status === 'FAILED').length,
+      fetchEnabled: knowledgeFetchEnabled(),
+    },
+    feedback: {
+      total: feedbackRows.length,
+      severityCorrections: feedbackRows.filter((row) => row.kind === 'SEVERITY_CORRECTED').length,
+      editedDrafts: feedbackRows.filter((row) => row.kind === 'DRAFT_EDITED').length,
+      last: feedbackRows[0]
+        ? { task: feedbackRows[0].task, kind: feedbackRows[0].kind, createdAt: feedbackRows[0].createdAt.toISOString() }
+        : null,
+    },
+    drift: (() => {
+      const latest = versions.find((version) => {
+        const evaluation = (version.evaluation ?? {}) as { drift?: ModelDrift };
+        return Boolean(evaluation.drift);
+      });
+      if (!latest) return null;
+      const evaluation = (latest.evaluation ?? {}) as { drift?: ModelDrift };
+      return evaluation.drift ? { ...evaluation.drift, version: latest.version, detectedAt: latest.createdAt.toISOString() } : null;
+    })(),
     jobs: {
       open: jobs.filter((job) => job.status === 'PENDING' || job.status === 'RUNNING').length,
       last: (() => {

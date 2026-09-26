@@ -129,6 +129,44 @@ export type GithubPullInfo = {
   base?: { sha?: string; ref?: string };
 };
 
+/**
+ * V6 - read the files a patch touches, at the pinned commit.
+ *
+ * Reproduction verification needs the repository contents the patch was written against, so the
+ * generated test can run against real code instead of a guess. Returns the decoded contents keyed
+ * by path; files that cannot be read are skipped rather than failing the whole run.
+ */
+export async function readFilesAtCommit(
+  client: GithubClient,
+  params: { owner: string; repo: string; ref: string; paths: string[] },
+): Promise<Record<string, string>> {
+  const files: Record<string, string> = {};
+  for (const path of params.paths.slice(0, 50)) {
+    try {
+      const response = await client.rest.repos.getContent({ owner: params.owner, repo: params.repo, path, ref: params.ref });
+      const data = response.data as { content?: string; encoding?: string; type?: string };
+      if (data?.type !== 'file' || typeof data.content !== 'string') continue;
+      const decoded = data.encoding === 'base64' ? Buffer.from(data.content, 'base64').toString('utf8') : data.content;
+      if (decoded.length > 400_000) continue; // one huge file should not become the whole corpus
+      files[path] = decoded;
+    } catch {
+      // A file we cannot read is simply not part of the reproduction corpus.
+    }
+  }
+  return files;
+}
+
+/** Paths a unified diff touches, in the order they appear. */
+export function pathsFromPatch(patch: string): string[] {
+  const paths: string[] = [];
+  const pattern = new RegExp('^\\+\\+\\+\\s+b?/(.+)$', 'gm');
+  for (const match of patch.matchAll(pattern)) {
+    const value = match[1]?.trim();
+    if (value && value !== '/dev/null' && !paths.includes(value)) paths.push(value);
+  }
+  return paths;
+}
+
 export type GithubRateLimitPayload = {
   resources: { core: { limit: number; used: number; remaining: number; reset: number } };
 };
