@@ -180,6 +180,13 @@ function renderMarkdown(summary) {
 }
 
 main().catch((error) => {
-  console.error(error instanceof Error ? error.message : String(error));
+  let message = error instanceof Error ? error.message : String(error);
+  // The common "fetch failed" in sandboxes/corporate networks is a TLS interception whose CA
+  // Node's bundled store does not know — say so instead of leaving a bare cause-less error.
+  const cause = error instanceof Error && error.cause instanceof Error ? error.cause.message : '';
+  if (/certificate|SSL|TLS|UNABLE_TO_VERIFY/i.test(`${message} ${cause}`)) {
+    message += `\nTLS verification failed — if you are behind a proxy with a custom CA, re-run with:\n  NODE_EXTRA_CA_CERTS=/path/to/ca-bundle.crt npx tsx scripts/github/repo-debug.mjs …`;
+  }
+  console.error(message);
   process.exit(1);
 });
