@@ -7,7 +7,8 @@
  *
  * On a normal machine `docker compose up -d && npm run setup && npm run dev` is equivalent.
  */
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config({ override: true });
 import { spawn, spawnSync } from 'node:child_process';
 import pg from 'pg';
 import { connectionFromEnv, startEmbeddedPostgres } from './lib/pg-embedded.mjs';
