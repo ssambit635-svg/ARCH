@@ -1,0 +1,61 @@
+name: Release Python CLI
+on:
+  push:
+    tags:
+      - 'cli-v*'
+jobs:
+  verify-server:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: sudo apt-get update && sudo apt-get install -y libpq5
+      - run: npm ci
+      - run: npm run db:generate && npm run typecheck && npm test && npm audit --omit=dev --audit-level=high
+  build:
+    needs: verify-server
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install build twine pytest -e clients/python
+      - run: pytest clients/python/tests
+      - run: python -m build clients/python --outdir dist
+      - run: twine check dist/*
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cli-package
+          path: dist/*
+  testpypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: testpypi
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: cli-package
+          path: dist
+      - run: pip install twine
+      - run: twine upload --repository-url https://test.pypi.org/legacy/ dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
+  pypi:
+    needs: testpypi
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: cli-package
+          path: dist
+      - run: pip install twine
+      - run: twine upload dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}

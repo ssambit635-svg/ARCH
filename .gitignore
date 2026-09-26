@@ -97,3 +97,8 @@ src/generated/
 # third-party or customer text; never commit). See docs/engineering/ARCH-MODEL.md.
 model-data/
 *.gguf
+
+# Python CLI packaging
+*.egg-info/
+__pycache__/
+.pytest_cache/

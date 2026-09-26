@@ -122,6 +122,11 @@ enum AiSuggestionStatus {
   DISMISSED
 }
 
+enum TokenScope {
+  READ
+  READ_WRITE
+}
+
 // ---------- Auth (Auth.js compatible) ----------
 
 model User {
@@ -135,6 +140,7 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   accounts          Account[]
+  apiTokensCreated  ApiToken[]
   sessions          Session[]
   memberships       Membership[]
   incidentsCreated  Incident[]      @relation("IncidentCreator")
@@ -197,6 +203,7 @@ model Organization {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  apiTokens        ApiToken[]
   memberships      Membership[]
   invitations      Invitation[]
   projects         Project[]
@@ -709,4 +716,24 @@ model PullRequest {
   @@index([incidentId])
   @@index([repoConnectionId])
   @@map("pull_requests")
+}
+
+model ApiToken {
+  id             String     @id @default(cuid())
+  organizationId String
+  name           String
+  prefix         String
+  hash           String     @unique
+  scopes         Json
+  createdById    String
+  lastUsedAt     DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime   @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdBy    User         @relation(fields: [createdById], references: [id])
+
+  @@index([organizationId, revokedAt])
+  @@index([prefix])
+  @@map("api_tokens")
 }

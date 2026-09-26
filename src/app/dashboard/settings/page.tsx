@@ -7,6 +7,8 @@ import { roleHasPermission, ROLES } from '@/lib/permissions';
 import { timeAgo } from '@/lib/format';
 import { Alert, Badge, Card, CardBody, CardHeader, DefinitionList, PageHeader, Table } from '@/components/ui';
 import { ActionForm } from '@/components/dashboard/action-form';
+import { ApiTokenManager } from '@/components/dashboard/api-token-manager';
+import { db } from '@/lib/db';
 import { Field, Input, Select } from '@/components/ui/form';
 import {
   changeMemberRoleAction,
@@ -47,6 +49,12 @@ export default async function SettingsPage() {
     })),
   );
 
+  const tokens = canManageWebhooks ? await db.apiToken.findMany({
+    where: { organizationId: organization.id, revokedAt: null },
+    select: { id: true, name: true, prefix: true, scopes: true, createdAt: true, lastUsedAt: true },
+    orderBy: { createdAt: 'desc' }, take: 100,
+  }) : [];
+
   return (
     <div className="space-y-6">
       <PageHeader title="Settings" description="Organization profile, people, and the integrations that open incidents for you." />
@@ -65,6 +73,11 @@ export default async function SettingsPage() {
           )}
         </CardBody>
       </Card>
+
+      {canManageWebhooks && <Card>
+        <CardHeader title="API tokens" description="Organization-scoped credentials; only owners and admins can manage them." />
+        <CardBody><ApiTokenManager organizationId={organization.id} initialTokens={tokens.map((token) => ({ ...token, scopes: token.scopes as string[], createdAt: token.createdAt.toISOString(), lastUsedAt: token.lastUsedAt?.toISOString() ?? null }))} /></CardBody>
+      </Card>}
 
       <Card>
         <CardHeader title="Members" description={`${members.length} member${members.length === 1 ? '' : 's'} · roles are enforced server-side on every request.`} />
