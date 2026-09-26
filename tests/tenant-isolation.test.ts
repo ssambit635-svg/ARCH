@@ -139,6 +139,9 @@ describe('tenant isolation', () => {
 
     const accepted = await acceptInvitation({ token, userId: invitedUser.id, userEmail: invitedUser.email });
     expect(accepted.organizationId).toBe(acme.organization.id);
+    const joined = await db.notification.findFirst({ where: { organizationId: acme.organization.id, reason: 'INVITATION_ACCEPTED' } });
+    expect(joined?.recipientId).toBe(acme.owner.id);
+    expect(joined?.body).toContain('invited@acme.test');
     expect(await db.membership.count({ where: { organizationId: acme.organization.id, userId: invitedUser.id } })).toBe(1);
     // Invitations are single-use.
     await expect(acceptInvitation({ token, userId: invitedUser.id, userEmail: invitedUser.email })).rejects.toMatchObject({ code: 'CONFLICT' });

@@ -22,6 +22,16 @@ function optionalTrimmed() {
     .transform((value) => value?.trim() || undefined);
 }
 
+/**
+ * Values people copy from `.env.example` and forget to replace. A placeholder must never count as
+ * a configured credential — that used to flip GitHub into "real" mode and fail at approve time.
+ */
+export function isPlaceholderSecret(value: string | null | undefined): boolean {
+  const trimmed = value?.trim();
+  if (!trimmed) return false;
+  return /replace-with|change-?me|placeholder|xxxx+|\{\{|\$\{/i.test(trimmed);
+}
+
 const envSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
 
@@ -111,7 +121,7 @@ function loadEnv(): Env {
       throw new Error('Refusing to start in production with placeholder secrets.');
     }
     // A placeholder PAT would make every "Approve" fail mid-flight, after the human already clicked.
-    if (value.GITHUB_TOKEN?.startsWith('replace-with')) {
+    if (isPlaceholderSecret(value.GITHUB_TOKEN)) {
       throw new Error('Refusing to start in production with a placeholder GITHUB_TOKEN.');
     }
     if (!value.GITHUB_API_BASE_URL.startsWith('https://')) {
@@ -120,8 +130,8 @@ function loadEnv(): Env {
   }
 
   // "real" is a promise that PRs are actually opened; fail at boot instead of at approval time.
-  if (value.GITHUB_MODE === 'real' && !value.GITHUB_TOKEN) {
-    throw new Error('GITHUB_MODE="real" needs GITHUB_TOKEN. Set a GitHub PAT or use GITHUB_MODE="auto"/"mock".');
+  if (value.GITHUB_MODE === 'real' && (!value.GITHUB_TOKEN || isPlaceholderSecret(value.GITHUB_TOKEN))) {
+    throw new Error('GITHUB_MODE="real" needs a real GITHUB_TOKEN, not a placeholder. Set a GitHub PAT or use GITHUB_MODE="auto"/"mock".');
   }
 
   return value;

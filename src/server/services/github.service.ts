@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { Octokit } from '@octokit/rest';
-import { env } from '@/lib/env';
+import packageJson from '../../../package.json';
+import { env, isPlaceholderSecret } from '@/lib/env';
 import { AppError } from '@/lib/errors';
 import { applyFilePatch, looksLikeUnifiedDiff, parseUnifiedDiff, type FilePatch } from './github-patch';
 
@@ -145,10 +146,24 @@ export function redactGithubSecrets(text: string): string {
     .replace(/x-access-token:[^@\s]+@/g, 'x-access-token:[redacted-token]@');
 }
 
-/** A blank/whitespace token is "not configured" — .env files are full of those. */
+/** A blank, whitespace, or `.env.example` placeholder token is "not configured". */
 function activeToken(): string | null {
   const token = env.GITHUB_TOKEN?.trim();
-  return token ? token : null;
+  if (!token || isPlaceholderSecret(token)) return null;
+  return token;
+}
+
+export type GithubTokenKind = 'missing' | 'classic' | 'fine-grained' | 'github-app' | 'oauth' | 'unknown';
+
+/** What kind of credential is this, from the prefix GitHub itself uses. Never logs the secret. */
+export function classifyGithubToken(token: string | null | undefined): GithubTokenKind {
+  const value = token?.trim();
+  if (!value || isPlaceholderSecret(value)) return 'missing';
+  if (value.startsWith('github_pat_')) return 'fine-grained';
+  if (value.startsWith('ghp_')) return 'classic';
+  if (value.startsWith('ghs_') || value.startsWith('ghu_')) return 'github-app';
+  if (value.startsWith('gho_')) return 'oauth';
+  return 'unknown';
 }
 
 function realModeRequested(): boolean {
@@ -177,7 +192,7 @@ async function defaultClientFactory(): Promise<GithubClient> {
   const octokit = new Octokit({
     auth: activeToken() ?? undefined,
     baseUrl: env.GITHUB_API_BASE_URL,
-    userAgent: `arch-verified-fix/${'0.3.0'}`,
+    userAgent: `arch-verified-fix/${packageJson.version}`,
     request: { fetch: fetchWithTimeout },
   });
   return octokit as unknown as GithubClient;
@@ -227,10 +242,10 @@ export function mapGithubError(error: unknown, context: { owner?: string; repo?:
 
   if (status === 403) {
     if (lower.includes('must have admin rights') || lower.includes('resource not accessible by integration')) {
-      return AppError.unavailable(`GitHub denied this operation for the configured token. A GitHub App installation token cannot open PRs for users; use a PAT with Contents: Read and write on ${context.owner ?? 'the org'}/* (or fine-grained: Contents + Pull requests on ${context.owner}/${context.repo ?? '*'}).`, {
-        ...details,
-        githubMessage: raw,
-      });
+      return AppError.unavailable(
+        `GitHub denied this operation (403). The token can see the API but not this resource. Give it Contents: Read and write and Pull requests: Read and write on ${context.owner ?? 'the org'}/${context.repo ?? '*'} (classic PATs need the repo scope).`,
+        { ...details, githubMessage: raw },
+      );
     }
     return AppError.forbidden(`GitHub token is not allowed to reach ${context.owner ?? ''}${context.repo ? `/${context.repo}` : ''} (403). Check the token's repository access and permissions.`, {
       ...details,
@@ -287,6 +302,8 @@ export type GithubConfigStatus = {
   tokenConfigured: boolean;
   /** Masked, e.g. `ghp_…Kx9`. Safe to render. */
   tokenHint: string | null;
+  /** Prefix classification. `missing` covers unset and `.env.example` placeholders. */
+  tokenKind: GithubTokenKind;
   baseUrl: string;
   timeoutMs: number;
   openAsDraft: boolean;
@@ -300,19 +317,36 @@ function maskToken(token: string): string {
   return `${token.slice(0, 6)}…${token.slice(-4)}`;
 }
 
+function realModeReason(token: string): string {
+  const kind = classifyGithubToken(token);
+  const kindNote =
+    kind === 'unknown'
+      ? ' The value does not look like a GitHub token (expected ghp_, github_pat_, gho_, or ghs_) — GitHub will reject it.'
+      : kind === 'github-app'
+        ? ' This is a GitHub App token. It can open PRs only on repositories the installation can write.'
+        : kind === 'fine-grained'
+          ? ' Fine-grained PATs do not report classic scopes; Contents and Pull requests must be Read and write on each repo.'
+          : '';
+  return `GITHUB_TOKEN is set and GITHUB_MODE allows real calls — approving a verified fix pushes a branch and opens a pull request.${kindNote}`;
+}
+
 export function describeGithubConfig(): GithubConfigStatus {
   const mode = githubMode();
   const token = activeToken();
+  const raw = env.GITHUB_TOKEN?.trim();
   const reason =
-    mode === 'real'
-      ? 'GITHUB_TOKEN is set and GITHUB_MODE allows real calls — approving a verified fix pushes a branch and opens a pull request.'
+    mode === 'real' && token
+      ? realModeReason(token)
       : env.GITHUB_MODE === 'mock'
         ? 'GITHUB_MODE="mock" forces offline PRs (tests / air-gapped demo). Set GITHUB_MODE="auto" to go live.'
-        : 'No GITHUB_TOKEN — PRs are mocked. Approvals are still recorded and audited, but nothing is pushed to GitHub.';
+        : raw && isPlaceholderSecret(raw)
+          ? 'GITHUB_TOKEN is still a placeholder from .env.example. Put the real PAT in .env (never in .env.example). PRs stay mocked until then.'
+          : 'No GITHUB_TOKEN — PRs are mocked. Approvals are still recorded and audited, but nothing is pushed to GitHub.';
   return {
     mode,
     tokenConfigured: Boolean(token),
     tokenHint: token ? maskToken(token) : null,
+    tokenKind: classifyGithubToken(token),
     baseUrl: env.GITHUB_API_BASE_URL,
     timeoutMs: env.GITHUB_TIMEOUT_MS,
     openAsDraft: env.GITHUB_PR_DRAFT,
@@ -336,6 +370,19 @@ export type GithubTokenCheck = {
  * scripts need. One cheap authenticated call, plus the identity call that a GitHub App token cannot
  * make. Never throws: a broken token is data, not a 500.
  */
+function failedTokenCheck(error: unknown): GithubTokenCheck {
+  const mapped = error instanceof AppError ? error : mapGithubError(error);
+  return {
+    ok: false,
+    mode: 'real',
+    actor: null,
+    actorType: null,
+    scopes: [],
+    rateLimit: { limit: 0, used: 0, remaining: 0, resetsAt: null },
+    message: mapped.message,
+  };
+}
+
 export async function verifyGithubCredentials(): Promise<GithubTokenCheck> {
   const config = describeGithubConfig();
   if (config.mode === 'mock') {
@@ -350,33 +397,50 @@ export async function verifyGithubCredentials(): Promise<GithubTokenCheck> {
     };
   }
 
-  const client = await getGithubClient();
+  let client: GithubClient;
+  try {
+    client = await getGithubClient();
+  } catch (error) {
+    return failedTokenCheck(error);
+  }
 
   // /rate_limit works for classic PATs, fine-grained PATs and GitHub App tokens alike, so it is the
   // "is this credential alive" probe; /user is the nicest-to-read identity but is denied to App tokens.
-  const rate = await githubCall(() => client.rest.rateLimit.get());
+  // A dead token is data for the dashboard, not an exception — callers used to see a 500 here.
+  let rate: { data: GithubRateLimitPayload; headers?: Record<string, unknown> };
+  try {
+    rate = (await client.rest.rateLimit.get()) as { data: GithubRateLimitPayload; headers?: Record<string, unknown> };
+  } catch (error) {
+    return failedTokenCheck(error);
+  }
   const core = rate.data.resources.core;
   const rateLimit = { limit: core.limit, used: core.used, remaining: core.remaining, resetsAt: new Date(core.reset * 1000).toISOString() };
 
   let actor: string | null = null;
   let actorType: string | null = null;
-  let scopes: string[] = [];
+  let scopes = readScopes(rate);
   let identityError: string | null = null;
   try {
     const me = await client.rest.users.getAuthenticated();
     actor = me.data.login;
     actorType = me.data.type ?? 'User';
-    scopes = readScopes(me as unknown as { headers?: Record<string, string> });
+    const identityScopes = readScopes(me as unknown as { headers?: Record<string, string> });
+    if (identityScopes.length) scopes = identityScopes;
   } catch (error) {
     const mapped = mapGithubError(error);
+    // 401 means the credential itself is rejected. 403 on /user is normal for App tokens.
+    if (mapped.status === 401) return failedTokenCheck(mapped);
     identityError = mapped.message;
     actorType = 'Token (identity endpoint not available for this credential type)';
   }
 
+  const kind = classifyGithubToken(activeToken());
   const scopesWarning =
-    scopes.length > 0 && !scopes.includes('repo') && !scopes.includes('public_repo')
+    kind === 'classic' && scopes.length > 0 && !scopes.includes('repo') && !scopes.includes('public_repo')
       ? ' Warning: this classic PAT lacks the `repo` scope, so pushing to private repos will fail.'
-      : '';
+      : kind === 'unknown'
+        ? ' Warning: the token prefix is not one GitHub documents, so treat a later 401 as "wrong credential", not a GitHub outage.'
+        : '';
 
   return {
     ok: true,
@@ -386,10 +450,10 @@ export async function verifyGithubCredentials(): Promise<GithubTokenCheck> {
     scopes,
     rateLimit,
     message:
-      `GitHub token is live${actor ? ` (authenticated as ${actor})` : ''}. ` +
+      `GitHub token is live${actor ? ` (authenticated as ${actor})` : ''}${kind !== 'missing' ? ` [${kind}]` : ''}. ` +
       `${rateLimit.remaining}/${rateLimit.limit} API calls left this hour.` +
       scopesWarning +
-      (identityError ? ' (Identity lookup was refused; that is normal for GitHub App tokens.)' : ''),
+      (identityError ? ' (Identity lookup was refused; that is normal for GitHub App tokens. Use the repo check to confirm push access.)' : ''),
   };
 }
 
@@ -465,7 +529,10 @@ export async function checkRepoAccess(params: { owner: string; repo: string; com
   const canPull = Boolean(data.permissions?.pull ?? true);
   const warnings = [
     data.archived ? `Repository ${data.full_name} is archived — GitHub normally refuses pushes.` : null,
-    !canPush ? 'The token can read but not write this repository, so PR creation will fail (needs Contents: Read and write).' : null,
+    // permissions are omitted for some App tokens. "push: false" only means something when GitHub sent the block.
+    data.permissions !== undefined && !canPush
+      ? 'The token can read but not write this repository, so PR creation will fail (needs Contents: Read and write).'
+      : null,
   ].filter(Boolean) as string[];
 
   return {
@@ -574,6 +641,13 @@ function fileAlreadyExists(error: unknown): boolean {
   const status = (error as { status?: number })?.status;
   if (status !== 409 && status !== 422) return false;
   return /already exists/i.test(String((error as { message?: string })?.message ?? ''));
+}
+
+/** createRef 422 is only retryable when GitHub is saying the branch name is taken. */
+function refAlreadyExists(error: unknown): boolean {
+  if (!(error instanceof AppError) || error.status !== 422) return false;
+  const detail = `${error.message} ${(error.issues ?? []).map((issue) => issue.message).join(' ')}`;
+  return /already exists/i.test(detail);
 }
 
 type PreparedFile = { path: string; changeType: FileChangeTypeish; content: string; patch: FilePatch; originalBytes: number };
@@ -723,7 +797,9 @@ export async function createPullRequest(params: CreatePrParams): Promise<CreateP
     `Branch: ${branch}\n\n` +
     `Co-authored-by: ARCH <arch@localhost>`;
 
-  const message = `fix(arch): ${commitSubjectTitle(params.title)}\n\n${commitBody}`;
+  // commitSubjectTitle already applies the single `fix(arch):` prefix. Adding it again produced
+  // `fix(arch): fix(arch): …` on every real commit.
+  const message = `${commitSubjectTitle(params.title)}\n\n${commitBody}`;
   const commit = await githubCall(
     () => client.rest.git.createCommit({ owner: params.repoOwner, repo: params.repoName, message, tree: tree.data.sha, parents: [baseSha] }),
     context,
@@ -734,7 +810,8 @@ export async function createPullRequest(params: CreatePrParams): Promise<CreateP
   try {
     await githubCall(() => client.rest.git.createRef({ owner: params.repoOwner, repo: params.repoName, ref: `refs/heads/${branch}`, sha: headSha }), context);
   } catch (error) {
-    if (!(error instanceof AppError) || error.status !== 422) throw error;
+    // Only a leftover ref is retried. Other 422s (bad SHA, empty commit) must not force-update a branch.
+    if (!refAlreadyExists(error)) throw error;
     await githubCall(() => client.rest.git.updateRef({ owner: params.repoOwner, repo: params.repoName, ref: `refs/heads/${branch}`, sha: headSha, force: true }), context);
   }
 

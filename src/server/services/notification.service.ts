@@ -30,9 +30,12 @@ export type IncidentEmailContext = {
   serviceName?: string | null;
   incident: Pick<Incident, 'id' | 'title' | 'severity' | 'status' | 'description' | 'startedAt'>;
   actorLabel: string;
+  assigneeId?: string | null;
   change?: { from: IncidentStatus; to: IncidentStatus } | null;
   message?: string | null;
 };
+
+export type IncidentNotificationReason = 'INCIDENT_CREATED' | 'INCIDENT_STATUS_CHANGED' | 'INCIDENT_COMMENT' | 'INCIDENT_ASSIGNED';
 
 function incidentUrl(incidentId: string): string {
   return `${env.APP_URL.replace(/\/$/, '')}/dashboard/incidents/${incidentId}`;
@@ -81,6 +84,20 @@ export function renderIncidentChanged(context: IncidentEmailContext): { subject:
   };
 }
 
+export function renderIncidentAssigned(context: IncidentEmailContext, recipientId: string): { subject: string; body: string } {
+  const you = Boolean(context.assigneeId && recipientId === context.assigneeId);
+  return {
+    subject: `${you ? '[Assigned to you]' : '[Assignment]'} ${context.incident.title} — ${context.organizationName}`,
+    body: [
+      you ? `${context.actorLabel} assigned this incident to you.` : `${context.actorLabel} changed who owns this incident.`,
+      '',
+      incidentSummary(context),
+      '',
+      `Open in ARCH: ${incidentUrl(context.incident.id)}`,
+    ].join('\n'),
+  };
+}
+
 export function renderInvitation(context: {
   organizationName: string;
   invitedByLabel: string;
@@ -102,22 +119,51 @@ export function renderInvitation(context: {
   };
 }
 
+function renderForReason(reason: IncidentNotificationReason, context: IncidentEmailContext, recipientId: string): { subject: string; body: string } {
+  if (reason === 'INCIDENT_CREATED') return renderIncidentCreated(context);
+  if (reason === 'INCIDENT_ASSIGNED') return renderIncidentAssigned(context, recipientId);
+  return renderIncidentChanged(context);
+}
+
 export function buildIncidentNotifications(
   context: IncidentEmailContext,
   recipientIds: string[],
-  reason: 'INCIDENT_CREATED' | 'INCIDENT_STATUS_CHANGED' | 'INCIDENT_COMMENT',
+  reason: IncidentNotificationReason,
   organizationId: string,
 ): NewNotification[] {
   if (recipientIds.length === 0) return [];
-  const template = reason === 'INCIDENT_CREATED' ? renderIncidentCreated(context) : renderIncidentChanged(context);
-  return recipientIds.map((recipientId) => ({
-    organizationId,
-    incidentId: context.incident.id,
-    recipientId,
-    reason,
-    subject: template.subject,
-    body: template.body,
-  }));
+  return recipientIds.map((recipientId) => {
+    const template = renderForReason(reason, context, recipientId);
+    return {
+      organizationId,
+      incidentId: context.incident.id,
+      recipientId,
+      reason,
+      subject: template.subject,
+      body: template.body,
+    };
+  });
+}
+
+export function renderInvitationAccepted(context: { organizationName: string; acceptedByLabel: string; role: string }): { subject: string; body: string } {
+  return {
+    subject: `${context.acceptedByLabel} joined ${context.organizationName} on ARCH`,
+    body: [
+      `${context.acceptedByLabel} accepted the invitation and joined ${context.organizationName} as ${context.role}.`,
+      '',
+      `Open the organization: ${env.APP_URL.replace(/\/$/, '')}/dashboard/settings`,
+    ].join('\n'),
+  };
+}
+
+export async function enqueueInvitationAcceptedNotification(
+  data: { organizationId: string; recipientId: string; subject: string; body: string },
+  client: DbClient = db,
+) {
+  await notificationRepository.enqueueMany(
+    [{ organizationId: data.organizationId, recipientId: data.recipientId, reason: 'INVITATION_ACCEPTED', subject: data.subject, body: data.body }],
+    client,
+  );
 }
 
 export async function enqueueInvitationNotification(
