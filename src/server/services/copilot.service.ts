@@ -232,6 +232,81 @@ export async function generateSuggestion(params: Params & { incidentId: string; 
   }
 }
 
+/**
+ * Ask ARCH a natural-language question about this incident.
+ *
+ * Runs the native answer engine directly: no language model, no tokens spent, no DB row created
+ * (the exchange is NOT persisted — it is a read-only helper, perfect for fast "what do I do?"
+ * questions in the dashboard). Rate limited the same way as the other Copilot endpoints.
+ *
+ * For hybrid/external providers we still try the native engine first because it is grounded on
+ * the team's actual timeline/runbooks and citations are clickable.
+ */
+export async function askArch(
+  params: Params & { incidentId: string; question: string },
+): Promise<{ answer: string; intent: string; confidence: string; citations: unknown[]; suggestions: string[]; provider: string; model: string }> {
+  const { organizationId, userId, incidentId, question } = params;
+  await requirePermission(organizationId, userId, 'copilot.read');
+  const incident = await loadIncident(organizationId, incidentId);
+  enforceRateLimit(copilotRateLimitKey(organizationId), { limit: env.AI_RATE_LIMIT_PER_MINUTE, windowMs: COPILOT_RATE_LIMIT_WINDOW_MS });
+
+  const trimmed = question.trim();
+  if (!trimmed) throw AppError.badRequest('Ask a question first.');
+  if (trimmed.length > 800) throw AppError.badRequest('Keep the question under 800 characters.');
+
+  const { context } = buildCopilotContext(incident);
+  try {
+    const model = await getOrganizationModel(organizationId);
+    const knowledge = buildKnowledge(model, context, { excludeIds: [`team:${incidentId}`] });
+    try {
+      knowledge.knowledgeChunks = await retrieveKnowledge({ organizationId, query: [trimmed, retrievalQuery(context)].filter(Boolean).join(' '), k: 3 });
+    } catch (error) {
+      console.warn(`[copilot] knowledge retrieval failed for ask: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    context.knowledge = knowledge;
+  } catch (error) {
+    console.warn(`[copilot] ARCH model unavailable for ask: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  // Lazy import avoids a circular load at module top-level.
+  const { answerQuestion } = await import('../ai/arch-model/answer');
+  const result = answerQuestion(trimmed, context, context.knowledge);
+  return {
+    answer: result.answer,
+    intent: result.intent,
+    confidence: result.confidence,
+    citations: result.citations,
+    suggestions: result.suggestions,
+    provider: 'arch',
+    model: 'arch-native-1',
+  };
+}
+
+/**
+ * Hints / gap detection — what ARCH thinks a responder is missing (stale updates, no assignee,
+ * runbook match, resolution-without-cause, etc.). All deterministic, on-CPU, free.
+ */
+export async function getHints(params: Params & { incidentId: string }): Promise<{ hints: unknown[]; provider: string; model: string }> {
+  const { organizationId, userId, incidentId } = params;
+  await requirePermission(organizationId, userId, 'copilot.read');
+  const incident = await loadIncident(organizationId, incidentId);
+  const { context } = buildCopilotContext(incident);
+  try {
+    const model = await getOrganizationModel(organizationId);
+    const knowledge = buildKnowledge(model, context, { excludeIds: [`team:${incidentId}`] });
+    try {
+      knowledge.knowledgeChunks = await retrieveKnowledge({ organizationId, query: retrievalQuery(context), k: 3 });
+    } catch {
+      /* ignore */
+    }
+    context.knowledge = knowledge;
+  } catch {
+    /* model problem is non-fatal — gaps can still be detected from the timeline */
+  }
+  const { detectGaps } = await import('../ai/arch-model/hints');
+  return { hints: detectGaps(context, context.knowledge), provider: 'arch', model: 'arch-native-1' };
+}
+
 export async function listSuggestions(params: Params & { incidentId: string; status?: AiSuggestionStatus }) {
   await requirePermission(params.organizationId, params.userId, 'copilot.read');
   await loadIncident(params.organizationId, params.incidentId);
