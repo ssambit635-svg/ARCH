@@ -68,6 +68,24 @@ Rules for this file:
 - Model artifacts stay **format 1**: an already-trained model keeps serving, and picks up
   calibration on its next retrain (a missing calibration defaults to a temperature of 1).
 
+### Added — sign-in
+
+- **"Continue with GitHub" on the sign-in page.** Set `AUTH_GITHUB_ID` + `AUTH_GITHUB_SECRET` in
+  `.env` (setup steps are documented next to the keys in `.env.example`) and the button appears on
+  `/login`; leave them blank and the page is unchanged. GitHub sign-ins create the local user on
+  first login, so RBAC, memberships and audit logs work exactly as for email/password accounts, and
+  a failed or misconfigured attempt lands back on `/login` with a plain-English message instead of
+  a stack trace.
+
+### Added — developer tooling
+
+- **`npm run github:debug -- --repo owner/name --symptom "…"` explores a repository and ranks the
+  files most likely to hold your bug.** It reads the real commit tree from GitHub, drops
+  vendored/generated/lock paths, scores the rest against your symptom (or `--issue N`), then runs
+  the same `analyzeCode()` rules Code Assist uses and ranks the findings by how close they sit to a
+  line that mentions the symptom. Output is Markdown (stdout or `--out report.md`) or `--json`.
+  Reads only — a `contents:read` token, no model in the loop, independent of `ARCH_OFFLINE_ONLY`.
+
 ### Fixed
 
 - **A live-looking GitHub PAT was committed in `.env.example` again.** It is back to a placeholder.
