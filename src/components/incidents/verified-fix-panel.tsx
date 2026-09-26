@@ -156,7 +156,19 @@ function VerificationItem({ verification, canApprove }: { verification: Verifica
 
       {verification.pullRequest ? (
         <p className="text-xs text-emerald-300">
-          PR created: <a href={verification.pullRequest.externalUrl ?? '#'} className="underline" target="_blank" rel="noreferrer">{verification.pullRequest.branch}</a> · {verification.pullRequest.status}
+          {verification.pullRequest.externalUrl ? (
+            <>
+              PR created:{' '}
+              <a href={verification.pullRequest.externalUrl} className="underline" target="_blank" rel="noreferrer">
+                {verification.pullRequest.branch}
+              </a>{' '}
+              · {verification.pullRequest.status}
+            </>
+          ) : (
+            <span className="text-amber-300">
+              Recorded offline — no GitHub PR (mock mode) · branch {verification.pullRequest.branch} · {verification.pullRequest.status}
+            </span>
+          )}
         </p>
       ) : verification.status === 'PASSED' && canApprove ? (
         <form action={approveAction} className="space-y-2">

@@ -29,7 +29,7 @@ export const POST = handleRoute(async (request) => {
     userId: user.id,
     owner: body.owner,
     repo: body.repo,
-    defaultBranch: body.defaultBranch,
+    defaultBranch: body.defaultBranch ?? null,
     pinnedCommitSha: body.pinnedCommitSha ?? null,
   });
   return created(connection);

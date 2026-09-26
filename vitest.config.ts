@@ -42,6 +42,11 @@ export default defineConfig({
       // ARCH model tests must not depend on a locally downloaded public corpus.
       ARCH_MODEL_DATA_DIR: 'tests/.no-model-data',
       ARCH_MODEL_RETRAIN_MINUTES: '0',
+      // The suite must not depend on the developer's GitHub credentials: an exported GITHUB_TOKEN
+      // would otherwise flip PR creation (and repo connect/pin validation) into real mode, so tests
+      // would hit api.github.com and depend on whether the token can see `acme/api`.
+      GITHUB_TOKEN: '',
+      GITHUB_MODE: 'mock',
     },
   },
 });

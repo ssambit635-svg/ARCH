@@ -20,8 +20,9 @@ export const repoConnectionRepository = {
     return client.repoConnection.findFirst({ where: { id, organizationId } });
   },
 
+  /** Case-insensitive: GitHub owner/repo names are case-insensitive, so Acme/Api IS acme/api. */
   findByFullName(organizationId: string, fullName: string, client: DbClient = db) {
-    return client.repoConnection.findFirst({ where: { organizationId, fullName } });
+    return client.repoConnection.findFirst({ where: { organizationId, fullName: { equals: fullName, mode: 'insensitive' } } });
   },
 
   list(organizationId: string, options: { includeInactive?: boolean } = {}, client: DbClient = db) {

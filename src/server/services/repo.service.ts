@@ -4,6 +4,7 @@ import { requirePermission } from '@/lib/permissions';
 import { writeAudit } from '@/lib/audit';
 import { repoConnectionRepository } from '@/server/repositories/repoConnection.repository';
 import { enforceRateLimit } from '@/lib/rate-limit';
+import { checkRepoAccess, githubMode, resolveCommitSha } from './github.service';
 
 const COMMIT_SHA_REGEX = /^[a-f0-9]{7,40}$/i;
 const OWNER_REGEX = /^[a-zA-Z0-9_.-]+$/;
@@ -51,6 +52,74 @@ function validateOwnerRepo(owner: string, repo: string): void {
  *   knows exact base, and PR can be created from that SHA.
  */
 
+type GithubVerified = {
+  fullName: string;
+  owner: string;
+  repo: string;
+  defaultBranch: string;
+  /** Full 40-char SHA GitHub resolved from the (possibly short) pin. */
+  pinnedCommitSha: string | null;
+  headSha: string;
+  notes: string[];
+};
+
+/**
+ * M1 hardening — when GitHub is reachable, a connection has to point at a repository the token can
+ * actually write, and a pin has to be a commit that exists.
+ *
+ * Two concrete bugs this closes:
+ *   - `git createRef` accepts only a full 40-char SHA, so a 7-char pin used to explode at approval
+ *     time, three milestones after it was entered. Short SHAs are expanded here instead.
+ *   - `defaultBranch: 'main'` was trusted blindly; a repo whose default is `master`/`develop` produced
+ *     a PR against a branch that does not exist. GitHub's own answer wins unless the caller insisted.
+ *
+ * Returns null in mock mode (tests, air-gapped demo), so nothing here needs the network offline.
+ */
+async function verifyAgainstGithub(input: {
+  owner: string;
+  repo: string;
+  defaultBranch?: string | null;
+  commitSha?: string | null;
+}): Promise<GithubVerified | null> {
+  if (githubMode() !== 'real') return null;
+
+  const check = await checkRepoAccess({
+    owner: input.owner,
+    repo: input.repo,
+    commitSha: input.commitSha ?? null,
+    defaultBranch: input.defaultBranch ?? null,
+  });
+
+  const notes: string[] = [];
+  if (check.permissionsKnown && !check.canPush) {
+    // A warning, not a refusal: GitHub reports `permissions.push: false` for some credentials that
+    // can in fact write (GitHub App installation tokens, org-owner inheritance). Blocking on it would
+    // lock people out of a working setup; the PR push itself is the real test, and its error is
+    // explicit. The audit note + the "Check repo access" button make it visible either way.
+    notes.push(`GitHub says this token cannot write ${check.fullName}; if that is right, give it "Contents: Read and write" before approving a fix.`);
+  }
+  if (check.archived) {
+    throw AppError.badRequest(`${check.fullName} is archived on GitHub — unarchive it or connect an active repository.`);
+  }
+  if (input.defaultBranch && check.defaultBranch !== input.defaultBranch) {
+    notes.push(`Base branch "${input.defaultBranch}" exists; note that ${check.fullName}'s default branch is "${check.defaultBranch}".`);
+  }
+  if (input.commitSha && check.baseSha !== input.commitSha.toLowerCase()) {
+    notes.push(`Pinned "${input.commitSha}" resolved to full SHA ${check.baseSha}.`);
+  }
+
+  const [owner, repo] = check.fullName.split('/');
+  return {
+    fullName: check.fullName,
+    owner: owner ?? input.owner,
+    repo: repo ?? input.repo,
+    defaultBranch: input.defaultBranch?.trim() || check.defaultBranch,
+    pinnedCommitSha: input.commitSha ? check.baseSha : null,
+    headSha: check.headSha,
+    notes,
+  };
+}
+
 export async function listRepoConnections(params: { organizationId: string; userId: string; includeInactive?: boolean }) {
   await requirePermission(params.organizationId, params.userId, 'repo.read');
   return repoConnectionRepository.list(params.organizationId, { includeInactive: params.includeInactive });
@@ -68,7 +137,7 @@ export async function createRepoConnection(params: {
   userId: string;
   owner: string;
   repo: string;
-  defaultBranch?: string;
+  defaultBranch?: string | null;
   pinnedCommitSha?: string | null;
 }) {
   await requirePermission(params.organizationId, params.userId, 'repo.manage');
@@ -77,11 +146,20 @@ export async function createRepoConnection(params: {
   const owner = params.owner.trim();
   const repo = params.repo.trim();
   validateOwnerRepo(owner, repo);
-  const fullName = normalizeFullName(owner, repo);
 
   if (params.pinnedCommitSha) {
     validateCommitSha(params.pinnedCommitSha);
   }
+
+  // Ask GitHub before storing anything (no-op while GITHUB_MODE keeps us offline).
+  const verified = await verifyAgainstGithub({
+    owner,
+    repo,
+    defaultBranch: params.defaultBranch,
+    commitSha: params.pinnedCommitSha ?? null,
+  });
+
+  const fullName = verified?.fullName ?? normalizeFullName(owner, repo);
 
   const count = await repoConnectionRepository.countActive(params.organizationId);
   if (count >= MAX_REPOS_PER_ORG) {
@@ -97,11 +175,11 @@ export async function createRepoConnection(params: {
     const created = await repoConnectionRepository.create(
       {
         organizationId: params.organizationId,
-        owner,
-        repo,
+        owner: verified?.owner ?? owner,
+        repo: verified?.repo ?? repo,
         fullName,
-        defaultBranch: params.defaultBranch?.trim() || 'main',
-        pinnedCommitSha: params.pinnedCommitSha ? params.pinnedCommitSha.toLowerCase() : null,
+        defaultBranch: verified?.defaultBranch ?? params.defaultBranch?.trim() ?? 'main',
+        pinnedCommitSha: verified?.pinnedCommitSha ?? (params.pinnedCommitSha ? params.pinnedCommitSha.toLowerCase() : null),
         connectedById: params.userId,
       },
       tx,
@@ -120,6 +198,9 @@ export async function createRepoConnection(params: {
           defaultBranch: created.defaultBranch,
           pinnedCommitSha: created.pinnedCommitSha ?? null,
           provider: 'github',
+          githubVerified: Boolean(verified),
+          headShaAtConnect: verified?.headSha ?? null,
+          notes: verified?.notes ?? [],
         },
       },
       tx,
@@ -146,6 +227,10 @@ export async function updateRepoConnection(params: {
   if (params.defaultBranch !== undefined) {
     const branch = params.defaultBranch.trim();
     if (branch.length === 0 || branch.length > 100) throw AppError.badRequest('Invalid branch name.');
+    // Real mode: refuse a base branch GitHub has never heard of, instead of discovering it at PR time.
+    if (githubMode() === 'real') {
+      await checkRepoAccess({ owner: connection.owner, repo: connection.repo, defaultBranch: branch });
+    }
   }
 
   const updated = await db.$transaction(async (tx) => {
@@ -187,8 +272,19 @@ export async function pinRepoCommit(params: {
   const connection = await repoConnectionRepository.findById(params.organizationId, params.repoConnectionId);
   if (!connection) throw AppError.notFound('Repository connection not found.');
 
+  // The pin must be a commit that exists, and must be stored as a full SHA: GitHub's createRef — which
+  // the PR path uses — rejects a 7-char abbreviation.
+  const requested = params.commitSha.toLowerCase();
+  let resolvedSha = requested;
+  let commitMessage: string | null = null;
+  if (githubMode() === 'real') {
+    const commit = await resolveCommitSha({ owner: connection.owner, repo: connection.repo, ref: requested });
+    resolvedSha = commit.sha;
+    commitMessage = commit.message;
+  }
+
   const pinned = await db.$transaction(async (tx) => {
-    const result = await repoConnectionRepository.pinCommit(params.repoConnectionId, params.commitSha.toLowerCase(), tx);
+    const result = await repoConnectionRepository.pinCommit(params.repoConnectionId, resolvedSha, tx);
     await writeAudit(
       {
         organizationId: params.organizationId,
@@ -200,6 +296,9 @@ export async function pinRepoCommit(params: {
           fullName: result.fullName,
           previousSha: connection.pinnedCommitSha,
           newSha: result.pinnedCommitSha,
+          requestedSha: requested,
+          resolvedFromGithub: resolvedSha !== requested,
+          commitMessage,
           pinnedAt: new Date().toISOString(),
         },
       },
