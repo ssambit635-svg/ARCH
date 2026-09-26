@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { requireUser, resolveOrganization } from '@/lib/session';
+import { requireDashboardContext } from '@/lib/session';
 import { listProjects, listServices } from '@/server/services/project.service';
 import { roleHasPermission } from '@/lib/permissions';
 import { timeAgo } from '@/lib/format';
@@ -14,8 +14,7 @@ export const dynamic = 'force-dynamic';
 const serviceStatuses = ['OPERATIONAL', 'DEGRADED', 'OUTAGE', 'MAINTENANCE'] as const;
 
 export default async function ProjectsPage() {
-  const user = await requireUser();
-  const organization = await resolveOrganization(user.id);
+  const { user, organization } = await requireDashboardContext();
   const canManage = roleHasPermission(organization.role, 'project.manage');
 
   const [projects, services] = await Promise.all([

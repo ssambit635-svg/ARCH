@@ -50,7 +50,7 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
                     >
                       Sign in
                     </Link>
-                    <Link className="rounded-lg border border-slate-700 px-3.5 py-2 text-sm text-slate-200 hover:bg-slate-800" href="/register">
+                    <Link className="rounded-lg border border-slate-700 px-3.5 py-2 text-sm text-slate-200 hover:bg-slate-800" href={`/register?callbackUrl=${encodeURIComponent(callbackUrl)}`}>
                       Create account
                     </Link>
                   </div>

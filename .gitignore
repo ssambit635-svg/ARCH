@@ -100,5 +100,6 @@ model-data/
 
 # Python CLI packaging
 *.egg-info/
+.venv/
 __pycache__/
 .pytest_cache/

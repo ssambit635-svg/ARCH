@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 import type { NextRequest } from 'next/server';
 import { auth } from './auth';
 import { db } from './db';
@@ -57,6 +58,27 @@ export async function resolveOrganization(userId: string, requestedId?: string |
   if (!first) throw AppError.badRequest('You are not a member of any organization yet.', { code: 'organization_required' });
 
   return { id: first.organization.id, name: first.organization.name, slug: first.organization.slug, role: first.role as Role };
+}
+
+/**
+ * Pages can render concurrently with the dashboard layout. Redirect here as well so an OAuth
+ * newcomer with no organization does not throw a logged error while the layout redirects.
+ * API routes still use requireApiContext and receive the normal organization_required error.
+ */
+export async function requireDashboardContext() {
+  const user = await requireUser();
+  let organization: ActiveOrganization;
+  try {
+    organization = await resolveOrganization(user.id);
+  } catch (error) {
+    if (error instanceof AppError && error.details &&
+        typeof error.details === 'object' && 'code' in error.details &&
+        error.details.code === 'organization_required') {
+      redirect('/onboarding');
+    }
+    throw error;
+  }
+  return { user, organization };
 }
 
 /** Convenience for route handlers: session + organization in one call. */

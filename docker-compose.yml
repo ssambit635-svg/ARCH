@@ -15,7 +15,7 @@ services:
       # Tests use a separate database (arch_test) created by scripts/dev-db.mjs / CI.
       POSTGRES_INITDB_ARGS: '--encoding=UTF8 --locale=C'
     ports:
-      - '5432:5432'
+      - '127.0.0.1:5432:5432'
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:

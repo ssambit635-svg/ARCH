@@ -313,6 +313,14 @@ describe('V4 Verified Fix Loop', () => {
       }
     });
 
+    it('does not confuse a similarly prefixed sibling with a path inside the sandbox', () => {
+      const root = '/tmp/arch-sandbox-1234';
+      expect(_testing.isInsideSandbox(root, `${root}/src/fix.ts`)).toBe(true);
+      expect(_testing.isInsideSandbox(root, `${root}-sibling/secret.txt`)).toBe(false);
+      expect(_testing.isInsideSandbox(root, `${root}/../outside/secret.txt`)).toBe(false);
+      expect(_testing.isInsideSandbox(root, '/etc/passwd')).toBe(false);
+    });
+
     it('prevents sandbox escape via path traversal', async () => {
       const escapePatch = `
 --- a/../../etc/passwd

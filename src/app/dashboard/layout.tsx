@@ -14,7 +14,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!user) redirect('/login?callbackUrl=/dashboard');
 
   const organizations = await listOrganizations(user.id);
-  if (organizations.length === 0) redirect('/register');
+  if (organizations.length === 0) redirect('/onboarding');
 
   const organization = await resolveOrganization(user.id);
   const openIncidents = await incidentRepository.count(organization.id, { open: true });

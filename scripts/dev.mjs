@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Development entrypoint used by sandboxes/preview environments: brings up the database,
- * generates the Prisma client, applies migrations, seeds demo data once, then runs Next.js.
+ * generates the Prisma client, applies migrations, optionally seeds demo data, then runs Next.js.
  *
  *   npm run dev:all
  *
@@ -10,8 +10,7 @@
 import dotenv from 'dotenv';
 dotenv.config({ override: true });
 import { spawn, spawnSync } from 'node:child_process';
-import pg from 'pg';
-import { connectionFromEnv, startEmbeddedPostgres } from './lib/pg-embedded.mjs';
+import { startEmbeddedPostgres } from './lib/pg-embedded.mjs';
 
 const port = process.env.PORT ?? '3000';
 const url = process.env.DATABASE_URL;
@@ -32,21 +31,13 @@ function run(command, args, label) {
 
 run(process.execPath, ['scripts/prisma-cli.mjs', 'generate'], 'generating Prisma client');
 
-const conn = connectionFromEnv();
 const db = await startEmbeddedPostgres();
 run(process.execPath, ['scripts/db-migrate.mjs'], 'applying migrations');
 
-let userCount = 0;
-try {
-  const client = new pg.Client({ connectionString: url });
-  await client.connect();
-  userCount = (await client.query('SELECT count(*)::int AS total FROM users')).rows[0].total;
-  await client.end();
-} catch {
-  userCount = 0;
-}
-if (userCount === 0) {
-  run(process.execPath, ['node_modules/tsx/dist/cli.mjs', 'scripts/seed.ts'], 'seeding demo data');
+if (process.env.ARCH_SEED_DEMO === 'true') {
+  run(process.execPath, ['node_modules/tsx/dist/cli.mjs', 'scripts/seed.ts'], 'seeding explicitly requested demo data');
+} else {
+  process.stdout.write('[dev] no public demo account — register at /register\n');
 }
 
 const child = spawn(

@@ -4,13 +4,12 @@
  *   1. make sure PostgreSQL is reachable (Docker-managed or embedded fallback)
  *   2. generate the Prisma client
  *   3. apply migrations
- *   4. seed demo data when the database is empty
+ *   4. seed disposable demo data only when ARCH_SEED_DEMO=true and SEED_PASSWORD is set
  *
  *   npm run setup
  */
 import 'dotenv/config';
 import { spawnSync } from 'node:child_process';
-import pg from 'pg';
 import { connectionFromEnv, portOpen, startEmbeddedPostgres } from './lib/pg-embedded.mjs';
 
 const url = process.env.DATABASE_URL ?? '';
@@ -39,21 +38,11 @@ if (!(await portOpen(conn.host, conn.port))) {
 run(process.execPath, ['scripts/prisma-cli.mjs', 'generate'], 'generating Prisma client');
 run(process.execPath, ['scripts/db-migrate.mjs'], 'applying migrations');
 
-let userCount = 0;
-try {
-  const client = new pg.Client({ connectionString: url });
-  await client.connect();
-  userCount = (await client.query('SELECT count(*)::int AS total FROM users')).rows[0].total;
-  await client.end();
-} catch {
-  userCount = 0;
-}
-
-if (userCount === 0) {
-  run(process.execPath, ['node_modules/tsx/dist/cli.mjs', 'scripts/seed.ts'], 'seeding demo data');
+if (process.env.ARCH_SEED_DEMO === 'true') {
+  run(process.execPath, ['node_modules/tsx/dist/cli.mjs', 'scripts/seed.ts'], 'seeding explicitly requested demo data');
 } else {
-  process.stdout.write(`\n[setup] database already has ${userCount} user(s) — skipping seed\n`);
+  process.stdout.write('\n[setup] no demo accounts created — register your own at /register\n');
 }
 
 await stop();
-process.stdout.write('\n[setup] ready — run `npm run dev`\n');
+process.stdout.write('\n[setup] ready — run `npm run dev:all` (starts both Postgres and Next.js)\n');

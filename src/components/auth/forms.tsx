@@ -68,11 +68,12 @@ export function LoginForm({
   );
 }
 
-export function RegisterForm() {
+export function RegisterForm({ callbackUrl = '/dashboard' }: { callbackUrl?: string }) {
   const [state, action] = useActionState<AuthFormState, FormData>(registerAction, undefined);
 
   return (
     <form action={action} className="space-y-4">
+      <input type="hidden" name="callbackUrl" value={callbackUrl} />
       <FormError message={state?.error} />
       <Field label="Work email" htmlFor="email" error={state?.fieldErrors?.email}>
         <Input id="email" name="email" type="email" required autoComplete="email" placeholder="you@company.com" />

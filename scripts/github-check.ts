@@ -1,4 +1,6 @@
 import dotenv from 'dotenv';
+// This is a local diagnosis tool: the ignored .env must win over an unrelated injected shell
+// GITHUB_TOKEN (e.g. a sandbox's gh CLI token). Load it BEFORE importing the server env module.
 dotenv.config({ override: true });
 /**
  * `npm run github:check` — offline-safe diagnosis of the V4 GitHub wiring, without the UI.
@@ -16,14 +18,14 @@ dotenv.config({ override: true });
  * no incident data: `--open-pr` is the only mode that writes, and it needs the flag explicitly.
  */
 import fs from 'node:fs';
-import {
+const {
   checkRepoAccess,
   createPullRequest,
   describeGithubConfig,
   previewPullRequest,
   verifyGithubCredentials,
-} from '@/server/services/github.service';
-import { parseUnifiedDiff } from '@/server/services/github-patch';
+} = await import('@/server/services/github.service');
+const { parseUnifiedDiff } = await import('@/server/services/github-patch');
 
 const argv = process.argv.slice(2);
 function flag(name: string): string | null {

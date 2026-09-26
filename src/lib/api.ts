@@ -3,7 +3,7 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import packageJson from '../../package.json';
 import { Prisma } from './db';
-import { env, isProduction } from './env';
+import { env } from './env';
 import { AppError, isAppError, type FieldIssue } from './errors';
 
 /**
@@ -60,9 +60,11 @@ export function fail(error: unknown): NextResponse {
     }
   }
 
-  console.error('[api] unhandled error', error);
+  // Error strings from drivers/providers can include connection URLs, headers or tokens.
+  // Keep those out of public responses even in development.
+  console.error('[api] unhandled error', error instanceof Error ? error.name : 'unknown');
   return NextResponse.json(
-    { error: { code: 'INTERNAL', message: isProduction ? 'Something went wrong on our side.' : String(error) } },
+    { error: { code: 'INTERNAL', message: 'Something went wrong on our side.' } },
     { status: 500 },
   );
 }

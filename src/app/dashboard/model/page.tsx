@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { requireUser, resolveOrganization } from '@/lib/session';
+import { requireDashboardContext } from '@/lib/session';
 import { roleHasPermission } from '@/lib/permissions';
 import { formatDateTime, timeAgo } from '@/lib/format';
 import { CATEGORIES, type CategoryId } from '@/server/ai/arch-model/knowledge';
@@ -88,8 +88,7 @@ function VersionRegistry({ versions, activeVersionId, canManage }: { versions: V
 }
 
 export default async function ModelPage() {
-  const user = await requireUser();
-  const organization = await resolveOrganization(user.id);
+  const { user, organization } = await requireDashboardContext();
   const status = await getModelStatus({ organizationId: organization.id, userId: user.id });
   const canTrain = roleHasPermission(organization.role, 'copilot.train');
   const { model, config, jobs } = status;

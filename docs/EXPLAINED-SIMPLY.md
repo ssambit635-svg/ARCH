@@ -35,7 +35,7 @@ Follow a single alert from "something is wrong" to "post-mortem written".
 | # | What happens | Who does it | What ARCH does behind the scenes |
 |---|---|---|---|
 | 1 | A monitor, a GitHub action or a Grafana rule fires | Your existing tools | `POST /api/webhooks/:provider` receives it |
-| 2 | ARCH checks the signature | Nobody | HMAC compared against `AUTH_SECRET_WEBHOOK`; bad signature → `401`, nothing stored |
+| 2 | ARCH checks the signature | Nobody | HMAC checked against the endpoint's `whsec_...` secret (encrypted in DB with `AUTH_SECRET_WEBHOOK` for v2); bad signature → `401`, nothing stored |
 | 3 | An **incident** is born | System | Row written to `incidents` with severity + status `INVESTIGATING`, linked to a project/service |
 | 4 | Someone is put in charge | Team lead / on-call | `assignedToId` set, `IncidentEvent(ASSIGNED)` + `AuditLog` written |
 | 5 | The team works the problem | Responder | Each comment and status change is an `IncidentEvent` — the timeline |

@@ -123,31 +123,42 @@ ARCH/
 ## Local development
 
 ```bash
-cp .env.example .env          # then set AUTH_SECRET and AUTH_SECRET_WEBHOOK
-npm install
-npm run setup                 # starts Postgres, generates the Prisma client, applies migrations
-npm run db:seed               # optional: demo org, incidents, status page, webhook endpoint
-npm run dev:all               # http://localhost:3000
-npm run worker                # second terminal: drains the notification outbox
+cp .env.example .env && chmod 600 .env  # set distinct random AUTH_SECRET / AUTH_SECRET_WEBHOOK
+npm ci
+npm run dev:all                         # starts Postgres + Next.js, applies migrations; /register
+npm run worker                          # optional second terminal: notification outbox
 ```
 
-`npm run setup` uses a **Docker** Postgres when one is available; in a sandbox without Docker it
-starts a local embedded PostgreSQL (data in `ARCH_DEV_DB_DIR`, default under `/tmp`) — same URL,
-same commands. Day-to-day:
+`npm run dev:all` uses a **Docker** Postgres when one is already running; in a sandbox without Docker it
+starts a local embedded PostgreSQL (data in `ARCH_DEV_DB_DIR`, default under `/tmp`). The database
+runs **only while the process is alive**, and `/tmp` can be lost when the sandbox resets; use managed
+PostgreSQL and a stable URL for durable staging/production. No demo users are created automatically.
+`npm run setup` prepares the DB and then stops embedded Postgres: follow it with `npm run dev:all`,
+not `npm run dev` (the latter expects an existing DB). For disposable demo data, set
+`ARCH_SEED_DEMO="true"` and a unique 12+ character `SEED_PASSWORD` in your ignored `.env` before
+`dev:all`, or run `npm run db:seed` with `SEED_PASSWORD` set. Never seed public/production databases.
+Day-to-day:
 
 | Command | What it does |
 |---|---|
 | `npm run dev` | Next.js only (assumes the database is already up) |
 | `npm run db:up` / `db:down` / `db:status` | Embedded Postgres lifecycle |
 | `npm run db:migrate` / `db:reset` | Apply migrations — `/` `--reset` drops and rebuilds |
-| `npm run db:seed` | Idempotent demo data (owner/admin/responder/viewer accounts) |
+| `npm run db:seed` | Idempotent demo data (only with a private, unique `SEED_PASSWORD`) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm test` | Vitest against a real, separate test database |
 | `npm run worker` | Outbox drain (add `-- --once` for a single pass) |
 
 Environment variables are documented in `AGENTS.md` §2. Never commit secrets — `.env` stays local.
+A previously committed `.env` was removed from tracking, but it remains in Git history: rotate
+anything copied to a hosted environment. New webhook endpoint envelopes use `AUTH_SECRET_WEBHOOK`;
+legacy v1 envelopes use `AUTH_SECRET`. If a live DB has legacy endpoints, back it up, set a NEW
+`AUTH_SECRET_WEBHOOK`, then run `npm run webhooks:rekey` (dry run) and
+`npm run webhooks:rekey -- --apply` while the OLD `AUTH_SECRET` is still available. Verify a signed
+webhook, then rotate `AUTH_SECRET` (this signs users out). If the old key is lost, rotate/reissue
+the affected endpoint credentials instead. Never log or commit either key.
 Production requires `AUTH_SECRET` and `AUTH_SECRET_WEBHOOK`; the app refuses to boot with the
-placeholder values.
+placeholder values. GitHub OAuth setup without a local checkout: [`docs/GITHUB-OAUTH-SETUP.md`](docs/GITHUB-OAUTH-SETUP.md).
 
 ### API in one table
 

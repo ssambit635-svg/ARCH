@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { requireUser, resolveOrganization } from '@/lib/session';
+import { requireDashboardContext } from '@/lib/session';
 import { listStatusPages } from '@/server/services/statusPage.service';
 import { listServices } from '@/server/services/project.service';
 import { roleHasPermission } from '@/lib/permissions';
@@ -13,8 +13,7 @@ export const metadata: Metadata = { title: 'Status pages' };
 export const dynamic = 'force-dynamic';
 
 export default async function StatusPagesPage() {
-  const user = await requireUser();
-  const organization = await resolveOrganization(user.id);
+  const { user, organization } = await requireDashboardContext();
   const canManage = roleHasPermission(organization.role, 'statuspage.manage');
   const canPublish = roleHasPermission(organization.role, 'statuspage.publish');
 

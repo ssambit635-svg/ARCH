@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { computeBodyHmac, computeHmacSignature, decryptSecret, sha256, verifyHmacSignature } from '@/lib/crypto';
+import { computeBodyHmac, computeHmacSignature, decryptSecret, encryptSecret, sha256, verifyHmacSignature } from '@/lib/crypto';
 import { ingest, verifySignature } from '@/server/services/webhook.service';
 import { createEndpoint } from '@/server/services/webhook.service';
 import { resetDatabase, createTenant, db } from './helpers/db';
@@ -117,7 +117,26 @@ describe('webhook ingestion pipeline', () => {
     const { secret, endpoint } = await setupEndpoint();
     expect(endpoint.secretHash).toBe(sha256(secret));
     expect(endpoint.secretEncrypted).not.toContain(secret);
-    expect(decryptSecret(endpoint.secretEncrypted, process.env.AUTH_SECRET!)).toBe(secret);
+    expect(endpoint.secretEncrypted).toMatch(/^v2\./);
+    expect(decryptSecret(endpoint.secretEncrypted, process.env.AUTH_SECRET_WEBHOOK!)).toBe(secret);
+    expect(() => decryptSecret(endpoint.secretEncrypted, process.env.AUTH_SECRET!)).toThrow();
+  });
+
+  it('still accepts legacy v1 endpoints until their secret is rotated', async () => {
+    const { secret, endpoint } = await setupEndpoint();
+    await db.webhookEndpoint.update({
+      where: { id: endpoint.id },
+      data: { secretEncrypted: encryptSecret(secret, process.env.AUTH_SECRET!, 'v1') },
+    });
+    const request = signedRequest(secret, { title: 'Legacy alert' });
+    const result = await ingest({
+      provider: 'grafana',
+      rawBody: request.rawBody,
+      headers: headers({ 'x-arch-signature': `t=${request.timestamp},v1=${request.signature}`, 'x-arch-delivery-id': request.deliveryId }),
+      searchParams: new URLSearchParams({ endpoint: endpoint.externalId }),
+      clientIp: '203.0.113.8',
+    });
+    expect(result.statusCode).toBe(202);
   });
 
   it('creates an incident from a valid payload', async () => {

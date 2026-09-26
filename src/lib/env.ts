@@ -2,7 +2,8 @@ import { z } from 'zod';
 import dotenv from 'dotenv';
 
 if (process.env.NODE_ENV !== 'test') {
-  dotenv.config({ override: true });
+  // Hosting/CI secret-manager variables win over a local .env, never the other way around.
+  dotenv.config();
 }
 
 /**
@@ -39,9 +40,9 @@ const envSchema = z.object({
 
   AUTH_SECRET: z.string().min(16, 'AUTH_SECRET must be at least 16 characters'),
   AUTH_SECRET_WEBHOOK: z.string().min(16, 'AUTH_SECRET_WEBHOOK must be at least 16 characters'),
-  APP_URL: z.string().default('http://localhost:3000'),
-  AUTH_GITHUB_ID: z.string().optional(),
-  AUTH_GITHUB_SECRET: z.string().optional(),
+  APP_URL: z.url().default('http://localhost:3000'),
+  AUTH_GITHUB_ID: optionalTrimmed(),
+  AUTH_GITHUB_SECRET: optionalTrimmed(),
 
   WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS: z.coerce.number().int().positive().default(300),
 
@@ -117,8 +118,11 @@ function loadEnv(): Env {
     if (value.AUTH_SECRET === value.AUTH_SECRET_WEBHOOK) {
       throw new Error('AUTH_SECRET and AUTH_SECRET_WEBHOOK must be different secrets.');
     }
-    if (value.AUTH_SECRET.startsWith('replace-with')) {
+    if (isPlaceholderSecret(value.AUTH_SECRET) || isPlaceholderSecret(value.AUTH_SECRET_WEBHOOK)) {
       throw new Error('Refusing to start in production with placeholder secrets.');
+    }
+    if (Boolean(value.AUTH_GITHUB_ID) !== Boolean(value.AUTH_GITHUB_SECRET)) {
+      throw new Error('GitHub sign-in needs both AUTH_GITHUB_ID and AUTH_GITHUB_SECRET in production.');
     }
     // A placeholder PAT would make every "Approve" fail mid-flight, after the human already clicked.
     if (isPlaceholderSecret(value.GITHUB_TOKEN)) {
@@ -127,6 +131,10 @@ function loadEnv(): Env {
     if (!value.GITHUB_API_BASE_URL.startsWith('https://')) {
       throw new Error('GITHUB_API_BASE_URL must be https:// in production (a PAT over plain http leaks the token).');
     }
+  }
+
+  if (isPlaceholderSecret(value.AUTH_GITHUB_ID) || isPlaceholderSecret(value.AUTH_GITHUB_SECRET)) {
+    throw new Error('GitHub OAuth credentials must not be placeholders. Leave both blank to disable sign-in.');
   }
 
   // "real" is a promise that PRs are actually opened; fail at boot instead of at approval time.
