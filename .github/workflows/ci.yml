@@ -1,0 +1,29 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: sudo apt-get update && sudo apt-get install -y libpq5
+      - run: npm ci
+      - run: npm run db:generate
+      - run: npm run typecheck
+      - run: npm run build
+        env:
+          DATABASE_URL: postgresql://arch:arch@localhost:55433/arch_test
+          AUTH_SECRET: ci-secret-value-that-is-long-enough
+          AUTH_SECRET_WEBHOOK: ci-webhook-secret-value-long-enough
+          APP_URL: http://localhost:3000
+      - run: npm test
+      - run: npm audit --omit=dev --audit-level=high
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -e clients/python pytest && pytest clients/python/tests
