@@ -317,3 +317,8 @@ export const githubCheckSchema = z.object({
     .transform((value) => value === true || value === 'true')
     .optional(),
 });
+
+// ---------- V6: dependency intelligence + SLO guardian ----------
+export const dependencyCreateSchema = z.object({ fromServiceId: id, toServiceId: id, relationship: z.string().trim().min(2).max(40).default('DEPENDS_ON'), criticality: z.coerce.number().int().min(1).max(5).default(3) });
+export const changeCreateSchema = z.object({ serviceId: id.optional(), projectId: id.optional(), title: shortText(200), type: z.string().trim().max(40).default('DEPLOYMENT'), commitSha: z.string().trim().max(100).optional(), author: z.string().trim().max(120).optional(), occurredAt: z.union([z.string(), z.number()]).optional(), source: z.string().trim().max(40).default('MANUAL') }).refine(v => v.serviceId || v.projectId, { message: 'A service or project is required.' });
+export const sloUpsertSchema = z.object({ serviceId: id, targetPercent: z.coerce.number().min(90).max(99.999), windowDays: z.coerce.number().int().min(1).max(365), burnAlertPercent: z.coerce.number().min(1).max(1000).default(50), enabled: z.boolean().default(true) });

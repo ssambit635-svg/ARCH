@@ -7,6 +7,8 @@ const items = [
   { href: '/dashboard', label: 'Overview' },
   { href: '/dashboard/incidents', label: 'Incidents' },
   { href: '/dashboard/projects', label: 'Projects & services' },
+  { href: '/dashboard/dependencies', label: 'Blast radius & changes' },
+  { href: '/dashboard/slos', label: 'SLO & error budgets' },
   { href: '/dashboard/status', label: 'Status pages' },
   { href: '/dashboard/code', label: 'Code Assist' },
   { href: '/dashboard/model', label: 'ARCH Model' },

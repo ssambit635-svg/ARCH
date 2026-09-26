@@ -1,0 +1,3 @@
+import type { NextRequest } from 'next/server'; import { handleRoute, ok, created, parseBody, readJson } from '@/lib/api'; import { requireApiContext } from '@/lib/session'; import { sloUpsertSchema } from '@/lib/validation'; import { listSloStatus, upsertSlo } from '@/server/services/v6.service';
+export const GET = handleRoute(async (r: NextRequest) => { const { user, organization } = await requireApiContext(r); return ok(await listSloStatus({ organizationId: organization.id, userId: user.id })); });
+export const POST = handleRoute(async (r: NextRequest) => { const { user, organization } = await requireApiContext(r); const b = parseBody(sloUpsertSchema, await readJson(r)); return created(await upsertSlo({ organizationId: organization.id, userId: user.id, ...b })); });
