@@ -1,0 +1,2 @@
+import type { NextRequest } from 'next/server'; import { handleRoute, ok } from '@/lib/api'; import { requireApiContext } from '@/lib/session'; import { getIncidentBlastRadius } from '@/server/services/v6.service';
+export const GET = handleRoute(async (r: NextRequest, { params }: { params: Promise<{ id: string }> }) => { const { user, organization } = await requireApiContext(r); return ok(await getIncidentBlastRadius({ organizationId: organization.id, userId: user.id, incidentId: (await params).id })); });

@@ -219,6 +219,9 @@ model Organization {
   repoConnections  RepoConnection[]
   fixVerifications FixVerification[]
   pullRequests     PullRequest[]
+  serviceDependencies ServiceDependency[] @relation("DependencyOrganization")
+  changeEvents     ChangeEvent[]
+  serviceSlos      ServiceSlo[]
 
   @@map("organizations")
 }
@@ -275,6 +278,7 @@ model Project {
   services     Service[]
   incidents    Incident[]
   webhookEndpoints WebhookEndpoint[]
+  changeEvents ChangeEvent[]
 
   @@unique([organizationId, slug])
   @@map("projects")
@@ -296,10 +300,76 @@ model Service {
   incidents          Incident[]
   statusPageServices StatusPageService[]
   webhookEndpoints   WebhookEndpoint[]
+  dependenciesFrom   ServiceDependency[] @relation("DependencyFrom")
+  dependenciesTo     ServiceDependency[] @relation("DependencyTo")
+  changeEvents       ChangeEvent[]
+  slo               ServiceSlo?
 
   @@unique([projectId, slug])
   @@index([projectId])
   @@map("services")
+}
+
+// ---------- V6 — dependency graph, change correlation and SLO guardian ----------
+
+model ServiceDependency {
+  id             String   @id @default(cuid())
+  organizationId String
+  fromServiceId  String
+  toServiceId    String
+  relationship   String   @default("DEPENDS_ON")
+  criticality    Int      @default(3)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation("DependencyOrganization", fields: [organizationId], references: [id], onDelete: Cascade)
+  fromService  Service @relation("DependencyFrom", fields: [fromServiceId], references: [id], onDelete: Cascade)
+  toService    Service @relation("DependencyTo", fields: [toServiceId], references: [id], onDelete: Cascade)
+
+  @@unique([fromServiceId, toServiceId])
+  @@index([organizationId])
+  @@map("service_dependencies")
+}
+
+model ChangeEvent {
+  id             String   @id @default(cuid())
+  organizationId String
+  serviceId      String?
+  projectId      String?
+  type           String   @default("DEPLOYMENT")
+  title          String
+  commitSha      String?
+  author         String?
+  source         String   @default("MANUAL")
+  occurredAt     DateTime @default(now())
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  service      Service? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  project      Project? @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, occurredAt])
+  @@index([serviceId, occurredAt])
+  @@map("change_events")
+}
+
+model ServiceSlo {
+  id             String   @id @default(cuid())
+  organizationId String
+  serviceId      String   @unique
+  targetPercent  Float    @default(99.9)
+  windowDays     Int      @default(30)
+  burnAlertPercent Float  @default(50)
+  enabled        Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  service      Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@map("service_slos")
 }
 
 // ---------- Incidents ----------

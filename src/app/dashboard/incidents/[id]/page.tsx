@@ -26,6 +26,7 @@ import { listRepoConnections } from '@/server/services/repo.service';
 import { copilotConfig } from '@/server/ai/provider';
 import { suggestionTimelineText } from '@/server/ai/schemas';
 import { roleHasPermission } from '@/lib/permissions';
+import { getIncidentBlastRadius } from '@/server/services/v6.service';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,12 +47,13 @@ export default async function IncidentDetailPage({ params }: { params: Promise<{
 
   if (!incident) notFound();
 
-  const [members, services, suggestions, verifications, repoConnections] = await Promise.all([
+  const [members, services, suggestions, verifications, repoConnections, blastRadius] = await Promise.all([
     listMembers({ organizationId: organization.id, userId: user.id }),
     listServices({ organizationId: organization.id, userId: user.id }),
     listSuggestions({ organizationId: organization.id, userId: user.id, incidentId: incident.id }),
     listVerifications({ organizationId: organization.id, userId: user.id, incidentId: incident.id }).catch(() => []),
     listRepoConnections({ organizationId: organization.id, userId: user.id }).catch(() => []),
+    getIncidentBlastRadius({ organizationId: organization.id, userId: user.id, incidentId: incident.id }).catch(() => ({ affectedServices: [], relatedChanges: [], relatedIncidents: [] })),
   ]);
 
   const memberName = (userId: string | null | undefined) => {
@@ -145,6 +147,7 @@ export default async function IncidentDetailPage({ params }: { params: Promise<{
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
+          {blastRadius.affectedServices.length > 0 ? <Card><CardHeader title="Blast radius & correlated changes" description={`${blastRadius.affectedServices.length} service(s) in the dependency chain`} /><CardBody><div className="flex flex-wrap gap-2">{blastRadius.affectedServices.map((service) => <span key={service.id} className="rounded-full bg-rose-500/10 px-2.5 py-1 text-xs text-rose-200">{service.name} · {service.status}</span>)}</div>{blastRadius.relatedChanges.length > 0 ? <div className="mt-4 border-t border-slate-800 pt-3 text-sm text-slate-300"><p className="mb-2 text-xs uppercase tracking-wide text-slate-500">Recent changes before incident</p>{blastRadius.relatedChanges.slice(0, 5).map((change) => <p key={change.id} className="py-1">{change.title} <span className="text-xs text-slate-500">({change.type})</span></p>)}</div> : <p className="mt-3 text-xs text-slate-500">No matching deployment changes found in the previous 7 days.</p>}</CardBody></Card> : null}
           <Card>
             <CardHeader title="Timeline" description="Every comment, status change and assignment, in order." />
             <IncidentTimeline events={incident.events} />

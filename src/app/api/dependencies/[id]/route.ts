@@ -1,0 +1,2 @@
+import type { NextRequest } from 'next/server'; import { handleRoute, ok } from '@/lib/api'; import { requireApiContext } from '@/lib/session'; import { deleteDependency } from '@/server/services/v6.service';
+export const DELETE = handleRoute(async (r: NextRequest, { params }: { params: Promise<{ id: string }> }) => { const { user, organization } = await requireApiContext(r); return ok(await deleteDependency({ organizationId: organization.id, userId: user.id, id: (await params).id })); });
