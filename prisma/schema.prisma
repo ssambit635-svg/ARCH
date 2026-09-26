@@ -222,6 +222,9 @@ model Organization {
   serviceDependencies ServiceDependency[] @relation("DependencyOrganization")
   changeEvents     ChangeEvent[]
   serviceSlos      ServiceSlo[]
+  knowledgeSources KnowledgeSource[]
+  modelFeedback    ArchModelFeedback[]
+  knowledgeChunks  KnowledgeChunk[]
 
   @@map("organizations")
 }
@@ -405,6 +408,7 @@ model Incident {
   aiSuggestions AiSuggestion[]
   fixVerifications FixVerification[]
   pullRequests PullRequest[]
+  modelFeedback   ArchModelFeedback[]
 
   @@index([organizationId, status])
   @@index([organizationId, createdAt])
@@ -737,6 +741,10 @@ model FixVerification {
   testOutput       String?
   /// Evidence bundle: { sandboxId, startedAt, finishedAt, durationMs, safetyChecks, commitSha, patchHash, testCommand, testResults, logs }
   evidence         Json?
+  /// V6 — the generated reproduction test that was written into the sandbox (always reviewed by a human).
+  reproductionTest String?
+  /// V6 — reproduction evidence: { ran, reason?, failedBeforePatch, passedAfterPatch, beforeOutput, afterOutput }
+  reproduction     Json?
   durationMs       Int?
   createdById      String?
   createdAt        DateTime @default(now())
@@ -806,4 +814,107 @@ model ApiToken {
   @@index([organizationId, revokedAt])
   @@index([prefix])
   @@map("api_tokens")
+}
+
+// ---------- V6 — RAG knowledge sources + learning feedback (ARCH's own retrieval, on your server) ----------
+
+/// Where a knowledge document came from. Runbooks and docs are the point: ARCH answers from YOUR
+/// operational knowledge, fetched once at ingest time and never leaving the server.
+enum KnowledgeSourceKind {
+  RUNBOOK
+  DOC
+  NOTE
+  URL
+  INCIDENT_EXPORT
+}
+
+/// PENDING (queued for indexing) | READY (chunked + embedded) | FAILED (see `error`)
+enum KnowledgeSourceStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+/// A document ARCH can retrieve from. Raw text is chunked and embedded at ingest; only the chunks
+/// are kept, so the source can be deleted without a trace in the model.
+model KnowledgeSource {
+  id             String                @id @default(cuid())
+  organizationId String
+  name           String
+  kind           KnowledgeSourceKind   @default(DOC)
+  status         KnowledgeSourceStatus @default(PENDING)
+  /// Public URL this was fetched from (kind URL), or null for pasted text.
+  sourceUrl      String?
+  /// sha256 of the normalized text — re-ingesting identical content is a no-op.
+  contentHash    String?
+  chunkCount     Int                   @default(0)
+  tokenCount     Int                   @default(0)
+  error          String?
+  createdById    String?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  chunks       KnowledgeChunk[]
+
+  @@index([organizationId, status])
+  @@index([organizationId, createdAt])
+  @@map("knowledge_sources")
+}
+
+/// One retrievable piece of a knowledge source. `embedding` is a dense vector produced by ARCH's
+/// own embedding space (Random Indexing over the organization's corpus) — no external embedding
+/// API, no network, no third-party model.
+model KnowledgeChunk {
+  id             String   @id @default(cuid())
+  organizationId String
+  sourceId       String
+  ordinal        Int
+  heading        String?
+  text           String
+  tokenCount     Int      @default(0)
+  embedding      Json
+  createdAt      DateTime @default(now())
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  source       KnowledgeSource  @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, sourceId])
+  @@index([sourceId, ordinal])
+  @@map("knowledge_chunks")
+}
+
+/// What humans taught the model. Every row is a label the next training run can use: a draft that
+/// was edited, a severity a responder corrected, a draft that was thrown away.
+enum ArchModelFeedbackKind {
+  DRAFT_EDITED
+  DRAFT_APPROVED
+  DRAFT_DISMISSED
+  SEVERITY_CORRECTED
+  CATEGORY_CORRECTED
+}
+
+/// V6 active learning. Feedback is captured from ordinary product use (approve / edit / dismiss /
+/// severity change) — no extra work for responders — and folded into the next training run.
+model ArchModelFeedback {
+  id             String                @id @default(cuid())
+  organizationId String
+  incidentId     String?
+  suggestionId   String?
+  /// summary | triage | status_update | postmortem | code_fix | verified_fix | severity
+  task           String
+  kind           ArchModelFeedbackKind
+  /// What the model produced (redacted).
+  original       Json?
+  /// What the human settled on (redacted).
+  corrected      Json?
+  createdById    String?
+  createdAt      DateTime              @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  incident     Incident?    @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, task, kind])
+  @@map("arch_model_feedback")
 }

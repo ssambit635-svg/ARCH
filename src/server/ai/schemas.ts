@@ -67,6 +67,8 @@ export const verifiedFixRawSchema = z.object({
   testPlan: z.array(line(300)).max(10).nullish(),
   references: z.array(line(300)).max(8).nullish(),
   commitSha: z.string().trim().max(40).nullish(),
+  /** V6 — a generated reproduction test: it must fail before the patch and pass after it. */
+  reproductionTest: z.string().trim().max(20_000).nullish(),
 });
 
 // ---------- stored output ----------
@@ -91,6 +93,8 @@ export type VerifiedFixOutput = {
   testPlan: string[];
   references: string[];
   commitSha?: string;
+  /** V6 — a generated reproduction test (reviewed by a human before it is used as evidence). */
+  reproductionTest?: string;
 };
 export type CodeReviewOutput = z.infer<typeof codeReviewRawSchema>;
 
@@ -167,6 +171,7 @@ export function parseVerifiedFix(text: string): VerifiedFixOutput {
     testPlan: raw.testPlan ?? [],
     references: raw.references ?? [],
     ...(raw.commitSha?.trim() ? { commitSha: raw.commitSha.trim() } : {}),
+    ...(raw.reproductionTest?.trim() ? { reproductionTest: raw.reproductionTest.trim() } : {}),
   };
 }
 

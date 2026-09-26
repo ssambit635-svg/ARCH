@@ -1,8 +1,9 @@
 import type { IncidentSeverity } from '@/generated/prisma/client';
-import type { CopilotContext, CopilotKnowledge, CopilotTimelineEntry, SimilarIncidentHint } from '../context';
+import type { CopilotContext, CopilotKnowledge, CopilotTimelineEntry, KnowledgeChunkHint, SimilarIncidentHint } from '../context';
 import { LIMITS } from '../guardrails';
 import type { CopilotTask } from '../provider';
 import { analyzeCode, type CodeAnalysis } from '../code/analyzer';
+import { generateReproductionTest } from '../code/reproduction';
 import { CATEGORIES, type CategoryId } from './knowledge';
 import { baseArchModel, type ArchModelRuntime } from './runtime';
 import { clip, formatDuration, sentences } from './text';
@@ -16,6 +17,10 @@ import { SEVERITIES, type TrainingSource } from './train';
  * labels hypotheses as hypotheses, and borrows fixes / action items from the most similar past
  * incidents. Output follows exactly the JSON contracts in schemas.ts, so it goes through the same
  * validation, approval and audit path as any other provider.
+ *
+ * V6 adds retrieval-augmented grounding: passages from the organization's own runbooks and docs
+ * (retrieved by ARCH's embeddings, on its own server) are cited alongside similar incidents, so a
+ * draft can point at the documented procedure instead of only at what happened last time.
  */
 
 const SOURCE_LABEL: Record<TrainingSource, SimilarIncidentHint['source']> = {
@@ -24,6 +29,7 @@ const SOURCE_LABEL: Record<TrainingSource, SimilarIncidentHint['source']> = {
   public: 'public_postmortem',
   code: 'code_corpus',
   review: 'review_corpus',
+  knowledge: 'pattern_library',
 };
 
 function comments(context: CopilotContext): CopilotTimelineEntry[] {
@@ -48,8 +54,10 @@ export function buildKnowledge(model: ArchModelRuntime, context: CopilotContext,
   const severity = model.classifySeverity(corpus);
 
   // Prefer the team's own history, then fill with the pattern library / public postmortems.
-  const team = model.similar(corpus, { k: 3, sources: ['team'], excludeIds: options.excludeIds, minScore: 0.15 });
-  const general = model.similar(corpus, { k: 3, sources: ['pattern', 'public'], excludeIds: options.excludeIds });
+  // V6: `similarDense` blends the dense (meaning) and sparse (words) signals, so an incident
+  // written in different words than the past one still matches.
+  const team = model.similarDense(corpus, { k: 3, sources: ['team'], excludeIds: options.excludeIds, minScore: 0.15 });
+  const general = model.similarDense(corpus, { k: 3, sources: ['pattern', 'public', 'knowledge'], excludeIds: options.excludeIds });
   const picked = [...team, ...general].slice(0, LIMITS.maxSimilarIncidents);
 
   // Code tasks additionally consult the downloaded bug-fix / code-review corpora (SWE-bench,
@@ -60,7 +68,7 @@ export function buildKnowledge(model: ArchModelRuntime, context: CopilotContext,
     picked.push(...codeKnowledge.filter((candidate) => !picked.some((existing) => existing.doc.id === candidate.doc.id)));
   }
 
-  return {
+  const knowledge: CopilotKnowledge = {
     model: model.name,
     likelyCategory: category.category,
     categoryLabel: CATEGORIES[category.category].label,
@@ -82,14 +90,28 @@ export function buildKnowledge(model: ArchModelRuntime, context: CopilotContext,
       return hint;
     }),
   };
+  if (context.knowledge?.knowledgeChunks?.length) knowledge.knowledgeChunks = context.knowledge.knowledgeChunks;
+  return knowledge;
+}
+
+/** Runbook passages worth citing in a draft: the ones retrieval actually scored well. */
+export function knowledgeCitations(knowledge: CopilotKnowledge, max = 2): KnowledgeChunkHint[] {
+  return (knowledge.knowledgeChunks ?? [])
+    .filter((chunk) => chunk.similarity >= 0.12)
+    .slice(0, max)
+    .map((chunk) => ({ ...chunk, text: clip(chunk.text, 320) }));
 }
 
 /** Similar incidents worth citing: the team's own history, or strong matches from elsewhere. */
 function relevantReferences(knowledge: CopilotKnowledge): string[] {
-  return knowledge.similarIncidents
+  const incidents = knowledge.similarIncidents
     .filter((hint) => hint.source === SOURCE_LABEL.team || hint.similarity >= 0.15)
     .slice(0, 3)
     .map((hint) => clip(hint.title, 200));
+  // V6 — cite the organization's own documents too, so a draft points at the runbook that already
+  // describes this failure instead of only at what happened last time.
+  const documents = knowledgeCitations(knowledge, 2).map((chunk) => `Runbook "${chunk.sourceName}"${chunk.heading ? ` — ${clip(chunk.heading, 80)}` : ''}`);
+  return [...incidents, ...documents].slice(0, 5);
 }
 
 function knowledgeFor(context: CopilotContext, model?: ArchModelRuntime): CopilotKnowledge {
@@ -357,11 +379,14 @@ function postmortem(context: CopilotContext, knowledge: CopilotKnowledge) {
       }`;
 
   const mitigations = mitigationStatements(context);
+  const runbook = knowledgeCitations(knowledge, 1)[0];
   const actionItems = dedupe(
     [
       causes.length ? `Add a test or guardrail that would have caught: ${clip(causes[0]!, 160)}` : `Confirm and document the root cause for "${clip(incident.title, 70)}".`,
       ...knowledge.similarIncidents.flatMap((hint) => hint.prevention ?? []).slice(0, 3),
       category ? CATEGORIES[category].detection : 'Add or tune alerting so this failure mode is detected before customers report it.',
+      // V6 — when a runbook already covers this failure, the action is to follow it, not to write one.
+      runbook ? `Follow the documented procedure in "${runbook.sourceName}"${runbook.heading ? ` (${clip(runbook.heading, 80)})` : ''}.` : '',
       mitigations.length ? `Add the mitigation that worked ("${clip(mitigations[0]!, 100)}") to the runbook.` : 'Write or update the runbook with the mitigation steps used during this incident.',
       incident.durationMinutes > 60 ? 'Review why detection-to-mitigation took over an hour and what would shorten it.' : '',
     ],
@@ -411,12 +436,14 @@ function codeFix(context: CopilotContext, knowledge: CopilotKnowledge) {
       ? `${errors[0].message} ${deployed ? 'A recent deploy is mentioned in the timeline; compare with the previous version.' : ''}`.trim()
       : 'Not determinable from the snippet alone.';
 
+  const runbookFix = knowledgeCitations(knowledge, 1)[0];
   const suggestedFixes = dedupe(
     [
       ...analysis.diagnoses.flatMap((d) => d.fixes),
       ...errors.map((finding) => `Line ${finding.line}: ${finding.suggestion}`),
       ...teamHints(knowledge).flatMap((hint) => hint.fix ?? []),
-      // How real bugs like this were fixed elsewhere (SWE-bench, ManySStuBs4J, code reviews).
+      // V6 — the organization's own runbook for this failure, when retrieval found one.
+      ...(runbookFix ? [`Runbook "${runbookFix.sourceName}" says: ${clip(runbookFix.text, 240)}`] : []),
       ...codeHints(knowledge).flatMap((hint) => hint.fix ?? []).slice(0, 4),
       deployed ? 'If the error started with the deploy, roll back first and debug on the previous version.' : '',
     ],
@@ -445,10 +472,24 @@ function verifiedFix(context: CopilotContext, knowledge: CopilotKnowledge) {
     'Verify fix against the reported error (stack trace / reproduction)',
     'Check for regressions in related services',
   ];
+  // V6 — draft the reproduction test too: it must fail before the patch and pass after it. The
+  // native engine can only write a skeleton, so the test plan says so and a human fills it in.
+  const source = context.attachment?.text ?? '';
+  const analysis = source.trim() ? analyzeCode(source, (context.attachment?.language as never) || null) : null;
+  const reproduction = generateReproductionTest({
+    incidentTitle: context.incident.title,
+    language: analysis?.language ?? 'typescript',
+    diagnosis: analysis?.diagnoses[0] ?? null,
+    topFrameFile: analysis?.topFrame?.file ?? null,
+  });
   return {
     ...base,
     patch: base.patch ?? `// Auto-generated fix for ${context.incident.title}\n// Pinned to commit: evidence bundle will include exact SHA\n${(context.attachment?.text ?? '').slice(0, 2000)}`,
-    testPlan,
+    testPlan: [
+      ...testPlan,
+      `Review the generated reproduction test (${reproduction.path}) — it must fail before the patch and pass after it.`,
+    ],
+    reproductionTest: reproduction.source,
   };
 }
 

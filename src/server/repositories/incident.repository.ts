@@ -90,6 +90,28 @@ export const incidentRepository = {
     return client.incident.findMany({ where: { organizationId }, include: incidentInclude, orderBy: { createdAt: 'desc' }, take });
   },
 
+  /** V6 - a specific set of incidents, still organization-scoped (cross-tenant ids are dropped). */
+  findByIds(organizationId: string, ids: string[], client: DbClient = db) {
+    if (ids.length === 0) return Promise.resolve([]);
+    return client.incident.findMany({ where: { organizationId, id: { in: ids } }, include: incidentInclude });
+  },
+
+  /**
+   * V6 - resolved incidents since a date, with their human-written timeline. Used by the recurring
+   * failure report; bounded so one workspace cannot ask for its whole history in one request.
+   */
+  listResolvedSince(organizationId: string, since: Date, take: number, client: DbClient = db) {
+    return client.incident.findMany({
+      where: { organizationId, status: 'RESOLVED', startedAt: { gte: since } },
+      include: {
+        ...incidentInclude,
+        events: { select: { type: true, body: true }, orderBy: { createdAt: 'asc' as const }, take: 100 },
+      },
+      orderBy: { startedAt: 'desc' },
+      take,
+    });
+  },
+
   /** Open incident previously created by the same alert source (alert-storm suppression). */
   findOpenByDedupeKey(organizationId: string, dedupeKey: string, client: DbClient = db) {
     return client.incident.findFirst({

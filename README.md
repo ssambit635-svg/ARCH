@@ -236,6 +236,30 @@ npm run model:eval             # offline accuracy report, no database needed
 npm run model:export-finetune -- --org <slug>   # JSONL to fine-tune the local LLM
 ```
 
+### Knowledge base + learning (V6): Copilot cites your own runbooks
+
+Guardrails and their enforcement points: [`docs/engineering/AI-GUARDRAILS.md`](docs/engineering/AI-GUARDRAILS.md).
+
+- **Knowledge page** (`/dashboard/knowledge`). Paste a runbook, a doc or a note — or fetch a public
+  documentation page — and ARCH chunks it, embeds it on your server, and retrieves the relevant
+  passages when Copilot answers. Drafts cite the source by name and only once it clears a relevance
+  floor. No external vector database, no embedding API, no tenant data leaving the boundary.
+- **No fetching at inference time.** Fetching is a human action, SSRF-guarded (private/loopback/
+  link-local addresses refused on every DNS record, ≤3 re-checked redirects, 10s timeout, 2MB cap),
+  rate-limited, audited, and disabled by `ARCH_OFFLINE_ONLY`.
+- **Calibrated confidence** (temperature fitted on your holdout), **learning from corrections**
+  (approve / edit / dismiss / a manual severity change, corrections at 3× weight), and **drift
+  detection** that flags a regressing model instead of promoting it.
+- **"Have we seen this before?"** on each incident and **change-risk ranking** on the declare-incident
+  page — both context for the responder, never an automated action.
+- **Verified fixes prove themselves:** a generated test must fail before the patch and pass after
+  it, and the panel shows both runs. When it cannot reproduce, it says so.
+
+```bash
+npm run knowledge:fetch -- --org <organizationId> --user <userId>   # seed from public docs
+npm run model:eval                                                  # golden-set accuracy, no database
+```
+
 ---
 
 ## Document conventions

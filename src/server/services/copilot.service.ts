@@ -7,7 +7,7 @@ import { writeAudit } from '@/lib/audit';
 import type { AiSuggestionStatus, AiSuggestionType } from '@/generated/prisma/client';
 import { buildKnowledge } from '../ai/arch-model/engine';
 import { detectLanguage, looksLikeStackTrace, scrubSecrets } from '../ai/code/analyzer';
-import { buildCopilotContext } from '../ai/context';
+import { buildCopilotContext, type CopilotContext } from '../ai/context';
 import { CopilotCallError, LIMITS, callWithGuardrails, redact, truncate } from '../ai/guardrails';
 import { buildPrompt } from '../ai/prompts';
 import { copilotAttempts, copilotConfig, copilotTimeoutMs, getAiProvider, type CopilotTask } from '../ai/provider';
@@ -26,6 +26,8 @@ import { aiSuggestionRepository } from '../repositories/aiSuggestion.repository'
 import { incidentRepository } from '../repositories/incident.repository';
 import { organizationRepository } from '../repositories/organization.repository';
 import { getOrganizationModel } from './archModel.service';
+import { retrieveKnowledge } from './knowledge.service';
+import { recordDraftApproved, recordDraftEdited, recordDraftDismissed, recordSeverityCorrection } from './modelLearning.service';
 import { addIncidentCommentInTransaction, updateIncident } from './incident.service';
 
 /**
@@ -63,6 +65,17 @@ export function copilotRateLimitKey(organizationId: string): string {
 }
 
 type Params = { organizationId: string; userId: string };
+
+/**
+ * What retrieval is asked for: the incident as a responder would describe it, plus what the code
+ * analyzer made of a pasted stack trace (so "ECONNREFUSED" finds the database runbook).
+ */
+function retrievalQuery(context: CopilotContext): string {
+  const parts = [context.incident.title, context.incident.affectedService ?? ''];
+  for (const entry of context.timeline) if (entry.text) parts.push(entry.text);
+  if (context.attachment?.text) parts.push(context.attachment.text.slice(0, 2_000));
+  return parts.filter(Boolean).join('. ');
+}
 
 async function loadIncident(organizationId: string, incidentId: string) {
   const incident = await incidentRepository.findByIdWithTimeline(organizationId, incidentId);
@@ -110,7 +123,15 @@ export async function generateSuggestion(params: Params & { incidentId: string; 
     const model = await getOrganizationModel(organizationId);
     // CODE_FIX + VERIFIED_FIX additionally consult the code-fix / code-review corpora; the incident tasks keep
     // the exact V2 knowledge mix (team history + pattern library + public postmortems).
-    context.knowledge = buildKnowledge(model, context, { excludeIds: [`team:${incidentId}`], includeCodeCorpus: type === 'CODE_FIX' || type === 'VERIFIED_FIX' });
+    const knowledge = buildKnowledge(model, context, { excludeIds: [`team:${incidentId}`], includeCodeCorpus: type === 'CODE_FIX' || type === 'VERIFIED_FIX' });
+    // V6 RAG: retrieve the organization's own runbooks / docs for this failure. Retrieved on this
+    // server by ARCH's embeddings — nothing is sent anywhere. Failure is non-fatal.
+    try {
+      knowledge.knowledgeChunks = await retrieveKnowledge({ organizationId, query: retrievalQuery(context), k: 3 });
+    } catch (error) {
+      console.warn(`[copilot] knowledge retrieval failed for ${organizationId}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    context.knowledge = knowledge;
   } catch (error) {
     console.warn(`[copilot] ARCH model unavailable for ${organizationId}: ${error instanceof Error ? error.message : String(error)}`);
   }
@@ -181,7 +202,13 @@ export async function generateSuggestion(params: Params & { incidentId: string; 
             attempts: call.attempts,
             latencyMs: call.latencyMs,
             ...(context.knowledge
-              ? { knowledge: { category: context.knowledge.likelyCategory, similarIncidents: context.knowledge.similarIncidents.length } }
+              ? {
+                  knowledge: {
+                    category: context.knowledge.likelyCategory,
+                    similarIncidents: context.knowledge.similarIncidents.length,
+                    knowledgeChunks: context.knowledge.knowledgeChunks?.length ?? 0,
+                  },
+                }
               : {}),
           },
         },
@@ -272,6 +299,19 @@ export async function approveSuggestion(params: Params & { suggestionId: string;
       entityId: suggestionId,
       metadata: { incidentId: suggestion.incidentId, type: suggestion.type, applied: changes },
     });
+    // V6 — applying a triage severity is an implicit label: the model's guess matched the team's.
+    if (changes.severity) {
+      await recordSeverityCorrection({
+        organizationId,
+        userId,
+        incidentId: suggestion.incidentId,
+        suggestionId,
+        task: 'triage',
+        incidentText: `${incident.title}. ${output.rationale}`,
+        predicted: output.severity ?? incident.severity,
+        actual: changes.severity,
+      });
+    }
     return aiSuggestionRepository.findById(organizationId, suggestionId);
   }
 
@@ -294,6 +334,20 @@ export async function approveSuggestion(params: Params & { suggestionId: string;
       body,
       metadata: { source: 'copilot', suggestionId, suggestionType: suggestion.type, edited },
     });
+    // V6 — learn from the review: a rewrite is a correction, an untouched approval a confirmation.
+    if (edited) {
+      await recordDraftEdited({
+        organizationId,
+        userId,
+        incidentId: suggestion.incidentId,
+        suggestionId,
+        task: suggestion.type.toLowerCase(),
+        original: suggestion.output,
+        edited: body,
+      });
+    } else {
+      await recordDraftApproved({ organizationId, userId, incidentId: suggestion.incidentId, suggestionId, task: suggestion.type.toLowerCase() });
+    }
     await aiSuggestionRepository.setAppliedEvent(organizationId, suggestionId, event.id, tx);
     await writeAudit(
       {
@@ -321,6 +375,14 @@ export async function dismissSuggestion(params: Params & { suggestionId: string 
     if (!(await aiSuggestionRepository.review(organizationId, suggestionId, { status: 'DISMISSED', reviewedById: userId, reviewedAt: new Date() }, tx))) {
       throw AppError.conflict('This draft was already reviewed by someone else.');
     }
+    await recordDraftDismissed({
+      organizationId,
+      userId,
+      incidentId: suggestion.incidentId,
+      suggestionId,
+      task: suggestion.type.toLowerCase(),
+      original: suggestion.output,
+    });
     await writeAudit(
       {
         organizationId,

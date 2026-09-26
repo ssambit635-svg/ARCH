@@ -532,6 +532,165 @@ export async function verifyPatchInSandbox(params: {
   };
 }
 
+/**
+ * V6 — reproduction verification: prove the fix fixes something.
+ *
+ * A green test suite after a patch only proves the suite passes. This runs the *generated
+ * reproduction test* twice in the same isolated sandbox:
+ *
+ *   1. before the patch  → the test MUST fail (it reproduces the reported failure);
+ *   2. after the patch   → the test MUST pass.
+ *
+ * Only both together are reported as PASSED, and the evidence bundle records both outputs. If the
+ * test passes before the patch, the status is FAILED with an explicit reason — a test that never
+ * reproduced the bug is not evidence, and pretending otherwise is how fake "verified" fixes ship.
+ *
+ * Requires `originalFiles` (the repository contents at the pinned commit). Without them there is
+ * nothing to reproduce against, and the run is reported as `skipped` rather than guessed.
+ */
+export type ReproductionResult = {
+  ran: boolean;
+  reason?: string;
+  failedBeforePatch?: boolean;
+  passedAfterPatch?: boolean;
+  beforeOutput?: string;
+  afterOutput?: string;
+  testPath?: string;
+};
+
+export async function verifyPatchWithReproduction(params: {
+  patch: string;
+  /** Path the generated test is written to, relative to the sandbox root. */
+  testPath: string;
+  /** The generated test source. */
+  reproductionTest: string;
+  testCommand: string;
+  commitSha?: string | null;
+  repoFullName?: string | null;
+  timeoutMs?: number;
+  originalFiles?: Record<string, string>;
+}): Promise<{ status: SandboxRunResult['status']; reproduction: ReproductionResult; testOutput: string; durationMs: number }> {
+  const timeoutMs = params.timeoutMs ?? SANDBOX_DEFAULT_TIMEOUT_MS;
+  const startedAt = Date.now();
+
+  const safety = checkSafety(params.patch);
+  if (isUnsafe(safety)) {
+    return {
+      status: 'UNSAFE',
+      reproduction: { ran: false, reason: 'Patch blocked by safety checks before reproduction.' },
+      testOutput: `Patch blocked by safety checks:\n${safety.failures.map((f) => `- [${f.rule}] ${f.message}`).join('\n')}`,
+      durationMs: Date.now() - startedAt,
+    };
+  }
+  if (!params.originalFiles || Object.keys(params.originalFiles).length === 0) {
+    return {
+      status: 'ERROR',
+      reproduction: { ran: false, reason: 'No repository files provided — nothing to reproduce against.' },
+      testOutput: 'Reproduction needs the repository contents at the pinned commit.',
+      durationMs: Date.now() - startedAt,
+    };
+  }
+
+  // The test path is validated against the sandbox root below; a path that tries to escape it
+  // ("../../etc/passwd") never reaches the filesystem.
+  const testPath = params.testPath.replace(/^\.?\//, '');
+
+  let dir: string;
+  try {
+    const created = await createTempSandbox();
+    dir = created.dir;
+  } catch (error) {
+    return {
+      status: 'ERROR',
+      reproduction: { ran: false, reason: `Sandbox could not be created: ${error instanceof Error ? error.message : String(error)}` },
+      testOutput: 'Sandbox creation failed.',
+      durationMs: Date.now() - startedAt,
+    };
+  }
+
+  const safeEnv = buildSafeEnv();
+  const sandboxTestPath = path.join(dir, testPath);
+  if (!sandboxTestPath.startsWith(path.resolve(dir))) {
+    await cleanupSandbox(dir);
+    return { status: 'UNSAFE', reproduction: { ran: false, reason: 'Test path escapes the sandbox.' }, testOutput: 'Blocked test path.', durationMs: 0 };
+  }
+
+  try {
+    await simulateRepoCheckout(dir, { commitSha: params.commitSha ?? null, repoFullName: params.repoFullName ?? null });
+
+    // 1. Repo + generated test, WITHOUT the patch: the test must fail.
+    for (const [filePath, content] of Object.entries(params.originalFiles)) {
+      const fullPath = path.resolve(dir, filePath);
+      if (!fullPath.startsWith(path.resolve(dir))) continue;
+      await fs.mkdir(path.dirname(fullPath), { recursive: true });
+      await fs.writeFile(fullPath, content, 'utf8');
+    }
+    await fs.mkdir(path.dirname(sandboxTestPath), { recursive: true });
+    await fs.writeFile(sandboxTestPath, params.reproductionTest, 'utf8');
+
+    const before = await runCommandInSandbox(dir, params.testCommand, timeoutMs, safeEnv);
+    const failedBeforePatch = before.timedOut ? false : before.exitCode !== 0;
+
+    // 2. Apply the patch and run the same test again: it must pass.
+    const applied = await applyPatchToDir(dir, params.patch, undefined);
+    if (!applied.applied) {
+      return {
+        status: 'ERROR',
+        reproduction: {
+          ran: true,
+          failedBeforePatch,
+          passedAfterPatch: false,
+          beforeOutput: truncateOutput(before.output),
+          testPath,
+        },
+        testOutput: `Reproduction test ${failedBeforePatch ? 'failed as expected' : 'did NOT fail'} before the patch, but the patch could not be applied:\n${applied.logs.join('\n')}`,
+        durationMs: Date.now() - startedAt,
+      };
+    }
+
+    const after = await runCommandInSandbox(dir, params.testCommand, timeoutMs, safeEnv);
+    const passedAfterPatch = !after.timedOut && after.exitCode === 0;
+
+    const reproduction: ReproductionResult = {
+      ran: true,
+      failedBeforePatch,
+      passedAfterPatch,
+      beforeOutput: truncateOutput(before.output),
+      afterOutput: truncateOutput(after.output),
+      testPath,
+    };
+
+    let status: SandboxRunResult['status'];
+    let testOutput: string;
+    if (after.timedOut) {
+      status = 'TIMEOUT';
+      testOutput = `Tests timed out after ${timeoutMs}ms while running the reproduction test with the patch applied.`;
+    } else if (!failedBeforePatch) {
+      status = 'FAILED';
+      testOutput =
+        'The reproduction test PASSED before the patch, so it does not reproduce the reported failure. ' +
+        'A test that never failed is not evidence — write one that fails for the reported reason and try again.';
+    } else if (!passedAfterPatch) {
+      status = 'FAILED';
+      testOutput = `The reproduction test still fails with the patch applied (exit ${after.exitCode ?? 'null'}).`;
+    } else {
+      status = 'PASSED';
+      testOutput = 'Reproduced before the patch, fixed after it — the patch is backed by evidence.';
+    }
+
+    return { status, reproduction, testOutput, durationMs: Date.now() - startedAt };
+  } catch (error) {
+    return {
+      status: 'ERROR',
+      reproduction: { ran: false, reason: error instanceof Error ? error.message : String(error) },
+      testOutput: `Sandbox execution error: ${error instanceof Error ? error.message : String(error)}`,
+      durationMs: Date.now() - startedAt,
+    };
+  } finally {
+    await cleanupSandbox(dir);
+  }
+}
+
 export const _testing = {
   checkSafety,
   isUnsafe,

@@ -46,6 +46,15 @@ export const PERMISSIONS = {
   'fix.approve': ['OWNER', 'ADMIN', 'RESPONDER'],
   'pr.create': ['OWNER', 'ADMIN', 'RESPONDER'],
   'pr.read': ['OWNER', 'ADMIN', 'RESPONDER', 'VIEWER'],
+  // V6 - change events and the risk they carry. Reading change history (and its risk scores) is
+  // open to everyone who can read incidents; recording a change is a responder-or-above action.
+  'change.read': ['OWNER', 'ADMIN', 'RESPONDER', 'VIEWER'],
+  'change.write': ['OWNER', 'ADMIN', 'RESPONDER'],
+  // V6 - the knowledge base feeding RAG. Reading and ingesting are open to responders (a runbook
+  // is only useful if the on-call engineer can add it at 3am); deletion is an admin decision.
+  'knowledge.read': ['OWNER', 'ADMIN', 'RESPONDER', 'VIEWER'],
+  'knowledge.manage': ['OWNER', 'ADMIN', 'RESPONDER'],
+  'knowledge.delete': ['OWNER', 'ADMIN'],
 } as const satisfies Record<string, readonly Role[]>;
 
 export type PermissionAction = keyof typeof PERMISSIONS;

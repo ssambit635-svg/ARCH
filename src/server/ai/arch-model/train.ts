@@ -30,14 +30,16 @@ export const SEVERITIES: IncidentSeverity[] = ['LOW', 'MEDIUM', 'HIGH', 'CRITICA
  *  - public  public postmortems downloaded by `npm run model:fetch-public`;
  *  - code    real bug-fix knowledge (SWE-bench, ManySStuBs4J) via `npm run model:fetch-code`;
  *  - review  human code-review knowledge (github-codereview, CodeReviewer) via
- *            `npm run model:fetch-review`.
- * `code` and `review` only enrich retrieval for code tasks — never the incident classifiers'
+ *            `npm run model:fetch-review`;
+ *  - knowledge the organization's own runbooks / docs / notes, ingested through the dashboard
+ *            (`/dashboard/knowledge`) — retrieval only, never a classifier label.
+ * `code`, `review` and `knowledge` only enrich retrieval — never the incident classifiers'
  * labels, and never another organization's model (they are shared, read-only corpora).
  */
-export type TrainingSource = 'team' | 'pattern' | 'public' | 'code' | 'review';
+export type TrainingSource = 'team' | 'pattern' | 'public' | 'code' | 'review' | 'knowledge';
 
 /** Bulk external corpora: their tokens only enter the vocabulary when seen in ≥2 documents. */
-export const EXTERNAL_SOURCES: TrainingSource[] = ['public', 'code', 'review'];
+export const EXTERNAL_SOURCES: TrainingSource[] = ['public', 'code', 'review', 'knowledge'];
 
 export type TrainingDoc = {
   id: string;
@@ -57,6 +59,21 @@ export type TrainingDoc = {
   occurredAt?: string;
 };
 
+/**
+ * A label a human produced through ordinary product use (V6 active learning): the severity they
+ * settled on, the category they corrected, a draft they rewrote. `weight` is how strongly the
+ * example counts — a human correction outranks the model's own guess.
+ */
+export type FeedbackExample = {
+  id: string;
+  tokens: string[];
+  /** Severity label, when the feedback corrects severity. */
+  severity?: IncidentSeverity;
+  /** Category label, when the feedback corrects the category. */
+  category?: CategoryId;
+  weight?: number;
+};
+
 /** Sparse multinomial Naive Bayes. `counts[term]` = flattened [classIndex, count, …] pairs. */
 export type NaiveBayesArtifact = {
   labels: string[];
@@ -65,6 +82,13 @@ export type NaiveBayesArtifact = {
   vocabularySize: number;
   counts: Record<string, number[]>;
 };
+
+/**
+ * Confidence calibration. Naive Bayes is systematically over-confident: the winner often reports
+ * 99% when it is right 80% of the time. One temperature (logits ÷ T) fitted on the held-out split
+ * fixes that, so a confidence shown in the UI means what it says.
+ */
+export type Calibration = { temperature: number; holdoutSize: number; nll: number | null };
 
 export type IndexedDoc = {
   id: string;
@@ -89,14 +113,16 @@ export type IndexedDoc = {
 };
 
 export type ArchModelMetrics = {
-  documents: { team: number; pattern: number; public: number; code: number; review: number };
-  severity: { trainedOn: number; holdoutAccuracy: number | null; holdoutSize: number; baseline: number | null };
-  category: { trainedOn: number; holdoutAccuracy: number | null; holdoutSize: number };
+  documents: { team: number; pattern: number; public: number; code: number; review: number; knowledge?: number };
+  severity: { trainedOn: number; holdoutAccuracy: number | null; holdoutSize: number; baseline: number | null; calibration?: Calibration };
+  category: { trainedOn: number; holdoutAccuracy: number | null; holdoutSize: number; calibration?: Calibration };
   team: {
     severityCounts: Partial<Record<IncidentSeverity, number>>;
     medianResolveMinutes: Partial<Record<IncidentSeverity, number>>;
     topCategories: { category: CategoryId; count: number }[];
   };
+  /** V6 — how many human labels (edits, corrections) were folded into this run. */
+  feedbackExamples: number;
   vocabularySize: number;
   trainingMs: number;
 };
@@ -110,6 +136,8 @@ export type ArchModelArtifact = {
   docs: IndexedDoc[];
   severity: NaiveBayesArtifact;
   category: NaiveBayesArtifact;
+  /** Present on models trained with a holdout split; absent (T = 1) on older artifacts. */
+  calibration?: { severity: Calibration; category: Calibration };
   metrics: ArchModelMetrics;
 };
 
@@ -159,8 +187,8 @@ export function trainNaiveBayes(examples: Example[], labels: string[]): NaiveBay
   };
 }
 
-/** Class probabilities (softmax of log-likelihoods). */
-export function predictNaiveBayes(model: NaiveBayesArtifact, tokens: string[]): number[] {
+/** Class probabilities (softmax of log-likelihoods). `temperature` 1 leaves them unchanged. */
+export function predictNaiveBayes(model: NaiveBayesArtifact, tokens: string[], temperature = 1): number[] {
   const scores = [...model.logPriors];
   const alpha = 1;
   for (const [token, count] of termCounts(tokens)) {
@@ -172,10 +200,39 @@ export function predictNaiveBayes(model: NaiveBayesArtifact, tokens: string[]): 
       scores[classIndex]! += count * Math.log((row[classIndex]! + alpha) / (model.totals[classIndex]! + alpha * model.vocabularySize));
     }
   }
-  const max = Math.max(...scores);
-  const exp = scores.map((score) => Math.exp(score - max));
+  const scaled = temperature > 0 && temperature !== 1 ? scores.map((score) => score / temperature) : scores;
+  const max = Math.max(...scaled);
+  const exp = scaled.map((score) => Math.exp(score - max));
   const sum = exp.reduce((total, value) => total + value, 0);
   return exp.map((value) => value / sum);
+}
+
+/**
+ * Fit one temperature that minimises the negative log-likelihood of the held-out examples. A
+ * temperature above 1 softens an over-confident model; below 1 sharpens an under-confident one.
+ * Without a holdout there is nothing to fit, so T stays 1 (the old behaviour).
+ */
+export function fitTemperature(model: NaiveBayesArtifact, examples: Example[]): Calibration {
+  if (examples.length < 8) return { temperature: 1, holdoutSize: examples.length, nll: null };
+
+  const nllAt = (temperature: number): number => {
+    let total = 0;
+    for (const example of examples) {
+      const probabilities = predictNaiveBayes(model, example.tokens, temperature);
+      const classIndex = model.labels.indexOf(example.label);
+      const probability = Math.min(Math.max(probabilities[classIndex] ?? 1e-9, 1e-9), 1 - 1e-9);
+      total -= Math.log(probability) * (example.weight ?? 1);
+    }
+    return total;
+  };
+
+  let best = { temperature: 1, nll: nllAt(1) };
+  for (let temperature = 0.6; temperature <= 3.0001; temperature += 0.1) {
+    const rounded = Math.round(temperature * 100) / 100;
+    const nll = nllAt(rounded);
+    if (nll < best.nll - 1e-9) best = { temperature: rounded, nll };
+  }
+  return { temperature: best.temperature, holdoutSize: examples.length, nll: Math.round(best.nll * 1000) / 1000 };
 }
 
 function argmax(values: number[]): number {
@@ -236,10 +293,11 @@ function median(values: number[]): number | undefined {
   return sorted.length % 2 ? sorted[middle] : Math.round((sorted[middle - 1]! + sorted[middle]!) / 2);
 }
 
-export function trainArchModel(input: TrainingDoc[], options: { now?: Date } = {}): ArchModelArtifact {
+export function trainArchModel(input: TrainingDoc[], options: { now?: Date; feedback?: FeedbackExample[] } = {}): ArchModelArtifact {
   const started = Date.now();
   const docs = [...builtInDocs(), ...input];
   const tokenized = docs.map((doc) => tokenize(docText(doc)));
+  const feedback = options.feedback ?? [];
 
   // ---- category classifier: patterns + category vocab + human-labelled docs
   const categoryExamples: (Example & { id: string })[] = [];
@@ -250,6 +308,12 @@ export function trainArchModel(input: TrainingDoc[], options: { now?: Date } = {
   docs.forEach((doc, index) => {
     if (doc.category) categoryExamples.push({ id: doc.id, tokens: tokenized[index]!, label: doc.category, weight: doc.source === 'pattern' ? 2 : 1 });
   });
+  // Human corrections are the strongest signal ARCH has: a responder who overrode the model's
+  // category is a label no amount of built-in vocabulary can outweigh.
+  for (const example of feedback) {
+    if (!example.category) continue;
+    categoryExamples.push({ id: example.id, tokens: example.tokens, label: example.category, weight: example.weight ?? 3 });
+  }
   // Evaluate on held-out human-labelled real-world docs (team + public), then train on everything.
   const categoryHoldout = categoryExamples.filter((example) => !example.id.startsWith('vocab:') && !example.id.startsWith('pattern:') && isHoldout(example.id));
   const categoryEval = trainNaiveBayes(categoryExamples.filter((example) => !categoryHoldout.includes(example)), CATEGORY_IDS);
@@ -265,6 +329,10 @@ export function trainArchModel(input: TrainingDoc[], options: { now?: Date } = {
   docs.forEach((doc, index) => {
     if (doc.source === 'team' && doc.severity) severityExamples.push({ id: doc.id, tokens: tokenized[index]!, label: doc.severity, weight: 1.5 });
   });
+  for (const example of feedback) {
+    if (!example.severity) continue;
+    severityExamples.push({ id: example.id, tokens: example.tokens, label: example.severity, weight: example.weight ?? 3 });
+  }
   const teamSeverity = severityExamples.filter((example) => !example.id.startsWith('sev:'));
   const severityHoldout = teamSeverity.length >= 10 ? teamSeverity.filter((example) => isHoldout(example.id)) : [];
   const severityEval = trainNaiveBayes(severityExamples.filter((example) => !severityHoldout.includes(example)), SEVERITIES);
@@ -273,6 +341,8 @@ export function trainArchModel(input: TrainingDoc[], options: { now?: Date } = {
   const majority = severityHoldout.length
     ? Math.max(...SEVERITIES.map((label) => severityHoldout.filter((example) => example.label === label).length)) / severityHoldout.length
     : null;
+  const severityCalibration = fitTemperature(severity, severityHoldout);
+  const categoryCalibration = fitTemperature(category, categoryHoldout);
 
   // ---- vocabulary + IDF
   const documentFrequency = new Map<string, number>();
@@ -360,17 +430,20 @@ export function trainArchModel(input: TrainingDoc[], options: { now?: Date } = {
       public: indexed.filter((doc) => doc.source === 'public').length,
       code: indexed.filter((doc) => doc.source === 'code').length,
       review: indexed.filter((doc) => doc.source === 'review').length,
+      knowledge: indexed.filter((doc) => doc.source === 'knowledge').length,
     },
     severity: {
       trainedOn: severityExamples.length,
       holdoutAccuracy: accuracy(severityEval, severityHoldout),
       holdoutSize: severityHoldout.length,
       baseline: majority === null ? null : Math.round(majority * 1000) / 1000,
+      calibration: severityCalibration,
     },
     category: {
       trainedOn: categoryExamples.length,
       holdoutAccuracy: accuracy(categoryEval, categoryHoldout),
       holdoutSize: categoryHoldout.length,
+      calibration: categoryCalibration,
     },
     team: {
       severityCounts,
@@ -380,6 +453,7 @@ export function trainArchModel(input: TrainingDoc[], options: { now?: Date } = {
         .slice(0, 5)
         .map(([name, count]) => ({ category: name, count })),
     },
+    feedbackExamples: feedback.length,
     vocabularySize: vocabulary.length,
     trainingMs: Date.now() - started,
   };
@@ -393,6 +467,7 @@ export function trainArchModel(input: TrainingDoc[], options: { now?: Date } = {
     docs: indexed,
     severity,
     category,
+    calibration: { severity: severityCalibration, category: categoryCalibration },
     metrics,
   };
 }

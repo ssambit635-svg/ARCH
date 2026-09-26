@@ -5,6 +5,8 @@ import { formatDateTime, timeAgo } from '@/lib/format';
 import { CATEGORIES, type CategoryId } from '@/server/ai/arch-model/knowledge';
 import { formatDuration } from '@/server/ai/arch-model/text';
 import { getModelStatus, type VersionSummary } from '@/server/services/archModel.service';
+import { feedbackSummary } from '@/server/services/modelLearning.service';
+import { listKnowledgeSources } from '@/server/services/knowledge.service';
 import { Alert, Badge, Card, CardBody, CardHeader, DefinitionList, PageHeader } from '@/components/ui';
 import { ActionForm } from '@/components/dashboard/action-form';
 import { RefreshWhile } from '@/components/dashboard/refresh-while';
@@ -95,10 +97,28 @@ export default async function ModelPage() {
   const severityCounts = Object.entries(metrics.team.severityCounts);
   const jobInProgress = jobs.open > 0;
   const lastJob = jobs.last;
+  const drift = status.drift;
+
+  // V6 — what the model is learning beyond resolved incidents: human corrections and the
+  // knowledge base Copilot cites. Both are best-effort so the page never fails on them.
+  const [feedback, knowledgeSources] = await Promise.all([
+    feedbackSummary(organization.id).catch(() => null),
+    listKnowledgeSources({ organizationId: organization.id, userId: user.id }).catch(() => []),
+  ]);
+  const knowledgeChunks = knowledgeSources.reduce((sum, source) => sum + source.chunkCount, 0);
+  const corrections = feedback ? (feedback.byKind.SEVERITY_CORRECTED ?? 0) + (feedback.byKind.CATEGORY_CORRECTED ?? 0) : 0;
 
   return (
     <div className="space-y-6">
       <RefreshWhile active={jobInProgress} />
+      {drift ? (
+        <Alert tone="info">
+          Version {drift.version} regressed on {drift.metric === 'severityAccuracy' ? 'severity' : 'category'} accuracy:{' '}
+          {pct(drift.previous)} → {pct(drift.current)} ({pct(drift.drop)} drop, detected{' '}
+          {timeAgo(new Date(drift.detectedAt))}). It was kept in the registry but never promoted — retrain with more
+          data, or roll back to the previous version below.
+        </Alert>
+      ) : null}
       <PageHeader
         title="ARCH Model"
         description="ARCH's own AI, trained on this workspace's incidents. It runs on your server: no OpenAI, no Anthropic, no GPU bill."
@@ -171,6 +191,54 @@ export default async function ModelPage() {
             ) : (
               <p className="text-xs text-slate-500">Only OWNER or ADMIN can retrain the model.</p>
             )}
+          </CardBody>
+        </Card>
+
+        <Card>
+          <CardHeader
+            title="Learning & knowledge"
+            description="What the model is learning from besides resolved incidents — your corrections and your own docs."
+            action={
+              feedback && feedback.total > 0 ? (
+                <Badge tone="neutral">{feedback.total} feedback signals</Badge>
+              ) : (
+                <Badge tone="neutral">no feedback yet</Badge>
+              )
+            }
+          />
+          <CardBody className="space-y-4">
+            <DefinitionList
+              items={[
+                { label: 'Drafts approved', value: String(feedback?.byKind.DRAFT_APPROVED ?? 0) },
+                { label: 'Drafts edited', value: String(feedback?.byKind.DRAFT_EDITED ?? 0) },
+                { label: 'Drafts dismissed', value: String(feedback?.byKind.DRAFT_DISMISSED ?? 0) },
+                {
+                  label: 'Corrections',
+                  value: `${corrections} (severity + category — these train at 3× weight)`,
+                },
+                {
+                  label: 'Knowledge base',
+                  value:
+                    knowledgeSources.length === 0 ? (
+                      <span className="text-amber-300">empty — Copilot has nothing to cite yet</span>
+                    ) : (
+                      `${knowledgeSources.length} source${knowledgeSources.length === 1 ? '' : 's'} · ${knowledgeChunks} retrievable chunk${knowledgeChunks === 1 ? '' : 's'}`
+                    ),
+                },
+                {
+                  label: 'Severity calibration',
+                  value:
+                    metrics.severity.calibration && metrics.severity.calibration.holdoutSize > 0
+                      ? `temperature ${metrics.severity.calibration.temperature.toFixed(2)} — reported confidence now matches measured accuracy`
+                      : 'not fitted yet (needs ≥10 held-out incidents)',
+                },
+              ]}
+            />
+            <p className="text-xs text-slate-500">
+              Approving a draft tells the model it was right; editing or dismissing one tells it what was wrong. Both
+              are folded in on the next training run, and corrections count three times as much — that is how a
+              workspace converges on its own severity scale.
+            </p>
           </CardBody>
         </Card>
 

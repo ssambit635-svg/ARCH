@@ -7,8 +7,16 @@ import { aiSuggestionRepository } from '@/server/repositories/aiSuggestion.repos
 import { repoConnectionRepository } from '@/server/repositories/repoConnection.repository';
 import { fixVerificationRepository } from '@/server/repositories/fixVerification.repository';
 import { pullRequestRepository } from '@/server/repositories/pullRequest.repository';
-import { verifyPatchInSandbox, SANDBOX_DEFAULT_TIMEOUT_MS } from './sandbox.service';
-import { createPullRequest, fetchPullRequestState, githubMode, prNumberFromUrl } from './github.service';
+import { verifyPatchInSandbox, verifyPatchWithReproduction, SANDBOX_DEFAULT_TIMEOUT_MS } from './sandbox.service';
+import {
+  createPullRequest,
+  fetchPullRequestState,
+  getGithubClient,
+  githubMode,
+  pathsFromPatch,
+  prNumberFromUrl,
+  readFilesAtCommit,
+} from './github.service';
 import { buildKnowledge } from '@/server/ai/arch-model/engine';
 import { buildCopilotContext } from '@/server/ai/context';
 import { getOrganizationModel } from './archModel.service';
@@ -228,6 +236,10 @@ export async function verifyFix(params: {
   patch: string;
   testCommand?: string | null;
   timeoutMs?: number;
+  /** V6 — generated reproduction test. When present (with repo files) the patch is proven, not just run. */
+  reproductionTest?: string | null;
+  /** Repository contents at the pinned commit, keyed by path. Fetched from GitHub when omitted. */
+  originalFiles?: Record<string, string> | null;
 }) {
   await requirePermission(params.organizationId, params.userId, 'fix.verify');
 
@@ -257,6 +269,7 @@ export async function verifyFix(params: {
     testCommand: params.testCommand ?? 'npm test',
     status: 'PENDING',
     createdById: params.userId,
+    reproductionTest: params.reproductionTest ?? null,
   });
 
   await writeAudit({
@@ -277,13 +290,53 @@ export async function verifyFix(params: {
   // Mark RUNNING
   await fixVerificationRepository.setRunning(verification.id);
 
-  // Run in sandbox (isolated, no prod credentials, timeout, temp container)
-  const result = await verifyPatchInSandbox({
-    patch: params.patch,
-    commitSha,
-    testCommand: params.testCommand ?? 'npm test',
-    timeoutMs: params.timeoutMs ?? SANDBOX_DEFAULT_TIMEOUT_MS,
-  });
+  // V6 — reproduction: run the generated test before the patch (must fail) and after it (must
+  // pass). Falls back to the V4 run when there is no test to reproduce with or no repository to
+  // reproduce against, and the evidence says which of the two happened.
+  const reproductionTest = params.reproductionTest?.trim() || (suggestion.output as { reproductionTest?: string }).reproductionTest?.trim() || null;
+  let originalFiles = params.originalFiles ?? null;
+  if (reproductionTest && !originalFiles && repoConnection && commitSha && githubMode() === 'real') {
+    try {
+      const client = await getGithubClient();
+      originalFiles = await readFilesAtCommit(client, {
+        owner: repoConnection.owner,
+        repo: repoConnection.repo,
+        ref: commitSha,
+        paths: pathsFromPatch(params.patch),
+      });
+    } catch (error) {
+      console.warn(`[verified-fix] could not read repo files for reproduction: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  let result: { status: string; testOutput: string; durationMs: number; evidence?: unknown };
+  let reproduction: unknown = null;
+  if (reproductionTest && originalFiles && Object.keys(originalFiles).length > 0) {
+    const run = await verifyPatchWithReproduction({
+      patch: params.patch,
+      testPath: reproductionPath(reproductionTest),
+      reproductionTest,
+      testCommand: params.testCommand ?? 'npm test',
+      commitSha,
+      repoFullName: repoConnection ? `${repoConnection.owner}/${repoConnection.repo}` : null,
+      timeoutMs: params.timeoutMs ?? SANDBOX_DEFAULT_TIMEOUT_MS,
+      originalFiles,
+    });
+    result = { status: run.status, testOutput: run.testOutput, durationMs: run.durationMs };
+    reproduction = run.reproduction;
+  } else {
+    const run = await verifyPatchInSandbox({
+      patch: params.patch,
+      commitSha,
+      testCommand: params.testCommand ?? 'npm test',
+      timeoutMs: params.timeoutMs ?? SANDBOX_DEFAULT_TIMEOUT_MS,
+    });
+    result = { status: run.status, testOutput: run.testOutput, durationMs: run.durationMs, evidence: run.evidence };
+    reproduction = {
+      ran: false,
+      reason: reproductionTest ? 'No repository contents available to reproduce against.' : 'No reproduction test was generated for this fix.',
+    };
+  }
 
   // Update with results
   const updated = await db.$transaction(async (tx) => {
@@ -292,7 +345,8 @@ export async function verifyFix(params: {
       {
         status: result.status,
         testOutput: result.testOutput,
-        evidence: result.evidence as never,
+        evidence: (result.evidence ?? {}) as never,
+        reproduction: reproduction as never,
         durationMs: result.durationMs,
         finishedAt: new Date(),
       },
@@ -311,8 +365,8 @@ export async function verifyFix(params: {
           status: result.status,
           durationMs: result.durationMs,
           commitSha,
-          patchHash: result.evidence.patchHash,
-          testCommand: result.testCommand,
+          testCommand: params.testCommand ?? 'npm test',
+          reproduction: reproduction as never,
         },
       },
       tx,
@@ -321,6 +375,14 @@ export async function verifyFix(params: {
   });
 
   return updated;
+}
+
+/** Where a generated test lives, based on the language its source implies. */
+function reproductionPath(source: string): string {
+  if (/^\s*(def |import pytest|from [\w.]+ import )/m.test(source)) return 'tests/test_repro_arch.py';
+  if (/^package \w+/m.test(source)) return 'repro_arch_test.go';
+  if (/import org\.junit/.test(source)) return 'src/test/java/ReproArchTest.java';
+  return 'tests/repro-arch.test.ts';
 }
 
 /**

@@ -20,6 +20,7 @@ import { ActionForm } from '@/components/dashboard/action-form';
 import { Field, Select } from '@/components/ui/form';
 import { CopilotPanel, type CopilotSuggestionView } from '@/components/incidents/copilot-panel';
 import { VerifiedFixPanel, type VerificationView, type RepoConnectionView } from '@/components/incidents/verified-fix-panel';
+import { SimilarIncidentsPanel } from '@/components/incidents/similar-incidents';
 import { listSuggestions } from '@/server/services/copilot.service';
 import { listVerifications } from '@/server/services/verifiedFix.service';
 import { listRepoConnections } from '@/server/services/repo.service';
@@ -106,6 +107,8 @@ export default async function IncidentDetailPage({ params }: { params: Promise<{
     repoConnection: v.repoConnection ? { id: v.repoConnection.id, fullName: v.repoConnection.fullName, pinnedCommitSha: v.repoConnection.pinnedCommitSha } : null,
     pullRequest: v.pullRequest ? { id: v.pullRequest.id, externalUrl: v.pullRequest.externalUrl, branch: v.pullRequest.branch, status: v.pullRequest.status } : null,
     suggestion: { id: v.suggestionId, type: 'CODE_FIX' },
+    reproductionTest: v.reproductionTest ?? null,
+    reproduction: v.reproduction as VerificationView['reproduction'],
   }));
 
   const repoConnectionViews: RepoConnectionView[] = repoConnections.map((rc) => ({
@@ -148,6 +151,7 @@ export default async function IncidentDetailPage({ params }: { params: Promise<{
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           {blastRadius.affectedServices.length > 0 ? <Card><CardHeader title="Blast radius & correlated changes" description={`${blastRadius.affectedServices.length} service(s) in the dependency chain`} /><CardBody><div className="flex flex-wrap gap-2">{blastRadius.affectedServices.map((service) => <span key={service.id} className="rounded-full bg-rose-500/10 px-2.5 py-1 text-xs text-rose-200">{service.name} · {service.status}</span>)}</div>{blastRadius.relatedChanges.length > 0 ? <div className="mt-4 border-t border-slate-800 pt-3 text-sm text-slate-300"><p className="mb-2 text-xs uppercase tracking-wide text-slate-500">Recent changes before incident</p>{blastRadius.relatedChanges.slice(0, 5).map((change) => <p key={change.id} className="py-1">{change.title} <span className="text-xs text-slate-500">({change.type})</span></p>)}</div> : <p className="mt-3 text-xs text-slate-500">No matching deployment changes found in the previous 7 days.</p>}</CardBody></Card> : null}
+          <SimilarIncidentsPanel incidentId={incident.id} initialTitle={incident.title} />
           <Card>
             <CardHeader title="Timeline" description="Every comment, status change and assignment, in order." />
             <IncidentTimeline events={incident.events} />

@@ -15,6 +15,59 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Added — V6 · Your own knowledge base, learning from corrections, and honest risk scores
+
+- **Copilot can cite your runbooks.** New **Knowledge** page (`/dashboard/knowledge`, `knowledge.*`
+  permissions): paste a runbook, a doc or a note, or fetch a public documentation page, and ARCH
+  chunks it, embeds it on your server and retrieves the relevant passages when a responder asks for
+  a summary, triage, status update, postmortem or code fix. Drafts cite the source by name, and a
+  citation only appears once it clears a relevance floor — otherwise Copilot says it has no source.
+  Retrieval is hybrid: dense similarity over ARCH's own embeddings catches a runbook that describes
+  the same failure in different words, keyword matching keeps exact error codes findable. There is
+  no external vector database and no embedding API; the "external database" is your own Postgres.
+- **Nothing is fetched while a responder is waiting.** Fetching is a human action (the button on the
+  Knowledge page, or `npm run knowledge:fetch -- --org … --user …`), it is SSRF-guarded (http/https
+  only, no credentials, localhost/`.internal`/private/link-local addresses refused on every DNS
+  record, ≤3 redirects each re-checked, 10s timeout, 2MB cap, HTML stripped of `script`/`style`),
+  rate-limited at 10/min per organization, audited as `knowledge.fetch`, and switched off entirely
+  by `ARCH_OFFLINE_ONLY`.
+- **Confidence you can trust.** Severity and category predictions are now temperature-calibrated on
+  your own held-out incidents, so a reported 80% means 80%. The ARCH Model page shows the fitted
+  temperature, and says "not fitted yet" instead of pretending.
+- **The model learns from corrections.** Approving a draft teaches it it was right; editing or
+  dismissing one teaches it what was wrong; changing an incident's severity by hand records what
+  ARCH would have said and the label you chose instead. Corrections train at 3× weight, and the
+  model page shows the feedback breakdown (approved / edited / dismissed / corrections).
+- **Drift is visible, and never promoted.** A candidate model that regresses on measured holdout
+  accuracy is flagged as drift in the audit log and on the model page, with the version that
+  regressed and by how much — and it does not start serving.
+- **"Have we seen this before?"** on every incident: similar past incidents with what fixed them and
+  how long they took, plus the matching runbook passages. Cross-tenant and org-scoped throughout.
+- **"Which change caused this?"** on the declare-incident page: recent changes ranked by the
+  probability that your own history associates that kind of change with an incident within the hour,
+  with the reasons (change type, time of day, size, service). Below 20 changes ARCH says it does not
+  know instead of guessing, and it never blocks or rolls anything back — it is a ranking aid.
+- **A verified fix now proves itself.** ARCH generates a failing test from the diagnosis, runs it
+  against the code at the pinned commit, applies the patch, and runs it again. The badge says
+  `PASSED` only when the test failed before and passed after; the panel shows both runs and the
+  generated test. When the repository contents cannot be read, the run falls back to patch-only
+  verification and says so with the reason rather than implying proof.
+- **Guardrails are documented and enforced.** `docs/engineering/AI-GUARDRAILS.md` lists every rule
+  — draft-only, minimal org-scoped context, redaction, 15s timeout + 1 retry, 20 calls/min per org,
+  audit on every generate/approve/dismiss, the offline lock, the fetch guard and the reproduction
+  rule — with the file that enforces it and the test that fails if it stops being true.
+- **An eval harness with a golden set.** `tests/arch-eval.test.ts` scores a hand-written set of 34
+  incidents covering all 22 failure families, asserts the base model stays above 75%, and asserts
+  that training on your own incidents reaches 100% — the same set `npm run model:eval` prints.
+
+### Migration notes — V6
+- Run `npm run db:migrate`. It adds `knowledge_sources` + `knowledge_chunks` (the RAG store),
+  `arch_model_feedback` (corrections and draft feedback) and `change_events` (deploy-risk features),
+  and adds the reproduction columns to `fix_verifications`. Nothing else is required — an empty
+  knowledge base simply means Copilot has nothing to cite.
+- Model artifacts stay **format 1**: an already-trained model keeps serving, and picks up
+  calibration on its next retrain (a missing calibration defaults to a temperature of 1).
+
 ### Fixed
 
 - **A live-looking GitHub PAT was committed in `.env.example` again.** It is back to a placeholder.

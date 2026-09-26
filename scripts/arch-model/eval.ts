@@ -12,6 +12,7 @@ import path from 'node:path';
 import { CATEGORY_IDS, type CategoryId } from '../../src/server/ai/arch-model/knowledge';
 import { ArchModelRuntime } from '../../src/server/ai/arch-model/runtime';
 import { trainArchModel, type TrainingDoc } from '../../src/server/ai/arch-model/train';
+import { GOLDEN, SEVERITY_GOLDEN, evaluate } from './golden-set';
 
 const file = path.resolve(process.env.ARCH_MODEL_DATA_DIR ?? 'model-data', 'public-incidents.jsonl');
 const docs: TrainingDoc[] = fs.existsSync(file)
@@ -32,6 +33,14 @@ const m = artifact.metrics;
 console.log(`documents: pattern=${m.documents.pattern} public=${m.documents.public} · vocabulary=${m.vocabularySize} · trained in ${m.trainingMs} ms · artifact ${Math.round(JSON.stringify(artifact).length / 1024)} KB`);
 console.log(`category accuracy (held-out real postmortems): ${m.category.holdoutAccuracy === null ? 'n/a — run npm run model:fetch-public' : `${Math.round(m.category.holdoutAccuracy * 100)}% on ${m.category.holdoutSize}`}`);
 if (!docs.length) console.log('tip: npm run model:fetch-public downloads ~340 public postmortems for a stronger base model');
+
+// Golden set: hand-written incidents, one or two per failure family, in an engineer's own words.
+const golden = evaluate(model);
+console.log(`\ngolden set (${GOLDEN.length} hand-written incidents, ${new Set(GOLDEN.map((g) => g.category)).size} families): ${golden.correct}/${golden.total} = ${Math.round(golden.accuracy * 100)}%`);
+for (const miss of golden.misses) console.log(`  miss: ${miss}`);
+for (const item of SEVERITY_GOLDEN) {
+  console.log(`  severity check: ${model.classifySeverity(item.text).severity} (expected ${item.severity})`);
+}
 
 const samples = [
   'Checkout returning 502 errors right after the payments-api deploy; rolled back',
