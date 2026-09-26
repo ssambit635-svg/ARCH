@@ -1,4 +1,5 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config({ override: true });
 /**
  * `npm run github:check` — offline-safe diagnosis of the V4 GitHub wiring, without the UI.
  *

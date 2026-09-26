@@ -1,4 +1,9 @@
 import { z } from 'zod';
+import dotenv from 'dotenv';
+
+if (process.env.NODE_ENV !== 'test') {
+  dotenv.config({ override: true });
+}
 
 /**
  * Environment contract. Everything the server reads at runtime is validated here once, so a
