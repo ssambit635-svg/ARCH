@@ -1,10 +1,61 @@
 @import 'tailwindcss';
 
 /*
- * ARCH design language: a dark operations console. Neutral slate surfaces, one accent (indigo)
- * for actions, and a strict status palette so an operator can read a screen in a glance:
- * status colours are reserved for status — never used for decoration.
+ * ARCH design language — a dark operations console.
+ * Layered abyss surfaces, one accent (indigo→violet) for actions and AI,
+ * and a strict status palette reserved for status — never decoration.
  */
+
+@theme {
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --color-abyss-950: #04060d;
+  --color-abyss-900: #070b16;
+  --color-abyss-850: #0a101f;
+  --color-abyss-800: #0e1526;
+  --color-abyss-700: #16203a;
+
+  --color-arch-300: #b9c2ff;
+  --color-arch-400: #8f9bff;
+  --color-arch-500: #6b76ff;
+  --color-arch-600: #525df5;
+  --color-arch-700: #3f46c8;
+
+  --animate-fade-in: fade-in 0.35s ease both;
+  --animate-rise: rise 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-scale-in: scale-in 0.18s ease-out both;
+  --animate-slide-in-right: slide-in-right 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
+  --animate-shimmer: shimmer 1.8s linear infinite;
+  --animate-spin-slow: spin 2.5s linear infinite;
+
+  @keyframes fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes scale-in {
+    from { opacity: 0; transform: scale(0.96) translateY(4px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+  }
+  @keyframes slide-in-right {
+    from { opacity: 0; transform: translateX(16px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 currentColor; }
+    50% { opacity: 0.55; }
+  }
+  @keyframes shimmer {
+    from { background-position: -200% 0; }
+    to { background-position: 200% 0; }
+  }
+}
+
 :root {
   color-scheme: dark;
   --arch-accent: oklch(0.62 0.19 265);
@@ -16,20 +67,94 @@ body {
 }
 
 body {
-  @apply bg-slate-950 text-slate-100 antialiased;
-  font-family:
-    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  @apply bg-abyss-950 font-sans text-slate-200 antialiased;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  text-rendering: optimizeLegibility;
+}
+
+/* Ambient backdrop: faint grid + aurora glow, fixed behind the app shell. */
+.arch-backdrop {
+  background-image:
+    radial-gradient(ellipse 60% 40% at 15% -5%, rgba(99, 102, 241, 0.12), transparent),
+    radial-gradient(ellipse 50% 35% at 85% 0%, rgba(168, 85, 247, 0.08), transparent),
+    linear-gradient(rgba(148, 163, 184, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.035) 1px, transparent 1px);
+  background-size: auto, auto, 44px 44px, 44px 44px;
+  mask-image: linear-gradient(to bottom, black 0%, black 55%, transparent 100%);
 }
 
 ::selection {
   background: color-mix(in oklab, var(--arch-accent) 45%, transparent);
 }
 
-/* Focus rings must stay visible for keyboard users on every interactive element. */
+/* Focus rings stay visible for keyboard users on every interactive element. */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   @apply outline-2 outline-offset-2 outline-indigo-400;
 }
 
 .arch-mono {
-  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  font-family: var(--font-mono);
+}
+
+/* Thin, dark scrollbars that don't shout. */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(51 65 85 / 0.8) transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: rgb(51 65 85 / 0.8);
+  border-radius: 8px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.text-gradient {
+  background: linear-gradient(120deg, #e0e7ff 20%, #a5b4fc 55%, #c4b5fd 90%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.glass {
+  background: rgb(10 16 31 / 0.72);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+.card-lift {
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.card-lift:hover {
+  transform: translateY(-1px);
+  border-color: rgb(129 140 248 / 0.35);
+  box-shadow: 0 12px 40px -12px rgb(79 70 229 / 0.35);
+}
+
+.link-row {
+  transition: background-color 0.15s ease;
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(100deg, rgb(30 41 59 / 0.6) 40%, rgb(51 65 85 / 0.6) 50%, rgb(30 41 59 / 0.6) 60%);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+/* Command palette + modal entrance helpers */
+.layer-shadow {
+  box-shadow: 0 24px 80px -12px rgb(0 0 0 / 0.7), 0 0 0 1px rgb(255 255 255 / 0.06);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

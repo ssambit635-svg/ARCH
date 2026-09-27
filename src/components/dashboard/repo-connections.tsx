@@ -24,16 +24,16 @@ export type RepoConnectionView = {
 export function ConnectRepoForm() {
   const [state, formAction] = useActionState<ActionResult | undefined, FormData>(connectRepoAction, undefined);
   return (
-    <form action={formAction} className="space-y-3 rounded-lg border border-slate-800 bg-slate-900/40 p-4">
+    <form action={formAction} className="space-y-3 rounded-lg border border-white/[0.07] bg-white/[0.02] p-4">
       <h3 className="text-sm font-medium text-white">Connect GitHub repo</h3>
       <p className="text-xs text-slate-400">M1: Repo link hua, RBAC enforced. Only OWNER/ADMIN can connect.</p>
       <div className="grid grid-cols-2 gap-2">
-        <input name="owner" placeholder="Owner (e.g., acme)" className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-200" required />
-        <input name="repo" placeholder="Repo (e.g., api)" className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-200" required />
+        <input name="owner" placeholder="Owner (e.g., acme)" className="rounded border border-white/10 bg-abyss-900 px-2 py-1 text-sm text-slate-200" required />
+        <input name="repo" placeholder="Repo (e.g., api)" className="rounded border border-white/10 bg-abyss-900 px-2 py-1 text-sm text-slate-200" required />
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <input name="defaultBranch" placeholder="Default branch (main)" className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-200" />
-        <input name="pinnedCommitSha" placeholder="Pinned commit SHA (optional)" className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200 arch-mono" />
+        <input name="defaultBranch" placeholder="Default branch (main)" className="rounded border border-white/10 bg-abyss-900 px-2 py-1 text-sm text-slate-200" />
+        <input name="pinnedCommitSha" placeholder="Pinned commit SHA (optional)" className="rounded border border-white/10 bg-abyss-900 px-2 py-1 text-xs text-slate-200 arch-mono" />
       </div>
       <SubmitButton pendingLabel="Connecting…">Connect repo</SubmitButton>
       <Outcome state={state} />
@@ -46,7 +46,7 @@ export function RepoConnectionItem({ connection }: { connection: RepoConnectionV
   const [deactState, deactAction] = useActionState<ActionResult | undefined, FormData>(deactivateRepoAction, undefined);
 
   return (
-    <li className="flex flex-col gap-2 rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+    <li className="flex flex-col gap-2 rounded-lg border border-white/[0.07] bg-abyss-950/50 p-3">
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-white">{connection.fullName}</p>
         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs ${connection.isActive ? 'bg-emerald-500/15 text-emerald-300' : 'bg-slate-500/15 text-slate-400'}`}>{connection.isActive ? 'active' : 'inactive'}</span>
@@ -57,7 +57,7 @@ export function RepoConnectionItem({ connection }: { connection: RepoConnectionV
 
       <form action={pinAction} className="flex gap-2">
         <input type="hidden" name="repoConnectionId" value={connection.id} />
-        <input name="commitSha" placeholder="New commit SHA to pin" className="flex-1 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200 arch-mono" required />
+        <input name="commitSha" placeholder="New commit SHA to pin" className="flex-1 rounded border border-white/10 bg-abyss-900 px-2 py-1 text-xs text-slate-200 arch-mono" required />
         <SubmitButton variant="secondary" pendingLabel="Pinning…">
           Pin commit
         </SubmitButton>

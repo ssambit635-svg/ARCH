@@ -16,8 +16,9 @@ export default async function OnboardingPage() {
   if ((await listOrganizations(user.id)).length) redirect('/dashboard');
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-12">
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-6">
+    <main className="relative mx-auto flex min-h-screen max-w-lg flex-col justify-center px-6 py-12">
+      <div className="arch-backdrop pointer-events-none fixed inset-0" aria-hidden />
+      <div className="relative animate-rise rounded-2xl border border-white/[0.08] bg-abyss-850/80 p-6 shadow-[0_24px_80px_-24px_rgb(0_0_0/0.8)] backdrop-blur sm:p-8">
         <h1 className="text-xl font-semibold text-white">Welcome to ARCH</h1>
         <p className="mt-2 text-sm text-slate-300">
           You are signed in as {user.email}. Create your organization to start using the dashboard,

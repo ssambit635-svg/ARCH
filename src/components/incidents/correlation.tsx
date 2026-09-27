@@ -76,7 +76,7 @@ export function CorrelationPanel({ incidentId }: { incidentId: string }) {
   const badge = data ? EVIDENCE_BADGE[data.sharedRootCause.evidence] : null;
 
   return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+    <section className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4">
       <header className="mb-3">
         <h2 className="text-sm font-medium text-white">Repeat alerts &amp; shared root cause</h2>
         <p className="text-xs text-slate-500">
@@ -91,7 +91,7 @@ export function CorrelationPanel({ incidentId }: { incidentId: string }) {
       {!loading && !error && data ? (
         <div className="space-y-4">
           <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-            <span className="rounded bg-slate-800/80 px-2 py-0.5 font-mono text-[10px] text-slate-400">
+            <span className="rounded bg-white/[0.07] px-2 py-0.5 font-mono text-[10px] text-slate-400">
               fp {data.fingerprint.slice(0, 10)}
             </span>
             <span>
@@ -106,7 +106,7 @@ export function CorrelationPanel({ incidentId }: { incidentId: string }) {
               <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Same alert signature</h3>
               <ul className="mt-2 space-y-2">
                 {data.repeats.map((repeat) => (
-                  <li key={repeat.id} className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+                  <li key={repeat.id} className="rounded-lg border border-white/[0.07] bg-abyss-950/50 p-3">
                     <div className="flex items-start justify-between gap-2">
                       {repeat.current ? (
                         <span className="text-sm text-slate-300">{repeat.title} <span className="text-xs text-slate-500">(this incident)</span></span>
@@ -130,7 +130,7 @@ export function CorrelationPanel({ incidentId }: { incidentId: string }) {
           )}
 
           {badge ? (
-            <div className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+            <div className="rounded-lg border border-white/[0.07] bg-abyss-950/50 p-3">
               <div className="flex items-center gap-2">
                 <span className={`rounded px-2 py-0.5 text-[10px] font-medium ${badge.className}`}>{badge.label}</span>
                 {data.sharedRootCause.categoryLabel ? (

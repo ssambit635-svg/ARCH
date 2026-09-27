@@ -46,20 +46,20 @@ export function AddKnowledgeForm({ canManage }: { canManage: boolean }) {
     );
   }
   return (
-    <form action={formAction} className="space-y-3 rounded-lg border border-slate-800 bg-slate-900/40 p-4">
+    <form action={formAction} className="space-y-3 rounded-lg border border-white/[0.07] bg-white/[0.02] p-4">
       <h3 className="text-sm font-medium text-white">Index a document</h3>
       <p className="text-xs text-slate-400">
         Paste a runbook, doc or note. ARCH splits it into retrievable passages and embeds them on this
-        server — nothing is sent anywhere. Copilot drafts then cite it by name.
+        server — nothing is sent anywhere. ARCH V1.1 drafts then cite it by name.
       </p>
       <div className="grid grid-cols-2 gap-2">
         <input
           name="name"
           placeholder="Name (e.g. Database pool runbook)"
-          className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-200"
+          className="rounded border border-white/10 bg-abyss-900 px-2 py-1 text-sm text-slate-200"
           required
         />
-        <select name="kind" defaultValue="RUNBOOK" className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-200">
+        <select name="kind" defaultValue="RUNBOOK" className="rounded border border-white/10 bg-abyss-900 px-2 py-1 text-sm text-slate-200">
           <option value="RUNBOOK">Runbook</option>
           <option value="DOC">Document</option>
           <option value="NOTE">Note</option>
@@ -70,7 +70,7 @@ export function AddKnowledgeForm({ canManage }: { canManage: boolean }) {
         name="text"
         rows={7}
         placeholder={'# Runbook: database pool exhaustion\n\nSymptoms: …\n\nSteps:\n1. …'}
-        className="w-full rounded border border-slate-700 bg-slate-900 px-2 py-1 font-mono text-xs text-slate-200"
+        className="w-full rounded border border-white/10 bg-abyss-900 px-2 py-1 font-mono text-xs text-slate-200"
         required
       />
       <SubmitButton pendingLabel="Indexing…">Index document</SubmitButton>
@@ -84,7 +84,7 @@ export function FetchKnowledgeForm({ enabled, canManage }: { enabled: boolean; c
   const [state, formAction] = useActionState<ActionResult | undefined, FormData>(fetchKnowledgeAction, undefined);
   if (!canManage) return null;
   return (
-    <form action={formAction} className="space-y-3 rounded-lg border border-slate-800 bg-slate-900/40 p-4">
+    <form action={formAction} className="space-y-3 rounded-lg border border-white/[0.07] bg-white/[0.02] p-4">
       <h3 className="text-sm font-medium text-white">Fetch a public document</h3>
       <p className="text-xs text-slate-400">
         {enabled
@@ -96,14 +96,14 @@ export function FetchKnowledgeForm({ enabled, canManage }: { enabled: boolean; c
           name="url"
           type="url"
           placeholder="https://example.com/runbook.md"
-          className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-200"
+          className="rounded border border-white/10 bg-abyss-900 px-2 py-1 text-sm text-slate-200"
           disabled={!enabled}
           required
         />
         <input
           name="name"
           placeholder="Name (optional)"
-          className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-sm text-slate-200"
+          className="rounded border border-white/10 bg-abyss-900 px-2 py-1 text-sm text-slate-200"
           disabled={!enabled}
         />
       </div>
@@ -121,12 +121,12 @@ export function KnowledgeSourceList({ sources, canDelete }: { sources: Knowledge
   if (sources.length === 0) {
     return (
       <p className="text-sm text-slate-400">
-        Nothing indexed yet. Add a runbook and the next Copilot draft will cite it instead of guessing.
+        Nothing indexed yet. Add a runbook and the next ARCH V1.1 draft will cite it instead of guessing.
       </p>
     );
   }
   return (
-    <ul className="divide-y divide-slate-800">
+    <ul className="divide-y divide-white/[0.05]">
       {sources.map((source) => (
         <li key={source.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
           <div className="min-w-0">

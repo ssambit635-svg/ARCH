@@ -126,7 +126,7 @@ export function ChangeRiskPanel({ serviceId }: { serviceId?: string | null }) {
   }, [serviceId]);
 
   return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+    <section className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4">
       <header className="mb-3">
         <h2 className="text-sm font-medium text-white">Change risk</h2>
         <p className="text-xs text-slate-500">
@@ -144,7 +144,7 @@ export function ChangeRiskPanel({ serviceId }: { serviceId?: string | null }) {
           ) : (
             <ul className="space-y-2">
               {data.changes.slice(0, 5).map((change) => (
-                <li key={change.changeId} className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+                <li key={change.changeId} className="rounded-lg border border-white/[0.07] bg-abyss-950/50 p-3">
                   <div className="flex items-start justify-between gap-2">
                     <p className="text-sm text-slate-200">{change.title}</p>
                     <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${BAND_STYLE[change.risk.band]}`}>

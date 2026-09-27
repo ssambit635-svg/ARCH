@@ -46,8 +46,8 @@ export function ApiTokenManager({ organizationId, initialTokens }: { organizatio
 
   return <div className="space-y-4">
     <form action={create} className="flex flex-wrap items-end gap-3">
-      <label className="text-sm text-slate-200">Token name <input name="name" required maxLength={100} className="block rounded bg-slate-900 p-2 text-white" /></label>
-      <label className="text-sm text-slate-200">Scope <select name="scope" className="block rounded bg-slate-900 p-2 text-white"><option value="READ">Read only</option><option value="READ_WRITE">Read and write</option></select></label>
+      <label className="text-sm text-slate-200">Token name <input name="name" required maxLength={100} className="block rounded bg-abyss-900 p-2 text-white" /></label>
+      <label className="text-sm text-slate-200">Scope <select name="scope" className="block rounded bg-abyss-900 p-2 text-white"><option value="READ">Read only</option><option value="READ_WRITE">Read and write</option></select></label>
       <button disabled={busy} className="rounded bg-cyan-700 px-4 py-2 text-white disabled:opacity-50">Create token</button>
     </form>
     {error && <p role="alert" className="text-red-300">{error}</p>}
@@ -56,7 +56,7 @@ export function ApiTokenManager({ organizationId, initialTokens }: { organizatio
       <code className="block break-all select-all">{secret}</code>
       <button className="mt-2 underline" onClick={() => setSecret(null)}>I have saved it — hide</button>
     </div>}
-    {tokens.length === 0 ? <p className="text-slate-400">No active API tokens.</p> : <ul className="space-y-2">{tokens.map((token) => <li key={token.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-slate-700 p-3 text-sm">
+    {tokens.length === 0 ? <p className="text-slate-400">No active API tokens.</p> : <ul className="space-y-2">{tokens.map((token) => <li key={token.id} className="flex flex-wrap items-center justify-between gap-2 rounded border border-white/10 p-3 text-sm">
       <span>{token.name} · {token.prefix}… · {token.scopes.join(', ')} · last used {token.lastUsedAt ? new Date(token.lastUsedAt).toLocaleString() : 'never'}</span>
       <button disabled={busy} onClick={() => revoke(token.id)} className="text-red-300 underline disabled:opacity-50">Revoke</button>
     </li>)}</ul>}

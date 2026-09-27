@@ -7,14 +7,12 @@ import { listMembers } from '@/server/services/organization.service';
 import { listServices } from '@/server/services/project.service';
 import { isAppError } from '@/lib/errors';
 import { formatDateTime, formatDuration, timeAgo } from '@/lib/format';
-import { Card, CardBody, CardHeader, DefinitionList, PageHeader, SeverityBadge, StatusBadge } from '@/components/ui';
+import { Card, CardBody, CardHeader, DefinitionList, SeverityBadge } from '@/components/ui';
+import { Avatar } from '@/components/ui/avatar';
 import { IncidentTimeline } from '@/components/incidents/timeline';
-import {
-  IncidentAssigneeForm,
-  IncidentCommentForm,
-  IncidentSeverityForm,
-  IncidentStatusActions,
-} from '@/components/incidents/incident-actions';
+import { IncidentAssigneeForm, IncidentSeverityForm } from '@/components/incidents/incident-actions';
+import { IncidentStateDropdown } from '@/components/incident/state-dropdown';
+import { CommentBox } from '@/components/incident/comment-box';
 import { updateIncidentAction } from '@/app/dashboard/actions';
 import { ActionForm } from '@/components/dashboard/action-form';
 import { Field, Select } from '@/components/ui/form';
@@ -122,42 +120,105 @@ export default async function IncidentDetailPage({ params }: { params: Promise<{
     isActive: rc.isActive,
   }));
 
-  return (
-    <div>
-      <PageHeader
-        title={incident.title}
-        description={`${incident.project.name}${incident.service ? ` · ${incident.service.name}` : ''} · opened ${timeAgo(incident.startedAt)} by ${
-          incident.createdBy?.name ?? incident.createdBy?.email ?? incident.source.toLowerCase()
-        }`}
-        action={
-          <Link className="text-sm text-slate-400 hover:text-slate-200" href="/dashboard/incidents">
-            ← All incidents
-          </Link>
-        }
-      />
+  const canWrite = roleHasPermission(organization.role, 'incident.write');
+  const open = incident.status !== 'RESOLVED';
 
-      <div className="mb-6 flex flex-wrap items-center gap-3">
-        <SeverityBadge severity={incident.severity} />
-        <StatusBadge status={incident.status} />
-        <span className="text-xs text-slate-500">
-          source: <span className="arch-mono">{incident.source}</span>
-        </span>
-        {incident.resolvedAt ? (
-          <span className="text-xs text-emerald-300">resolved {timeAgo(incident.resolvedAt)}</span>
-        ) : (
-          <span className="text-xs text-amber-300">open for {formatDuration(incident.startedAt)}</span>
-        )}
+  return (
+    <div className="animate-rise">
+      {/* Workspace header */}
+      <div className="mb-6">
+        <Link href="/dashboard/incidents" className="mb-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-500 transition hover:text-slate-200">
+          ← All incidents
+        </Link>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="min-w-0 max-w-3xl">
+            <h1 className="text-balance text-2xl font-semibold tracking-tight text-white sm:text-[28px] sm:leading-tight">{incident.title}</h1>
+            <p className="mt-1.5 text-sm text-slate-400">
+              {incident.project.name}
+              {incident.service ? (
+                <>
+                  {' · '}
+                  <Link href={`/dashboard/services/${incident.service.id}`} className="text-indigo-400 transition hover:text-indigo-300 hover:underline">
+                    {incident.service.name}
+                  </Link>
+                </>
+              ) : null}
+              {' · '}opened {timeAgo(incident.startedAt)} by {incident.createdBy?.name ?? incident.createdBy?.email ?? incident.source.toLowerCase()}
+            </p>
+          </div>
+          <div className="flex shrink-0 flex-wrap items-center gap-2.5">
+            <SeverityBadge severity={incident.severity} />
+            <IncidentStateDropdown incidentId={incident.id} status={incident.status} canWrite={canWrite} />
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+          <span className="arch-mono">source: {incident.source}</span>
+          {incident.resolvedAt ? (
+            <span className="font-medium text-emerald-300">✓ resolved {timeAgo(incident.resolvedAt)}</span>
+          ) : (
+            <span className="font-medium text-amber-300">● open for {formatDuration(incident.startedAt)}</span>
+          )}
+          {incident.assignedTo ? (
+            <span className="flex items-center gap-1.5">
+              <Avatar name={incident.assignedTo.name} email={incident.assignedTo.email} size="xs" />
+              <span className="text-slate-400">{incident.assignedTo.name ?? incident.assignedTo.email}</span>
+            </span>
+          ) : (
+            <span className="text-slate-500">Unassigned</span>
+          )}
+        </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          {blastRadius.affectedServices.length > 0 ? <Card><CardHeader title="Blast radius & correlated changes" description={`${blastRadius.affectedServices.length} service(s) in the dependency chain`} /><CardBody><div className="flex flex-wrap gap-2">{blastRadius.affectedServices.map((service) => <span key={service.id} className="rounded-full bg-rose-500/10 px-2.5 py-1 text-xs text-rose-200">{service.name} · {service.status}</span>)}</div>{blastRadius.relatedChanges.length > 0 ? <div className="mt-4 border-t border-slate-800 pt-3 text-sm text-slate-300"><p className="mb-2 text-xs uppercase tracking-wide text-slate-500">Recent changes before incident</p>{blastRadius.relatedChanges.slice(0, 5).map((change) => <p key={change.id} className="py-1">{change.title} <span className="text-xs text-slate-500">({change.type})</span></p>)}</div> : <p className="mt-3 text-xs text-slate-500">No matching deployment changes found in the previous 7 days.</p>}</CardBody></Card> : null}
+      <div className="grid items-start gap-6 xl:grid-cols-3">
+        {/* Main column */}
+        <div className="space-y-6 xl:col-span-2">
+          {blastRadius.affectedServices.length > 0 ? (
+            <Card className="!border-rose-500/20">
+              <CardHeader title="Blast radius" description={`${blastRadius.affectedServices.length} service(s) in the dependency chain`} />
+              <CardBody>
+                <div className="flex flex-wrap gap-2">
+                  {blastRadius.affectedServices.map((service) => (
+                    <Link
+                      key={service.id}
+                      href={`/dashboard/services/${service.id}`}
+                      className="rounded-full bg-rose-500/10 px-2.5 py-1 text-xs font-medium text-rose-200 ring-1 ring-inset ring-rose-500/25 transition hover:bg-rose-500/20"
+                    >
+                      {service.name} · {service.status}
+                    </Link>
+                  ))}
+                </div>
+                {blastRadius.relatedChanges.length > 0 ? (
+                  <div className="mt-4 border-t border-white/[0.06] pt-3 text-sm text-slate-300">
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Recent changes before incident</p>
+                    {blastRadius.relatedChanges.slice(0, 5).map((change) => (
+                      <p key={change.id} className="py-1 text-[13px]">
+                        {change.title} <span className="text-xs text-slate-500">({change.type})</span>
+                      </p>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="mt-3 text-xs text-slate-500">No matching deployment changes found in the previous 7 days.</p>
+                )}
+              </CardBody>
+            </Card>
+          ) : null}
+
           <CorrelationPanel incidentId={incident.id} />
           <SimilarIncidentsPanel incidentId={incident.id} initialTitle={incident.title} />
+
           <Card>
-            <CardHeader title="Timeline" description="Every comment, status change and assignment, in order." />
+            <CardHeader title="Response timeline" description="Every comment, status change and assignment, in order." />
             <IncidentTimeline events={incident.events} />
           </Card>
+
+          {canWrite && open ? (
+            <Card>
+              <CardHeader title="Add an update" description="Updates notify the responders and land in the audit trail." />
+              <CardBody>
+                <CommentBox incidentId={incident.id} />
+              </CardBody>
+            </Card>
+          ) : null}
 
           <CopilotPanel
             incidentId={incident.id}
@@ -174,50 +235,14 @@ export default async function IncidentDetailPage({ params }: { params: Promise<{
             repoConnections={repoConnectionViews}
             verifications={verificationViews}
           />
-
-          <Card>
-            <CardHeader title="Add an update" description="Updates notify the responders and land in the audit trail." />
-            <CardBody>
-              <IncidentCommentForm incidentId={incident.id} />
-            </CardBody>
-          </Card>
-
-          <Card>
-            <CardHeader title="Details" />
-            <CardBody>
-              <DefinitionList
-                items={[
-                  { label: 'Incident id', value: <span className="arch-mono text-xs">{incident.id}</span> },
-                  { label: 'Project', value: incident.project.name },
-                  { label: 'Service', value: incident.service?.name ?? '—' },
-                  { label: 'Assignee', value: incident.assignedTo?.name ?? incident.assignedTo?.email ?? 'Nobody yet' },
-                  { label: 'Started', value: formatDateTime(incident.startedAt) },
-                  { label: 'Resolved', value: incident.resolvedAt ? formatDateTime(incident.resolvedAt) : '—' },
-                  { label: 'Duration', value: formatDuration(incident.startedAt, incident.resolvedAt) },
-                  { label: 'Last update', value: formatDateTime(incident.updatedAt) },
-                ]}
-              />
-              {incident.description ? (
-                <div className="mt-4 border-t border-slate-800 pt-4">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">Description</p>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-slate-300">{incident.description}</p>
-                </div>
-              ) : null}
-            </CardBody>
-          </Card>
         </div>
 
-        <div className="space-y-6">
+        {/* Right rail */}
+        <div className="space-y-6 xl:sticky xl:top-[68px]">
           <AskArchPanel incidentId={incident.id} />
-          <Card>
-            <CardHeader title="Move the incident" description="Transitions follow the incident state machine." />
-            <CardBody>
-              <IncidentStatusActions incidentId={incident.id} status={incident.status} />
-            </CardBody>
-          </Card>
 
           <Card>
-            <CardHeader title="Triage" />
+            <CardHeader title="Triage" description="Severity, owner and service linkage." />
             <CardBody className="space-y-5">
               <IncidentAssigneeForm incidentId={incident.id} assignedToId={incident.assignedToId} assignees={assignable} />
               <IncidentSeverityForm incidentId={incident.id} severity={incident.severity} />
@@ -234,6 +259,29 @@ export default async function IncidentDetailPage({ params }: { params: Promise<{
                   </Select>
                 </Field>
               </ActionForm>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader title="Details" />
+            <CardBody>
+              <DefinitionList
+                items={[
+                  { label: 'Incident id', value: <span className="arch-mono text-xs">{incident.id.slice(0, 8)}</span> },
+                  { label: 'Project', value: incident.project.name },
+                  { label: 'Service', value: incident.service?.name ?? '—' },
+                  { label: 'Started', value: formatDateTime(incident.startedAt) },
+                  { label: 'Resolved', value: incident.resolvedAt ? formatDateTime(incident.resolvedAt) : '—' },
+                  { label: 'Duration', value: formatDuration(incident.startedAt, incident.resolvedAt) },
+                  { label: 'Last update', value: formatDateTime(incident.updatedAt) },
+                ]}
+              />
+              {incident.description ? (
+                <div className="mt-4 border-t border-white/[0.06] pt-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Description</p>
+                  <p className="mt-1.5 whitespace-pre-wrap text-[13px] leading-relaxed text-slate-300">{incident.description}</p>
+                </div>
+              ) : null}
             </CardBody>
           </Card>
         </div>

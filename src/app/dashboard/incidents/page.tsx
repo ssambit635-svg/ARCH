@@ -3,8 +3,11 @@ import type { Metadata } from 'next';
 import { requireDashboardContext } from '@/lib/session';
 import { listIncidents } from '@/server/services/incident.service';
 import { listProjects } from '@/server/services/project.service';
-import { timeAgo } from '@/lib/format';
-import { Card, EmptyState, PageHeader, Pagination, SeverityBadge, StatusBadge, Table } from '@/components/ui';
+import { incidentRepository } from '@/server/repositories/incident.repository';
+import { Card, EmptyState, PageHeader, Pagination, Table } from '@/components/ui';
+import { ButtonLink } from '@/components/ui/button';
+import { SegmentedControl } from '@/components/ui/segmented';
+import { IncidentRow } from '@/components/incident/incident-row';
 import { incidentListQuerySchema } from '@/lib/validation';
 
 export const metadata: Metadata = { title: 'Incidents' };
@@ -15,6 +18,8 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 function first(value: string | string[] | undefined): string | undefined {
   return Array.isArray(value) ? value[0] : value;
 }
+
+const STATUSES = ['INVESTIGATING', 'IDENTIFIED', 'MONITORING', 'RESOLVED'] as const;
 
 export default async function IncidentsPage({ searchParams }: { searchParams: SearchParams }) {
   const { user, organization } = await requireDashboardContext();
@@ -30,7 +35,7 @@ export default async function IncidentsPage({ searchParams }: { searchParams: Se
     open: first(params.open),
   });
 
-  const [{ items, total, totalPages, page }, projects] = await Promise.all([
+  const [{ items, total, totalPages, page }, projects, openCount, byStatus] = await Promise.all([
     listIncidents({
       organizationId: organization.id,
       userId: user.id,
@@ -45,7 +50,25 @@ export default async function IncidentsPage({ searchParams }: { searchParams: Se
       },
     }),
     listProjects({ organizationId: organization.id, userId: user.id }),
+    incidentRepository.count(organization.id, { open: true }),
+    incidentRepository.countByStatus(organization.id),
   ]);
+
+  const statusCount = (status: string) => byStatus.find((row) => row.status === status)?._count._all ?? 0;
+
+  const hrefWith = (overrides: Record<string, string | undefined>) => {
+    const next = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      const single = first(value);
+      if (single && key !== 'page') next.set(key, single);
+    }
+    for (const [key, value] of Object.entries(overrides)) {
+      if (value) next.set(key, value);
+      else next.delete(key);
+    }
+    const queryString = next.toString();
+    return `/dashboard/incidents${queryString ? `?${queryString}` : ''}`;
+  };
 
   const buildHref = (nextPage: number) => {
     const next = new URLSearchParams();
@@ -57,43 +80,52 @@ export default async function IncidentsPage({ searchParams }: { searchParams: Se
     return `/dashboard/incidents?${next.toString()}`;
   };
 
+  const hasFilters = Boolean(query.q ?? query.status ?? query.severity ?? query.projectId ?? query.open);
+
   return (
-    <div>
+    <div className="animate-rise">
       <PageHeader
+        eyebrow="Respond"
         title="Incidents"
-        description={`${total} incident${total === 1 ? '' : 's'} matching the current filters.`}
-        action={
-          <Link className="rounded-lg bg-rose-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-rose-500" href="/dashboard/incidents/new">
-            Declare incident
-          </Link>
+        description={
+          openCount > 0
+            ? `${openCount} open · ${total} matching the current filters`
+            : `${total} incident${total === 1 ? '' : 's'} in history — nothing open`
         }
+        action={<ButtonLink href="/dashboard/incidents/new" variant="danger">+ Declare incident</ButtonLink>}
       />
 
-      <Card className="mb-6">
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <SegmentedControl
+          options={[
+            { label: 'Open', href: hrefWith({ open: 'true', status: undefined }), active: query.open === true && !query.status, count: openCount },
+            ...STATUSES.map((status) => ({
+              label: status.charAt(0) + status.slice(1).toLowerCase(),
+              href: hrefWith({ status, open: undefined }),
+              active: query.status === status,
+              count: statusCount(status),
+            })),
+            { label: 'All', href: hrefWith({ open: undefined, status: undefined }), active: !query.open && !query.status, count: null },
+          ]}
+        />
+      </div>
+
+      <Card className="mb-5">
         <form className="flex flex-wrap items-end gap-3 px-5 py-4" method="get">
-          <label className="text-sm">
-            <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500">Search</span>
+          {query.status ? <input type="hidden" name="status" value={query.status} /> : null}
+          {query.open ? <input type="hidden" name="open" value="true" /> : null}
+          <label className="min-w-52 flex-1 text-sm">
+            <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Search</span>
             <input
               name="q"
               defaultValue={query.q ?? ''}
-              placeholder="Title or description"
-              className="w-56 rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm"
+              placeholder="Title or description…"
+              className="w-full rounded-xl border border-white/10 bg-abyss-950/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 transition focus:border-indigo-500/60 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
             />
           </label>
           <label className="text-sm">
-            <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500">Status</span>
-            <select name="status" defaultValue={query.status ?? ''} className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm">
-              <option value="">Any</option>
-              {['INVESTIGATING', 'IDENTIFIED', 'MONITORING', 'RESOLVED'].map((status) => (
-                <option key={status} value={status}>
-                  {status}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-sm">
-            <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500">Severity</span>
-            <select name="severity" defaultValue={query.severity ?? ''} className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm">
+            <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Severity</span>
+            <select name="severity" defaultValue={query.severity ?? ''} className="rounded-xl border border-white/10 bg-abyss-950/70 px-3 py-2 text-sm text-slate-200">
               <option value="">Any</option>
               {['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map((severity) => (
                 <option key={severity} value={severity}>
@@ -103,8 +135,8 @@ export default async function IncidentsPage({ searchParams }: { searchParams: Se
             </select>
           </label>
           <label className="text-sm">
-            <span className="mb-1 block text-xs uppercase tracking-wide text-slate-500">Project</span>
-            <select name="projectId" defaultValue={query.projectId ?? ''} className="rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-2 text-sm">
+            <span className="mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Project</span>
+            <select name="projectId" defaultValue={query.projectId ?? ''} className="rounded-xl border border-white/10 bg-abyss-950/70 px-3 py-2 text-sm text-slate-200">
               <option value="">Any</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
@@ -113,54 +145,31 @@ export default async function IncidentsPage({ searchParams }: { searchParams: Se
               ))}
             </select>
           </label>
-          <label className="flex items-center gap-2 pb-2 text-sm text-slate-300">
-            <input type="checkbox" name="open" value="true" defaultChecked={query.open === true} className="size-4 rounded border-slate-700 bg-slate-950" />
-            Open only
-          </label>
-          <button type="submit" className="rounded-lg border border-slate-700 px-3.5 py-2 text-sm text-slate-200 hover:bg-slate-800">
-            Apply filters
+          <button type="submit" className="rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2 text-sm font-medium text-slate-200 transition hover:border-white/20 hover:bg-white/[0.08]">
+            Apply
           </button>
-          <Link className="pb-2 text-sm text-slate-400 hover:text-slate-200" href="/dashboard/incidents">
-            Reset
-          </Link>
+          {hasFilters ? (
+            <Link className="pb-2 text-sm text-slate-500 transition hover:text-slate-200" href="/dashboard/incidents">
+              Reset
+            </Link>
+          ) : null}
         </form>
       </Card>
 
       <Card>
         {items.length === 0 ? (
-          <EmptyState
-            title="No incidents match"
-            description="Try clearing the filters, or declare a new incident to get started."
-            action={
-              <Link className="rounded-lg bg-indigo-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-indigo-500" href="/dashboard/incidents/new">
-                Declare incident
-              </Link>
-            }
-          />
+          <div className="p-5">
+            <EmptyState
+              title="No incidents match"
+              description="Try clearing the filters — or declare a new incident to get started."
+              action={<ButtonLink href="/dashboard/incidents/new" variant="primary">Declare incident</ButtonLink>}
+            />
+          </div>
         ) : (
           <>
-            <Table head={['Incident', 'Severity', 'Status', 'Project / service', 'Assigned', 'Updated']}>
+            <Table head={['Incident', 'Severity', 'Status', 'Service', 'Assignee', 'Updated']}>
               {items.map((incident) => (
-                <tr key={incident.id} className="hover:bg-slate-800/40">
-                  <td className="px-4 py-3">
-                    <Link className="font-medium text-slate-100 hover:text-white" href={`/dashboard/incidents/${incident.id}`}>
-                      {incident.title}
-                    </Link>
-                    <p className="text-xs text-slate-500">Started {timeAgo(incident.startedAt)}</p>
-                  </td>
-                  <td className="px-4 py-3">
-                    <SeverityBadge severity={incident.severity} />
-                  </td>
-                  <td className="px-4 py-3">
-                    <StatusBadge status={incident.status} />
-                  </td>
-                  <td className="px-4 py-3 text-slate-300">
-                    {incident.project.name}
-                    {incident.service ? <span className="text-slate-500"> · {incident.service.name}</span> : null}
-                  </td>
-                  <td className="px-4 py-3 text-slate-300">{incident.assignedTo?.name ?? incident.assignedTo?.email ?? '—'}</td>
-                  <td className="px-4 py-3 text-slate-400">{timeAgo(incident.updatedAt)}</td>
-                </tr>
+                <IncidentRow key={incident.id} incident={incident} />
               ))}
             </Table>
             <Pagination page={page} totalPages={totalPages} buildHref={buildHref} />

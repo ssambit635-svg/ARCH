@@ -12,7 +12,7 @@ import { ActionForm } from '@/components/dashboard/action-form';
 import { RefreshWhile } from '@/components/dashboard/refresh-while';
 import { activateModelVersionAction, rollbackModelAction, trainModelAction } from '@/app/dashboard/actions';
 
-export const metadata: Metadata = { title: 'ARCH Model' };
+export const metadata: Metadata = { title: 'ARCH V1.1' };
 export const dynamic = 'force-dynamic';
 
 function pct(value: number | null | undefined): string {
@@ -20,7 +20,7 @@ function pct(value: number | null | undefined): string {
 }
 
 function Code({ children }: { children: string }) {
-  return <pre className="arch-mono overflow-x-auto rounded-lg border border-slate-800 bg-slate-950/70 p-3 text-xs leading-relaxed text-slate-300">{children}</pre>;
+  return <pre className="arch-mono overflow-x-auto rounded-lg border border-white/[0.07] bg-abyss-950/80 p-3 text-xs leading-relaxed text-slate-300">{children}</pre>;
 }
 
 const STATUS_TONE: Record<VersionSummary['status'], 'success' | 'neutral' | 'danger'> = {
@@ -53,7 +53,7 @@ function VersionRegistry({ versions, activeVersionId, canManage }: { versions: V
             <th className="py-2 font-medium">Evaluation</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800/70">
+        <tbody className="divide-y divide-white/[0.05]/70">
           {versions.map((version) => (
             <tr key={version.id} className="align-top text-slate-300">
               <td className="py-2 pr-3 font-medium">v{version.version}</td>
@@ -99,7 +99,7 @@ export default async function ModelPage() {
   const drift = status.drift;
 
   // V6 — what the model is learning beyond resolved incidents: human corrections and the
-  // knowledge base Copilot cites. Both are best-effort so the page never fails on them.
+  // knowledge base ARCH V1.1 cites. Both are best-effort so the page never fails on them.
   const [feedback, knowledgeSources] = await Promise.all([
     feedbackSummary(organization.id).catch(() => null),
     listKnowledgeSources({ organizationId: organization.id, userId: user.id }).catch(() => []),
@@ -108,7 +108,7 @@ export default async function ModelPage() {
   const corrections = feedback ? (feedback.byKind.SEVERITY_CORRECTED ?? 0) + (feedback.byKind.CATEGORY_CORRECTED ?? 0) : 0;
 
   return (
-    <div className="space-y-6">
+    <div className="animate-rise space-y-6">
       <RefreshWhile active={jobInProgress} />
       {drift ? (
         <Alert tone="info">
@@ -119,18 +119,19 @@ export default async function ModelPage() {
         </Alert>
       ) : null}
       <PageHeader
-        title="ARCH Model"
+        eyebrow="Intelligence"
+        title="ARCH V1.1"
         description="ARCH's own AI, trained on this workspace's incidents. It runs on your server: no OpenAI, no Anthropic, no GPU bill."
       />
 
       <Card>
         <CardHeader
           title="Privacy"
-          description="Where Copilot and Code Assist run."
+          description="Where ARCH V1.1 and Code Assist run."
           action={config.onPremise ? <Badge tone="success">on-premise · no data leaves</Badge> : <Badge tone="danger">external</Badge>}
         />
         <CardBody>
-          {!config.enabled ? <Alert tone="error">Copilot is disabled: {config.reason}</Alert> : null}
+          {!config.enabled ? <Alert tone="error">ARCH V1.1 is disabled: {config.reason}</Alert> : null}
           <DefinitionList
             items={[
               { label: 'Mode', value: <span className="arch-mono">AI_PROVIDER=&quot;{config.provider}&quot;</span> },
@@ -219,7 +220,7 @@ export default async function ModelPage() {
                   label: 'Knowledge base',
                   value:
                     knowledgeSources.length === 0 ? (
-                      <span className="text-amber-300">empty — Copilot has nothing to cite yet</span>
+                      <span className="text-amber-300">empty — ARCH V1.1 has nothing to cite yet</span>
                     ) : (
                       `${knowledgeSources.length} source${knowledgeSources.length === 1 ? '' : 's'} · ${knowledgeChunks} retrievable chunk${knowledgeChunks === 1 ? '' : 's'}`
                     ),

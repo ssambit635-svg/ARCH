@@ -190,7 +190,12 @@ export async function getPublicStatusPage(slug: string) {
 
   const serviceIds = page.services.map((entry) => entry.serviceId);
   const activeIncidents = await incidentRepository.listActiveForServices(serviceIds);
-  const recentEvents = await incidentRepository.recentEventsForIncidents(activeIncidents.map((incident) => incident.id));
+  const historyWindow = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  const resolvedHistory = await incidentRepository.recentResolvedForServices(serviceIds, historyWindow);
+  const recentEvents = await incidentRepository.recentEventsForIncidents([
+    ...activeIncidents.map((incident) => incident.id),
+    ...resolvedHistory.map((incident) => incident.id),
+  ]);
 
   // Newest-first, so the first event seen for an incident is its latest update.
   const latestUpdateByIncident = new Map<string, (typeof recentEvents)[number]>();
@@ -238,6 +243,20 @@ export async function getPublicStatusPage(slug: string) {
         const event = latestUpdateByIncident.get(incident.id);
         return event ? { body: event.body, actorLabel: event.actorLabel, createdAt: event.createdAt, type: event.type } : null;
       })(),
+    })),
+    // Resolved in the last 90 days — customer-safe subset (no severities, no assignees).
+    history: resolvedHistory.map((incident) => ({
+      id: incident.id,
+      title: incident.title,
+      status: incident.status,
+      severity: incident.severity,
+      serviceId: incident.serviceId,
+      startedAt: incident.startedAt,
+      resolvedAt: incident.resolvedAt,
+      updates: recentEvents
+        .filter((event) => event.incidentId === incident.id && event.body)
+        .slice(0, 6)
+        .map((event) => ({ id: event.id, body: event.body, createdAt: event.createdAt })),
     })),
     generatedAt: new Date(),
   };

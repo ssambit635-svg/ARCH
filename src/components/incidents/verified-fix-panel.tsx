@@ -103,7 +103,7 @@ function EvidenceBundle({ evidence }: { evidence: VerificationView['evidence'] }
           <span className="text-slate-500">Duration:</span> <span className="text-slate-300">{evidence.durationMs}ms</span>
         </div>
       </div>
-      <div className="rounded bg-slate-950/60 p-2">
+      <div className="rounded bg-abyss-950/70 p-2">
         <p className="text-xs font-medium text-slate-400">Safety checks: {evidence.safetyChecks.passed ? 'PASSED' : 'FAILED'}</p>
         {evidence.safetyChecks.failures.length > 0 && (
           <ul className="mt-1 list-disc pl-4 text-xs text-rose-300">
@@ -115,7 +115,7 @@ function EvidenceBundle({ evidence }: { evidence: VerificationView['evidence'] }
           </ul>
         )}
       </div>
-      <div className="rounded bg-slate-950/60 p-2">
+      <div className="rounded bg-abyss-950/70 p-2">
         <p className="text-xs font-medium text-slate-400">Isolation guarantees</p>
         <ul className="mt-1 text-xs text-slate-300">
           <li>✓ No prod credentials: {evidence.isolation.noProdCredentials ? 'yes' : 'no'}</li>
@@ -124,7 +124,7 @@ function EvidenceBundle({ evidence }: { evidence: VerificationView['evidence'] }
           <li>✓ Sandbox escape prevented: {evidence.isolation.sandboxEscapePrevented ? 'yes' : 'no'}</li>
         </ul>
       </div>
-      <details className="rounded bg-slate-950/60 p-2">
+      <details className="rounded bg-abyss-950/70 p-2">
         <summary className="cursor-pointer text-xs font-medium text-slate-400">Logs ({evidence.logs.length})</summary>
         <pre className="mt-2 whitespace-pre-wrap text-xs text-slate-300">{evidence.logs.join('\n')}</pre>
       </details>
@@ -137,7 +137,7 @@ function VerificationItem({ verification, canApprove }: { verification: Verifica
   const [showEvidence, setShowEvidence] = useState(false);
 
   return (
-    <li className="space-y-3 border-b border-slate-800/70 px-5 py-4 last:border-0">
+    <li className="space-y-3 border-b border-white/[0.05] px-5 py-4 last:border-0">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium text-white">Verification {verification.id.slice(0, 8)}</p>
         <StatusBadge status={verification.status} />
@@ -148,12 +148,12 @@ function VerificationItem({ verification, canApprove }: { verification: Verifica
 
       <div className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Diff</p>
-        <pre className="max-h-64 overflow-auto rounded-lg bg-slate-950/60 p-3 text-xs leading-relaxed text-slate-300">{verification.patch.slice(0, 4000)}</pre>
+        <pre className="max-h-64 overflow-auto rounded-lg bg-abyss-950/70 p-3 text-xs leading-relaxed text-slate-300">{verification.patch.slice(0, 4000)}</pre>
       </div>
 
       <div className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Test results</p>
-        <pre className="max-h-48 overflow-auto rounded-lg bg-slate-950/60 p-3 text-xs leading-relaxed text-slate-300">
+        <pre className="max-h-48 overflow-auto rounded-lg bg-abyss-950/70 p-3 text-xs leading-relaxed text-slate-300">
           {verification.testOutput ?? verification.evidence?.testOutput ?? 'No output yet'}
         </pre>
       </div>
@@ -204,12 +204,12 @@ function GenerateVerifiedFixForm({ incidentId, repoConnections, canGenerate }: {
   const [state, formAction] = useActionState<ActionResult | undefined, FormData>(generateVerifiedFixAction, undefined);
 
   return (
-    <form action={formAction} className="flex flex-col gap-2 rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+    <form action={formAction} className="flex flex-col gap-2 rounded-lg border border-white/[0.07] bg-abyss-950/50 p-3">
       <input type="hidden" name="incidentId" value={incidentId} />
       <label className="text-xs font-medium text-slate-400">Generate verified fix (patch → sandbox test → evidence)</label>
       <Textarea name="attachment" rows={3} placeholder="Paste stack trace or code snippet (optional)" className="arch-mono text-xs" disabled={!canGenerate} />
       {repoConnections.length > 0 && (
-        <select name="repoConnectionId" className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200" disabled={!canGenerate}>
+        <select name="repoConnectionId" className="rounded border border-white/10 bg-abyss-900 px-2 py-1 text-xs text-slate-200" disabled={!canGenerate}>
           <option value="">Auto (first active repo)</option>
           {repoConnections.map((rc) => (
             <option key={rc.id} value={rc.id}>
@@ -218,7 +218,7 @@ function GenerateVerifiedFixForm({ incidentId, repoConnections, canGenerate }: {
           ))}
         </select>
       )}
-      <input name="testCommand" placeholder="Test command (default: npm test)" className="rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200" disabled={!canGenerate} />
+      <input name="testCommand" placeholder="Test command (default: npm test)" className="rounded border border-white/10 bg-abyss-900 px-2 py-1 text-xs text-slate-200" disabled={!canGenerate} />
       <SubmitButton variant="secondary" pendingLabel="Generating & testing…">
         Generate verified fix
       </SubmitButton>
@@ -240,7 +240,7 @@ function ReproductionEvidence({ verification }: { verification: VerificationView
 
   if (!reproduction.ran) {
     return (
-      <div className="mt-3 rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+      <div className="mt-3 rounded-lg border border-white/[0.07] bg-abyss-950/50 p-3">
         <p className="text-xs font-medium text-slate-400">Reproduction: not run</p>
         <p className="mt-1 text-xs text-slate-500">{reproduction.reason ?? 'No reproduction test was generated for this fix.'}</p>
       </div>
@@ -272,7 +272,7 @@ function ReproductionEvidence({ verification }: { verification: VerificationView
             {showTest ? 'Hide generated test' : 'Show generated test'}
           </button>
           {showTest ? (
-            <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded border border-slate-800 bg-slate-950 p-2 text-xs text-slate-300">
+            <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap rounded border border-white/[0.07] bg-abyss-950 p-2 text-xs text-slate-300">
               {verification.reproductionTest}
             </pre>
           ) : null}
@@ -299,8 +299,8 @@ export function VerifiedFixPanel({
   const total = verifications.length;
 
   return (
-    <div className="rounded-xl border border-emerald-500/30 bg-slate-900/60">
-      <div className="flex items-start justify-between gap-4 border-b border-slate-800 px-5 py-4">
+    <div className="rounded-xl border border-emerald-500/30 bg-abyss-850/90">
+      <div className="flex items-start justify-between gap-4 border-b border-white/[0.07] px-5 py-4">
         <div>
           <h2 className="flex items-center gap-2 text-sm font-semibold tracking-wide text-slate-100">
             Verified Fix Loop
@@ -331,7 +331,7 @@ export function VerifiedFixPanel({
         {canGenerate ? <GenerateVerifiedFixForm incidentId={incidentId} repoConnections={repoConnections} canGenerate={canGenerate} /> : <p className="text-sm text-slate-400">Your role cannot generate verified fixes.</p>}
       </div>
 
-      <div className="border-t border-slate-800">
+      <div className="border-t border-white/[0.07]">
         <p className="px-5 pt-4 text-xs font-medium uppercase tracking-wide text-slate-500">Verifications ({total}) — diff + test results + evidence bundle</p>
         {verifications.length === 0 ? (
           <p className="px-5 pb-4 pt-2 text-sm text-slate-400">No verifications yet. Generate a verified fix above.</p>

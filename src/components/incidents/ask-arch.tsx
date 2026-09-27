@@ -1,6 +1,8 @@
 'use client';
 
 import { useRef, useState } from 'react';
+import { AiBadge } from '@/components/ui/logo';
+import { AI_NAME } from '@/lib/brand';
 
 type Citation = {
   source: 'timeline' | 'runbook' | 'similar_incident' | 'category' | 'playbook';
@@ -64,14 +66,14 @@ export function AskArchPanel({ incidentId }: { incidentId: string }) {
         body: JSON.stringify({ question: trimmed, history: pairs.slice(-6) }),
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload?.error?.message ?? 'ARCH could not answer that.');
+      if (!response.ok) throw new Error(payload?.error?.message ?? `${AI_NAME} could not answer that.`);
       const data = payload.data as { answer: string; intent: string; confidence: string; citations: Citation[]; suggestions: string[] };
       setTurns((previous) => [
         ...previous,
         { role: 'arch', text: data.answer, intent: data.intent, confidence: data.confidence, citations: data.citations, suggestions: data.suggestions },
       ]);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'ARCH could not answer that.');
+      setError(cause instanceof Error ? cause.message : `${AI_NAME} could not answer that.`);
       setTurns((previous) => previous.slice(0, -1));
       setQuestion(trimmed);
     } finally {
@@ -81,9 +83,9 @@ export function AskArchPanel({ incidentId }: { incidentId: string }) {
   }
 
   return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+    <section className="overflow-hidden rounded-2xl border border-violet-500/25 bg-gradient-to-b from-indigo-500/[0.07] to-abyss-850 p-4 shadow-[0_8px_32px_-16px_rgb(0_0_0/0.8)]">
       <header className="mb-3">
-        <h2 className="text-sm font-medium text-white">Ask ARCH</h2>
+        <h2 className="flex items-center gap-2 text-sm font-semibold text-white">Ask <AiBadge /></h2>
         <p className="text-xs text-slate-500">
           Talk to the native engine — status, cause, next steps, or any ops problem (&quot;database slow hai, kya karu?&quot;).
           English or Hinglish. Answers are advice, never auto-applied.
@@ -98,7 +100,7 @@ export function AskArchPanel({ incidentId }: { incidentId: string }) {
                 key={chip}
                 type="button"
                 onClick={() => ask(chip)}
-                className="block w-full rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2 text-left text-xs text-slate-300 hover:border-slate-700 hover:text-slate-100"
+                className="block w-full rounded-lg border border-white/[0.08] bg-abyss-950/50 px-3 py-2 text-left text-xs text-slate-300 hover:border-white/20 hover:text-slate-100"
               >
                 {chip}
               </button>
@@ -109,11 +111,11 @@ export function AskArchPanel({ incidentId }: { incidentId: string }) {
         {turns.map((turn, index) =>
           turn.role === 'user' ? (
             <div key={index} className="flex justify-end">
-              <p className="max-w-[85%] rounded-lg bg-sky-500/15 px-3 py-2 text-xs text-sky-100">{turn.text}</p>
+              <p className="max-w-[85%] rounded-xl rounded-br-sm bg-indigo-500/20 px-3 py-2 text-xs text-indigo-100">{turn.text}</p>
             </div>
           ) : (
             <div key={index} className="space-y-2">
-              <div className="rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2">
+              <div className="rounded-lg border border-white/[0.08] bg-abyss-950/60 px-3 py-2">
                 <p className="whitespace-pre-wrap text-xs leading-relaxed text-slate-200">{turn.text}</p>
                 {turn.intent ? (
                   <p className="mt-1.5 text-[10px] uppercase tracking-wide text-slate-600">
@@ -124,7 +126,7 @@ export function AskArchPanel({ incidentId }: { incidentId: string }) {
               {turn.citations?.length ? (
                 <ul className="space-y-1">
                   {turn.citations.map((citation, cIndex) => (
-                    <li key={cIndex} className="rounded border border-slate-800/80 bg-slate-950/30 px-2 py-1 text-[10px] text-slate-400">
+                    <li key={cIndex} className="rounded border border-white/[0.08]/80 bg-abyss-950/40 px-2 py-1 text-[10px] text-slate-400">
                       <span className="text-slate-500">{SOURCE_LABEL[citation.source]}</span> — {citation.label}
                       {citation.detail ? <span className="block text-slate-500">{citation.detail}</span> : null}
                     </li>
@@ -138,7 +140,7 @@ export function AskArchPanel({ incidentId }: { incidentId: string }) {
                       key={suggestion}
                       type="button"
                       onClick={() => ask(suggestion)}
-                      className="rounded-full border border-slate-700 px-2.5 py-1 text-[10px] text-slate-300 hover:border-sky-500/60 hover:text-sky-200"
+                      className="rounded-full border border-white/10 px-2.5 py-1 text-[10px] text-slate-300 hover:border-sky-500/60 hover:text-sky-200"
                     >
                       {suggestion}
                     </button>
@@ -149,7 +151,7 @@ export function AskArchPanel({ incidentId }: { incidentId: string }) {
           ),
         )}
 
-        {busy ? <p className="text-xs text-slate-400">ARCH is thinking…</p> : null}
+        {busy ? <p className="flex items-center gap-2 text-xs text-violet-300"><span className="flex gap-1"><span className="size-1.5 animate-bounce rounded-full bg-violet-400" /><span className="size-1.5 animate-bounce rounded-full bg-violet-400 [animation-delay:150ms]" /><span className="size-1.5 animate-bounce rounded-full bg-violet-400 [animation-delay:300ms]" /></span>Thinking…</p> : null}
       </div>
 
       {error ? <p className="mt-2 text-xs text-rose-300" role="alert">{error}</p> : null}
@@ -167,14 +169,14 @@ export function AskArchPanel({ incidentId }: { incidentId: string }) {
           value={question}
           onChange={(event) => setQuestion(event.target.value)}
           maxLength={800}
-          placeholder="Ask about this incident, or describe a problem…"
-          className="w-full rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2 text-xs text-slate-200 placeholder:text-slate-600 focus:border-sky-500/60 focus:outline-none"
+          placeholder={`Ask ${AI_NAME}…`}
+          className="w-full rounded-lg border border-white/[0.08] bg-abyss-950/70 px-3 py-2 text-xs text-slate-200 placeholder:text-slate-600 focus:border-violet-500/60 focus:outline-none"
           disabled={busy}
         />
         <button
           type="submit"
           disabled={busy || question.trim().length < 2}
-          className="shrink-0 rounded-lg bg-sky-500/20 px-3 py-2 text-xs font-medium text-sky-200 hover:bg-sky-500/30 disabled:opacity-40"
+          className="shrink-0 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:from-indigo-400 hover:to-indigo-500 disabled:opacity-40"
         >
           Ask
         </button>
