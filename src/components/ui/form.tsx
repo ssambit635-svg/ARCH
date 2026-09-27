@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import type { ReactNode } from 'react';
 
@@ -49,6 +50,45 @@ const controlClass =
 
 export function Input({ ref, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { ref?: React.Ref<HTMLInputElement> }) {
   return <input ref={ref} {...props} className={`${controlClass} ${props.className ?? ''}`} />;
+}
+
+function EyeIcon({ off }: { off: boolean }) {
+  return (
+    <svg viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M1.8 10S4.9 4.6 10 4.6 18.2 10 18.2 10 15.1 15.4 10 15.4 1.8 10 1.8 10Z" />
+      <circle cx="10" cy="10" r="2.6" />
+      {off ? <path d="M3 3l14 14" /> : null}
+    </svg>
+  );
+}
+
+/**
+ * Password field with a show/hide toggle.
+ *
+ * The eye button flips the input between `password` and `text` so someone on a phone can check
+ * what they typed before submitting — a mistyped password is the most common failed sign-in.
+ * It is a real `<button type="button">` (never submits the form), keeps the caret and value, and
+ * tells screen readers the state with `aria-pressed` + a changing `aria-label`.
+ */
+export function PasswordInput({ ref, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { ref?: React.Ref<HTMLInputElement> }) {
+  const [visible, setVisible] = useState(false);
+  const label = visible ? 'Hide password' : 'Show password';
+
+  return (
+    <div className="relative">
+      <Input ref={ref} {...props} type={visible ? 'text' : 'password'} className="pr-11" />
+      <button
+        type="button"
+        onClick={() => setVisible((current) => !current)}
+        aria-label={label}
+        aria-pressed={visible}
+        title={label}
+        className="absolute right-1.5 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-lg text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40"
+      >
+        <EyeIcon off={visible} />
+      </button>
+    </div>
+  );
 }
 
 export function Textarea({ ref, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { ref?: React.Ref<HTMLTextAreaElement> }) {
