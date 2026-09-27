@@ -8,7 +8,8 @@
     "node": ">=20.19"
   },
   "scripts": {
-    "dev": "next dev --hostname 0.0.0.0",
+    "dev": "node scripts/dev.mjs",
+    "dev:next": "next dev --hostname 0.0.0.0",
     "build": "next build",
     "start": "next start --hostname 0.0.0.0",
     "dev:all": "node scripts/dev.mjs",
@@ -38,6 +39,8 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "2.11.3",
+    "@fontsource-variable/inter": "5.3.0",
+    "@fontsource-variable/jetbrains-mono": "5.3.0",
     "@octokit/rest": "22.0.1",
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",

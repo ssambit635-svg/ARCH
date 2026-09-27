@@ -1,11 +1,13 @@
 #!/usr/bin/env node
 /**
- * Development entrypoint used by sandboxes/preview environments: brings up the database,
+ * Development entrypoint (`npm run dev` / `npm run dev:all`): brings up the database,
  * generates the Prisma client, applies migrations, optionally seeds demo data, then runs Next.js.
  *
- *   npm run dev:all
- *
- * On a normal machine `docker compose up -d && npm run setup && npm run dev` is equivalent.
+ * `npm run dev` is this wrapper on purpose: a fresh clone used to start Next.js against an
+ * unmigrated database, and registration failed with a useless "Could not create your account".
+ * The wrapper is idempotent — when a database is already listening on the DATABASE_URL port
+ * (Docker, a managed instance, a previous `db:up`) it skips the embedded server entirely.
+ * `npm run dev:next` remains for anyone who manages the database themselves.
  */
 import dotenv from 'dotenv';
 dotenv.config({ override: true });

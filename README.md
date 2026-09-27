@@ -125,23 +125,25 @@ ARCH/
 ```bash
 cp .env.example .env && chmod 600 .env  # set distinct random AUTH_SECRET / AUTH_SECRET_WEBHOOK
 npm ci
-npm run dev:all                         # starts Postgres + Next.js, applies migrations; /register
+npm run dev                             # DB + migrations + Next.js; then open /register
 npm run worker                          # optional second terminal: notification outbox
 ```
 
-`npm run dev:all` uses a **Docker** Postgres when one is already running; in a sandbox without Docker it
-starts a local embedded PostgreSQL (data in `ARCH_DEV_DB_DIR`, default under `/tmp`). The database
-runs **only while the process is alive**, and `/tmp` can be lost when the sandbox resets; use managed
-PostgreSQL and a stable URL for durable staging/production. No demo users are created automatically.
-`npm run setup` prepares the DB and then stops embedded Postgres: follow it with `npm run dev:all`,
-not `npm run dev` (the latter expects an existing DB). For disposable demo data, set
-`ARCH_SEED_DEMO="true"` and a unique 12+ character `SEED_PASSWORD` in your ignored `.env` before
-`dev:all`, or run `npm run db:seed` with `SEED_PASSWORD` set. Never seed public/production databases.
-Day-to-day:
+`npm run dev` (same as `dev:all`) uses a **Docker** Postgres when one is already running; in a
+sandbox without Docker it starts a local embedded PostgreSQL (data in `ARCH_DEV_DB_DIR`, default
+under `/tmp`) and applies migrations before Next.js boots — so account creation works on a fresh
+clone instead of failing against an unmigrated database. The database runs **only while the process
+is alive**, and `/tmp` can be lost when the sandbox resets; use managed PostgreSQL and a stable URL
+for durable staging/production. No demo users are created automatically. If you manage the database
+yourself (Docker Compose, managed Postgres), `npm run dev:next` starts Next.js only. For disposable
+demo data, set `ARCH_SEED_DEMO="true"` and a unique 12+ character `SEED_PASSWORD` in your ignored
+`.env` before `npm run dev`, or run `npm run db:seed` with `SEED_PASSWORD` set. Never seed
+public/production databases. Day-to-day:
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Next.js only (assumes the database is already up) |
+| `npm run dev` | Database (if needed) + migrations + Next.js — the one-command start |
+| `npm run dev:next` | Next.js only (assumes the database is already up and migrated) |
 | `npm run db:up` / `db:down` / `db:status` | Embedded Postgres lifecycle |
 | `npm run db:migrate` / `db:reset` | Apply migrations — `/` `--reset` drops and rebuilds |
 | `npm run db:seed` | Idempotent demo data (only with a private, unique `SEED_PASSWORD`) |
