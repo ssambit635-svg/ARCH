@@ -35,12 +35,16 @@ the whole product failing. Four real causes, all fixed:
   or egress-restricted machine the build failed outright, and in dev mode Next retried the download
   on *every* render. Both variable fonts are now self-hosted from `src/app/fonts/` (OFL-1.1, licence
   files included) with `next/font/local`, so the build is network-free and every render is local.
-- **The dev server no longer runs out of memory.** Extracting Turbopack source maps for each
-  lazily-compiled route grew the server by roughly 90 MB per route — around 3.5 GB and an OOM kill
-  after ~40 routes on a 4 GB machine, which took the whole preview down mid-session. Development now
-  runs with `turbopackSourceMaps`/`turbopackInputSourceMaps` off plus `turbopackMemoryEviction:
-  'full'` (peak ~2 GB across the full API surface, no kill). `ARCH_DEV_SOURCE_MAPS="true"` restores
-  full stack traces when memory is not the constraint; production builds are unaffected.
+- **The dev server is much less likely to run out of memory.** Extracting Turbopack source maps for
+  each lazily-compiled route grew the server by roughly 90 MB per route — around 3.5 GB and an OOM
+  kill after ~40 routes on a 4 GB machine, which took the whole preview down mid-session.
+  Development now runs with `turbopackSourceMaps`/`turbopackInputSourceMaps` off plus
+  `turbopackMemoryEviction: 'full'`: a full walk of the API surface peaks near 2 GB in warm runs
+  instead of being killed at 3.5 GB. It is not a hard guarantee — a cold dev server compiling ~80
+  routes can still climb past 3 GB — so run the whole `smoke:api` sweep against a production build
+  (`npm run build && npm run start`), which answers the same 108 checks from ~300 MB.
+  `ARCH_DEV_SOURCE_MAPS="true"` restores full stack traces when memory is not the constraint;
+  production builds are unaffected.
 
 ### Added — password visibility toggle
 
