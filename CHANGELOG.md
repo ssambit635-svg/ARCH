@@ -40,6 +40,11 @@ Rules for this file:
   (single constant in `src/lib/brand.ts`). API routes and permission names are unchanged.
 - **Auth pages redesigned.** Split-screen sign-in / register with a brand panel; onboarding and
   invitation screens match the new language.
+- **Landing site rebuilt.** Sticky nav, hero with a live CSS product mock, stats, how-it-works,
+  an ARCH V1.1 spotlight section, feature grid, honest scope cards, and a closing CTA.
+- **Public status pages rebuilt.** 90-day uptime bars computed from real incident spans, a
+  resolved-incident history feed (new `recentResolvedForServices` query), redesigned active
+  incident cards, and customer-safe wording throughout — still fully cached, no session.
 
 ### Added — V7 · Incident correlation, change-aware blast radius, and a conversational ARCH
 

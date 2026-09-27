@@ -160,6 +160,16 @@ export const incidentRepository = {
     });
   },
 
+  /** Recently resolved incidents on these services — powers public history + uptime bars. */
+  recentResolvedForServices(serviceIds: string[], since: Date, take = 25, client: DbClient = db) {
+    if (serviceIds.length === 0) return Promise.resolve([]);
+    return client.incident.findMany({
+      where: { serviceId: { in: serviceIds }, status: 'RESOLVED', resolvedAt: { gte: since } },
+      orderBy: { startedAt: 'desc' },
+      take,
+    });
+  },
+
   create(
     data: {
       organizationId: string;
