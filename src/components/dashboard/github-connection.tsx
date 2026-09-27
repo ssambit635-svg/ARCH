@@ -100,7 +100,7 @@ export function GithubConnectionPanel({ config: initial }: { config: GithubConfi
   const tone = shown.mode === 'real' ? (check && !check.ok ? 'danger' : 'success') : 'neutral';
 
   return (
-    <div className="space-y-3 rounded-lg border border-slate-800 bg-slate-950/40 p-4">
+    <div className="space-y-3 rounded-lg border border-white/[0.07] bg-abyss-950/50 p-4">
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-sm font-medium text-white">GitHub connection</h3>
         <Badge tone={tone}>{shown.mode === 'real' ? 'real PRs' : 'offline (mock)'}</Badge>
@@ -118,25 +118,25 @@ export function GithubConnectionPanel({ config: initial }: { config: GithubConfi
           value={owner}
           onChange={(event) => setOwner(event.target.value)}
           placeholder="owner"
-          className="w-32 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200"
+          className="w-32 rounded border border-white/10 bg-abyss-900 px-2 py-1 text-xs text-slate-200"
         />
         <input
           value={repo}
           onChange={(event) => setRepo(event.target.value)}
           placeholder="repo"
-          className="w-32 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200"
+          className="w-32 rounded border border-white/10 bg-abyss-900 px-2 py-1 text-xs text-slate-200"
         />
         <input
           value={commitSha}
           onChange={(event) => setCommitSha(event.target.value)}
           placeholder="commit SHA (optional)"
-          className="w-44 rounded border border-slate-700 bg-slate-900 px-2 py-1 text-xs text-slate-200 arch-mono"
+          className="w-44 rounded border border-white/10 bg-abyss-900 px-2 py-1 text-xs text-slate-200 arch-mono"
         />
         <button
           type="button"
           onClick={() => void runCheck(false)}
           disabled={state.phase === 'checking'}
-          className="rounded-md border border-slate-700 px-2.5 py-1 text-xs text-slate-200 hover:border-slate-500 disabled:opacity-50"
+          className="rounded-md border border-white/10 px-2.5 py-1 text-xs text-slate-200 hover:border-slate-500 disabled:opacity-50"
         >
           Test token
         </button>
@@ -154,14 +154,14 @@ export function GithubConnectionPanel({ config: initial }: { config: GithubConfi
       {state.phase === 'failed' ? <p className="text-xs text-rose-300">{state.message}</p> : null}
 
       {check ? (
-        <div className="space-y-1 rounded border border-slate-800 bg-slate-900/60 p-3">
+        <div className="space-y-1 rounded border border-white/[0.07] bg-abyss-850/90 p-3">
           <p className={`text-xs ${check.ok ? 'text-emerald-300' : 'text-rose-300'}`}>{check.message}</p>
           {check.scopes.length > 0 ? <p className="text-xs text-slate-500">scopes: <span className="arch-mono">{check.scopes.join(', ')}</span></p> : null}
         </div>
       ) : null}
 
       {repository ? (
-        <div className="space-y-1 rounded border border-slate-800 bg-slate-900/60 p-3">
+        <div className="space-y-1 rounded border border-white/[0.07] bg-abyss-850/90 p-3">
           <p className="text-xs text-slate-300">{repository.message}</p>
           <p className="text-xs text-slate-500">
             default branch <span className="arch-mono">{repository.defaultBranch}</span> · head{' '}

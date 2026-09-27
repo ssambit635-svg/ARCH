@@ -50,7 +50,7 @@ export function SimilarIncidentsPanel({ incidentId, initialTitle }: { incidentId
   }, [incidentId]);
 
   return (
-    <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+    <section className="rounded-xl border border-white/[0.07] bg-white/[0.02] p-4">
       <header className="mb-3">
         <h2 className="text-sm font-medium text-white">Have we seen this before?</h2>
         <p className="text-xs text-slate-500">
@@ -75,7 +75,7 @@ export function SimilarIncidentsPanel({ incidentId, initialTitle }: { incidentId
           ) : (
             <ul className="space-y-2">
               {data.incidents.map((incident) => (
-                <li key={incident.id} className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+                <li key={incident.id} className="rounded-lg border border-white/[0.07] bg-abyss-950/50 p-3">
                   <div className="flex items-start justify-between gap-2">
                     <Link href={`/dashboard/incidents/${incident.id}`} className="text-sm text-slate-100 hover:text-white">
                       {incident.title}
@@ -100,7 +100,7 @@ export function SimilarIncidentsPanel({ incidentId, initialTitle }: { incidentId
               <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Runbooks</h3>
               <ul className="mt-2 space-y-2">
                 {data.runbooks.map((runbook) => (
-                  <li key={`${runbook.sourceName}-${runbook.similarity}`} className="rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+                  <li key={`${runbook.sourceName}-${runbook.similarity}`} className="rounded-lg border border-white/[0.07] bg-abyss-950/50 p-3">
                     <p className="text-sm text-slate-200">
                       {runbook.sourceName}
                       {runbook.heading ? ` — ${runbook.heading}` : ''}

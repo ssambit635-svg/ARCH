@@ -34,16 +34,16 @@ export function LoginForm({
             <input type="hidden" name="callbackUrl" value={callbackUrl} />
             <button
               type="submit"
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-950/60 px-3.5 py-2 text-sm font-medium text-slate-200 transition hover:bg-slate-800"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2 text-sm font-medium text-slate-200 transition hover:border-white/20 hover:bg-white/[0.06]"
             >
               <GitHubMark />
               Continue with GitHub
             </button>
           </form>
           <div className="flex items-center gap-3 text-xs text-slate-500" aria-hidden="true">
-            <span className="h-px flex-1 bg-slate-800" />
+            <span className="h-px flex-1 bg-white/[0.08]" />
             or
-            <span className="h-px flex-1 bg-slate-800" />
+            <span className="h-px flex-1 bg-white/[0.08]" />
           </div>
         </>
       ) : null}

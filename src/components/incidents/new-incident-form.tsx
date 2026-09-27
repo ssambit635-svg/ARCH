@@ -24,14 +24,14 @@ export function NewIncidentForm({
   if (state?.ok) {
     return (
       <div className="space-y-3">
-        <p className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-200" role="status">
+        <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/[0.08] px-3.5 py-2.5 text-sm text-emerald-200" role="status">
           {state.message}
         </p>
         <div className="flex gap-3">
-          <a className="rounded-lg bg-indigo-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-indigo-500" href={`/dashboard/incidents/${(state.data as { incidentId?: string })?.incidentId ?? ''}`}>
+          <a className="rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-3.5 py-2 text-sm font-medium text-white transition hover:from-indigo-400 hover:to-indigo-500" href={`/dashboard/incidents/${(state.data as { incidentId?: string })?.incidentId ?? ''}`}>
             Open the incident
           </a>
-          <a className="rounded-lg border border-slate-700 px-3.5 py-2 text-sm text-slate-200 hover:bg-slate-800" href="/dashboard/incidents">
+          <a className="rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2 text-sm text-slate-200 transition hover:bg-white/[0.08]" href="/dashboard/incidents">
             Back to the list
           </a>
         </div>

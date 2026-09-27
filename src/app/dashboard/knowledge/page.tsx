@@ -13,7 +13,7 @@ export const dynamic = 'force-dynamic';
  * V6 — the organization's knowledge base.
  *
  * This is where RAG lives: documents are chunked and embedded on this server by ARCH's own
- * embedding space, and Copilot drafts cite the passages they were grounded in. There is no external
+ * embedding space, and ARCH V1.1 drafts cite the passages they were grounded in. There is no external
  * vector database and no embedding API — the "external database" is your own Postgres, and the
  * embeddings are produced in-process.
  */
@@ -39,8 +39,9 @@ export default async function KnowledgePage() {
   const totalChunks = views.reduce((sum, source) => sum + source.chunkCount, 0);
 
   return (
-    <div className="space-y-6">
+    <div className="animate-rise space-y-6">
       <PageHeader
+        eyebrow="Intelligence"
         title="Knowledge"
         description="Runbooks and docs ARCH can cite. Everything is embedded on your server — incident data and code never leave it."
       />
@@ -67,7 +68,7 @@ export default async function KnowledgePage() {
         <CardHeader title="How it is used" />
         <CardBody className="space-y-2 text-sm text-slate-400">
           <p>
-            When a responder asks Copilot for a summary, triage, status update, postmortem or code fix, ARCH
+            When a responder asks ARCH V1.1 for a summary, triage, status update, postmortem or code fix, ARCH
             retrieves the most relevant passages from this page and cites them by name in the draft — and
             marks them as hypotheses when they are not confirmed by your timeline.
           </p>

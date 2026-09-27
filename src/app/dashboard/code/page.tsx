@@ -14,8 +14,9 @@ export default async function CodeAssistPage() {
   const config = copilotConfig();
 
   return (
-    <div className="space-y-6">
+    <div className="animate-rise space-y-6">
       <PageHeader
+        eyebrow="Intelligence"
         title="Code Assist"
         description="Review, fix, or explain code — or use Thinker for a small boilerplate snippet plus file path and paste-risks. Native ARCH model, this server. Not a coding agent."
       />

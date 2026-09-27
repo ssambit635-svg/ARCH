@@ -15,6 +15,32 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Added — Dashboard experience rebuild + ARCH V1.1 identity
+
+- **New app shell.** Grouped sidebar navigation (Respond / Intelligence / Reliability / System) with
+  an open-incident badge, glass topbar with breadcrumbs, a ⌘K command palette (jump to incidents,
+  services and pages), a global toast stack for every mutation, and a mobile drawer + account menu.
+- **Overview rebuilt.** Greeting header, all-clear/triage hero banner, stat cards with real 14-day
+  sparklines, a "needs attention" incident table, an activity feed with actor avatars, live service
+  health, quick actions, and an ARCH V1.1 spotlight card.
+- **Incident workspace rebuilt.** Sticky header with a one-click state-machine dropdown, response
+  timeline, template comment composer (⌘/Ctrl+Enter to post), triage rail, and blast-radius links
+  that jump to the affected service.
+- **New service detail page** (`/dashboard/services/[id]`). Live status with pin/derive controls,
+  open + resolved incident feeds, and a details rail — every service name in the dashboard links to it.
+- **New component structure.** `components/ui` (button, avatar, dialog, toast, tabs, segmented
+  control, stat, sparkline, skeleton, logo), `components/organization` (dropdown org selector,
+  invite modal with one-time copyable link, member table), `components/incident` (state dropdown,
+  comment box, rich incident rows), `components/permission` (server-side `PermissionGate` wrapper),
+  and `components/statuspage` (public badge, uptime bars, customer-safe incident list).
+- **Settings go tabbed.** General / People / Webhooks / API tokens under `?tab=` links; People gets
+  the invite modal and avatar member rows.
+- **ARCH V1.1 naming.** The native intelligence is now called ARCH V1.1 everywhere responders see
+  it — sidebar, response drafts, Ask panel, timeline badges, Code Assist and the model page
+  (single constant in `src/lib/brand.ts`). API routes and permission names are unchanged.
+- **Auth pages redesigned.** Split-screen sign-in / register with a brand panel; onboarding and
+  invitation screens match the new language.
+
 ### Added — V7 · Incident correlation, change-aware blast radius, and a conversational ARCH
 
 - **Incident correlation & dedup.** Every alert now gets a content *fingerprint* — the title is

@@ -1,8 +1,9 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
 import { requireDashboardContext } from '@/lib/session';
 import { listProjects, listServices } from '@/server/services/project.service';
 import { listMembers } from '@/server/services/organization.service';
-import { Card, CardHeader, CardBody, PageHeader } from '@/components/ui';
+import { Alert, Card, CardHeader, CardBody, PageHeader } from '@/components/ui';
 import { NewIncidentForm } from '@/components/incidents/new-incident-form';
 import { ChangeRiskPanel } from '@/components/incidents/change-risk';
 
@@ -21,12 +22,18 @@ export default async function NewIncidentPage() {
   const assignable = members.filter((member) => member.role === 'OWNER' || member.role === 'ADMIN' || member.role === 'RESPONDER');
 
   return (
-    <div>
+    <div className="animate-rise mx-auto max-w-3xl">
       <PageHeader
+        eyebrow="Respond"
         title="Declare an incident"
         description="Opening an incident records the first timeline event, notifies the responders and updates the service status."
+        action={
+          <Link href="/dashboard/incidents" className="text-sm font-medium text-slate-400 transition hover:text-slate-200">
+            ← Back to list
+          </Link>
+        }
       />
-      <Card className="mb-6 max-w-3xl">
+      <Card className="mb-6">
         <CardHeader
           title="Recent change risk"
           description="Changes most likely to have caused this, ranked by ARCH from your own incident history."
@@ -35,13 +42,17 @@ export default async function NewIncidentPage() {
           <ChangeRiskPanel />
         </CardBody>
       </Card>
-      <Card className="max-w-3xl">
-        <CardHeader title="Incident details" description="Required: a title and a project." />
+      <Card>
+        <CardHeader title="Incident details" description="Required: a title and a project. Everything else can follow." />
         <CardBody>
           {projects.length === 0 ? (
-            <p className="text-sm text-amber-200">
-              You need at least one project first — create one under Projects &amp; services.
-            </p>
+            <Alert tone="warning">
+              You need at least one project first —{' '}
+              <Link href="/dashboard/projects" className="font-medium underline underline-offset-2">
+                create one under Projects & services
+              </Link>
+              .
+            </Alert>
           ) : (
             <NewIncidentForm
               projects={projects.map((project) => ({ id: project.id, name: project.name }))}

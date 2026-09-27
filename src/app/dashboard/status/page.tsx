@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
 import { requireDashboardContext } from '@/lib/session';
 import { listStatusPages } from '@/server/services/statusPage.service';
@@ -6,7 +7,8 @@ import { roleHasPermission } from '@/lib/permissions';
 import { timeAgo } from '@/lib/format';
 import { Badge, Card, CardBody, CardHeader, EmptyState, PageHeader, ServiceStatusBadge } from '@/components/ui';
 import { ActionForm } from '@/components/dashboard/action-form';
-import { Field, Input, Textarea } from '@/components/ui/form';
+import { Checkbox, Field, Input, Textarea } from '@/components/ui/form';
+import { PermissionGate } from '@/components/permission/permission-gate';
 import { createStatusPageAction, publishStatusPageAction, updateStatusPageAction } from '@/app/dashboard/actions';
 
 export const metadata: Metadata = { title: 'Status pages' };
@@ -23,13 +25,14 @@ export default async function StatusPagesPage() {
   ]);
 
   return (
-    <div>
+    <div className="animate-rise">
       <PageHeader
+        eyebrow="Respond"
         title="Status pages"
         description="Publish a page your customers can read. Unpublished pages return 404 — even to people who guess the slug."
       />
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid items-start gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
           {pages.length === 0 ? (
             <EmptyState title="No status pages yet" description="Create one, add the services you want to expose, then publish." />
@@ -38,17 +41,25 @@ export default async function StatusPagesPage() {
               <Card key={page.id}>
                 <CardHeader
                   title={
-                    <span className="flex items-center gap-2">
+                    <span className="flex items-center gap-2.5">
                       {page.name}
-                      {page.isPublished ? <Badge tone="success">published</Badge> : <Badge tone="neutral">draft</Badge>}
+                      {page.isPublished ? <Badge tone="success">● published</Badge> : <Badge tone="neutral">draft</Badge>}
                     </span>
                   }
                   description={
-                    page.isPublished ? `Live at /status/${page.slug} · published ${timeAgo(page.publishedAt)}` : `Slug reserved: /status/${page.slug}`
+                    page.isPublished ? (
+                      <>
+                        Live at <span className="arch-mono text-xs text-slate-300">/status/{page.slug}</span> · published {timeAgo(page.publishedAt)}
+                      </>
+                    ) : (
+                      <>
+                        Slug reserved: <span className="arch-mono text-xs text-slate-300">/status/{page.slug}</span>
+                      </>
+                    )
                   }
                   action={
                     <a
-                      className="text-sm text-indigo-400 hover:text-indigo-300"
+                      className="inline-flex items-center gap-1 text-[13px] font-medium text-indigo-400 transition hover:text-indigo-300"
                       href={`/status/${page.slug}`}
                       target="_blank"
                       rel="noreferrer"
@@ -59,17 +70,19 @@ export default async function StatusPagesPage() {
                 />
                 <CardBody className="space-y-5">
                   <div>
-                    <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">Components on this page</p>
+                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Components on this page</p>
                     {page.services.length === 0 ? (
-                      <p className="text-sm text-amber-200">No services selected — the page will show “all operational” and nothing else.</p>
+                      <p className="rounded-xl border border-amber-500/25 bg-amber-500/[0.06] px-3.5 py-2.5 text-[13px] text-amber-200">
+                        No services selected — the page will show “all operational” and nothing else.
+                      </p>
                     ) : (
-                      <ul className="space-y-1.5">
+                      <ul className="space-y-1">
                         {page.services.map((entry) => (
-                          <li key={entry.id} className="flex items-center justify-between gap-3 text-sm">
-                            <span className="text-slate-200">
+                          <li key={entry.id} className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 transition hover:bg-white/[0.03]">
+                            <Link href={`/dashboard/services/${entry.serviceId}`} className="min-w-0 text-sm text-slate-200 hover:text-white hover:underline">
                               {entry.displayName ?? entry.service.name}
                               <span className="text-slate-500"> · {entry.service.project.name}</span>
-                            </span>
+                            </Link>
                             <ServiceStatusBadge status={entry.service.status} />
                           </li>
                         ))}
@@ -78,26 +91,29 @@ export default async function StatusPagesPage() {
                   </div>
 
                   {canManage ? (
-                    <div className="border-t border-slate-800 pt-4">
+                    <div className="border-t border-white/[0.06] pt-4">
                       <ActionForm action={updateStatusPageAction} submitLabel="Save components" variant="secondary">
                         <input type="hidden" name="statusPageId" value={page.id} />
-                        <fieldset className="space-y-2">
-                          <legend className="mb-1 text-xs uppercase tracking-wide text-slate-500">Choose services</legend>
+                        <fieldset>
+                          <legend className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Choose services</legend>
                           {services.length === 0 ? (
                             <p className="text-sm text-slate-400">No services exist yet.</p>
                           ) : (
-                            services.map((service) => (
-                              <label key={service.id} className="flex items-center gap-2 text-sm text-slate-300">
-                                <input
-                                  type="checkbox"
-                                  name="serviceIds"
-                                  value={service.id}
-                                  defaultChecked={page.services.some((entry) => entry.serviceId === service.id)}
-                                  className="size-4 rounded border-slate-700 bg-slate-950"
-                                />
-                                {service.project.name} / {service.name}
-                              </label>
-                            ))
+                            <div className="grid gap-1.5 sm:grid-cols-2">
+                              {services.map((service) => (
+                                <label key={service.id} className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-white/[0.06] bg-white/[0.015] px-3 py-2 text-[13px] text-slate-300 transition hover:border-white/15">
+                                  <Checkbox
+                                    name="serviceIds"
+                                    value={service.id}
+                                    defaultChecked={page.services.some((entry) => entry.serviceId === service.id)}
+                                    aria-label={`${service.project.name} / ${service.name}`}
+                                  />
+                                  <span className="truncate">
+                                    {service.name} <span className="text-slate-500">· {service.project.name}</span>
+                                  </span>
+                                </label>
+                              ))}
+                            </div>
                           )}
                         </fieldset>
                       </ActionForm>
@@ -105,10 +121,10 @@ export default async function StatusPagesPage() {
                   ) : null}
 
                   {canPublish ? (
-                    <div className="border-t border-slate-800 pt-4">
+                    <div className="border-t border-white/[0.06] pt-4">
                       <ActionForm
                         action={publishStatusPageAction}
-                        submitLabel={page.isPublished ? 'Unpublish' : 'Publish'}
+                        submitLabel={page.isPublished ? 'Unpublish' : 'Publish page'}
                         variant={page.isPublished ? 'secondary' : 'primary'}
                       >
                         <input type="hidden" name="statusPageId" value={page.id} />
@@ -122,8 +138,8 @@ export default async function StatusPagesPage() {
           )}
         </div>
 
-        <div className="space-y-6">
-          {canManage ? (
+        <div className="space-y-6 lg:sticky lg:top-[68px]">
+          <PermissionGate permission="statuspage.manage">
             <Card>
               <CardHeader title="New status page" description="ADMIN and OWNER only. Slugs are global and must be unique." />
               <CardBody>
@@ -137,27 +153,31 @@ export default async function StatusPagesPage() {
                   <Field label="Description" htmlFor="page-description">
                     <Textarea id="page-description" name="description" rows={2} placeholder="Current status of Acme services" />
                   </Field>
-                  <fieldset className="space-y-2">
-                    <legend className="mb-1 text-xs uppercase tracking-wide text-slate-500">Services</legend>
-                    {services.map((service) => (
-                      <label key={service.id} className="flex items-center gap-2 text-sm text-slate-300">
-                        <input type="checkbox" name="serviceIds" value={service.id} className="size-4 rounded border-slate-700 bg-slate-950" />
-                        {service.project.name} / {service.name}
-                      </label>
-                    ))}
-                  </fieldset>
+                  {services.length > 0 ? (
+                    <fieldset>
+                      <legend className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Services</legend>
+                      <div className="grid gap-1.5">
+                        {services.map((service) => (
+                          <label key={service.id} className="flex cursor-pointer items-center gap-2.5 rounded-lg border border-white/[0.06] bg-white/[0.015] px-3 py-2 text-[13px] text-slate-300 transition hover:border-white/15">
+                            <Checkbox name="serviceIds" value={service.id} aria-label={`${service.project.name} / ${service.name}`} />
+                            <span className="truncate">
+                              {service.name} <span className="text-slate-500">· {service.project.name}</span>
+                            </span>
+                          </label>
+                        ))}
+                      </div>
+                    </fieldset>
+                  ) : null}
                 </ActionForm>
               </CardBody>
             </Card>
-          ) : null}
+          </PermissionGate>
 
           <Card>
-            <CardHeader title="Caching" />
-            <CardBody className="text-sm text-slate-400">
-              <p>
-                Public pages are rendered statically and revalidated on every dashboard write, so a status change shows up immediately without
-                hammering the database on every visitor.
-              </p>
+            <CardHeader title="How publishing works" />
+            <CardBody className="space-y-2 text-[13px] leading-relaxed text-slate-400">
+              <p>Public pages render statically and revalidate on every dashboard write — a status change shows up immediately.</p>
+              <p className="text-xs text-slate-500">Drafts 404 for everyone, including logged-in viewers outside the org.</p>
             </CardBody>
           </Card>
         </div>

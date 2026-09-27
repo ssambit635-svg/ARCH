@@ -44,7 +44,7 @@ export function IncidentTimeline({ events }: { events: TimelineEvent[] }) {
         const actor = event.author?.name ?? event.author?.email ?? event.actorLabel ?? 'system';
         const summary = metadataSummary(event.metadata);
         return (
-          <li key={event.id} className="relative border-b border-slate-800/70 px-5 py-4 last:border-0">
+          <li key={event.id} className="relative border-b border-white/[0.05] px-5 py-4 last:border-0">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <p className="text-sm text-slate-200">
                 <span className="font-medium text-white">{actor}</span>{' '}
@@ -53,9 +53,9 @@ export function IncidentTimeline({ events }: { events: TimelineEvent[] }) {
                 {isCopilotEntry(event.metadata) ? (
                   <span
                     className="ml-1 inline-flex items-center rounded-full bg-indigo-500/15 px-2 py-0.5 text-xs font-medium text-indigo-300 ring-1 ring-inset ring-indigo-500/30"
-                    title="Drafted by ARCH Copilot, reviewed and approved by this person"
+                    title="Drafted by ARCH V1.1, reviewed and approved by this person"
                   >
-                    Copilot draft · approved
+                    V1.1 draft · approved
                   </span>
                 ) : null}
               </p>

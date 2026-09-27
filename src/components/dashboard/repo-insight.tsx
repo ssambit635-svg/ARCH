@@ -7,7 +7,7 @@ import { askRepoInsightAction, type RepoInsightState } from '@/app/dashboard/act
 const SEVERITY: Record<string, string> = {
   error: 'bg-rose-500/15 text-rose-300',
   warning: 'bg-amber-500/15 text-amber-200',
-  info: 'bg-slate-800 text-slate-300',
+  info: 'bg-white/[0.06] text-slate-300',
 };
 
 export function RepoInsight({
@@ -65,9 +65,9 @@ export function RepoInsight({
                 {state.result.fullName} · {state.result.private ? 'private' : 'public'} · touchedRepo={String(state.result.touchedRepo)}
               </span>
             </p>
-            <pre className="whitespace-pre-wrap rounded-lg border border-slate-800 bg-slate-950/40 p-4 text-sm text-slate-300">{state.result.explanation}</pre>
+            <pre className="whitespace-pre-wrap rounded-lg border border-white/[0.07] bg-abyss-950/50 p-4 text-sm text-slate-300">{state.result.explanation}</pre>
             {state.result.findings.length ? (
-              <ul className="divide-y divide-slate-800 rounded-lg border border-slate-800">
+              <ul className="divide-y divide-white/[0.05] rounded-lg border border-white/[0.07]">
                 {state.result.findings.map((finding, index) => (
                   <li key={`${finding.path}-${index}`} className="px-3 py-2 text-sm">
                     <span className={`mr-2 rounded-full px-2 py-0.5 text-xs ${SEVERITY[finding.severity]}`}>{finding.severity}</span>

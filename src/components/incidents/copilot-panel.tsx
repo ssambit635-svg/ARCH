@@ -2,6 +2,8 @@
 
 import { useActionState } from 'react';
 import { SubmitButton, Textarea } from '@/components/ui/form';
+import { AiBadge } from '@/components/ui/logo';
+import { AI_NAME } from '@/lib/brand';
 import {
   approveCopilotDraftAction,
   dismissCopilotDraftAction,
@@ -10,7 +12,7 @@ import {
 } from '@/app/dashboard/actions';
 
 /**
- * ARCH Copilot panel (AGENTS-V2.md M2/M3) — lives in the incident workspace.
+ * ARCH V1.1 panel (AGENTS-V2.md M2/M3) — lives in the incident workspace.
  *
  * Every piece of AI output is shown as a DRAFT with an explicit "needs review" marker. Responders
  * can edit text drafts, then approve (posts to the timeline / applies triage) or dismiss. Viewers
@@ -82,7 +84,7 @@ function Outcome({ state }: { state: ActionResult | undefined }) {
 function GenerateButton({ incidentId, type, label, hint, disabled }: { incidentId: string; type: string; label: string; hint: string; disabled: boolean }) {
   const [state, formAction] = useActionState<ActionResult | undefined, FormData>(generateCopilotDraftAction, undefined);
   return (
-    <form action={formAction} className="flex flex-col gap-1.5 rounded-lg border border-slate-800 bg-slate-950/40 p-3">
+    <form action={formAction} className="flex flex-col gap-1.5 rounded-xl border border-white/[0.07] bg-abyss-950/50 p-3">
       <input type="hidden" name="incidentId" value={incidentId} />
       <input type="hidden" name="type" value={type} />
       <fieldset disabled={disabled} className="contents">
@@ -100,7 +102,7 @@ function GenerateButton({ incidentId, type, label, hint, disabled }: { incidentI
 function CodeFixGenerator({ incidentId, disabled }: { incidentId: string; disabled: boolean }) {
   const [state, formAction] = useActionState<ActionResult | undefined, FormData>(generateCopilotDraftAction, undefined);
   return (
-    <form action={formAction} className="flex flex-col gap-2 rounded-lg border border-slate-800 bg-slate-950/40 p-3 sm:col-span-2">
+    <form action={formAction} className="flex flex-col gap-2 rounded-xl border border-white/[0.07] bg-abyss-950/50 p-3 sm:col-span-2">
       <input type="hidden" name="incidentId" value={incidentId} />
       <input type="hidden" name="type" value="CODE_FIX" />
       <label htmlFor={`code-fix-${incidentId}`} className="text-xs font-medium text-slate-400">
@@ -177,7 +179,7 @@ function PendingDraft({ suggestion, canReview }: { suggestion: CopilotSuggestion
   const rows = suggestion.type === 'POSTMORTEM' || suggestion.type === 'CODE_FIX' ? 16 : suggestion.type === 'SUMMARY' ? 7 : 5;
 
   return (
-    <li className="space-y-3 border-b border-slate-800/70 px-5 py-4 last:border-0">
+    <li className="space-y-3 border-b border-white/[0.05] px-5 py-4 last:border-0">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-sm font-medium text-white">{TYPE_LABELS[suggestion.type]}</p>
         <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-200 ring-1 ring-inset ring-amber-500/30">
@@ -198,7 +200,7 @@ function PendingDraft({ suggestion, canReview }: { suggestion: CopilotSuggestion
             <Textarea id={textareaId} name="text" rows={rows} defaultValue={suggestion.draftText ?? ''} className="arch-mono text-xs leading-relaxed" />
           </div>
         ) : (
-          <pre className="whitespace-pre-wrap rounded-lg bg-slate-950/60 p-3 text-xs leading-relaxed text-slate-300">{suggestion.draftText}</pre>
+          <pre className="whitespace-pre-wrap rounded-lg bg-abyss-950/60 p-3 text-xs leading-relaxed text-slate-300">{suggestion.draftText}</pre>
         )}
         {canReview ? (
           <div className="flex flex-wrap items-center gap-2">
@@ -238,8 +240,8 @@ export function CopilotPanel({
   const reviewed = suggestions.filter((suggestion) => suggestion.status !== 'PENDING');
 
   return (
-    <div className="rounded-xl border border-indigo-500/30 bg-slate-900/60">
-      <div className="flex items-start justify-between gap-4 border-b border-slate-800 px-5 py-4">
+    <div className="rounded-xl border border-indigo-500/30 bg-abyss-850/90">
+      <div className="flex items-start justify-between gap-4 border-b border-white/[0.07] px-5 py-4">
         <div>
           <h2 className="flex items-center gap-2 text-sm font-semibold tracking-wide text-slate-100">
             ARCH Copilot
@@ -266,8 +268,8 @@ export function CopilotPanel({
 
       <div className="space-y-3 px-5 py-4">
         {!config.enabled ? (
-          <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200" role="status">
-            Copilot is not configured: {config.reason ?? 'missing AI settings.'} Set <span className="arch-mono">AI_PROVIDER=&quot;arch&quot;</span> to use
+          <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-200" role="status">
+            {AI_NAME} is not configured: {config.reason ?? 'missing AI settings.'} Set <span className="arch-mono">AI_PROVIDER=&quot;arch&quot;</span> to use
             ARCH&apos;s own model (no setup, no external API).
           </p>
         ) : null}
@@ -283,7 +285,7 @@ export function CopilotPanel({
         )}
       </div>
 
-      <div className="border-t border-slate-800">
+      <div className="border-t border-white/[0.07]">
         <p className="px-5 pt-4 text-xs font-medium uppercase tracking-wide text-slate-500">Waiting for review ({pending.length})</p>
         {pending.length === 0 ? (
           <p className="px-5 pb-4 pt-2 text-sm text-slate-400">No drafts waiting. {canGenerate ? 'Ask Copilot for one above.' : ''}</p>
@@ -297,7 +299,7 @@ export function CopilotPanel({
       </div>
 
       {reviewed.length > 0 ? (
-        <details className="border-t border-slate-800 px-5 py-3">
+        <details className="border-t border-white/[0.07] px-5 py-3">
           <summary className="cursor-pointer text-xs font-medium uppercase tracking-wide text-slate-500">Reviewed drafts ({reviewed.length})</summary>
           <ul className="mt-3 space-y-2">
             {reviewed.map((suggestion) => (

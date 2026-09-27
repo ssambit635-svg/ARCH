@@ -22,7 +22,7 @@ const SAMPLE = `async function getUser(id) {
 const SEVERITY_STYLE = {
   error: 'bg-rose-500/15 text-rose-300 ring-rose-500/30',
   warning: 'bg-amber-500/15 text-amber-200 ring-amber-500/30',
-  info: 'bg-slate-800 text-slate-300 ring-slate-700',
+  info: 'bg-white/[0.06] text-slate-300 ring-white/10',
 } as const;
 
 function CopyButton({ text }: { text: string }) {
@@ -30,7 +30,7 @@ function CopyButton({ text }: { text: string }) {
   return (
     <button
       type="button"
-      className="rounded-md border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800"
+      className="rounded-md border border-white/10 px-2 py-1 text-xs text-slate-300 hover:bg-white/[0.06]"
       onClick={() => {
         void navigator.clipboard?.writeText(text).then(() => {
           setCopied(true);
@@ -54,7 +54,7 @@ function Result({ state }: { state: CodeReviewState }) {
   const result = state.result;
   return (
     <div className="space-y-5" aria-live="polite">
-      <div className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+      <div className="rounded-xl border border-white/[0.07] bg-abyss-850/90 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-medium text-white">{result.summary}</p>
           <span className="arch-mono text-xs text-slate-500">
@@ -95,7 +95,7 @@ function Result({ state }: { state: CodeReviewState }) {
       {result.findings.length ? (
         <div className="space-y-2">
           <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Findings ({result.findings.length})</h3>
-          <ul className="divide-y divide-slate-800 rounded-lg border border-slate-800">
+          <ul className="divide-y divide-white/[0.05] rounded-lg border border-white/[0.07]">
             {result.findings.map((finding, index) => (
               <li key={`${finding.line}-${index}`} className="flex gap-3 px-4 py-3">
                 <span className={`h-fit shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${SEVERITY_STYLE[finding.severity]}`}>{finding.severity}</span>
@@ -121,7 +121,7 @@ function Result({ state }: { state: CodeReviewState }) {
           {result.appliedFixes.length && result.provider === 'arch' ? (
             <p className="text-xs text-emerald-300">Safe fixes applied: {result.appliedFixes.join(' · ')}</p>
           ) : null}
-          <pre className="arch-mono max-h-[28rem] overflow-auto rounded-lg border border-slate-800 bg-slate-950/80 p-4 text-xs leading-relaxed text-slate-200">
+          <pre className="arch-mono max-h-[28rem] overflow-auto rounded-lg border border-white/[0.07] bg-abyss-950/80 p-4 text-xs leading-relaxed text-slate-200">
             {result.improvedCode}
           </pre>
         </div>
@@ -130,7 +130,7 @@ function Result({ state }: { state: CodeReviewState }) {
       {result.explanation ? (
         <div className="space-y-2">
           <h3 className="text-xs font-medium uppercase tracking-wide text-slate-500">Explanation</h3>
-          <pre className="whitespace-pre-wrap rounded-lg border border-slate-800 bg-slate-950/40 p-4 text-sm leading-relaxed text-slate-300">{result.explanation}</pre>
+          <pre className="whitespace-pre-wrap rounded-lg border border-white/[0.07] bg-abyss-950/50 p-4 text-sm leading-relaxed text-slate-300">{result.explanation}</pre>
         </div>
       ) : null}
     </div>
@@ -198,7 +198,7 @@ export function CodeAssist({ canUse, engineLabel }: { canUse: boolean; engineLab
           spellCheck={false}
           disabled={!canUse}
         />
-        <div className="rounded-lg border border-slate-800 bg-slate-900/40 p-3">
+        <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] p-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <label htmlFor="code-attachments" className="block text-sm font-medium text-slate-200">Add screenshots or context files</label>
@@ -212,7 +212,7 @@ export function CodeAssist({ canUse, engineLabel }: { canUse: boolean; engineLab
               accept="image/png,image/jpeg,image/webp,image/gif,image/bmp,.md,.markdown,.txt,.log,.json,.yaml,.yml,.toml,.ini,.js,.jsx,.ts,.tsx,.py,.go,.java,.kt,.cs,.rb,.php,.sql,.sh,.diff,.patch,.html,.css,.xml,.graphql"
               disabled={!canUse}
               onChange={(event) => setFiles(Array.from(event.currentTarget.files ?? []).map((file) => ({ name: file.name, size: file.size })))}
-              className="max-w-full text-xs text-slate-400 file:mr-3 file:rounded-md file:border-0 file:bg-slate-800 file:px-3 file:py-2 file:text-xs file:font-medium file:text-slate-200 hover:file:bg-slate-700"
+              className="max-w-full text-xs text-slate-400 file:mr-3 file:rounded-md file:border-0 file:bg-white/[0.08] file:px-3 file:py-2 file:text-xs file:font-medium file:text-slate-200 hover:file:bg-white/[0.14]"
             />
           </div>
           {files.length ? <p className="mt-2 break-words text-xs text-slate-400">Selected: {files.map((file) => `${file.name} (${(file.size / 1024).toFixed(0)} KB)`).join(' · ')}</p> : null}
@@ -231,7 +231,7 @@ export function CodeAssist({ canUse, engineLabel }: { canUse: boolean; engineLab
         {state ? (
           <Result state={state} />
         ) : (
-          <div className="flex h-full min-h-64 items-center justify-center rounded-xl border border-dashed border-slate-800 p-8 text-center">
+          <div className="flex h-full min-h-64 items-center justify-center rounded-xl border border-dashed border-white/[0.07] p-8 text-center">
             <div className="max-w-sm space-y-2">
               <p className="text-sm font-medium text-slate-200">Your code never leaves this server</p>
               <p className="text-sm text-slate-400">

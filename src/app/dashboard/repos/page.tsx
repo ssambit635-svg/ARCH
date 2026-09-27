@@ -31,9 +31,10 @@ export default async function ReposPage() {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="animate-rise space-y-6">
       <PageHeader
-        title="GitHub Repositories"
+        eyebrow="Intelligence"
+        title="Repositories"
         description="Connect a GitHub repo. Insight only reads (explain, security, how-tos). Verified Fix may open a draft PR after a human approves — Insight never will."
       />
 
