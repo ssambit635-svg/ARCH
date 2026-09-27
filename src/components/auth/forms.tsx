@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useActionState } from 'react';
 import { Field, FormError, Input, SubmitButton } from '@/components/ui/form';
+import { PasswordInput } from '@/components/ui/password-input';
 import { githubLoginAction, loginAction, registerAction, type AuthFormState } from '@/app/(auth)/actions';
 
 /** The official mark, inlined so the login page needs no asset pipeline or extra request. */
@@ -54,7 +55,7 @@ export function LoginForm({
           <Input id="email" name="email" type="email" required autoComplete="email" placeholder="you@company.com" />
         </Field>
         <Field label="Password" htmlFor="password" error={state?.fieldErrors?.password}>
-          <Input id="password" name="password" type="password" required autoComplete="current-password" />
+          <PasswordInput id="password" name="password" required autoComplete="current-password" />
         </Field>
         <SubmitButton pendingLabel="Signing in…">Sign in</SubmitButton>
         <p className="text-sm text-slate-400">
@@ -85,7 +86,7 @@ export function RegisterForm({ callbackUrl = '/dashboard' }: { callbackUrl?: str
         <Input id="organizationName" name="organizationName" placeholder="Acme Inc" />
       </Field>
       <Field label="Password" htmlFor="password" hint="At least 10 characters." error={state?.fieldErrors?.password}>
-        <Input id="password" name="password" type="password" required autoComplete="new-password" minLength={10} />
+        <PasswordInput id="password" name="password" required autoComplete="new-password" minLength={10} />
       </Field>
       <SubmitButton pendingLabel="Creating account…">Create account</SubmitButton>
       <p className="text-sm text-slate-400">

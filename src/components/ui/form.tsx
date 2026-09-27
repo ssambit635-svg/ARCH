@@ -2,6 +2,7 @@
 
 import { useFormStatus } from 'react-dom';
 import type { ReactNode } from 'react';
+import { controlClass } from './form-styles';
 
 /**
  * Form primitives. Every control has an explicit <label>, and errors are announced with
@@ -43,9 +44,6 @@ export function Field({
     </div>
   );
 }
-
-const controlClass =
-  'w-full rounded-xl border border-white/10 bg-abyss-950/70 px-3 py-2 text-sm text-slate-100 placeholder:text-slate-600 shadow-[0_1px_0_rgb(255_255_255/0.04)_inset] transition focus:border-indigo-500/60 focus:bg-abyss-950 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-50';
 
 export function Input({ ref, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { ref?: React.Ref<HTMLInputElement> }) {
   return <input ref={ref} {...props} className={`${controlClass} ${props.className ?? ''}`} />;

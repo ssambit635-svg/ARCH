@@ -15,6 +15,19 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Fixed — sign-in, account creation and offline builds
+
+- **Account creation works on a fresh clone.** `npm run dev` now guarantees the database before
+  Next.js boots: it starts (or reuses) PostgreSQL and applies migrations automatically, so
+  `/register` no longer fails against an unmigrated database. Previously you had to know about
+  `npm run dev:all`; both now do the same thing. `npm run dev:next` remains for anyone who
+  manages the database themselves.
+- **Show/hide password.** The sign-in and sign-up forms have an eye toggle next to the password
+  field (keyboard- and screen-reader-accessible, never submits the form, masked by default).
+- **Builds work without internet access.** Fonts are now self-hosted from npm packages instead of
+  being downloaded from Google Fonts at build time, so `npm run build` succeeds in offline and
+  air-gapped environments (and stops every page load waiting on fonts.googleapis.com).
+
 ### Added — Dashboard experience rebuild + ARCH V1.1 identity
 
 - **New app shell.** Grouped sidebar navigation (Respond / Intelligence / Reliability / System) with
