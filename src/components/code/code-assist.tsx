@@ -154,6 +154,7 @@ export function CodeAssist({ canUse, engineLabel }: { canUse: boolean; engineLab
               <option value="review">Review — find bugs &amp; risks</option>
               <option value="fix">Fix — give me better code</option>
               <option value="explain">Explain — this error / stack trace</option>
+              <option value="scaffold">Thinker — small snippet + where it goes / what breaks</option>
             </Select>
           </div>
           <div className="space-y-1.5">
@@ -192,7 +193,7 @@ export function CodeAssist({ canUse, engineLabel }: { canUse: boolean; engineLab
           maxLength={20_000}
           value={code}
           onChange={(event) => setCode(event.target.value)}
-          placeholder="Paste code, a stack trace or an error log…"
+          placeholder="Paste code or a stack trace — or, in Thinker mode, describe a small snippet (e.g. CRUD route for alerts with name and severity)"
           className="arch-mono text-xs leading-relaxed"
           spellCheck={false}
           disabled={!canUse}

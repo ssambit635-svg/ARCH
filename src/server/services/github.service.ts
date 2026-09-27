@@ -89,6 +89,12 @@ export type GithubClient = {
     };
     git: {
       getCommit: (p: { owner: string; repo: string; commit_sha: string }) => Promise<{ data: { tree: { sha: string } } }>;
+      getTree: (p: {
+        owner: string;
+        repo: string;
+        tree_sha: string;
+        recursive?: string;
+      }) => Promise<{ data: { truncated?: boolean; tree: Array<{ path?: string; type?: string; size?: number; sha?: string }> } }>;
       createBlob: (p: { owner: string; repo: string; content: string; encoding: 'utf-8' | 'base64' }) => Promise<{ data: { sha: string } }>;
       createTree: (p: {
         owner: string;
@@ -968,6 +974,130 @@ export async function fetchPullRequestState(params: { owner: string; repo: strin
     url: data.html_url,
     headSha: data.head?.sha ?? null,
     mergedAt: data.merged_at ?? null,
+  };
+}
+
+const INSIGHT_MAX_FILES = 18;
+const INSIGHT_MAX_FILE_BYTES = 64 * 1024;
+const INSIGHT_SKIP = /(^|\/)(node_modules|dist|build|\.git|coverage|\.next|vendor)\//i;
+const INSIGHT_SKIP_NAME = /(\.lock$|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|\.min\.(js|css)$|\.(png|jpg|jpeg|gif|webp|ico|woff2?|pdf|bin)$)/i;
+const INSIGHT_PRIORITY = [
+  /^readme/i,
+  /^package\.json$/i,
+  /^pyproject\.toml$/i,
+  /^go\.mod$/i,
+  /^cargo\.toml$/i,
+  /^\.env\.example$/i,
+  /^prisma\/schema\.prisma$/i,
+  /^\.github\/workflows\//i,
+  /docker-compose/i,
+  /next\.config/i,
+  /(middleware|auth|webhook|permission|env)\.(ts|js|py|go)$/i,
+];
+
+export type RepoInsightFile = { path: string; text: string; bytes: number };
+export type RepoInsightSnapshot = {
+  fullName: string;
+  private: boolean;
+  archived: boolean;
+  defaultBranch: string;
+  commitSha: string;
+  truncated: boolean;
+  files: RepoInsightFile[];
+  treeSize: number;
+};
+
+function insightScore(path: string): number {
+  let score = 0;
+  for (let i = 0; i < INSIGHT_PRIORITY.length; i++) {
+    if (INSIGHT_PRIORITY[i]!.test(path)) score += 50 - i;
+  }
+  if (/\.(ts|tsx|js|py|go|rb|java)$/i.test(path)) score += 2;
+  return score;
+}
+
+function decodeGithubFile(data: unknown): string | null {
+  if (!data || typeof data !== 'object') return null;
+  const row = data as { encoding?: string; content?: string; type?: string };
+  if (row.type && row.type !== 'file') return null;
+  if (typeof row.content !== 'string') return null;
+  const raw = row.encoding === 'base64' ? Buffer.from(row.content.replace(/\n/g, ''), 'base64').toString('utf8') : row.content;
+  return raw;
+}
+
+/**
+ * Read-only snapshot for Repo Insight. Never creates refs, blobs, or pull requests.
+ * Caps tree walk so a huge monorepo cannot hang the dashboard.
+ */
+export async function fetchRepoInsightSnapshot(params: {
+  owner: string;
+  repo: string;
+  ref?: string | null;
+}): Promise<RepoInsightSnapshot> {
+  if (githubMode() !== 'real') {
+    return {
+      fullName: `${params.owner}/${params.repo}`,
+      private: false,
+      archived: false,
+      defaultBranch: 'main',
+      commitSha: params.ref ?? 'offline',
+      truncated: true,
+      files: [],
+      treeSize: 0,
+    };
+  }
+
+  const client = await getGithubClient();
+  const repo = await githubCall(() => client.rest.repos.get({ owner: params.owner, repo: params.repo }), {
+    owner: params.owner,
+    repo: params.repo,
+  });
+  const ref = params.ref?.trim() || repo.data.default_branch;
+  const commit = await githubCall(() => client.rest.repos.getCommit({ owner: params.owner, repo: params.repo, ref }), {
+    owner: params.owner,
+    repo: params.repo,
+  });
+  const treeSha = commit.data.sha;
+  const gitCommit = await githubCall(() => client.rest.git.getCommit({ owner: params.owner, repo: params.repo, commit_sha: treeSha }), {
+    owner: params.owner,
+    repo: params.repo,
+  });
+  const tree = await githubCall(
+    () => client.rest.git.getTree({ owner: params.owner, repo: params.repo, tree_sha: gitCommit.data.tree.sha, recursive: 'true' }),
+    { owner: params.owner, repo: params.repo },
+  );
+
+  const blobs = (tree.data.tree ?? [])
+    .filter((entry) => entry.type === 'blob' && entry.path && !INSIGHT_SKIP.test(entry.path) && !INSIGHT_SKIP_NAME.test(entry.path.split('/').pop() ?? ''))
+    .sort((a, b) => insightScore(b.path!) - insightScore(a.path!))
+    .slice(0, INSIGHT_MAX_FILES);
+
+  const files: RepoInsightFile[] = [];
+  for (const blob of blobs) {
+    const size = blob.size ?? 0;
+    if (size > INSIGHT_MAX_FILE_BYTES) continue;
+    try {
+      const content = await githubCall(
+        () => client.rest.repos.getContent({ owner: params.owner, repo: params.repo, path: blob.path!, ref: treeSha }),
+        { owner: params.owner, repo: params.repo },
+      );
+      const text = decodeGithubFile(content.data);
+      if (!text) continue;
+      files.push({ path: blob.path!, text: text.slice(0, INSIGHT_MAX_FILE_BYTES), bytes: text.length });
+    } catch {
+      // Skip unreadable blobs (submodules, too large, binary). Insight is best-effort.
+    }
+  }
+
+  return {
+    fullName: repo.data.full_name,
+    private: Boolean(repo.data.private),
+    archived: Boolean(repo.data.archived),
+    defaultBranch: repo.data.default_branch,
+    commitSha: treeSha,
+    truncated: Boolean(tree.data.truncated) || (tree.data.tree?.length ?? 0) > INSIGHT_MAX_FILES,
+    files,
+    treeSize: tree.data.tree?.length ?? 0,
   };
 }
 

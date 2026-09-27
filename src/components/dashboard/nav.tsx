@@ -13,7 +13,7 @@ const items = [
   { href: '/dashboard/code', label: 'Code Assist' },
   { href: '/dashboard/model', label: 'ARCH Model' },
   { href: '/dashboard/knowledge', label: 'Knowledge & RAG' },
-  { href: '/dashboard/repos', label: 'GitHub Repos · Verified Fix' },
+  { href: '/dashboard/repos', label: 'GitHub Repos · Insight' },
   { href: '/dashboard/audit', label: 'Audit log' },
   { href: '/dashboard/settings', label: 'Settings' },
 ];

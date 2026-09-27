@@ -53,6 +53,7 @@ function fakeGithub(options: { repo?: Record<string, unknown>; failOnGet?: numbe
       },
       git: {
         getCommit: async () => ({ data: { tree: { sha: 'tree' } } }),
+        getTree: async () => ({ data: { truncated: false, tree: [] } }),
         createBlob: async () => ({ data: { sha: 'blob' } }),
         createTree: async () => ({ data: { sha: 'tree' } }),
         createCommit: async () => ({ data: { sha: 'commit' } }),

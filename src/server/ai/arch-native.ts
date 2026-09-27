@@ -2,6 +2,7 @@ import { archDraft } from './arch-model/engine';
 import { ARCH_MODEL_NAME } from './arch-model/train';
 import { buildCodeReviewOutput } from './code/review';
 import { parseCodeContextFromPrompt, parseContextFromPrompt } from './prompts';
+import { buildThinkerOutput } from './thinker/draft';
 import { AiProviderError, estimateTokens, type AiProvider, type GenerateOptions, type GenerateResult } from './provider';
 
 /**
@@ -21,7 +22,7 @@ export function createArchNativeProvider(): AiProvider {
       if (options.task === 'code_review') {
         const input = parseCodeContextFromPrompt(user);
         if (!input) throw new AiProviderError('arch provider: prompt has no code_context block', { retryable: false, status: 400 });
-        output = buildCodeReviewOutput(input);
+        output = input.mode === 'scaffold' ? buildThinkerOutput(input.code) : buildCodeReviewOutput(input);
       } else {
         const context = parseContextFromPrompt(user);
         if (!context) throw new AiProviderError('arch provider: prompt has no incident_context block', { retryable: false, status: 400 });

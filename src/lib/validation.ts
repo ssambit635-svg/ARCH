@@ -223,7 +223,7 @@ export const codeLanguages = ['typescript', 'javascript', 'python', 'go', 'java'
 export const codeReviewSchema = z.object({
   // Attachments can be the entire request, so emptiness is checked after server-side extraction.
   code: z.string().max(20_000, 'Snippets are limited to 20,000 characters.').default(''),
-  mode: z.enum(['review', 'fix', 'explain']).default('review'),
+  mode: z.enum(['review', 'fix', 'explain', 'scaffold']).default('review'),
   language: z
     .union([z.enum(codeLanguages), z.literal('auto'), z.literal('')])
     .optional()
@@ -296,6 +296,11 @@ export const pullRequestCreateSchema = z.object({
   verificationId: id,
   title: shortText(200).optional(),
   body: z.string().trim().max(5000).optional(),
+});
+
+export const repoInsightAskSchema = z.object({
+  repoConnectionId: id,
+  question: z.string().trim().min(3, 'Ask a short question.').max(2000),
 });
 
 export const repoConnectionListQuerySchema = z.object({
