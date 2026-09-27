@@ -15,6 +15,60 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Fixed — sign-in / sign-up on a fresh machine (and a build that needs no network)
+
+Signing in or creating an account is the first thing anyone does with ARCH, so a failure there is
+the whole product failing. Four real causes, all fixed:
+
+- **`npm run dev` now brings up the whole stack.** It used to start Next.js alone and assume a
+  database was already running, so on a fresh checkout (or a preview container) every page worked
+  until you submitted the sign-up form, which then failed with "Could not create your account.
+  Please try again." — because there was no PostgreSQL to write to. `npm run dev` now generates the
+  Prisma client, starts a database if none is reachable (Docker-managed or embedded) and applies
+  migrations before Next.js. `npm run dev:next` keeps the old "Next.js only" behaviour.
+- **Auth failures now say what is actually wrong.** If the database is unreachable, `/login` and
+  `/register` answer "ARCH can't reach its database … start PostgreSQL (`npm run db:up`, or
+  `npm run dev`)" instead of "Invalid email or password." / "Please try again." The same condition
+  returns `503 SERVICE_UNAVAILABLE` from the API instead of a generic `500`.
+- **`next build` no longer needs the internet.** Inter and JetBrains Mono were loaded with
+  `next/font/google`, which downloads from fonts.googleapis.com during the build; on an air-gapped
+  or egress-restricted machine the build failed outright, and in dev mode Next retried the download
+  on *every* render. Both variable fonts are now self-hosted from `src/app/fonts/` (OFL-1.1, licence
+  files included) with `next/font/local`, so the build is network-free and every render is local.
+- **The dev server is much less likely to run out of memory.** Extracting Turbopack source maps for
+  each lazily-compiled route grew the server by roughly 90 MB per route — around 3.5 GB and an OOM
+  kill after ~40 routes on a 4 GB machine, which took the whole preview down mid-session.
+  Development now runs with `turbopackSourceMaps`/`turbopackInputSourceMaps` off plus
+  `turbopackMemoryEviction: 'full'`: a full walk of the API surface peaks near 2 GB in warm runs
+  instead of being killed at 3.5 GB. It is not a hard guarantee — a cold dev server compiling ~80
+  routes can still climb past 3 GB — so run the whole `smoke:api` sweep against a production build
+  (`npm run build && npm run start`), which answers the same 108 checks from ~300 MB.
+  `ARCH_DEV_SOURCE_MAPS="true"` restores full stack traces when memory is not the constraint;
+  production builds are unaffected.
+
+### Added — password visibility toggle
+
+- **Show/hide on every password field.** New `PasswordInput` (`src/components/ui/form.tsx`) adds an
+  eye button to the sign-in and create-account forms. It is a real `<button type="button">` (never
+  submits the form), keeps the caret and the typed value, and announces its state with
+  `aria-pressed` plus a changing `aria-label`. A mistyped password is the most common failed
+  sign-in, and on a phone there is no way to check one without this.
+- **A clear hand-off after sign-up.** If the automatic sign-in that follows registration fails, the
+  form redirects to `/login?registered=1` with "Account created. Sign in with the password you just
+  chose." instead of leaving the person on a form that looks like nothing happened.
+
+### Added — `npm run smoke:api`
+
+- **One command that proves the backend works.** `scripts/smoke-api.mjs` registers a throwaway
+  account, signs in through the real Auth.js credentials callback, and walks every API surface —
+  projects, services, incidents (+ timeline, correlation, similar, blast radius), the full Copilot
+  set, status pages (create → publish → anonymous read), HMAC-signed webhook ingestion, dependencies,
+  changes, SLOs, knowledge sources, repo connections, the v1 bearer API, invitations and member
+  removal — plus the negative paths (anonymous 401, cross-tenant 404, duplicate email 409, short
+  password 422, malformed email 422, unsigned webhook 401, revoked token 401). 108 checks, non-zero
+  exit on failure, `SMOKE_VERBOSE=1` for per-check output and `SMOKE_RSS=1` for per-request memory.
+  It only creates `smoke-*` rows and refuses to run against a server it cannot reach.
+
 ### Added — Dashboard experience rebuild + ARCH V1.1 identity
 
 - **New app shell.** Grouped sidebar navigation (Respond / Intelligence / Reliability / System) with

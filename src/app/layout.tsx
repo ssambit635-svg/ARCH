@@ -1,9 +1,31 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, JetBrains_Mono } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 
-const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-sans' });
-const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], display: 'swap', variable: '--font-mono' });
+/**
+ * Fonts are self-hosted (OFL-1.1, see `src/app/fonts/*.txt`).
+ *
+ * `next/font/google` downloads from fonts.googleapis.com at build time, which breaks two things
+ * ARCH cares about: an air-gapped / on-prem install cannot build, and a sandbox without egress
+ * fails `next build` outright (dev mode then retried the download on every render). The same two
+ * variable fonts (Inter, JetBrains Mono) ship in this repository instead, so the build is
+ * network-free and every render is local.
+ */
+const inter = localFont({
+  src: './fonts/inter-latin-wght-normal.woff2',
+  weight: '100 900',
+  display: 'swap',
+  variable: '--font-inter',
+  fallback: ['ui-sans-serif', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+});
+
+const jetbrainsMono = localFont({
+  src: './fonts/jetbrains-mono-latin-wght-normal.woff2',
+  weight: '100 800',
+  display: 'swap',
+  variable: '--font-jetbrains-mono',
+  fallback: ['ui-monospace', 'SFMono-Regular', 'SF Mono', 'Menlo', 'Consolas', 'Liberation Mono', 'monospace'],
+});
 
 export const metadata: Metadata = {
   title: {

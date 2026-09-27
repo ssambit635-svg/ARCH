@@ -24,6 +24,8 @@ Start with the row that matches who you are.
 
 ### Engineering (`docs/engineering/`)
 - **ARCHITECTURE.md** — components, request lifecycle, tenancy, data flow, failure modes.
+- **BACKEND-TESTING.md** — how to prove the backend works: the 108-check smoke suite, manual curl
+  recipes, the feature checklist and the guard rails to break on purpose.
 - **SECURITY-AND-COMPLIANCE.md** — controls, threat model, DPDP/GDPR posture, subprocessors.
 - **OPERATIONS-RUNBOOK.md** — deploy, rollback, backups, on-call, our own incident process.
 

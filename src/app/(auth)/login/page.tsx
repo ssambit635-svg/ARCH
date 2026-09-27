@@ -15,8 +15,8 @@ const OAUTH_ERROR_MESSAGES: Record<string, string> = {
   Configuration: 'GitHub sign-in is misconfigured. Set AUTH_GITHUB_ID and AUTH_GITHUB_SECRET on the server.',
 };
 
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ callbackUrl?: string; error?: string }> }) {
-  const { callbackUrl, error } = await searchParams;
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ callbackUrl?: string; error?: string; registered?: string }> }) {
+  const { callbackUrl, error, registered } = await searchParams;
   const user = await currentUser();
   if (user && !error) redirect('/dashboard');
 
@@ -44,7 +44,12 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         <h1 className="text-xl font-semibold text-white">Sign in to ARCH</h1>
         <p className="mt-1 text-sm text-slate-400">Pick up where the last incident left off.</p>
       </div>
-      <LoginForm callbackUrl={safeCallback} githubEnabled={githubEnabled} oauthError={oauthError} />
+      <LoginForm
+        callbackUrl={safeCallback}
+        githubEnabled={githubEnabled}
+        oauthError={oauthError}
+        successMessage={registered ? 'Account created. Sign in with the password you just chose.' : undefined}
+      />
     </div>
   );
 }

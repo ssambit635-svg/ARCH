@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import packageJson from '../../package.json';
-import { Prisma } from './db';
+import { Prisma, isDatabaseUnavailableError } from './db';
 import { env } from './env';
 import { AppError, isAppError, type FieldIssue } from './errors';
 
@@ -45,6 +45,15 @@ export function fail(error: unknown): NextResponse {
     return NextResponse.json(
       { error: { code: 'VALIDATION_FAILED', message: 'The submitted data is invalid.', issues: zodIssues(error) } },
       { status: 422 },
+    );
+  }
+
+  // A dead database is not "a bug on our side": self-hosted installs and preview containers both
+  // hit this, and the caller deserves to know the one thing they can act on.
+  if (isDatabaseUnavailableError(error)) {
+    return NextResponse.json(
+      { error: { code: 'SERVICE_UNAVAILABLE', message: 'The database is unreachable. If you run ARCH yourself, start PostgreSQL and try again.' } },
+      { status: 503 },
     );
   }
 

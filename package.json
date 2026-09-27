@@ -8,7 +8,8 @@
     "node": ">=20.19"
   },
   "scripts": {
-    "dev": "next dev --hostname 0.0.0.0",
+    "dev": "node scripts/dev.mjs",
+    "dev:next": "next dev --hostname 0.0.0.0",
     "build": "next build",
     "start": "next start --hostname 0.0.0.0",
     "dev:all": "node scripts/dev.mjs",
@@ -22,6 +23,7 @@
     "db:up": "node scripts/dev-db.mjs start",
     "db:down": "node scripts/dev-db.mjs stop",
     "db:status": "node scripts/dev-db.mjs status",
+    "smoke:api": "node scripts/smoke-api.mjs",
     "github:check": "tsx scripts/github-check.ts",
     "github:debug": "tsx scripts/github/repo-debug.mjs",
     "typecheck": "tsc --noEmit",
