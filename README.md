@@ -125,29 +125,56 @@ ARCH/
 ```bash
 cp .env.example .env && chmod 600 .env  # set distinct random AUTH_SECRET / AUTH_SECRET_WEBHOOK
 npm ci
-npm run dev:all                         # starts Postgres + Next.js, applies migrations; /register
+npm run dev                             # Postgres + migrations + Next.js; register at /register
 npm run worker                          # optional second terminal: notification outbox
 ```
 
-`npm run dev:all` uses a **Docker** Postgres when one is already running; in a sandbox without Docker it
-starts a local embedded PostgreSQL (data in `ARCH_DEV_DB_DIR`, default under `/tmp`). The database
-runs **only while the process is alive**, and `/tmp` can be lost when the sandbox resets; use managed
-PostgreSQL and a stable URL for durable staging/production. No demo users are created automatically.
-`npm run setup` prepares the DB and then stops embedded Postgres: follow it with `npm run dev:all`,
-not `npm run dev` (the latter expects an existing DB). For disposable demo data, set
-`ARCH_SEED_DEMO="true"` and a unique 12+ character `SEED_PASSWORD` in your ignored `.env` before
-`dev:all`, or run `npm run db:seed` with `SEED_PASSWORD` set. Never seed public/production databases.
+`npm run dev` is the one command that has to work on a fresh machine: it generates the Prisma client,
+makes sure a database is reachable, applies migrations, and then starts Next.js. It uses a **Docker**
+Postgres when one is already running; otherwise it starts a local embedded PostgreSQL (data in
+`ARCH_DEV_DB_DIR`, default under `/tmp`). The database runs **only while the process is alive**, and
+`/tmp` can be lost when the sandbox resets; use managed PostgreSQL and a stable URL for durable
+staging/production. No demo users are created automatically — sign up at `/register`. (`npm run
+dev:all` is an alias kept for existing scripts; `npm run dev:next` starts Next.js alone, assuming the
+database is up.) `npm run setup` prepares the database and then stops embedded Postgres. For
+disposable demo data, set `ARCH_SEED_DEMO="true"` and a unique 12+ character `SEED_PASSWORD` in your
+ignored `.env` before `npm run dev`, or run `npm run db:seed` with `SEED_PASSWORD` set. Never seed
+public/production databases.
+
+Two environment-independent details worth knowing:
+
+- **Fonts are self-hosted** (`src/app/fonts/`, OFL-1.1). `next build` never calls
+  fonts.googleapis.com, so an air-gapped or egress-restricted machine can build and run ARCH.
+- **The dev server runs in a memory-safe mode** (no Turbopack source maps). Extracting source maps
+  for every lazily compiled route is what makes a 4 GB container run out of memory after a few dozen
+  routes. Set `ARCH_DEV_SOURCE_MAPS="true"` when you have the headroom and want full stack traces.
+
 Day-to-day:
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | Next.js only (assumes the database is already up) |
+| `npm run dev` | Postgres (Docker or embedded) + migrations + Next.js |
+| `npm run dev:next` | Next.js only (assumes the database is already up) |
+| `npm run build` / `npm start` | Production build / production server |
 | `npm run db:up` / `db:down` / `db:status` | Embedded Postgres lifecycle |
 | `npm run db:migrate` / `db:reset` | Apply migrations — `/` `--reset` drops and rebuilds |
 | `npm run db:seed` | Idempotent demo data (only with a private, unique `SEED_PASSWORD`) |
+| `npm run smoke:api` | End-to-end backend check against a running server (see below) |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm test` | Vitest against a real, separate test database |
 | `npm run worker` | Outbox drain (add `-- --once` for a single pass) |
+
+### Backend smoke test
+
+`npm run smoke:api` exercises every API surface against a server you are already running
+(`SMOKE_BASE_URL` overrides `http://localhost:3000`): it registers a throwaway account, signs in
+through the real credentials callback, then walks projects, services, incidents (+ timeline,
+correlation, similar, blast radius), the whole Copilot surface, status pages, HMAC-signed webhook
+ingestion, dependencies, changes, SLOs, knowledge sources, repo connections, the v1 bearer API,
+invitations and the negative paths (anonymous 401s, cross-tenant 404s, duplicate email 409, weak
+password 422, bad signature 401). It creates only `smoke-*` rows and exits non-zero if anything
+fails. `SMOKE_VERBOSE=1` prints each check as it runs; `SMOKE_RSS=1` also reports the server's
+resident memory per request, which is how a leaking route shows up.
 
 Environment variables are documented in `AGENTS.md` §2. Never commit secrets — `.env` stays local.
 A previously committed `.env` was removed from tracking, but it remains in Git history: rotate
