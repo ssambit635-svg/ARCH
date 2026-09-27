@@ -15,6 +15,41 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Added — V7 · Incident correlation, change-aware blast radius, and a conversational ARCH
+
+- **Incident correlation & dedup.** Every alert now gets a content *fingerprint* — the title is
+  normalized (hosts, numbers, timestamps, UUIDs and framing words removed; 4xx/5xx codes kept) and
+  hashed with the source and service. Two visible results: (1) a repeating alert with the same
+  signature collapses onto the open incident even when the sender sends no `dedupeKey` — the alert
+  storm stops being nine incidents; (2) a new **Repeat alerts & shared root cause** panel on the
+  incident page groups every occurrence of one signature and shows the strongest root-cause
+  evidence ARCH has — a resolved twin's recorded cause ("same alert signature", fact) or a
+  same-failure-family hypothesis ("hypothesis", labelled as such). Nothing merges or closes by
+  itself; grouping is advisory and always shows its evidence level.
+- **Change-aware blast radius.** `GET /api/changes/:id/blast-radius` answers "yeh service affect
+  hoga?": from a deploy/commit, ARCH walks the service dependency map outwards and lists every
+  downstream service ordered by graph distance, with the change-risk score and recent incidents on
+  the affected set. Shown inline in the Change-risk panel ("Blast radius — who is downstream?").
+  Read-only — it never blocks a deploy.
+- **Ask ARCH — the conversational incident copilot.** A chat panel on the incident workspace,
+  powered entirely by the native engine (no language model, no cost). New in the brain:
+  - **Basic conversation**: greetings ("hi", "kaise ho?"), thanks, and "what can you do?" — real
+    questions still win over small talk ("thanks — what's the status?" is a status question).
+  - **Problem-solving advice, not code**: describe any ops problem ("database slow hai, kya
+    karu?", "API latency is spiking — how do I reduce it?") and ARCH answers with a structured
+    approach — what it usually is, what to check first, what usually fixes it, prevention — from
+    12 built-in playbooks (database, cache, latency, errors, queues, disk, memory, network, auth,
+    deploys, traffic, outages), enriched with your runbooks when they match. It advises and says
+    where to verify; it never writes code or acts on anything.
+  - **Follow-up memory**: short follow-ups ("what about the database?", "aur phir?") resolve
+    against the last few turns of the conversation.
+  - **Honest fallback**: an unrecognized question that is plainly asking for help gets the generic
+    triage approach instead of "I did not understand"; everything else still recaps the incident
+    and offers follow-ups.
+- The Verified Fix runner (patch → isolated sandbox → test evidence → human approval → PR, never
+  auto-applied) was reviewed for this release and left as-is: sandbox isolation, timeouts, unsafe-
+  patch detection and the no-apply guarantee were already covered by tests.
+
 ### Added — Native Thinker + read-only GitHub Repo Insight
 
 - **Code Assist → Thinker (`scaffold`).** Native, no LLM: intent + one small boilerplate snippet

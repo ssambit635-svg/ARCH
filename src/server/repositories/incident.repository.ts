@@ -120,6 +120,28 @@ export const incidentRepository = {
     });
   },
 
+  /**
+   * V7 — open incident with the same content fingerprint. Used for alert-storm suppression when
+   * the sender supplies no explicit dedupeKey: the same failure re-firing must not open a second
+   * incident. Same contract as findOpenByDedupeKey (latest open match wins).
+   */
+  findOpenByFingerprint(organizationId: string, fingerprint: string, client: DbClient = db) {
+    return client.incident.findFirst({
+      where: { organizationId, fingerprint, status: { not: 'RESOLVED' } },
+      orderBy: { createdAt: 'desc' },
+    });
+  },
+
+  /** Every incident sharing an alert fingerprint — the "repeat alerts" correlation group. */
+  findByFingerprint(organizationId: string, fingerprint: string, client: DbClient = db) {
+    return client.incident.findMany({
+      where: { organizationId, fingerprint },
+      include: { service: { select: { id: true, name: true } } },
+      orderBy: { startedAt: 'desc' },
+      take: 50,
+    });
+  },
+
   /** Latest timeline entries for a set of incidents (public status page "latest update"). */
   recentEventsForIncidents(incidentIds: string[], take = 200, client: DbClient = db) {
     if (incidentIds.length === 0) return Promise.resolve([]);
@@ -152,6 +174,7 @@ export const incidentRepository = {
       assignedToId?: string | null;
       webhookEndpointId?: string | null;
       dedupeKey?: string | null;
+      fingerprint?: string | null;
       startedAt?: Date;
     },
     client: DbClient = db,
@@ -171,6 +194,7 @@ export const incidentRepository = {
       projectId?: string;
       resolvedAt?: Date | null;
       startedAt?: Date;
+      fingerprint?: string | null;
     },
     client: DbClient = db,
   ) {

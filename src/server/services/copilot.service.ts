@@ -243,7 +243,7 @@ export async function generateSuggestion(params: Params & { incidentId: string; 
  * the team's actual timeline/runbooks and citations are clickable.
  */
 export async function askArch(
-  params: Params & { incidentId: string; question: string },
+  params: Params & { incidentId: string; question: string; history?: { question: string; answer: string }[] },
 ): Promise<{ answer: string; intent: string; confidence: string; citations: unknown[]; suggestions: string[]; provider: string; model: string }> {
   const { organizationId, userId, incidentId, question } = params;
   await requirePermission(organizationId, userId, 'copilot.read');
@@ -270,7 +270,8 @@ export async function askArch(
 
   // Lazy import avoids a circular load at module top-level.
   const { answerQuestion } = await import('../ai/arch-model/answer');
-  const result = answerQuestion(trimmed, context, context.knowledge);
+  const history = (params.history ?? []).slice(-6);
+  const result = answerQuestion(trimmed, context, context.knowledge, history);
   return {
     answer: result.answer,
     intent: result.intent,

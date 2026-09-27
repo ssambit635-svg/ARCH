@@ -113,6 +113,62 @@ async function main() {
     description: 'React front-end served from the edge.',
   });
 
+  // ---------- V6 dependency graph: what a bad change to a service takes down with it ----------
+  await db.serviceDependency.createMany({
+    data: [
+      { organizationId: acme.id, fromServiceId: apiGateway.id, toServiceId: checkout.id, relationship: 'DEPENDS_ON', criticality: 5 },
+      { organizationId: acme.id, fromServiceId: webApp.id, toServiceId: apiGateway.id, relationship: 'DEPENDS_ON', criticality: 4 },
+    ],
+  });
+
+  // ---------- V6/V7 change history: the deploys the incident timeline talks about ----------
+  await db.changeEvent.createMany({
+    data: [
+      {
+        organizationId: acme.id,
+        serviceId: checkout.id,
+        projectId: payments.id,
+        title: 'Deploy retry logic v2.3 (pool defaults changed)',
+        type: 'DEPLOYMENT',
+        author: 'chen.wu',
+        commitSha: 'a1b2c3d',
+        occurredAt: new Date(Date.now() - 2 * 3600_000),
+        source: 'MANUAL',
+      },
+      {
+        organizationId: acme.id,
+        serviceId: apiGateway.id,
+        projectId: payments.id,
+        title: 'Raise gateway rate limits for the campaign',
+        type: 'CONFIG',
+        author: 'ben.l',
+        occurredAt: new Date(Date.now() - 26 * 3600_000),
+        source: 'MANUAL',
+      },
+      {
+        organizationId: acme.id,
+        serviceId: checkout.id,
+        projectId: payments.id,
+        title: 'Bump payments-api to v4.18.2',
+        type: 'DEPLOYMENT',
+        author: 'chen.wu',
+        commitSha: 'd4e5f6a',
+        occurredAt: new Date(Date.now() - 3 * 86_400_000),
+        source: 'MANUAL',
+      },
+      {
+        organizationId: acme.id,
+        serviceId: webApp.id,
+        projectId: portal.id,
+        title: 'CDN cache rule update',
+        type: 'CONFIG',
+        author: 'ada.o',
+        occurredAt: new Date(Date.now() - 5 * 86_400_000),
+        source: 'MANUAL',
+      },
+    ],
+  });
+
   // ---------- Incidents ----------
   const critical = await createIncident({
     organizationId: acme.id,
@@ -181,6 +237,32 @@ async function main() {
     userId: admin.id,
     incidentId: resolved!.id,
     input: { status: 'RESOLVED', message: 'Cache rules corrected; p95 back to 180ms.' },
+  });
+
+  // ---------- V7 correlation: the same alert signature, fired before ----------
+  // Same content fingerprint as "Checkout latency spike in eu-west-1" (the host number is
+  // normalized away), so the incident page shows the pair as one signature with a shared cause.
+  const earlierSpike = await createIncident({
+    organizationId: acme.id,
+    userId: responder.id,
+    source: 'DASHBOARD',
+    input: {
+      title: 'Checkout latency spike in eu-west-2',
+      description: 'Last week\'s twin of tonight\'s alert: p99 on payment intent creation jumped after the retry-logic deploy.',
+      severity: 'HIGH',
+      projectId: payments.id,
+      serviceId: checkout.id,
+      startedAt: new Date(Date.now() - 8 * 86_400_000),
+    },
+  });
+  await updateIncident({
+    organizationId: acme.id,
+    userId: responder.id,
+    incidentId: earlierSpike!.id,
+    input: {
+      status: 'RESOLVED',
+      message: 'Root cause was a saturated connection pool after the retry-logic deploy. Pool size raised and retries bounded; latency recovered within the hour.',
+    },
   });
 
   // ---------- Status page ----------

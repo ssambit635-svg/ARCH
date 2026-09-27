@@ -13,9 +13,10 @@ import type { CopilotContext, CopilotKnowledge, KnowledgeChunkHint, SimilarIncid
 import { clip, formatDuration, sentences } from './text';
 import { extractCausalSentences, extractMitigationSentences, incidentCorpus, knowledgeCitations } from './engine';
 import { CATEGORIES, type CategoryId } from './knowledge';
+import { matchAdvisoryTopic, wantsAdvice } from './advisory';
 
 export type AnswerCitation = {
-  source: 'timeline' | 'runbook' | 'similar_incident' | 'category';
+  source: 'timeline' | 'runbook' | 'similar_incident' | 'category' | 'playbook';
   label: string;
   detail?: string;
   similarity?: number;
@@ -29,45 +30,73 @@ export type AskAnswer = {
   suggestions: string[];
 };
 
+/** One previous turn of the conversation, used to understand follow-ups ("aur phir?", "what about the db?"). */
+export type AskTurn = { question: string; answer: string };
+
 type IntentId =
   | 'status'          // what's happening now?
   | 'cause'           // why did this happen? root cause?
   | 'impact'          // who/what is affected?
-  | 'fix'             // how do we fix / mitigate?
+  | 'fix'             // how do we fix THIS incident?
+  | 'advice'          // solve a described problem — "database slow hai, kya karu?"
   | 'next'            // what should I do next?
   | 'when'            // timeline / when did X happen?
   | 'who'             // who's involved / assigned?
   | 'what_happened'   // summary / recap
   | 'similar'         // has this happened before?
   | 'runbook'         // what does the runbook say?
+  | 'greet'           // hi / hello / kaise ho
+  | 'thanks'          // thanks / shukriya
+  | 'help'            // what can you do?
   | 'unknown';
 
 // ---------- Intent classification ----------
 
 type IntentRule = { id: IntentId; patterns: RegExp[]; weight?: number };
 
+/** Small talk never overrides a real ops question ("thanks — what's the status?" is a status question). */
+const SOCIAL_INTENTS = new Set<IntentId>(['greet', 'thanks', 'help']);
+
 const INTENT_RULES: IntentRule[] = [
   { id: 'status', patterns: [/\b(what'?s? (going on|happening|the status|current)|status (update|right now|now)|current state|where (are we|do we) stand|still (down|broken|happening)|update (me|us|pl(ea)?se)|kya (ho raha|chal raha|haalat|sthit(i|ee))|abhi kya (hai|ho raha)|present me kya)\b/i] },
   { id: 'cause', patterns: [/\b(why|root cause|what caused|culprit|reason|how did (this|it) happen|what broke|yahan kya hua|kaise hua|kyun (hua|haya|haa)|kya wajah|kya karan|root cause kya)\b/i] },
   { id: 'impact', patterns: [/\b(impact|affected|who is affected|customer|user|how (bad|many|much)|kitna nuksan|who'?s? impacted|blast radius|kitna impact|kaun prabhavit|kitna loss)\b/i] },
-  { id: 'fix', patterns: [/\b(fix|mitigat|rollback|revert|resolve|how (do|can|should) i|kaise thik|workaround|repair|remedy|solution|what do i do|kaise solve|ise kaise thik|thik kaise|kaise sahi|kya upay)\b/i] },
-  { id: 'next', patterns: [/\b(next step|what next|ab kya|should i do now|action item|priorit|what now|age kya|aage kya|ab kya karna|next kya)\b/i] },
+  { id: 'fix', patterns: [/\b(fix|mitigat|rollback|revert|resolve|how (do|can|should) i|kaise thik|workaround|repair|remedy|solution|what do i do|kaise solve|ise kaise thik|thik kaise|kaise sahi|kya upay)\b/i], weight: 2 },
+  { id: 'next', patterns: [/\b(next step|what next|ab kya|should i do now|what (should|do) (i|we) do( next| now)|action item|priorit|what now|age kya|aage kya|ab kya karna|next kya)\b/i] },
   { id: 'when', patterns: [/\b(when|kitne baje|started at|how long|duration|kab (hua|se|tha)|since when|last update|kab se|kitni der|kab shuru)\b/i] },
   { id: 'who', patterns: [/\b(who|assigned|on ?call|owner|responding|kaun|whose working|in charge|kaun dekh raha|kaun hai|kaun responsible)\b/i] },
   { id: 'similar', patterns: [/\b(before|happened before|last time|seen this|similar|recurr|past incident|pehle bhi|pehle kabhi|pichli baar)\b/i] },
   { id: 'runbook', patterns: [/\b(runbook|doc|procedure|playbook|process|guide|check ?list|runbook kya|doc kya|process kya)\b/i] },
   { id: 'what_happened', patterns: [/\b(what happened|recap|summary|tldr|brief|sab kuch|kya hua tha|kya hua|poora recap|poori kahani)\b/i] },
+  // Problem-solving conversation: the question carries its own subject ("database slow hai").
+  { id: 'advice', patterns: [/\b(kya kar(u|un)?|kaise (solve|fix|thik|sahi|handle|deal|manage)|how (do|can|should) (i|we)|how to|what should i do about|solution|upay|samadhan|best practice|tips|prevent|reduce|improve|guide me|advice|suggest(ion)?s?)\b/i], weight: 2 },
+  // Small talk — matched last and only wins when nothing else did.
+  { id: 'greet', patterns: [/\b(hi|hello|hey|yo|namaste|namaskar|salaam|good (morning|afternoon|evening)|kaise ho|kya haal|how are you|kaise hain aap)\b/i], weight: 3 },
+  { id: 'thanks', patterns: [/\b(thanks?|thank you|thx|shukriya|shukria|dhanyavad|dhanyavaad|great help|badhiya|bahut badhiya)\b/i], weight: 3 },
+  { id: 'help', patterns: [/\b(what can you do|what do you do|help me|capabilities?|features?|tum (kya|kaise) (kar sakte|ho)|aap (kya|kaise) (kar sakte|ho)|how (do|does) (you|this|arch) work|kaun (kaun) se (sawal|question))\b/i], weight: 3 },
 ];
 
 function classifyIntent(question: string): IntentId {
-  const scores: Record<string, number> = {};
+  const scores = new Map<IntentId, number>();
   for (const rule of INTENT_RULES) {
-    for (const pattern of rule.patterns) {
-      if (pattern.test(question)) scores[rule.id] = (scores[rule.id] ?? 0) + 1;
-    }
+    let hits = 0;
+    for (const pattern of rule.patterns) if (pattern.test(question)) hits += 1;
+    if (hits > 0) scores.set(rule.id, (scores.get(rule.id) ?? 0) + hits * (rule.weight ?? 1));
   }
-  const [best = 'unknown'] = Object.entries(scores).sort((a, b) => b[1] - a[1]).map(([id]) => id);
-  return best as IntentId;
+  // Content intents outrank social ones; within a tier, higher score wins; stable sort keeps rule
+  // order as the tie-break (status before cause before …).
+  const ranked = [...scores.entries()].sort((a, b) => {
+    const tier = Number(SOCIAL_INTENTS.has(a[0])) - Number(SOCIAL_INTENTS.has(b[0]));
+    return tier !== 0 ? tier : b[1] - a[1];
+  });
+  const best = ranked[0]?.[0] ?? 'unknown';
+  // A question that carries its own subject ("database slow hai kaise thik karu?") is a problem
+  // to solve, not the incident's fix flow — but short incident-referencing asks ("ise kaise
+  // thik?") stay 'fix', and questions like "why is the database slow?" stay 'cause'.
+  if ((best === 'fix' || best === 'advice' || best === 'unknown') && question.split(/\s+/).length >= 5 && matchAdvisoryTopic(question)) {
+    return 'advice';
+  }
+  return best;
 }
 
 // ---------- Evidence extraction ----------
@@ -285,6 +314,81 @@ function answerRunbook(context: CopilotContext, knowledge?: CopilotKnowledge): {
   return { text: `From your team's knowledge base: ${chunks.map((c) => `"${c.sourceName}"${c.heading ? ` (${c.heading})` : ''}`).join(', ')}.`, cites };
 }
 
+// ---------- Conversation (basic chat) & advisory (problem-solving, not code) ----------
+
+function answerGreet(): { text: string; cites: AnswerCitation[]; suggestions: string[] } {
+  return {
+    text: 'Hey! I am ARCH — here to help you work this incident, or any ops problem you describe. Ask in English or Hinglish: what is happening, why it happened, what to do next, whether we have seen it before — or just describe a problem like "database slow hai, kya karu?" and I will walk you through an approach.',
+    cites: [],
+    suggestions: ["What's the current status?", 'What should I do next?', 'Database slow hai — kya karu?'],
+  };
+}
+
+function answerThanks(): { text: string; cites: AnswerCitation[]; suggestions: string[] } {
+  return {
+    text: 'Happy to help! If you want to keep going, I can dig into the timeline, the likely cause, or what to watch next — and if anything new shows up, just describe it and we will work through it together.',
+    cites: [],
+    suggestions: ['Why did this happen?', 'What should I do next?', 'Has this happened before?'],
+  };
+}
+
+function answerHelp(): { text: string; cites: AnswerCitation[]; suggestions: string[] } {
+  return {
+    text:
+      'I am the incident copilot — think of me as the teammate who has read every past incident, runbook and timeline entry. Five things I do: ' +
+      '(1) explain what is happening right now and what changed; ' +
+      '(2) dig for the likely cause — and say clearly when something is still a hypothesis; ' +
+      '(3) suggest what to do next, in order; ' +
+      '(4) find past incidents and runbooks that look like this one, with what fixed them; ' +
+      '(5) talk through any ops problem you describe (slowness, outages, disk full, queue backlog…) step by step. ' +
+      'I never write or change code, and I never act on anything by myself — everything is advice for you to verify.',
+    cites: [],
+    suggestions: ['What should I do next?', 'Why did this happen?', 'Redis cache misses are spiking — what should I check?'],
+  };
+}
+
+/**
+ * Advisory: a described problem ("database slow hai, kya karu?") gets a structured approach —
+ * what it usually is, what to check first, what usually fixes it, prevention — enriched with the
+ * organization's own runbooks when retrieval found any. Ops counsel, never code.
+ */
+function answerAdvice(question: string, _context: CopilotContext, knowledge?: CopilotKnowledge): { text: string; cites: AnswerCitation[]; suggestions: string[] } {
+  const topic = matchAdvisoryTopic(question);
+  const cites: AnswerCitation[] = [];
+  const suggestions: string[] = [];
+  const parts: string[] = [];
+
+  if (topic) {
+    const p = topic.playbook;
+    cites.push({ source: 'playbook', label: `Playbook: ${p.label}`, detail: clip(p.usuallyIs, 220) });
+    parts.push(`Here is how I would approach this — ${p.label.toLowerCase()}. It is usually: ${p.usuallyIs}`);
+    parts.push(`Check first: ${p.checks.slice(0, 3).map((c, i) => `(${i + 1}) ${c}`).join(' ')}`);
+    parts.push(`What usually fixes it: ${p.fixes.slice(0, 3).join(' ')}`);
+    parts.push(`Prevention for next time: ${p.prevention.slice(0, 2).join(' ')}`);
+  } else {
+    parts.push(
+      'I do not have a playbook for that exact problem, but this is the approach that works for almost any production issue: ' +
+        '(1) What changed recently — deploys, config, traffic. Line them up with when the symptom started. ' +
+        '(2) Where the symptom begins — walk the request path top-down (DNS → LB → app → DB) and find the first failing tier. ' +
+        '(3) Scope it — one tenant/endpoint or everyone? One region or all? ' +
+        'Mitigate before you fully diagnose (rollback, failover, shed load), then fix the root cause on the recovered system.',
+    );
+    suggestions.push('Tell me the symptom — what broke, when, and who is affected — and I will narrow this down.');
+  }
+
+  const runbooks = knowledgeCitations(knowledge ?? ({} as CopilotKnowledge), 2);
+  for (const chunk of runbooks) {
+    cites.push({ source: 'runbook', label: `"${chunk.sourceName}"${chunk.heading ? ` — ${clip(chunk.heading, 80)}` : ''}`, detail: clip(chunk.text, 320), similarity: chunk.similarity });
+    parts.push(`Your runbook "${clip(chunk.sourceName, 80)}" matches this: ${clip(chunk.text, 220)}`);
+    suggestions.push(`Follow runbook "${clip(chunk.sourceName, 80)}" — it matched this problem.`);
+  }
+
+  parts.push('This is an approach to verify, not a command: check each step against your dashboards, and write what you find in the incident timeline as you go.');
+  suggestions.push('Still stuck? Describe what you already checked and I will suggest what to look at next.');
+
+  return { text: parts.join(' '), cites, suggestions };
+}
+
 // ---------- Helpers ----------
 
 function hhmm(iso: string): string {
@@ -319,9 +423,40 @@ function dedupe(items: string[], max: number): string[] {
 
 // ---------- Main entry point ----------
 
-export function answerQuestion(question: string, context: CopilotContext, knowledge?: CopilotKnowledge): AskAnswer {
+/**
+ * Answer a responder's question about the current incident — or a described ops problem, or just
+ * small talk. `history` (the previous turns of this conversation) lets short follow-ups like
+ * "what about the database?" or "aur phir?" resolve against what was just being discussed.
+ */
+export function answerQuestion(question: string, context: CopilotContext, knowledge?: CopilotKnowledge, history?: AskTurn[]): AskAnswer {
   const q = question.trim();
-  const intent = classifyIntent(q);
+  let subject = q;
+  let intent = classifyIntent(q);
+
+  // Follow-up resolution: a question with no intent of its own gets a second pass over the
+  // previous turn + this one, so "what about the database?" inherits the subject under discussion.
+  if (intent === 'unknown' && history && history.length > 0) {
+    const lastQuestion = history[history.length - 1]!.question.slice(0, 300);
+    const merged = `${lastQuestion} ${q}`;
+    const retry = classifyIntent(merged);
+    if (retry !== 'unknown' && !SOCIAL_INTENTS.has(retry)) {
+      intent = retry;
+      subject = merged;
+    } else if (matchAdvisoryTopic(merged) && merged.split(/\s+/).length >= 4) {
+      intent = 'advice';
+      subject = merged;
+    }
+  }
+
+  // A free-form problem description ("database slow hai, kya karu?") is advice even when it did
+  // not need the follow-up pass — the question itself carries the subject. So is any unrecognized
+  // question that is plainly asking for help with something ("my cron scheduler is acting up,
+  // what should I do?") — the generic approach beats "I did not understand".
+  if (intent === 'unknown') {
+    const topic = matchAdvisoryTopic(subject);
+    const words = subject.split(/\s+/).length;
+    if ((topic && words >= 4) || wantsAdvice(subject)) intent = 'advice';
+  }
 
   let text = '';
   let cites: AnswerCitation[] = [];
@@ -345,6 +480,12 @@ export function answerQuestion(question: string, context: CopilotContext, knowle
       const r = answerFix(context, knowledge);
       text = r.text; cites = r.cites; suggestions = r.suggestions;
       confidence = cites.some((c) => c.source === 'timeline') ? 'high' : 'medium';
+      break;
+    }
+    case 'advice': {
+      const r = answerAdvice(subject, context, knowledge);
+      text = r.text; cites = r.cites; suggestions = r.suggestions;
+      confidence = matchAdvisoryTopic(subject) ? 'medium' : 'low';
       break;
     }
     case 'next': {
@@ -373,14 +514,32 @@ export function answerQuestion(question: string, context: CopilotContext, knowle
       ({ text, cites } = answerRunbook(context, knowledge));
       confidence = cites.length ? 'high' : 'low';
       break;
+    case 'greet': {
+      const r = answerGreet();
+      text = r.text; suggestions = r.suggestions;
+      confidence = 'high';
+      break;
+    }
+    case 'thanks': {
+      const r = answerThanks();
+      text = r.text; suggestions = r.suggestions;
+      confidence = 'high';
+      break;
+    }
+    case 'help': {
+      const r = answerHelp();
+      text = r.text; suggestions = r.suggestions;
+      confidence = 'high';
+      break;
+    }
     case 'unknown':
     default: {
       // Fall back to what_happened plus offer follow-ups
       const r = answerWhatHappened(context, knowledge);
-      text = `I didn't quite pin down the intent of that question. Here's the current picture: ${r.text} Try asking "what's the status", "why did this happen", "what should I do next", or "has this happened before".`;
+      text = `I didn't quite pin down the intent of that question. Here's the current picture: ${r.text} Try asking "what's the status", "why did this happen", "what should I do next" — or describe a problem (like "disk is filling up, what do I do?") and I'll walk you through it.`;
       cites = r.cites;
       confidence = 'low';
-      suggestions = ['What\'s the current status?', 'What should I do next?', 'Has this happened before?'];
+      suggestions = ["What's the current status?", 'What should I do next?', 'Has this happened before?'];
     }
   }
 

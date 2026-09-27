@@ -392,6 +392,9 @@ model Incident {
   webhookEndpointId String?
   /// Set by webhook ingestion when the sender supplies a stable alert key.
   dedupeKey      String?
+  /// Content-derived alert signature (normalized title + service + source), used to group
+  /// repeat alerts and link incidents with the same root cause. See incident-fingerprint.ts.
+  fingerprint    String?
   startedAt      DateTime         @default(now())
   resolvedAt     DateTime?
   createdAt      DateTime         @default(now())
@@ -414,6 +417,7 @@ model Incident {
   @@index([organizationId, createdAt])
   @@index([organizationId, severity])
   @@index([organizationId, dedupeKey])
+  @@index([organizationId, fingerprint])
   @@index([projectId])
   @@map("incidents")
 }

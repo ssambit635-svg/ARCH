@@ -1,0 +1,184 @@
+'use client';
+
+import { useRef, useState } from 'react';
+
+type Citation = {
+  source: 'timeline' | 'runbook' | 'similar_incident' | 'category' | 'playbook';
+  label: string;
+  detail?: string;
+  similarity?: number;
+};
+
+type Turn = {
+  role: 'user' | 'arch';
+  text: string;
+  intent?: string;
+  confidence?: string;
+  citations?: Citation[];
+  suggestions?: string[];
+};
+
+const SOURCE_LABEL: Record<Citation['source'], string> = {
+  timeline: 'Timeline',
+  runbook: 'Runbook',
+  similar_incident: 'Past incident',
+  category: 'Classifier',
+  playbook: 'Playbook',
+};
+
+/**
+ * Ask ARCH — the conversational face of the native engine.
+ *
+ * Ask anything about the incident ("what's the status?", "kyun hua?", "what do I do next?"),
+ * describe an ops problem ("database slow hai, kya karu?"), or just say hi. Answers are computed
+ * on this server by the native engine — no language model, no cost — and every claim comes with
+ * clickable evidence. The last few turns are sent along so follow-ups make sense.
+ */
+export function AskArchPanel({ incidentId }: { incidentId: string }) {
+  const [turns, setTurns] = useState<Turn[]>([]);
+  const [question, setQuestion] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  async function ask(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed || busy) return;
+    setBusy(true);
+    setError(null);
+    setQuestion('');
+    // Build {question, answer} pairs from the transcript so follow-ups resolve against them.
+    const pairs: { question: string; answer: string }[] = [];
+    for (let i = 0; i < turns.length; i += 1) {
+      const current = turns[i]!;
+      if (current.role === 'user') {
+        const next = turns[i + 1];
+        pairs.push({ question: current.text, answer: next && next.role === 'arch' ? next.text : '' });
+      }
+    }
+    setTurns((previous) => [...previous, { role: 'user', text: trimmed }]);
+    try {
+      const response = await fetch(`/api/incidents/${incidentId}/copilot/ask`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ question: trimmed, history: pairs.slice(-6) }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload?.error?.message ?? 'ARCH could not answer that.');
+      const data = payload.data as { answer: string; intent: string; confidence: string; citations: Citation[]; suggestions: string[] };
+      setTurns((previous) => [
+        ...previous,
+        { role: 'arch', text: data.answer, intent: data.intent, confidence: data.confidence, citations: data.citations, suggestions: data.suggestions },
+      ]);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'ARCH could not answer that.');
+      setTurns((previous) => previous.slice(0, -1));
+      setQuestion(trimmed);
+    } finally {
+      setBusy(false);
+      inputRef.current?.focus();
+    }
+  }
+
+  return (
+    <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+      <header className="mb-3">
+        <h2 className="text-sm font-medium text-white">Ask ARCH</h2>
+        <p className="text-xs text-slate-500">
+          Talk to the native engine — status, cause, next steps, or any ops problem (&quot;database slow hai, kya karu?&quot;).
+          English or Hinglish. Answers are advice, never auto-applied.
+        </p>
+      </header>
+
+      <div className="max-h-96 space-y-3 overflow-y-auto pr-1">
+        {turns.length === 0 ? (
+          <div className="space-y-1.5">
+            {["What's the current status?", 'What should I do next?', 'Disk is filling up — what do I do?'].map((chip) => (
+              <button
+                key={chip}
+                type="button"
+                onClick={() => ask(chip)}
+                className="block w-full rounded-lg border border-slate-800 bg-slate-950/40 px-3 py-2 text-left text-xs text-slate-300 hover:border-slate-700 hover:text-slate-100"
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        {turns.map((turn, index) =>
+          turn.role === 'user' ? (
+            <div key={index} className="flex justify-end">
+              <p className="max-w-[85%] rounded-lg bg-sky-500/15 px-3 py-2 text-xs text-sky-100">{turn.text}</p>
+            </div>
+          ) : (
+            <div key={index} className="space-y-2">
+              <div className="rounded-lg border border-slate-800 bg-slate-950/50 px-3 py-2">
+                <p className="whitespace-pre-wrap text-xs leading-relaxed text-slate-200">{turn.text}</p>
+                {turn.intent ? (
+                  <p className="mt-1.5 text-[10px] uppercase tracking-wide text-slate-600">
+                    {turn.intent.replace(/_/g, ' ')} · {turn.confidence} confidence
+                  </p>
+                ) : null}
+              </div>
+              {turn.citations?.length ? (
+                <ul className="space-y-1">
+                  {turn.citations.map((citation, cIndex) => (
+                    <li key={cIndex} className="rounded border border-slate-800/80 bg-slate-950/30 px-2 py-1 text-[10px] text-slate-400">
+                      <span className="text-slate-500">{SOURCE_LABEL[citation.source]}</span> — {citation.label}
+                      {citation.detail ? <span className="block text-slate-500">{citation.detail}</span> : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {turn.suggestions?.length ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {turn.suggestions.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      onClick={() => ask(suggestion)}
+                      className="rounded-full border border-slate-700 px-2.5 py-1 text-[10px] text-slate-300 hover:border-sky-500/60 hover:text-sky-200"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          ),
+        )}
+
+        {busy ? <p className="text-xs text-slate-400">ARCH is thinking…</p> : null}
+      </div>
+
+      {error ? <p className="mt-2 text-xs text-rose-300" role="alert">{error}</p> : null}
+
+      <form
+        className="mt-3 flex gap-2"
+        onSubmit={(event) => {
+          event.preventDefault();
+          void ask(question);
+        }}
+      >
+        <input
+          ref={inputRef}
+          type="text"
+          value={question}
+          onChange={(event) => setQuestion(event.target.value)}
+          maxLength={800}
+          placeholder="Ask about this incident, or describe a problem…"
+          className="w-full rounded-lg border border-slate-800 bg-slate-950/60 px-3 py-2 text-xs text-slate-200 placeholder:text-slate-600 focus:border-sky-500/60 focus:outline-none"
+          disabled={busy}
+        />
+        <button
+          type="submit"
+          disabled={busy || question.trim().length < 2}
+          className="shrink-0 rounded-lg bg-sky-500/20 px-3 py-2 text-xs font-medium text-sky-200 hover:bg-sky-500/30 disabled:opacity-40"
+        >
+          Ask
+        </button>
+      </form>
+    </section>
+  );
+}

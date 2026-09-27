@@ -11,6 +11,7 @@ import { incidentRepository } from '../repositories/incident.repository';
 import { projectRepository } from '../repositories/project.repository';
 import { serviceRepository } from '../repositories/service.repository';
 import { createIncidentInternal } from './incident.service';
+import { alertFingerprint } from './incident-fingerprint';
 import { newExternalId } from './slug.service';
 import { webhookIngestSchema } from '@/lib/validation';
 
@@ -19,7 +20,8 @@ import { webhookIngestSchema } from '@/lib/validation';
  *
  * Pipeline (and the order matters):
  *   resolve endpoint → rate limit → verify signature → replay/idempotency check → normalize
- *   payload → create incident + delivery log in one transaction → 202 Accepted.
+ *   payload → fingerprint + alert-storm suppression → create incident + delivery log in one
+ *   transaction → 202 Accepted.
  *
  * Anything rejected is *recorded* (status REJECTED with the reason) so an operator can see why
  * their integration is not working, without the response telling an attacker anything useful.
@@ -445,49 +447,69 @@ export async function ingest(params: {
 
   // Resolve the service: explicit id, then slug inside the endpoint's project, then the endpoint default.
   let serviceId: string | null = endpoint.serviceId ?? null;
+  let serviceKey: string | null = null;
   if (payload.serviceId) {
     const service = await serviceRepository.findByIds(endpoint.project.organizationId, [payload.serviceId]);
     if (service.length === 0) throw AppError.notFound('Service in payload does not belong to this organization.');
     serviceId = service[0]!.id;
+    serviceKey = service[0]!.name;
   } else if (payload.serviceSlug) {
     const services = await serviceRepository.list(endpoint.project.organizationId, { projectId: endpoint.projectId });
     const match = services.find((service) => service.slug === payload.serviceSlug);
-    if (match) serviceId = match.id;
+    if (match) {
+      serviceId = match.id;
+      serviceKey = match.name;
+    }
+  }
+  if (!serviceKey && serviceId) {
+    const service = await serviceRepository.findByIds(endpoint.project.organizationId, [serviceId]);
+    serviceKey = service[0]?.name ?? null;
   }
 
-  // Alert-storm suppression: an identical open incident on the same service is updated, not duplicated.
-  if (payload.dedupeKey) {
-    const existingIncident = await incidentRepository.findOpenByDedupeKey(endpoint.project.organizationId, payload.dedupeKey);
-    if (existingIncident) {
-      const delivery = await db.$transaction(async (tx) => {
-        const created = await webhookRepository.createDelivery(
-          {
-            endpointId: endpoint.id,
-            deliveryKey,
-            status: 'DUPLICATE',
-            httpStatus: 202,
-            incidentId: existingIncident.id,
-            payload: normalized as Record<string, unknown>,
-          },
-          tx,
-        );
-        await incidentRepository.addEvent(
-          {
-            incidentId: existingIncident.id,
-            authorId: null,
-            actorLabel,
-            type: 'COMMENT',
-            body: payload.description ?? 'Duplicate alert received from the same source.',
-            metadata: { dedupeKey: payload.dedupeKey, event: payload.event ?? null },
-          },
-          tx,
-        );
-        await webhookRepository.markDelivered(endpoint.id, new Date(), tx);
-        return created;
-      });
+  // V7 — content fingerprint of this alert. Used for correlation (grouping repeats of the same
+  // failure) and, when the sender gives no explicit dedupeKey, for alert-storm suppression: the
+  // same failure re-firing from a replica host or with a fresh timestamp collapses onto the open
+  // incident instead of opening a duplicate.
+  const fingerprint = alertFingerprint({
+    source: params.provider,
+    serviceKey,
+    title: payload.title,
+    description: payload.description ?? null,
+  });
 
-      return { statusCode: 202, body: { status: 'duplicate', deliveryId: delivery.id, incidentId: existingIncident.id }, deliveryId: delivery.id, incidentId: existingIncident.id };
-    }
+  const existingIncident = payload.dedupeKey
+    ? await incidentRepository.findOpenByDedupeKey(endpoint.project.organizationId, payload.dedupeKey)
+    : await incidentRepository.findOpenByFingerprint(endpoint.project.organizationId, fingerprint);
+  if (existingIncident) {
+    const collapseReason = payload.dedupeKey ? 'Duplicate alert received from the same source.' : 'Repeat of the same alert signature (fingerprint match).';
+    const delivery = await db.$transaction(async (tx) => {
+      const created = await webhookRepository.createDelivery(
+        {
+          endpointId: endpoint.id,
+          deliveryKey,
+          status: 'DUPLICATE',
+          httpStatus: 202,
+          incidentId: existingIncident.id,
+          payload: normalized as Record<string, unknown>,
+        },
+        tx,
+      );
+      await incidentRepository.addEvent(
+        {
+          incidentId: existingIncident.id,
+          authorId: null,
+          actorLabel,
+          type: 'COMMENT',
+          body: payload.description ?? collapseReason,
+          metadata: { dedupeKey: payload.dedupeKey ?? null, fingerprint, event: payload.event ?? null },
+        },
+        tx,
+      );
+      await webhookRepository.markDelivered(endpoint.id, new Date(), tx);
+      return created;
+    });
+
+    return { statusCode: 202, body: { status: 'duplicate', deliveryId: delivery.id, incidentId: existingIncident.id }, deliveryId: delivery.id, incidentId: existingIncident.id };
   }
 
   const result = await db.$transaction(async (tx) => {
@@ -499,6 +521,7 @@ export async function ingest(params: {
       webhookEndpointId: endpoint.id,
       skipPermissionCheck: true,
       dedupeKey: payload.dedupeKey ?? null,
+      fingerprint,
       input: {
         title: payload.title,
         description: payload.description ?? null,
