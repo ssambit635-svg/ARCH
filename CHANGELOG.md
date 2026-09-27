@@ -15,6 +15,15 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Added — Native Thinker + read-only GitHub Repo Insight
+
+- **Code Assist → Thinker (`scaffold`).** Native, no LLM: intent + one small boilerplate snippet
+  (CRUD route, Zod, Prisma, webhook, status machine, test, form) plus file path, paste-risks, and
+  what the human still owns. Always native even under `arch-hybrid`. Not a coding agent.
+- **Repo Insight.** Connected GitHub repos can be *read* (tree subset + analyzer + GitHub how-tos
+  such as making a repo private). ARCH never pushes, branches, or opens a PR from Insight.
+  Verified Fix remains the only write path, and still needs human approval.
+
 ### Added — V6 · Your own knowledge base, learning from corrections, and honest risk scores
 
 - **Copilot can cite your runbooks.** New **Knowledge** page (`/dashboard/knowledge`, `knowledge.*`

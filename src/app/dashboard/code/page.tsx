@@ -17,7 +17,7 @@ export default async function CodeAssistPage() {
     <div className="space-y-6">
       <PageHeader
         title="Code Assist"
-        description="Review code, get a safer version, or understand a stack trace — powered by ARCH's own model, running on this server."
+        description="Review, fix, or explain code — or use Thinker for a small boilerplate snippet plus file path and paste-risks. Native ARCH model, this server. Not a coding agent."
       />
       {!canUse ? <Alert tone="info">Your role ({organization.role}) can read incidents but cannot use Code Assist. RESPONDER or above is required.</Alert> : null}
       {!config.enabled ? <Alert tone="error">Code Assist is not available: {config.reason}</Alert> : null}

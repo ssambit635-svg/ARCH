@@ -1,11 +1,12 @@
 import { analyzeCode, type CodeAnalysis, type CodeLanguage, type FindingSeverity } from './analyzer';
 import type { CodeReviewAttachment } from './attachments';
+import { buildThinkerOutput } from '../thinker/draft';
 
 /**
  * ARCH Code Assist — the input sent to a provider and the native (no-LLM) answer.
  */
 
-export type CodeReviewMode = 'review' | 'fix' | 'explain';
+export type CodeReviewMode = 'review' | 'fix' | 'explain' | 'scaffold';
 
 export type CodeReviewInput = {
   mode: CodeReviewMode;
@@ -33,6 +34,7 @@ export function buildCodeReviewInput(code: string, mode: CodeReviewMode, analysi
 
 /** Deterministic answer in the same JSON shape a local LLM is asked for (schemas.ts). */
 export function buildCodeReviewOutput(input: CodeReviewInput) {
+  if (input.mode === 'scaffold') return buildThinkerOutput(input.code || (input.attachments ?? []).map((item) => item.content).join('\n'));
   // If the user uploaded only a screenshot / context file, analyze its extracted text as the main
   // input. Otherwise retain the original snippet as the only candidate for mechanical code fixes.
   const attachmentText = (input.attachments ?? []).map((item) => `# ${item.name} (${item.kind})\n${item.content}`).join('\n\n');

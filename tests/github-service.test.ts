@@ -109,6 +109,13 @@ function createFakeGithub(options: FakeOptions = {}) {
       },
       git: {
         getCommit: async () => step('git.getCommit', () => ({ data: { tree: { sha: 'tree-base' } } })),
+        getTree: async () =>
+          step('git.getTree', () => ({
+            data: {
+              truncated: false,
+              tree: Object.keys(options.files ?? {}).map((path) => ({ path, type: 'blob' as const, size: 100, sha: 'blob' })),
+            },
+          })),
         createBlob: async ({ content }) =>
           step('git.createBlob', () => {
             const sha = `${'d'.repeat(36)}${created.blobs.length}`;

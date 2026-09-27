@@ -4,7 +4,7 @@ import { codeReviewSchema } from '@/lib/validation';
 import { reviewCode } from '@/server/services/codeAssist.service';
 
 /**
- * POST — ARCH Code Assist. Body: { "code": string, "mode"?: "review" | "fix" | "explain", "language"?: string }.
+ * POST — ARCH Code Assist. Body: { "code": string, "mode"?: "review" | "fix" | "explain" | "scaffold", "language"?: string }.
  * Runs on this server only (ARCH model, or the local LLM in arch-hybrid mode). The code is not stored.
  * OWNER/ADMIN/RESPONDER; shares the per-organization Copilot rate limit.
  */

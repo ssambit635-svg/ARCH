@@ -20,6 +20,12 @@
 | Quality | Factual and extractive. Every sentence comes from your timeline, your history or the curated pattern library. | Fluent, rewrites code, and follows instructions |
 | Setup | none | `ollama pull qwen2.5-coder:7b` |
 
+**Code Assist → Thinker (`mode: "scaffold"`)** is always the native engine, even under
+`arch-hybrid`. It classifies a short request (CRUD route, Zod schema, Prisma model, webhook,
+status machine, unit test, React form), emits **one small snippet**, the **file path**, and
+**what will break if you paste it blindly**. It is a support tool for humans and coding agents,
+not a multi-file coding agent and not vibe-coding.
+
 Both engines produce **the same JSON contracts**, validated by the same Zod schemas
 (`src/server/ai/schemas.ts`) as the old vendor adapters. Everything that existed before still works
 unchanged: drafts, human approval, audit, rate limits and redaction. `openai` and `anthropic` still

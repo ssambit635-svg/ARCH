@@ -50,7 +50,12 @@ export async function reviewCode(params: { organizationId: string; userId: strin
   const code = params.code.replace(/\r\n/g, '\n');
   let attachments = params.attachments ?? [];
   const uploads = params.uploads ?? [];
-  if (!code.trim() && attachments.length === 0 && uploads.length === 0) throw AppError.badRequest('Paste code or attach an image, Markdown file, log or source file first.');
+  if (!code.trim() && attachments.length === 0 && uploads.length === 0 && mode !== 'scaffold') {
+    throw AppError.badRequest('Paste code or attach an image, Markdown file, log or source file first.');
+  }
+  if (mode === 'scaffold' && !code.trim() && attachments.length === 0 && uploads.length === 0) {
+    throw AppError.badRequest('Describe the small snippet you need (CRUD route, Zod schema, Prisma model, webhook, status machine, test or form).');
+  }
   if (code.length > MAX_CODE_CHARS) throw AppError.badRequest(`Snippets are limited to ${MAX_CODE_CHARS.toLocaleString('en-US')} characters.`);
 
   // Authorize and rate-limit before invoking OCR (an external local executable) on uploaded bytes.
@@ -70,27 +75,35 @@ export async function reviewCode(params: { organizationId: string; userId: strin
   let model = config.model;
   let tokens = { prompt: 0, completion: 0 };
 
-  if (config.provider === 'arch') {
+  // Thinker is always native: templates + risks, never a local LLM rewriting a whole feature.
+  if (config.provider === 'arch' || mode === 'scaffold') {
+    if (mode === 'scaffold') {
+      provider = 'arch';
+      model = config.provider === 'arch' ? config.model : 'arch-native-thinker';
+    }
     output = parseCodeReview(JSON.stringify(buildCodeReviewOutput({ ...buildCodeReviewInput(code, mode, analysis, attachments), code })));
 
     // Ground the answer in what similar real bugs and code reviews said (downloaded corpora:
     // SWE-bench, ManySStuBs4J, github-codereview, CodeReviewer). The output contract is
     // unchanged — this only adds references to `explanation`. A model problem never breaks a review.
-    try {
-      const organizationModel = await getOrganizationModel(organizationId);
-      const query = [...analysis.diagnoses.map((diagnosis) => `${diagnosis.title}. ${diagnosis.explanation}`), analysis.summary].join(' ');
-      const hits = organizationModel.similar(query, { k: 3, sources: ['code', 'review'], minScore: 0.12 });
-      if (hits.length > 0) {
-        const references = hits.map(
-          (hit, index) => `(${index + 1}) ${hit.doc.title}${hit.doc.rootCause ? ` — ${hit.doc.rootCause}` : ''}${hit.doc.url ? ` [source: ${hit.doc.url}]` : ''}`,
-        );
-        output = {
-          ...output,
-          explanation: [output.explanation, '', 'Similar issues seen in the bug-fix / code-review knowledge base:', ...references].join('\n').trim().slice(0, 6000),
-        };
+    // Thinker scaffolds are templates, not incident diagnoses — skip retrieval.
+    if (mode !== 'scaffold') {
+      try {
+        const organizationModel = await getOrganizationModel(organizationId);
+        const query = [...analysis.diagnoses.map((diagnosis) => `${diagnosis.title}. ${diagnosis.explanation}`), analysis.summary].join(' ');
+        const hits = organizationModel.similar(query, { k: 3, sources: ['code', 'review'], minScore: 0.12 });
+        if (hits.length > 0) {
+          const references = hits.map(
+            (hit, index) => `(${index + 1}) ${hit.doc.title}${hit.doc.rootCause ? ` — ${hit.doc.rootCause}` : ''}${hit.doc.url ? ` [source: ${hit.doc.url}]` : ''}`,
+          );
+          output = {
+            ...output,
+            explanation: [output.explanation, '', 'Similar issues seen in the bug-fix / code-review knowledge base:', ...references].join('\n').trim().slice(0, 6000),
+          };
+        }
+      } catch (error) {
+        console.warn(`[code-assist] ARCH model unavailable for ${organizationId}: ${error instanceof Error ? error.message : String(error)}`);
       }
-    } catch (error) {
-      console.warn(`[code-assist] ARCH model unavailable for ${organizationId}: ${error instanceof Error ? error.message : String(error)}`);
     }
   } else {
     const scrubbed = scrubSecrets(code, analysis.language);

@@ -7,6 +7,7 @@ import { timeAgo } from '@/lib/format';
 import { Card, CardBody, CardHeader, PageHeader } from '@/components/ui';
 import { ConnectRepoForm, RepoConnectionsList } from '@/components/dashboard/repo-connections';
 import { GithubConnectionPanel } from '@/components/dashboard/github-connection';
+import { RepoInsight } from '@/components/dashboard/repo-insight';
 
 export const metadata: Metadata = { title: 'Repositories' };
 export const dynamic = 'force-dynamic';
@@ -33,7 +34,7 @@ export default async function ReposPage() {
     <div className="space-y-6">
       <PageHeader
         title="GitHub Repositories"
-        description="M1: GitHub repo connect + org permission + commit pinning. Connected repos are used for Verified Fix Loop (repo@commit checkout)."
+        description="Connect a GitHub repo. Insight only reads (explain, security, how-tos). Verified Fix may open a draft PR after a human approves — Insight never will."
       />
 
       <Card>
@@ -45,6 +46,16 @@ export default async function ReposPage() {
           ) : (
             <p className="text-sm text-slate-400">Only OWNER/ADMIN can connect repositories.</p>
           )}
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader
+          title="Repo Insight (read-only)"
+          description="Ask how to make the repo private, where secrets might be, or what the tree looks like. ARCH will not push, branch, or add features."
+        />
+        <CardBody>
+          <RepoInsight repos={views.filter((row) => row.isActive).map((row) => ({ id: row.id, fullName: row.fullName }))} />
         </CardBody>
       </Card>
 

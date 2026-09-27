@@ -141,6 +141,8 @@ const CODE_MODES: Record<CodeReviewInput['mode'], string> = {
   review: 'Review the code. List real problems (bugs, reliability, security, performance, readability), most severe first.',
   fix: 'Fix the code. Return a complete corrected version in "improvedCode" that keeps behaviour and public interfaces unchanged.',
   explain: 'Explain the error / stack trace (or the code) in plain language: what failed, where, the probable cause and how to fix it.',
+  scaffold:
+    'ARCH Thinker: from the prompt, emit ONE small boilerplate snippet (route, schema, model, webhook, status table, test or form). List file path, risks of pasting blindly, and what the human still must do. Never a multi-file agent plan.',
 };
 
 export function buildCodeReviewPrompt(input: CodeReviewInput): PromptPair {

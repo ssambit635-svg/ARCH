@@ -21,6 +21,7 @@ import {
   copilotGenerateSchema,
   codeReviewSchema,
   repoConnectionCreateSchema,
+  repoInsightAskSchema,
   repoPinSchema,
   verifiedFixGenerateSchema,
   pullRequestCreateSchema,
@@ -36,6 +37,7 @@ import { approveSuggestion, dismissSuggestion, generateSuggestion } from '@/serv
 import { reviewCode, type CodeReviewResult } from '@/server/services/codeAssist.service';
 import { activateModelVersion, rollbackModel, trainModel } from '@/server/services/archModel.service';
 import { createRepoConnection, pinRepoCommit, deactivateRepoConnection } from '@/server/services/repo.service';
+import { askRepoInsight, type RepoInsightAnswer } from '@/server/services/repoInsight.service';
 import { generateVerifiedFix, verifyFix, approveAndCreatePr } from '@/server/services/verifiedFix.service';
 import { deleteKnowledgeSource, fetchKnowledgeUrl, ingestKnowledgeSource } from '@/server/services/knowledge.service';
 import { revalidateOrganizationStatusPages } from '@/server/revalidate';
@@ -610,6 +612,29 @@ export async function connectRepoAction(_state: ActionResult | undefined, formDa
     return { ok: true, message: `Connected ${connection.fullName} @ ${connection.pinnedCommitSha ?? connection.defaultBranch}` };
   } catch (error) {
     return toFailure(error);
+  }
+}
+
+export type RepoInsightState = { ok: true; result: RepoInsightAnswer } | { ok: false; error: string };
+
+export async function askRepoInsightAction(_state: RepoInsightState | undefined, formData: FormData): Promise<RepoInsightState> {
+  try {
+    const { user, organization } = await context();
+    const input = repoInsightAskSchema.parse({
+      repoConnectionId: formData.get('repoConnectionId'),
+      question: formData.get('question'),
+    });
+    const result = await askRepoInsight({
+      organizationId: organization.id,
+      userId: user.id,
+      repoConnectionId: input.repoConnectionId,
+      question: input.question,
+    });
+    return { ok: true, result };
+  } catch (error) {
+    if (error instanceof z.ZodError) return { ok: false, error: error.issues[0]?.message ?? 'Invalid input.' };
+    const failure = toFailure(error);
+    return { ok: false, error: failure.ok ? 'Something went wrong.' : failure.error };
   }
 }
 
