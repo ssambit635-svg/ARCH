@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 import { z } from 'zod';
 import packageJson from '../../package.json';
 import { Prisma, isDatabaseUnavailableError } from './db';
+import { describeDatabaseError, safeErrorLog } from './db-errors';
 import { env } from './env';
 import { AppError, isAppError, type FieldIssue } from './errors';
 
@@ -57,6 +58,15 @@ export function fail(error: unknown): NextResponse {
     );
   }
 
+  const database = describeDatabaseError(error);
+  if (database.kind === 'schema_out_of_date') {
+    console.error('[api] database schema is missing or out of date', JSON.stringify(safeErrorLog(error)));
+    return NextResponse.json(
+      { error: { code: 'SERVICE_UNAVAILABLE', message: 'The database schema is missing or out of date. If you run ARCH yourself, run npm run db:migrate and try again.' } },
+      { status: 503 },
+    );
+  }
+
   if (error instanceof Prisma.PrismaClientKnownRequestError) {
     if (error.code === 'P2002') {
       return NextResponse.json({ error: { code: 'CONFLICT', message: 'That value is already taken.' } }, { status: 409 });
@@ -71,7 +81,7 @@ export function fail(error: unknown): NextResponse {
 
   // Error strings from drivers/providers can include connection URLs, headers or tokens.
   // Keep those out of public responses even in development.
-  console.error('[api] unhandled error', error instanceof Error ? error.name : 'unknown');
+  console.error('[api] unhandled error', JSON.stringify(safeErrorLog(error)));
   return NextResponse.json(
     { error: { code: 'INTERNAL', message: 'Something went wrong on our side.' } },
     { status: 500 },
