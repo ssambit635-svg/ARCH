@@ -66,6 +66,77 @@ describe('ARCH answer engine (native)', () => {
   });
 });
 
+describe('ARCH answer engine — conversation & advisory', () => {
+  it('greets back and offers useful openings', () => {
+    const out = answerQuestion('hi there!', baseContext());
+    expect(out.intent).toBe('greet');
+    expect(out.answer).toMatch(/ARCH/i);
+    expect(out.suggestions.length).toBeGreaterThan(0);
+  });
+
+  it('handles Hinglish small talk', () => {
+    const out = answerQuestion('kaise ho?', baseContext());
+    expect(out.intent).toBe('greet');
+  });
+
+  it('accepts thanks without pretending to change anything', () => {
+    const out = answerQuestion('thanks, that helps!', baseContext());
+    expect(out.intent).toBe('thanks');
+    expect(out.answer).toMatch(/help/i);
+  });
+
+  it('explains what it can do', () => {
+    const out = answerQuestion('what can you do?', baseContext());
+    expect(out.intent).toBe('help');
+    expect(out.answer).toMatch(/incident/i);
+    expect(out.answer).toMatch(/never (write|writes)/i);
+  });
+
+  it('lets real questions win over small talk', () => {
+    const out = answerQuestion("thanks — what's the status?", baseContext());
+    expect(out.intent).toBe('status');
+  });
+
+  it('solves a described ops problem step by step, without writing code', () => {
+    const out = answerQuestion('database slow hai, kya karu?', baseContext());
+    expect(out.intent).toBe('advice');
+    expect(out.answer).toMatch(/check first/i);
+    expect(out.answer).toMatch(/database/i);
+    expect(out.citations.some((c) => c.source === 'playbook')).toBe(true);
+    expect(out.confidence).toBe('medium');
+  });
+
+  it('advises on latency problems in English too', () => {
+    const out = answerQuestion('API latency is spiking, how do I reduce it?', baseContext());
+    expect(out.intent).toBe('advice');
+    expect(out.answer).toMatch(/latency/i);
+  });
+
+  it('falls back to a generic approach when no playbook matches', () => {
+    const out = answerQuestion('something weird is happening with my cron scheduler, what should I do?', baseContext());
+    expect(out.intent).toBe('advice');
+    expect(out.answer).toMatch(/request path|recently|scope/i);
+  });
+
+  it('keeps short incident-referencing asks on the incident fix flow', () => {
+    const out = answerQuestion('ise kaise thik kare?', baseContext());
+    expect(out.intent).toBe('fix');
+  });
+
+  it('resolves follow-ups against the conversation history', () => {
+    const history = [{ question: 'checkout latency is spiking, how do I reduce it?', answer: 'Here is how I would approach this…' }];
+    const out = answerQuestion('what about the database?', baseContext(), undefined, history);
+    expect(out.intent).toBe('advice');
+    expect(out.answer).toMatch(/database/i);
+  });
+
+  it('still answers the incident questions it always did', () => {
+    expect(answerQuestion("what's the status?", baseContext()).intent).toBe('status');
+    expect(answerQuestion('kyun hua?', baseContext()).intent).toBe('cause');
+    expect(answerQuestion('why?', baseContext()).intent).toBe('cause');
+  });
+});
+
 describe('ARCH hints (gap detection)', () => {
   it('flags a CRITICAL incident with no assignee', () => {
     const ctx = baseContext({ incident: { ...baseContext().incident, severity: 'CRITICAL' } });

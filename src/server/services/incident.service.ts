@@ -10,6 +10,7 @@ import { organizationRepository } from '../repositories/organization.repository'
 import { notificationRepository } from '../repositories/notification.repository';
 import { buildIncidentNotifications } from './notification.service';
 import { assertTransition, isReopen } from './incident-state';
+import { alertFingerprint } from './incident-fingerprint';
 import { getOrganizationModel } from './archModel.service';
 import { recordSeverityCorrection } from './modelLearning.service';
 
@@ -189,6 +190,8 @@ export async function createIncidentInternal(
     webhookEndpointId?: string | null;
     /// Suppresses duplicate incidents coming from a repeating alert source.
     dedupeKey?: string | null;
+    /// Pre-computed alert fingerprint (webhook path); otherwise derived from title + service.
+    fingerprint?: string | null;
     input: IncidentCreateInput;
     /// Set by the webhook path, which already authenticates with HMAC instead of a session.
     skipPermissionCheck?: boolean;
@@ -206,6 +209,16 @@ export async function createIncidentInternal(
   if (input.assignedToId) await assertAssigneeIsMember(organizationId, input.assignedToId, client);
 
   const startedAt = parseStartedAt(input.startedAt);
+  // Alert fingerprint: supplied by webhook ingestion (so the pre-create dedupe check and the
+  // stored row agree) or derived here so dashboard/API incidents join the same correlation groups.
+  const fingerprint =
+    params.fingerprint ??
+    alertFingerprint({
+      source: params.source,
+      serviceKey: service?.name ?? null,
+      title: input.title,
+      description: input.description ?? null,
+    });
   const incident = await incidentRepository.create(
     {
       organizationId,
@@ -220,6 +233,7 @@ export async function createIncidentInternal(
       assignedToId: input.assignedToId ?? null,
       webhookEndpointId: params.webhookEndpointId ?? null,
       dedupeKey: params.dedupeKey ?? null,
+      fingerprint,
       startedAt,
     },
     client,

@@ -31,6 +31,75 @@ const FEATURE_LABEL: Record<string, string> = {
   category: 'failure family',
 };
 
+type BlastRadius = {
+  affectedServices: { id: string; name: string; status: string; distance: number }[];
+  recentIncidents: { id: string; title: string; severity: string; status: string; startedAt: string }[];
+  note: string;
+};
+
+/**
+ * V7 — change-aware blast radius, loaded on demand: "this deploy ships — who is downstream of it?"
+ * Graph distance 1 = depends directly on the changed service.
+ */
+function ChangeBlastRadius({ changeId }: { changeId: string }) {
+  const [open, setOpen] = useState(false);
+  const [data, setData] = useState<BlastRadius | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!open || data) return;
+    const controller = new AbortController();
+    fetch(`/api/changes/${changeId}/blast-radius`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Could not load blast radius.');
+        setData((await response.json()).data as BlastRadius);
+      })
+      .catch((cause: unknown) => {
+        if (cause instanceof DOMException && cause.name === 'AbortError') return;
+        setError(cause instanceof Error ? cause.message : 'Could not load blast radius.');
+      });
+    return () => controller.abort();
+  }, [open, data, changeId]);
+
+  return (
+    <div className="mt-2">
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        className="text-xs text-sky-300 hover:text-sky-200"
+      >
+        {open ? 'Hide blast radius' : 'Blast radius — who is downstream?'}
+      </button>
+      {open ? (
+        <div className="mt-2 space-y-2">
+          {error ? <p className="text-xs text-rose-300">{error}</p> : null}
+          {!error && !data ? <p className="text-xs text-slate-500">Walking the dependency map…</p> : null}
+          {data ? (
+            <>
+              <p className="text-xs text-slate-400">{data.note}</p>
+              {data.affectedServices.length > 0 ? (
+                <ul className="flex flex-wrap gap-1.5">
+                  {data.affectedServices.map((service) => (
+                    <li key={service.id} className="rounded-full bg-rose-500/10 px-2 py-0.5 text-[10px] text-rose-200">
+                      {service.name} · hop {service.distance}
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+              {data.recentIncidents.length > 0 ? (
+                <p className="text-[10px] text-slate-500">
+                  Recent incidents on the affected set:{' '}
+                  {data.recentIncidents.slice(0, 3).map((incident) => incident.title).join(' · ')}
+                </p>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 /**
  * V6 — which recent changes are most likely to cause an incident, and why.
  *
@@ -94,6 +163,7 @@ export function ChangeRiskPanel({ serviceId }: { serviceId?: string | null }) {
                         .join(', ')}
                     </p>
                   ) : null}
+                  <ChangeBlastRadius changeId={change.changeId} />
                 </li>
               ))}
             </ul>
