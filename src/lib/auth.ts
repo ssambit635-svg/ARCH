@@ -26,15 +26,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       credentials: { email: {}, password: {} },
-      async authorize(rawCredentials) {
+      async authorize(rawCredentials, request) {
         const parsed = loginSchema.safeParse(rawCredentials);
         if (!parsed.success) return null;
         const { email, password } = parsed.data;
         const normalizedEmail = email.toLowerCase();
 
-        // Brute-force protection: per-email and per-IP limits are applied by the caller of
-        // /api/auth/callback/credentials via the same key namespace.
+        // Brute-force protection also covers direct Auth.js callback requests (not just the
+        // sign-in form action). Email and IP buckets are independent so changing either one
+        // cannot bypass the other.
         enforceRateLimit(`auth:credentials:${normalizedEmail}`, { limit: 10, windowMs: 60_000 });
+        const forwardedIp = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim();
+        const ip = forwardedIp || request.headers.get('x-real-ip')?.trim();
+        if (ip) enforceRateLimit(`auth:credentials:ip:${ip}`, { limit: 30, windowMs: 60_000 });
 
         const user = await db.user.findUnique({ where: { email: normalizedEmail } });
         if (!user?.passwordHash) return null;

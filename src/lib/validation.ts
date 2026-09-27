@@ -31,7 +31,7 @@ export const paginationSchema = z.object({
 // ---------- Auth ----------
 
 export const registerSchema = z.object({
-  email: z.email('Enter a valid email address.').max(200),
+  email: z.string().trim().toLowerCase().pipe(z.email('Enter a valid email address.').max(200)),
   name: z.string().trim().max(80).optional(),
   password: z
     .string()
@@ -41,7 +41,7 @@ export const registerSchema = z.object({
 });
 
 export const loginSchema = z.object({
-  email: z.email('Enter a valid email address.'),
+  email: z.string().trim().toLowerCase().pipe(z.email('Enter a valid email address.')),
   password: z.string().min(1, 'Enter your password.'),
 });
 
