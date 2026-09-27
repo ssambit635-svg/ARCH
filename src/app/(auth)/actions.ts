@@ -1,14 +1,16 @@
 'use server';
 
 import { AuthError } from 'next-auth';
+import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { signIn, signOut } from '@/lib/auth';
 import { isDatabaseReachable, isDatabaseUnavailableError } from '@/lib/db';
 import { env } from '@/lib/env';
-import { registerSchema } from '@/lib/validation';
+import { loginSchema, registerSchema } from '@/lib/validation';
 import { registerUser } from '@/server/services/auth.service';
 import { zodIssues } from '@/lib/api';
 import { isAppError } from '@/lib/errors';
+import { rateLimit } from '@/lib/rate-limit';
 
 /**
  * Auth server actions.
@@ -51,13 +53,37 @@ function fieldErrorsFrom(issues: { path: readonly PropertyKey[]; message: string
   return result;
 }
 
+async function enforceFormRateLimit(key: string, limit: number, windowMs: number): Promise<string | null> {
+  const result = rateLimit(key, { limit, windowMs });
+  return result.ok ? null : `Too many attempts. Please wait ${result.retryAfterSeconds} seconds, then try again.`;
+}
+
+async function requestIp(): Promise<string | null> {
+  const requestHeaders = await headers();
+  const forwarded = requestHeaders.get('x-forwarded-for')?.split(',')[0]?.trim();
+  const ip = forwarded || requestHeaders.get('x-real-ip')?.trim();
+  return ip || null;
+}
+
 export async function loginAction(_state: AuthFormState, formData: FormData): Promise<AuthFormState> {
   const callbackUrl = safeCallbackUrl(formData.get('callbackUrl'));
+  const parsed = loginSchema.safeParse({ email: formData.get('email'), password: formData.get('password') });
+  if (!parsed.success) {
+    return { error: 'Please check your email and password.', fieldErrors: fieldErrorsFrom(parsed.error.issues) };
+  }
+  const email = parsed.data.email;
+  const emailLimit = await enforceFormRateLimit(`auth:form:email:${email}`, 10, 60_000);
+  if (emailLimit) return { error: emailLimit };
+  const ip = await requestIp();
+  if (ip) {
+    const ipLimit = await enforceFormRateLimit(`auth:form:ip:${ip}`, 30, 60_000);
+    if (ipLimit) return { error: ipLimit };
+  }
   if (await databaseIsDown()) return { error: DATABASE_DOWN_MESSAGE };
   try {
     await signIn('credentials', {
-      email: String(formData.get('email') ?? ''),
-      password: String(formData.get('password') ?? ''),
+      email: parsed.data.email,
+      password: parsed.data.password,
       redirectTo: callbackUrl,
     });
     return undefined;
@@ -101,6 +127,14 @@ export async function registerAction(_state: AuthFormState, formData: FormData):
 
   if (!parsed.success) {
     return { error: 'Please check the form.', fieldErrors: fieldErrorsFrom(parsed.error.issues) };
+  }
+
+  const emailLimit = await enforceFormRateLimit(`auth:register:email:${parsed.data.email.toLowerCase()}`, 5, 10 * 60_000);
+  if (emailLimit) return { error: emailLimit };
+  const ip = await requestIp();
+  if (ip) {
+    const ipLimit = await enforceFormRateLimit(`auth:register:ip:${ip}`, 20, 10 * 60_000);
+    if (ipLimit) return { error: ipLimit };
   }
 
   if (await databaseIsDown()) return { error: DATABASE_DOWN_MESSAGE };
