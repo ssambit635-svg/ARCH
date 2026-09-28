@@ -141,9 +141,9 @@ export default async function ModelPage() {
               {
                 label: 'Offline lock',
                 value: status.offlineOnly ? (
-                  <span className="text-emerald-300">on — external AI vendors and public LLM URLs are refused</span>
+                  <span className="text-emerald-300">on — external knowledge fetch refused; no AI vendor code exists in ARCH</span>
                 ) : (
-                  <span className="text-amber-300">off — ARCH_OFFLINE_ONLY=false allows external vendors</span>
+                  <span className="text-amber-300">off — ARCH_OFFLINE_ONLY=false allows public document fetching</span>
                 ),
               },
             ]}
@@ -313,41 +313,21 @@ export default async function ModelPage() {
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
           <CardHeader
-            title="Local LLM (optional)"
-            description="For richer drafts and code rewrites, run an open-source model next to ARCH. The ARCH model stays as automatic fallback."
-            action={
-              status.localLlm ? (
-                status.localLlm.reachable && status.localLlm.modelAvailable ? (
-                  <Badge tone="success">connected</Badge>
-                ) : status.localLlm.reachable ? (
-                  <Badge tone="danger">model not pulled</Badge>
-                ) : (
-                  <Badge tone="danger">unreachable</Badge>
-                )
-              ) : (
-                <Badge>not enabled</Badge>
-              )
-            }
+            title="ARCH Agent (built in)"
+            description="Complex prompts are intercepted, planned and executed by ARCH's own agent loop — no external model, no API key."
+            action={<Badge tone="success">native · no setup</Badge>}
           />
           <CardBody className="space-y-3">
-            {status.localLlm ? (
-              <DefinitionList
-                items={[
-                  { label: 'Server', value: <span className="arch-mono">{status.localLlm.url}</span> },
-                  { label: 'Model', value: <span className="arch-mono">{status.localLlm.model}</span> },
-                  { label: 'Available models', value: status.localLlm.models.length ? status.localLlm.models.join(', ') : '—' },
-                ]}
-              />
-            ) : null}
-            <p className="text-sm text-slate-400">Free, CPU-only setup (8–16 GB RAM works well with a 7B model):</p>
-            <Code>{`# 1. install Ollama (https://ollama.com) or: docker compose --profile ai up -d
-ollama pull qwen2.5-coder:7b          # ~4.7 GB, good at code + JSON
-# smaller server? qwen2.5-coder:3b or llama3.2:3b
-
-# 2. .env
-AI_PROVIDER="arch-hybrid"
-LOCAL_LLM_URL="http://127.0.0.1:11434"
-LOCAL_LLM_MODEL="qwen2.5-coder:7b"`}</Code>
+            <DefinitionList
+              items={[
+                { label: 'Planner', value: 'Prefixes a chain-of-thought system prompt, then reads the <thinking> / <plan> tags back before any answer is shown.' },
+                { label: 'Tools', value: 'A plain registry of native functions (calculator, clock, scoped file read/list). The model asks for one as JSON; ARCH runs it and feeds the result back.' },
+                { label: 'Self-correction', value: 'Generated Python is written to a temp .py file and run in a sandboxed subprocess. Failures come back as “The code failed with this error: … Fix it.” until it passes or attempts run out.' },
+              ]}
+            />
+            <p className="text-sm text-slate-400">
+              Every step runs on this server. Chat prompts that need no planning skip the loop entirely and answer in milliseconds.
+            </p>
           </CardBody>
         </Card>
 
@@ -376,7 +356,7 @@ LOCAL_LLM_MODEL="qwen2.5-coder:7b"`}</Code>
               Downloads run on your server into a git-ignored folder; nothing third-party is committed or redistributed — ARCH keeps short snippets and source
               links only. Licenses: docs/legal/TRAINING-DATA-LICENSES.md. Then retrain above.
             </p>
-            <p className="text-sm text-slate-400">Want to fine-tune the local LLM on your incidents? Export a training set:</p>
+            <p className="text-sm text-slate-400">Want to train your own derivative model on your incidents? Export a fine-tuning dataset:</p>
             <Code>{`npm run model:export-finetune -- --org <organization-slug>`}</Code>
           </CardBody>
         </Card>

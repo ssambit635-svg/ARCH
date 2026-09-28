@@ -22,9 +22,8 @@ import {
   type TrainingDoc,
 } from '../ai/arch-model/train';
 import { redact } from '../ai/guardrails';
-import { checkLocalLlm, isLocalEndpoint, type LocalLlmHealth } from '../ai/local-llm';
 import { knowledgeFetchEnabled } from './knowledge.service';
-import { copilotConfig, localLlmConfig } from '../ai/provider';
+import { copilotConfig } from '../ai/provider';
 import { archModelRepository } from '../repositories/archModel.repository';
 import { knowledgeSourceRepository } from '../repositories/knowledgeSource.repository';
 import { modelFeedbackRepository } from '../repositories/modelFeedback.repository';
@@ -731,7 +730,6 @@ export type ModelStatus = {
   drift: (ModelDrift & { version: number; detectedAt: string }) | null;
   jobs: { open: number; last: TrainJobSummary | null };
   versions: VersionSummary[];
-  localLlm: (LocalLlmHealth & { url: string; model: string; api: string; private: boolean }) | null;
   retrainMinutes: number;
 };
 
@@ -772,12 +770,11 @@ function summarizeVersion(row: {
   };
 }
 
-export async function getModelStatus(params: { organizationId: string; userId: string; checkLlm?: boolean }): Promise<ModelStatus> {
+export async function getModelStatus(params: { organizationId: string; userId: string }): Promise<ModelStatus> {
   await requirePermission(params.organizationId, params.userId, 'copilot.read');
   const summary = await archModelRepository.findSummary(params.organizationId);
   const base = baseArchModel();
   const config = copilotConfig();
-  const llm = localLlmConfig();
   const publicDocs = loadPublicDocs();
   const codeDocs = loadCodeDocs();
   const reviewDocs = loadReviewDocs();
@@ -837,10 +834,6 @@ export async function getModelStatus(params: { organizationId: string; userId: s
       })(),
     },
     versions: versions.map(summarizeVersion),
-    localLlm:
-      env.AI_PROVIDER === 'arch-hybrid' || params.checkLlm
-        ? { ...(await checkLocalLlm(llm)), url: llm.baseUrl, model: llm.model, api: llm.api, private: isLocalEndpoint(llm.baseUrl) }
-        : null,
     retrainMinutes: env.ARCH_MODEL_RETRAIN_MINUTES,
   };
 }

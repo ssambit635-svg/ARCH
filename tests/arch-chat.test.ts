@@ -20,7 +20,6 @@ import {
 import { ingestKnowledgeSource, resetKnowledgeCaches } from '@/server/services/knowledge.service';
 import { approveSuggestion, generateSuggestion } from '@/server/services/copilot.service';
 import { processTrainingJobs, resetArchModelCache, trainModel } from '@/server/services/archModel.service';
-import { setLocalChatModelForTesting, type LocalChatModel } from '../src/server/ai/local-chat';
 import { addMember, createTenant, createTestIncident, createTestUser, db, resetDatabase } from './helpers/db';
 
 /**
@@ -51,7 +50,6 @@ describe('Chat with ARCH (service)', () => {
     resetRateLimits();
     resetArchModelCache();
     resetKnowledgeCaches();
-    setLocalChatModelForTesting(undefined);
   });
 
   it('creates a conversation, answers the first message, and titles the chat from it', async () => {
@@ -78,56 +76,6 @@ describe('Chat with ARCH (service)', () => {
     expect(result.session.messageCount).toBe(2);
     expect(result.session.titleSource).toBe('AUTO');
   });
-
-  it('uses the opt-in local model for open-ended chat, reflects once, and records the provider', async () => {
-    const { organization, owner } = await setup('local-chat');
-    const session = await createChatSession({ organizationId: organization.id, userId: owner.id });
-    let calls = 0;
-    const localModel: LocalChatModel = {
-      model: 'local-test-model',
-      async generate() {
-        calls += 1;
-        return { model: 'local-test-model', text: calls === 1 ? 'Draft: Apologize clearly.' : 'A sincere, specific apology is a good start.' };
-      },
-    };
-    setLocalChatModelForTesting(localModel);
-
-    const result = await sendChatMessage({
-      organizationId: organization.id,
-      userId: owner.id,
-      sessionId: session.id,
-      content: 'How do I apologize to a friend?',
-    });
-
-    expect(calls).toBe(2);
-    expect(result.archMessage.content).toBe('A sincere, specific apology is a good start.');
-    expect(result.archMessage.provider).toBe('arch-hybrid');
-    expect(result.archMessage.model).toBe('local-test-model');
-    const stored = await db.archChatMessage.findFirstOrThrow({ where: { id: result.archMessage.id } });
-    expect(stored.provider).toBe('arch-hybrid');
-  }, 60_000);
-
-  it('uses the deterministic native answer when local generation fails', async () => {
-    const { organization, owner } = await setup('local-chat-fallback');
-    const session = await createChatSession({ organizationId: organization.id, userId: owner.id });
-    setLocalChatModelForTesting({
-      model: 'local-test-model',
-      async generate() {
-        throw new Error('private local inference unavailable');
-      },
-    });
-
-    const result = await sendChatMessage({
-      organizationId: organization.id,
-      userId: owner.id,
-      sessionId: session.id,
-      content: 'How do I apologize to a friend?',
-    });
-
-    expect(result.archMessage.provider).toBe('arch');
-    expect(result.archMessage.model).toBe('arch-native-1');
-    expect(result.archMessage.content.length).toBeGreaterThan(0);
-  }, 60_000);
 
   it('persists the transcript and returns it oldest-first', async () => {
     const { organization, owner } = await setup('persist');
@@ -635,4 +583,77 @@ describe('Chat with ARCH (service)', () => {
     await approveSuggestion({ organizationId: organization.id, userId: owner.id, suggestionId: suggestion.id });
     expect(await db.archModelFeedback.count({ where: { organizationId: organization.id } })).toBeGreaterThan(0);
   }, 60_000);
+});
+
+/**
+ * ARCH Agent in chat, end to end against a real database and a real Python interpreter:
+ * complex prompts are intercepted (plan managed server-side), native tools execute, and a
+ * requested script runs in the sandboxed subprocess with the self-correction loop attached.
+ * The member must never see <thinking>/<plan> tags — only the final answer.
+ */
+describe('ARCH Agent in chat (service)', () => {
+  beforeEach(async () => {
+    await resetDatabase();
+    resetRateLimits();
+    resetArchModelCache();
+    resetKnowledgeCaches();
+  });
+
+  it('intercepts a complex prompt but presents only the clean, tag-free answer', async () => {
+    const { organization, owner } = await setup('agent-plan');
+    const result = await sendChatMessage({
+      organizationId: organization.id,
+      userId: owner.id,
+      content: 'compare our two rollout strategies and give me a step by step plan for each with the risks',
+    });
+
+    expect(result.archMessage.provider).toBe('arch');
+    expect(result.archMessage.content.length).toBeGreaterThan(0);
+    // The plan and thinking were managed server-side, never rendered.
+    expect(result.archMessage.content).not.toMatch(/<thinking>|<plan>|<step>|<\/answer>/);
+    const stored = await db.archChatMessage.findFirstOrThrow({ where: { id: result.archMessage.id } });
+    expect(stored.content).not.toMatch(/<thinking>|<plan>/);
+  }, 30_000);
+
+  it('runs the native calculator tool and feeds the exact result back into the answer', async () => {
+    const { organization, owner } = await setup('agent-tool');
+    const result = await sendChatMessage({
+      organizationId: organization.id,
+      userId: owner.id,
+      content: 'Calculate 12 * 8 + 4 and explain what it means for the incident budget plan',
+    });
+
+    expect(result.archMessage.content).toContain('100');
+    expect(result.archMessage.content).toMatch(/calculator/i);
+    expect(result.archMessage.content).not.toMatch(/<thinking>|<plan>|<step>/);
+    expect(result.archMessage.provider).toBe('arch');
+  }, 30_000);
+
+  it('writes a Python script, executes it in the sandbox, and answers with the verified output', async () => {
+    const { organization, owner } = await setup('agent-script');
+    const result = await sendChatMessage({
+      organizationId: organization.id,
+      userId: owner.id,
+      content: 'write a python script for the p95 of 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120',
+    });
+
+    const answer = result.archMessage.content;
+    expect(answer).toContain('```python');
+    expect(answer).toContain('Output (exit 0');
+    expect(answer).toContain('p95=');
+    // The p95 of that series is 120 (nearest-rank on the sorted tail) — real execution, not prose.
+    expect(answer).toMatch(/p95=1[12]\d/);
+    expect(answer).not.toMatch(/<thinking>|<plan>|<step>/);
+    // Script answers carry no incident citations (they replace the engine refusal wholesale).
+    expect(result.archMessage.citations).toHaveLength(0);
+    expect(result.archMessage.provider).toBe('arch');
+  }, 30_000);
+
+  it('keeps ordinary short prompts on the fast path (no agent overhead)', async () => {
+    const { organization, owner } = await setup('agent-fast');
+    const result = await sendChatMessage({ organizationId: organization.id, userId: owner.id, content: 'hello' });
+    expect(result.archMessage.content.length).toBeGreaterThan(0);
+    expect(result.archMessage.content).not.toMatch(/<thinking>|<plan>/);
+    expect(result.archMessage.provider).toBe('arch');
+  }, 30_000);
 });

@@ -13,8 +13,8 @@ import type { CategoryId } from '../arch-model/knowledge';
  *                        from strings, hard-coded secrets, unbounded retries …) and applies the
  *                        fixes that are safe to apply mechanically.
  *
- * When a local LLM is configured (AI_PROVIDER="arch-hybrid") these findings are handed to it as
- * grounding; without one they ARE the answer. Either way nothing leaves the server.
+ * These findings ARE the answer — they ground the native review engine too. Nothing leaves the
+ * server: ARCH has no local-LLM or vendor adapter in this path (or anywhere else).
  */
 
 export type CodeLanguage = 'typescript' | 'javascript' | 'python' | 'go' | 'java' | 'sql' | 'ruby' | 'php' | 'csharp' | 'shell' | 'yaml' | 'unknown';

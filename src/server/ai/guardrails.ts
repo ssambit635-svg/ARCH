@@ -206,16 +206,6 @@ export async function callWithGuardrails<T>(params: {
           task: params.task,
           maxTokens: params.maxTokens,
           signal: controller.signal,
-          // Lets a composite provider (arch-hybrid) check a completion and fall back BEFORE
-          // returning it, instead of burning the retry on output it could have repaired itself.
-          accept: (text: string) => {
-            try {
-              params.parse(text);
-              return true;
-            } catch {
-              return false;
-            }
-          },
         }),
         timeout,
       ]);

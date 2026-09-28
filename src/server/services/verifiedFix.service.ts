@@ -24,7 +24,7 @@ import { analyzeCode, detectLanguage, looksLikeStackTrace, scrubSecrets } from '
 import { LIMITS, redact, truncate } from '@/server/ai/guardrails';
 import { buildPrompt } from '@/server/ai/prompts';
 import { callWithGuardrails, CopilotCallError } from '@/server/ai/guardrails';
-import { copilotConfig, copilotTimeoutMs, copilotAttempts, getAiProvider } from '@/server/ai/provider';
+import { copilotConfig, copilotTimeoutMs, getAiProvider } from '@/server/ai/provider';
 import { parseCodeFix, parseVerifiedFix, suggestionTimelineText } from '@/server/ai/schemas';
 import { enforceRateLimit } from '@/lib/rate-limit';
 import { env } from '@/lib/env';
@@ -143,7 +143,6 @@ export async function generateVerifiedFix(params: {
       user: prompt.user,
       maxTokens: Math.max(env.AI_MAX_TOKENS, 1500),
       timeoutMs: copilotTimeoutMs(),
-      attempts: copilotAttempts(),
       parse,
     });
 

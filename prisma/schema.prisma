@@ -609,7 +609,7 @@ model AiSuggestion {
   incidentId       String
   type             AiSuggestionType
   status           AiSuggestionStatus @default(PENDING)
-  /// Provider + model that produced the draft ("mock", "openai", "anthropic").
+  /// Provider + model that produced the draft ("arch" native engine or "mock" for tests).
   provider         String
   model            String
   promptTokens     Int                @default(0)
