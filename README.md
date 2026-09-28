@@ -154,8 +154,8 @@ Day-to-day:
 | Command | What it does |
 |---|---|
 | `npm run dev` | Postgres (Docker or embedded) + migrations + Next.js |
-| `npm run dev:next` | Next.js only (assumes the database is already up) |
-| `npm run build` / `npm start` | Production build / production server |
+| `npm run dev:next` | Next.js only (assumes the database is already up **and migrated**) |
+| `npm run build` / `npm start` | Production build / production server (does **not** migrate — run `npm run db:migrate` first) |
 | `npm run db:up` / `db:down` / `db:status` | Embedded Postgres lifecycle |
 | `npm run db:migrate` / `db:reset` | Apply migrations — `/` `--reset` drops and rebuilds |
 | `npm run db:seed` | Idempotent demo data (only with a private, unique `SEED_PASSWORD`) |
@@ -163,6 +163,16 @@ Day-to-day:
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm test` | Vitest against a real, separate test database |
 | `npm run worker` | Outbox drain (add `-- --once` for a single pass) |
+
+### Sign-up or sign-in says the database tables are missing
+
+`npm run dev:next`, `npm start` and a fresh hosted PostgreSQL do not apply migrations. The database
+then answers connections but has no `users` table, and `/register` / `/login` say that ARCH's tables
+are missing or out of date. Run `npm run db:migrate` against the same `DATABASE_URL` (or start with
+`npm run dev`, which migrates automatically). Any other unexpected sign-up/sign-in failure shows an
+**Error ID**; the server log has a matching `[register] failed` / `[login] failed` line with the
+Prisma/PostgreSQL error codes and the table involved (never passwords, form data or connection
+strings).
 
 ### Backend smoke test
 

@@ -15,6 +15,23 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Fixed — "Could not create your account" when the database is reachable but not migrated
+
+- **Sign-up and sign-in now tell you when migrations are missing.** `npm run dev:next`, `npm start`
+  and a new hosted PostgreSQL don't apply migrations. The database still answered connections, so
+  ARCH skipped its "database is down" message. Then creating the account failed because the `users`
+  table didn't exist, and all you saw was "Could not create your account. Please try again."
+  `/register` and `/login` now say the tables are missing or out of date and tell you to run
+  `npm run db:migrate`. A database role without permission on the tables, and a busy connection
+  pool, get their own messages too.
+- **Two sign-ups at the same moment no longer fail with the generic error.** Prisma 7 reports
+  unique-index conflicts in a new format, and the duplicate-email check didn't recognise it. A second
+  sign-up for the same email now gets "An account with that email already exists". Two sign-ups
+  creating the same organization name now retry with the next free slug (`acme-inc-2`).
+- **Any failure left unexplained now has a traceable Error ID.** The form shows a short Error ID. The
+  server logs a matching line with the Prisma/PostgreSQL error codes and the table, column or
+  constraint involved. It never logs passwords, form data, email addresses or connection strings.
+
 ### Fixed — sign-in / sign-up on a fresh machine (and a build that needs no network)
 
 Signing in or creating an account is the first thing anyone does with ARCH, so a failure there is
