@@ -169,7 +169,11 @@ Day-to-day:
 `npm run dev:next`, `npm start` and a fresh hosted PostgreSQL do not apply migrations. The database
 then answers connections but has no `users` table, and `/register` / `/login` say that ARCH's tables
 are missing or out of date. Run `npm run db:migrate` against the same `DATABASE_URL` (or start with
-`npm run dev`, which migrates automatically). Any other unexpected sign-up/sign-in failure shows an
+`npm run dev`, which migrates automatically). On a hosting platform, either make the build command
+`npm run db:migrate && npm run build`, or run `DATABASE_URL="<production url>" npm run db:migrate`
+once from your own machine after each release that adds a migration. Managed databases that
+require SSL work as-is: the migrator connects with the URL unchanged (including `?sslmode=…`) and
+never needs the `postgres` maintenance database. Any other unexpected sign-up/sign-in failure shows an
 **Error ID**; the server log has a matching `[register] failed` / `[login] failed` line with the
 Prisma/PostgreSQL error codes and the table involved (never passwords, form data or connection
 strings).
