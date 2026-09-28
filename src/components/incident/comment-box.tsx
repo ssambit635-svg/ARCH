@@ -69,7 +69,7 @@ export function CommentBox({ incidentId }: { incidentId: string }) {
           <button
             type="submit"
             disabled={pending || !body.trim()}
-            className="rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-600 px-3.5 py-1.5 text-[13px] font-medium text-white transition hover:from-indigo-400 hover:to-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-lg bg-bone px-3.5 py-1.5 text-[13px] font-medium text-ink-1000 transition hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
           >
             {pending ? 'Posting…' : 'Post update'}
           </button>

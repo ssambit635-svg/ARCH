@@ -146,7 +146,7 @@ export function IncidentStateDropdown({
               type="button"
               onClick={submit}
               disabled={pending}
-              className="rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-3.5 py-2 text-sm font-medium text-white transition hover:from-indigo-400 hover:to-indigo-500 disabled:opacity-60"
+              className="rounded-xl bg-bone px-3.5 py-2 text-sm font-medium text-ink-1000 transition hover:bg-white disabled:opacity-60"
             >
               {pending ? 'Updating…' : target?.label ?? 'Update'}
             </button>

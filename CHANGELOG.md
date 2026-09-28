@@ -15,6 +15,48 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Changed — the entire visual language ("Mission Control")
+
+- **The indigo→violet gradient scheme is gone.** ARCH shipped with two accent colours, decorative
+  blur orbs, gradient-filled display type and coloured drop-shadows — which contradicted our own
+  `docs/go-to-market/BRAND-GUIDE.md` ("one strong signal colour", "never add gradients" to the mark,
+  "status colours never used for decoration"). The palette is rebuilt on that original intent.
+- **Graphite base, one accent, severity as data.** Surfaces are near-zero-chroma graphite rather
+  than blue-black; sodium (`#ffb627`) is the single decorative hue and marks ARCH itself; red /
+  orange / amber / green / sky belong to incident and service state and appear nowhere else. No
+  glow, no aurora, no gradient text.
+- **Body text is no longer blue.** `slate-*` is remapped to a stone neutral across the product —
+  ~550 utility classes set text colour from a blue-gray ramp, and body copy is where the cast showed.
+- **New display typeface.** Space Grotesk (variable) for headlines and large numbers, alongside the
+  existing Inter and JetBrains Mono. Self-hosted like the others, so `next build` still never calls
+  fonts.googleapis.com and an air-gapped machine still builds.
+- **New logotype.** A load-bearing arch whose keystone is a live signal, with the incident pulse
+  running inside it. Two stroke weights and one accent — no gradient fill, which the previous mark
+  had.
+- **The landing page is rebuilt** as a scroll-driven story: a boot sequence, full-bleed graded
+  footage, a live WebGL service-dependency graph showing an incident propagating, a pinned
+  four-step lifecycle scrub (ingest → respond → publish → prove) with real artefacts, the native
+  engine's agent loop and Verified Fix evidence, an interactive topology inspector with blast-radius
+  walk, a capability grid, a self-host terminal, and attribution for every asset.
+- **Motion is opt-out.** Everything above is disabled under `prefers-reduced-motion: reduce`: no
+  curtain, no autoplay video (the poster still shows), a flat dependency list instead of WebGL, and
+  reveals resolving straight to their end state so no content is stranded off-screen.
+- **The product dashboard is unchanged in behaviour.** Roughly 800 existing utility classes inherit
+  the new palette through `@theme` aliases rather than being rewritten, so no feature logic moved.
+  `indigo-*` and `violet-*` still resolve (to sodium) so a stray class cannot reintroduce blue.
+- **Contrast fix.** Remapping the palette left white text sitting on a sodium background in seven
+  places (1.59:1). Those controls are now bone-on-ink (17.9:1); the primary button is bone-on-ink
+  everywhere.
+
+### Added — marketing asset pipeline
+
+- Real stock footage (Pexels licence) and real CC-BY Sketchfab models, both attributed in the
+  footer and in the stage HUD. Footage streams from the CDN at runtime and is not vendored into git.
+- `SketchfabStage` accepts any model `uid`, so a model can be swapped without a code change.
+- `docs/go-to-market/BRAND-GUIDE.md` §4–§10 rewritten to describe what actually ships, including
+  measured contrast ratios and the motion non-negotiables.
+
+
 ### Removed — external AI is gone, end to end (breaking for hybrid users)
 
 - **No Ollama, no local LLM, no hybrid mode, no vendors.** The `arch-hybrid` provider, the

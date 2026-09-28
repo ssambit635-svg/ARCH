@@ -30,7 +30,7 @@ export function InviteModal({ triggerLabel = 'Invite member' }: { triggerLabel?:
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-3.5 py-2 text-sm font-medium text-white shadow-[0_4px_16px_-4px_rgb(99_102_241/0.6)] ring-1 ring-inset ring-white/10 transition hover:from-indigo-400 hover:to-indigo-500 active:scale-[0.98]"
+        className="inline-flex items-center gap-2 rounded-xl bg-bone px-3.5 py-2 text-sm font-medium text-ink-1000 shadow-[0_10px_24px_-14px_rgb(0_0_0/0.9)] ring-1 ring-inset ring-ink-1000/10 transition hover:bg-white active:scale-[0.98]"
       >
         <svg viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
           <path d="M8 3v10M3 8h10" />

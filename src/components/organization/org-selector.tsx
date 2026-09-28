@@ -62,7 +62,7 @@ export function OrgSelector({
       >
         <span
           aria-hidden="true"
-          className="grid size-7 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-indigo-500 to-violet-600 text-xs font-bold text-white"
+          className="grid size-7 shrink-0 place-items-center rounded-lg bg-bone text-xs font-bold text-ink-1000"
         >
           {active.name.slice(0, 1).toUpperCase()}
         </span>

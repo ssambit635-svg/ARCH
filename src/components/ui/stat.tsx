@@ -4,12 +4,12 @@ import { Card, CardBody } from './index';
 type Tone = 'neutral' | 'danger' | 'success' | 'warning' | 'info' | 'ai';
 
 const valueTones: Record<Tone, string> = {
-  neutral: 'text-white',
-  danger: 'text-rose-300',
-  success: 'text-emerald-300',
-  warning: 'text-amber-200',
-  info: 'text-sky-300',
-  ai: 'text-violet-200',
+  neutral: 'text-bone',
+  danger: 'text-sev-critical',
+  success: 'text-state-ok',
+  warning: 'text-sev-medium',
+  info: 'text-state-info',
+  ai: 'text-signal-300',
 };
 
 export function Stat({
@@ -31,10 +31,10 @@ export function Stat({
     <Card className="card-lift relative overflow-hidden">
       <CardBody>
         <div className="flex items-start justify-between gap-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">{label}</p>
+          <p className="arch-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ash-500">{label}</p>
           {icon ? <span className="text-slate-500">{icon}</span> : null}
         </div>
-        <p className={`mt-2 text-[32px] font-semibold leading-none tracking-tight tabular-nums ${valueTones[tone]}`}>{value}</p>
+        <p className={`arch-display mt-2.5 text-[34px] font-semibold leading-none tracking-[-0.03em] arch-tabular ${valueTones[tone]}`}>{value}</p>
         <div className="mt-2 flex items-end justify-between gap-3">
           {hint ? <p className="text-xs leading-relaxed text-slate-500">{hint}</p> : <span />}
           {spark}

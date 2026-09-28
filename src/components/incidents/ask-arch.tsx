@@ -176,7 +176,7 @@ export function AskArchPanel({ incidentId }: { incidentId: string }) {
         <button
           type="submit"
           disabled={busy || question.trim().length < 2}
-          className="shrink-0 rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-3.5 py-2 text-xs font-semibold text-white transition hover:from-indigo-400 hover:to-indigo-500 disabled:opacity-40"
+          className="shrink-0 rounded-xl bg-bone px-3.5 py-2 text-xs font-semibold text-ink-1000 transition hover:bg-white disabled:opacity-40"
         >
           Ask
         </button>

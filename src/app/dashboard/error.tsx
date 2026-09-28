@@ -12,7 +12,7 @@ export default function DashboardError({ error, reset }: { error: Error & { dige
       <div className="mt-6 flex justify-center gap-2.5">
         <button
           onClick={reset}
-          className="rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:from-indigo-400 hover:to-indigo-500"
+          className="rounded-xl bg-bone px-4 py-2 text-sm font-medium text-ink-1000 transition hover:bg-white"
         >
           Try again
         </button>

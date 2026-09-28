@@ -46,7 +46,7 @@ export default async function InvitationPage({ params }: { params: Promise<{ tok
                   <p className="text-sm text-slate-400">Sign in (or create an account) with {preview.email} to accept.</p>
                   <div className="flex gap-3">
                     <Link
-                      className="rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-3.5 py-2 text-sm font-medium text-white transition hover:from-indigo-400 hover:to-indigo-500"
+                      className="rounded-xl bg-bone px-3.5 py-2 text-sm font-medium text-ink-1000 transition hover:bg-white"
                       href={`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`}
                     >
                       Sign in
