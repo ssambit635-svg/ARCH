@@ -21,6 +21,7 @@
 import type { IncidentSeverity, IncidentStatus } from '@/generated/prisma/client';
 import { AI_NAME } from '@/lib/brand';
 import { matchAdvisoryTopic, wantsAdvice } from './advisory';
+import { matchTechFact, techFactSuggestions, TECH_CATEGORY_LABELS, TECH_PACK_STATS, type TechFact } from './tech-knowledge';
 import { clip, formatDuration } from './text';
 
 // ---------------------------------------------------------------------------------------------
@@ -134,7 +135,8 @@ export type ChatSnapshot = {
 export type ChatTurn = { role: 'user' | 'arch'; content: string };
 
 export type ChatCitation = {
-  source: 'incident' | 'runbook' | 'past_incident' | 'pattern' | 'service' | 'workspace' | 'playbook';
+  /** `reference` = ARCH's built-in tech knowledge pack (general knowledge, not workspace data). */
+  source: 'incident' | 'runbook' | 'past_incident' | 'pattern' | 'service' | 'workspace' | 'playbook' | 'reference';
   label: string;
   detail?: string;
   /** Dashboard link for anything clickable. */
@@ -166,6 +168,8 @@ export type ChatIntent =
   | 'memory_recall'
   | 'memory_clear'
   | 'concept_explain'
+  /** General engineering knowledge answered from the built-in tech pack (oldest language, 502 vs 503…). */
+  | 'tech_fact'
   | 'health_summary'
   | 'unknown';
 
@@ -637,6 +641,16 @@ const INTENT_RULES: IntentRule[] = [
   },
 ];
 
+/**
+ * Shapes used when the workspace intents would otherwise swallow a general question.
+ *
+ * "What does HTTP 503 mean?" classifies as incident *advice* (it contains an error code) but is a
+ * definition question; "502s after the deploy — what do we do?" is the same words about *us* and
+ * must stay with the incident advisor. Together these two tests separate the two cases.
+ */
+const DEFINITION_QUESTION = /^(what(?:'s| is| are| does| do)\b|explain\b|define\b|meaning of\b|difference between\b|which\b|how (?:does|do|are|is|to|can|should)\b)/i;
+const WORKSPACE_SUBJECT = /\b(we|us|our|ours|my|team|this|these|those|here|today|yesterday|tonight|currently|now|incident|incidents|on ?call|page[ds]?)\b/i;
+
 export function classifyChatIntent(question: string): ChatIntent {
   const scores = new Map<ChatIntent, number>();
   for (const rule of INTENT_RULES) {
@@ -889,7 +903,17 @@ function answerServices(snapshot: ChatSnapshot, lang: ChatLang): { text: string;
 
 function answerTeam(snapshot: ChatSnapshot, lang: ChatLang): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
   if (snapshot.members.length === 0) {
-    return { text: emptyWorkspaceHint(lang), cites: [], suggestions: ['What can you do?'], confidence: 'low' };
+    // "Who is on call?" has nothing to do with incidents — say what is actually missing, and where
+    // to fix it, instead of recycling the empty-incidents line.
+    return {
+      text:
+        lang === 'hinglish'
+          ? 'Is workspace mein abhi team members load nahi hain, isliye roster ya load ka jawab nahi de sakta. **Settings → People** se log invite karo — uske baad "kaun on-call hai?" jaise sawaal real data se answer honge.\n\nTab tak general on-call practice mere built-in tech pack mein hai: "on call best practices" poochho.'
+          : 'I have no members loaded in this workspace yet, so there is no roster or load to read. Invite people in **Settings → People** and questions like "who is on call tonight?" answer from real data.\n\nUntil then, general on-call practice lives in my built-in tech pack — ask "on call best practices".',
+      cites: [],
+      suggestions: ['On call best practices', 'What can you do?'],
+      confidence: 'low',
+    };
   }
   const lines = snapshot.members
     .slice(0, 12)
@@ -1458,11 +1482,38 @@ function answerUnknown(snapshot: ChatSnapshot, lang: ChatLang): { text: string; 
       : lang === 'hinglish'
         ? 'Abhi kuch open nahi hai.'
         : 'Nothing is open right now.';
+  const pack =
+    lang === 'hinglish'
+      ? `Main general tech ke ${TECH_PACK_STATS.topics} topics built-in jaanta hoon (languages, databases, networking, k8s, queues, security, SRE, AI basics) — unme se kuch bhi poochho. Aapke apne docs ke liye Knowledge page par source add karo, phir main unse cite karunga.`
+      : `I know ${TECH_PACK_STATS.topics} general engineering topics built in (languages, databases, networking, Kubernetes, queues, security, SRE, AI basics) — ask me any of those. For answers about your own docs, add them as a Knowledge source and I will cite them.`;
   return {
-    text: `${say('unknown', lang)}\n\n${state}`,
+    text: `${say('unknown', lang)}\n\n${state}\n\n${pack}`,
     cites: [],
-    suggestions: ['What is open right now?', 'Show me recent incidents', 'Has this happened before?'],
+    suggestions: ['Which language is the oldest?', 'What is the difference between 502 and 503?', 'What is open right now?'],
     confidence: 'low',
+  };
+}
+
+/**
+ * Answer a general engineering question from the built-in tech pack.
+ *
+ * This is deliberately labelled: the answer comes from ARCH's own reference material, not from the
+ * workspace and not from a vendor model. Every entry is hand-written (see `tech-knowledge.ts`), so
+ * the reply can be short, offline, deterministic — and, when the topic is not covered, we say so
+ * rather than improvise.
+ */
+function answerTechFact(fact: TechFact, lang: ChatLang): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
+  return {
+    text: fact[lang === 'hinglish' ? 'hi' : 'en'],
+    cites: [
+      {
+        source: 'reference',
+        label: fact.title,
+        detail: `ARCH built-in tech pack · ${TECH_CATEGORY_LABELS[fact.category]} · offline, no vendor`,
+      },
+    ],
+    suggestions: techFactSuggestions(fact),
+    confidence: 'high',
   };
 }
 
@@ -1546,8 +1597,16 @@ export function answerChat(params: {
       return spread(answerMemoryRecall(subject, memory, lang), intent, lang);
     case 'memory_clear':
       return spread(answerMemoryClear(lang), intent, lang);
-    case 'concept_explain':
+    case 'concept_explain': {
+      // The four concepts below are answered with workspace context (your median resolve time, your
+      // knowledge base). Anything else goes to the built-in tech pack before the generic fallback.
+      const OPS_CONCEPTS = /\b(mttr|mttd|mtbf|slo|sla|sli|runbook|playbook|blast radius|error budget)\b/i;
+      if (!OPS_CONCEPTS.test(subject)) {
+        const match = matchTechFact(subject);
+        if (match) return spread(answerTechFact(match.fact, lang), 'tech_fact', lang);
+      }
       return spread(answerConceptExplain(subject, snapshot, lang), intent, lang);
+    }
     case 'health_summary':
       return spread(answerHealthSummary(snapshot, lang), intent, lang);
     case 'open_incidents':
@@ -1564,15 +1623,38 @@ export function answerChat(params: {
       return spread(answerSearch(snapshot, lang), intent, lang);
     case 'lessons':
       return spread(answerLessons(subject, snapshot, lang), intent, lang);
-    case 'explain_incident':
+    case 'explain_incident': {
+      // "explain the CAP theorem" classifies as "explain an incident" because of the verb, but when
+      // no incident in this workspace matches the subject, the general pack is the honest reading —
+      // listing recent incidents instead would be answering a question nobody asked.
+      const hasWorkspaceIncident = findNamedIncident(subject, snapshot) !== null || snapshot.matches.length > 0;
+      if (!hasWorkspaceIncident) {
+        const match = matchTechFact(subject);
+        if (match) return spread(answerTechFact(match.fact, lang), 'tech_fact', lang);
+      }
       return spread(answerExplainIncident(subject, snapshot, lang), intent, lang);
+    }
     case 'runbook':
       return spread(answerRunbook(snapshot, lang), intent, lang);
-    case 'advice':
+    case 'advice': {
+      // "What does HTTP 503 mean?" is a general question that merely contains an error code — the
+      // pack answers it better than incident triage does. The two guards keep that honest: the
+      // question must *ask for a definition*, and it must not be about this workspace ("we", "our",
+      // "tonight", "this incident"). "502s after the deploy, what do we do?" stays with the advisor.
+      if (DEFINITION_QUESTION.test(question) && !WORKSPACE_SUBJECT.test(question)) {
+        const match = matchTechFact(subject);
+        if (match) return spread(answerTechFact(match.fact, lang), 'tech_fact', lang);
+      }
       return spread(answerAdvice(subject, snapshot, lang), intent, lang);
+    }
     case 'unknown':
-    default:
+    default: {
+      // A general engineering question ("which language is the oldest?") is not an incident
+      // question — but it is still a question we can answer honestly, from the built-in pack.
+      const match = matchTechFact(subject);
+      if (match) return spread(answerTechFact(match.fact, lang), 'tech_fact', lang);
       return spread(answerUnknown(snapshot, lang), intent, lang);
+    }
   }
 }
 

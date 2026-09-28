@@ -80,6 +80,17 @@ Ye checklist har command ke saath hai (`/dashboard/chat`):
       item **Forget** karein, aur aakhir mein **Forget everything** — list khaali ho jani chahiye.
 - [ ] Chat mein `clear memory` likhein — jawab ke baad Memory panel khaali dikhe (aur `clearedAt`
       ka time ho).
+- [ ] Ek general tech sawaal poochein: `which language is the oldest in tech?` — jawab Fortran se
+      shuru ho, neeche **Tech pack** citation dikhe, aur answer mein koi workspace hawala na ho.
+- [ ] Hinglish mein poochein: `docker vs kubernetes kya farak hai?` — jawab Hinglish mein aaye,
+      technical terms English mein rahein.
+- [ ] Status code wala definition sawaal: `what does http 503 mean?` — 5xx ka matlab batao; par
+      `we keep seeing 503s after the deploy, what should we do?` — yeh incident advisor ke paas hi
+      rahe (koi Tech pack citation na aaye).
+- [ ] Pack se bahar ka sawaal: `what is quantum tunnelling in GPUs?` — ARCH saaf bole ki yeh uske
+      built-in topics mein nahi hai, kitne topics built-in hain bataye, aur Knowledge page ka raasta
+      suggest kare. Koi banaya hua fact na aaye.
+- [ ] Workspace sawaal abhi bhi theek: `what is open right now?` — open queue aaye, Tech pack nahi.
 
 Har jawab ke neeche latency header mein `latencyMs` chhupa hota hai (API response mein bhi aata
 hai). Alpha ka target: **warm answer < 300 ms**, pehla answer < 1.5 s.

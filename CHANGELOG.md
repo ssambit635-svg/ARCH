@@ -15,6 +15,48 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Added — V10 · a built-in tech knowledge pack (and an honest limit)
+
+"Can it answer any tech question in the world?" — a curated pack cannot equal a pretrained model's
+coverage, and pretending otherwise would be the one thing an incident tool must never do. What V10
+does instead: answer the canon — the 89 questions engineers actually ask — offline, deterministically,
+with a citation, in English or Hinglish, and say plainly when a topic is outside the pack. No vendor,
+no API key, no model download, still ₹0 per answer.
+
+- **89 built-in topics across 11 families** (`src/server/ai/arch-model/tech-knowledge.ts`):
+  languages (oldest language, Go vs Rust, choosing a stack), web (HTTP status codes, REST/GraphQL/gRPC,
+  DNS, TLS, caching, HTTP/2 vs 3, TCP, rate limiting, backpressure), databases (SQL vs NoSQL, ACID, CAP,
+  eventual consistency, Postgres vs MySQL, indexes and N+1, replication and sharding, migrations,
+  connection pools, event sourcing/CQRS, OLTP vs OLAP, hot partitions, Bloom filters), infra (Docker vs
+  Kubernetes, pods and probes, Helm and operators, service mesh, CI/CD and IaC, queues/Kafka, serverless,
+  monolith vs microservices), cloud (IaaS/PaaS, why the bill is big), ops (MTTR and error budgets, SLO/SLI
+  burn rate, alert fatigue, on-call, postmortems, runbooks, idempotency, retries and circuit breakers,
+  deploy strategies, observability, chaos, change management, toil, 12-factor), security (authn vs authz,
+  OAuth/OIDC/JWT/SAML, MFA and zero trust, encryption vs hashing, secrets and HMAC, network controls and
+  DDoS, OWASP attacks, supply chain), testing (test pyramid, incident regression tests, load and capacity),
+  systems (processes/threads, GC and leaks, deadlocks and races, virtual memory/cgroups/OOM), engineering
+  practice (code review, design docs and ADRs, tech debt, agile/estimates, monorepo vs polyrepo) and AI
+  (how LLMs work, RAG, hallucination, local vs API, judging an AI feature) — plus the ARCH-specific topics.
+- **Every answer carries a "Tech pack" citation** — so a reader can tell general knowledge from
+  workspace knowledge, which is the distinction that matters when deciding whether to act on a reply.
+- **It says what it does not know.** Outside the pack, the fallback names how many topics are built in,
+  suggests the closest family, and points at Knowledge sources for your own docs — instead of inventing
+  a fact or answering a different question.
+- **Workspace questions are never shadowed.** Matching is scored (alias phrase > cue > keyword) with a
+  confidence floor, so "our cache incident yesterday" stays an incident question and "what is open right
+  now?" is still the open queue. Definition questions that merely contain an error code ("what does HTTP
+  503 mean?") go to the pack; the same words about your own estate ("we keep seeing 503s after the
+  deploy — what do we do?") stay with the incident advisor.
+- **Growing it is a data change, not a code change.** Append an entry (title, aliases, keywords, EN +
+  Hinglish answer, related topics) and it is live in chat and in tests; the engine's matching never
+  changes. For the long tail beyond the pack, the opt-in local model (`AI_PROVIDER=arch-hybrid`) stays
+  the documented path — it runs on the same server, free, but slower and only as good as the model your
+  hardware can hold.
+- **Also fixed in this release:** asking "who is on call tonight?" in a workspace with no members now
+  says that the roster is empty and where to invite people, instead of recycling the empty-incidents
+  line; and "explain the CAP theorem" answers the theorem rather than listing your recent incidents.
+
+
 ### Added — V9 · memory that is actually saved (and yours to delete)
 
 Asked "what do you remember about me?", ARCH used to answer from whatever happened to still be in

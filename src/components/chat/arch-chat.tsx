@@ -21,7 +21,7 @@ import { IconChat, IconCopy, IconDownload, IconMemory, IconPencil, IconPlus, Ico
  */
 
 type Citation = {
-  source: 'incident' | 'runbook' | 'past_incident' | 'pattern' | 'service' | 'workspace' | 'playbook';
+  source: 'incident' | 'runbook' | 'past_incident' | 'pattern' | 'service' | 'workspace' | 'playbook' | 'reference';
   label: string;
   detail?: string;
   href?: string;
@@ -72,6 +72,7 @@ const SOURCE_LABEL: Record<Citation['source'], string> = {
   service: 'Service',
   workspace: 'Workspace',
   playbook: 'Playbook',
+  reference: 'Tech pack',
 };
 
 const SOURCE_ICON: Record<Citation['source'], string> = {
@@ -82,6 +83,7 @@ const SOURCE_ICON: Record<Citation['source'], string> = {
   service: '▣',
   workspace: '▤',
   playbook: '✦',
+  reference: '⌘',
 };
 
 const INTENT_LABEL: Record<string, string> = {
@@ -108,6 +110,7 @@ const INTENT_LABEL: Record<string, string> = {
   memory_recall: 'memory',
   memory_clear: 'memory cleared',
   concept_explain: 'concept',
+  tech_fact: 'tech knowledge',
   health_summary: 'system health',
   unknown: 'best effort',
 };

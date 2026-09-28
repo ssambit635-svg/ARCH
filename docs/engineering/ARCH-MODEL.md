@@ -127,10 +127,20 @@ equivalent is `npm run model:train`, which trains synchronously (a CLI process, 
 
 The conversational surface of the same model. `src/server/ai/arch-model/chat.ts` is the pure
 engine: it classifies the question (greeting, identity, open queue, recent history, incident
-search, explain, stats, services, roster, runbook, lessons, advice, code request, unknown), fills
-language-aware templates (English or Hinglish, matched to the question) and returns
+search, explain, stats, services, roster, runbook, lessons, advice, code request, concept, tech fact,
+unknown), fills language-aware templates (English or Hinglish, matched to the question) and returns
 `{answer, intent, confidence, citations, suggestions, lang}`. It has no database and no network —
 the service hands it a snapshot.
+
+General engineering questions ("which language is the oldest?", "what does 503 mean?", "what is the
+CAP theorem?") are answered from `arch-model/tech-knowledge.ts` — the built-in pack — and carry a
+`reference` citation so a reader can tell general knowledge from workspace knowledge. The router is
+deliberately narrow: the pack is consulted for `concept_explain` (except the ops concepts that get
+workspace-aware answers), `unknown`, and for definition questions that would otherwise be swallowed by
+the `advice` or `explain_incident` intents. A matching floor and a workspace-marker check keep "our
+cache incident yesterday" and "we keep seeing 503s after the deploy" on the incident path. Teaching it
+a new topic means appending one entry to that file — no engine change, and the pack data is asserted
+well formed (unique ids, resolvable related ids, both languages) in `tests/arch-chat-engine.test.ts`.
 
 `src/server/services/archChat.service.ts` builds that snapshot per turn: status/severity counts
 (open-only severity mix), the open queue (25, severity-sorted), the 25 newest resolved incidents,
@@ -258,6 +268,10 @@ src/server/ai/
   arch-model/engine.ts      buildKnowledge + archDraft(task) for every Copilot task
   arch-model/chat.ts        pure Chat with ARCH engine: intents, EN/Hinglish answers, citations,
                             conversational memory merge (typed > stored > account name)
+  arch-model/tech-knowledge.ts  V10 built-in tech knowledge pack: 89 general topics (aliases +
+                            keywords + cues, EN/Hinglish, related) and the scored matcher
+                            (alias phrase > cue > keyword, confidence floor so workspace
+                            questions are never shadowed)
   code/analyzer.ts          language detection, stack-trace diagnosis, rules, safe fixes, scrubSecrets
   code/review.ts            Code Assist input/output
   arch-native.ts            AI_PROVIDER="arch" and the hybrid fallback wrapper

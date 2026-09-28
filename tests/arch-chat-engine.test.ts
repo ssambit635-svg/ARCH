@@ -8,6 +8,7 @@ import {
   type ChatIncident,
   type ChatSnapshot,
 } from '../src/server/ai/arch-model/chat';
+import { matchTechFact, TECH_FACTS, TECH_PACK_STATS } from '../src/server/ai/arch-model/tech-knowledge';
 
 /**
  * The chat engine is pure and deterministic, so it is tested without a database: intents, language,
@@ -368,6 +369,83 @@ describe('chat answers', () => {
   it('does not leak privacy-sensitive text: no emails, tokens or ids in answers', () => {
     const answer = answerChat({ question: 'what is open and how are we doing?', snapshot: snapshot() });
     expect(answer.answer).not.toMatch(/@|Bearer|sk-|ghp_/);
+  });
+});
+
+describe('built-in tech knowledge pack', () => {
+  it('answers general engineering questions from the pack, with a pack citation', () => {
+    const cases: { question: string; intent?: string; expect: RegExp }[] = [
+      { question: 'which language is the oldest in tech?', expect: /Fortran/ },
+      { question: 'what is the CAP theorem', expect: /PACELC/ },
+      { question: 'what is the difference between docker and kubernetes', expect: /Container|scheduler/i },
+      { question: 'what is a bloom filter', expect: /probabilistic/i },
+      { question: 'explain the CAP theorem', expect: /vailability/ },
+    ];
+    for (const testCase of cases) {
+      const answer = answerChat({ question: testCase.question, snapshot: snapshot({ openIncidents: [] }) });
+      expect(answer.intent, testCase.question).toBe('tech_fact');
+      expect(answer.confidence, testCase.question).toBe('high');
+      expect(answer.answer, testCase.question).toMatch(testCase.expect);
+      expect(answer.citations[0]?.source, testCase.question).toBe('reference');
+      expect(answer.citations[0]?.detail, testCase.question).toContain('built-in tech pack');
+    }
+  });
+
+  it('does not let a status code turn a definition question into incident triage', () => {
+    // "what does 503 mean" is general knowledge…
+    const definition = answerChat({ question: 'what does HTTP 503 mean?', snapshot: snapshot() });
+    expect(definition.intent).toBe('tech_fact');
+    expect(definition.answer).toMatch(/5xx|server/i);
+
+    // …but the same words about *this* workspace stay with the incident advisor.
+    const ours = answerChat({ question: 'we keep seeing 503s after the deploy, what should we do?', snapshot: snapshot() });
+    expect(ours.intent).toBe('advice');
+    expect(ours.citations.some((citation) => citation.source === 'reference')).toBe(false);
+  });
+
+  it('keeps workspace questions out of the pack (no shadowing)', () => {
+    expect(answerChat({ question: 'what is open right now?', snapshot: snapshot() }).intent).toBe('open_incidents');
+    expect(answerChat({ question: 'what happened last week?', snapshot: snapshot() }).intent).toBe('recent_incidents');
+    expect(answerChat({ question: 'which language should i use for microservices?', snapshot: snapshot() }).intent).toBe('tech_stack_advice');
+
+    // The matcher refuses below its confidence bar, so a workspace sentence never becomes a lecture.
+    for (const question of ['our cache incident yesterday', 'what is good for lunch', 'who is on call tonight', 'how do i add a service']) {
+      expect(matchTechFact(question), question).toBeNull();
+    }
+  });
+
+  it('answers in Hinglish when the question is Hinglish', () => {
+    const answer = answerChat({ question: 'event sourcing kya hai', snapshot: snapshot() });
+    expect(answer.intent).toBe('tech_fact');
+    expect(answer.lang).toBe('hinglish');
+    expect(answer.answer).toMatch(/event sourcing/i);
+  });
+
+  it('offers the pack as the fallback, and admits when a topic is not covered', () => {
+    const answer = answerChat({ question: 'what is quantum tunnelling in GPUs?', snapshot: snapshot({ openIncidents: [] }) });
+    expect(answer.intent).toBe('unknown');
+    expect(answer.confidence).toBe('low');
+    // Honest limits, stated with the number of topics actually covered and how to extend them.
+    expect(answer.answer).toContain(String(TECH_PACK_STATS.topics));
+    expect(answer.answer).toMatch(/Knowledge/);
+  });
+
+  it('keeps the pack data well formed', () => {
+    const ids = new Set<string>();
+    for (const fact of TECH_FACTS) {
+      expect(ids.has(fact.id), `duplicate id ${fact.id}`).toBe(false);
+      ids.add(fact.id);
+      expect(fact.aliases.length, fact.id).toBeGreaterThan(0);
+      expect(fact.en.length, fact.id).toBeGreaterThan(80);
+      expect(fact.hi.length, fact.id).toBeGreaterThan(80);
+      for (const related of fact.related ?? []) {
+        expect(ids.has(related) || TECH_FACTS.some((other) => other.id === related), `${fact.id} -> ${related}`).toBe(true);
+      }
+      // The pack is offline reference material: no vendor names as the *source* of an answer.
+      expect(fact.en).not.toMatch(/chatgpt|openai|anthropic/i);
+    }
+    expect(TECH_PACK_STATS.topics).toBe(TECH_FACTS.length);
+    expect(TECH_PACK_STATS.topics).toBeGreaterThanOrEqual(80);
   });
 });
 
