@@ -1135,6 +1135,40 @@ export type TechMatch = { fact: TechFact; score: number };
  * good for microservices?" both the Python topic (python + "good for") and the microservices topic
  * (just the word "microservices") score 4, and the phrase match is the better reading.
  */
+/** Words that carry no topic by themselves — used only by the bare-topic fallback below. */
+const QUESTION_FILLERS = new Set([
+  'what', 'which', 'why', 'when', 'how', 'who', 'does', 'did', 'is', 'are', 'was', 'were', 'be',
+  'kya', 'hai', 'hain', 'hota', 'hoti', 'hote', 'matlab', 'samjhao', 'samjha', 'batao', 'bata',
+  'kaise', 'kaam', 'karta', 'karti', 'karte', 'karo', 'use', 'uses', 'used', 'using', 'about',
+  'tell', 'explain', 'define', 'definition', 'meaning', 'difference', 'between', 'versus', 'vs',
+  'work', 'works', 'working', 'please', 'the', 'a', 'an', 'in', 'of', 'for', 'to', 'and', 'or',
+  'on', 'off', 'with', 'without', 'my', 'our', 'your', 'me', 'isnt', 'doesnt', 'this', 'that',
+]);
+
+/**
+ * The one-word question: "redis?", "kafka kya hai", "docker kaise kaam karta hai".
+ *
+ * Only consulted when nothing else matched, and only when the question reduces to a single content
+ * word that some topic lists as a defining keyword — so "docker down" or "our cache incident" can
+ * never become a lecture, while a bare topic name gets its one good answer.
+ */
+function matchBareTopic(question: string): TechFact | null {
+  const words = clean(question)
+    .split(' ')
+    .filter((word) => word.length >= 3 && !QUESTION_FILLERS.has(word));
+  if (words.length !== 1) return null;
+  const [word] = words;
+  if (!word) return null;
+  const candidates = TECH_FACTS.filter((fact) => fact.keywords.some((keyword) => keyword === word || keyword === `${word}s`));
+  if (candidates.length === 1) return candidates[0]!;
+  // Several topics may merely *mention* a word ("redis" is a keyword for caching and for Redis).
+  // The topic that names it — in its title or an alias — is the one the question is about.
+  const named = candidates.filter(
+    (fact) => fact.title.toLowerCase().includes(word) || fact.aliases.some((alias) => alias.includes(word)),
+  );
+  return named.length === 1 ? named[0]! : null;
+}
+
 export function matchTechFact(question: string): TechMatch | null {
   const haystack = normalise(question);
   let best: (TechMatch & { phraseScore: number }) | null = null;
@@ -1158,7 +1192,10 @@ export function matchTechFact(question: string): TechMatch | null {
   }
 
   // 3 = one alias, or a combination that is clearly about one topic.
-  return best && best.score >= 3 ? { fact: best.fact, score: best.score } : null;
+  if (best && best.score >= 3) return { fact: best.fact, score: best.score };
+
+  const bare = matchBareTopic(question);
+  return bare ? { fact: bare, score: 2 } : null;
 }
 
 /** Topics offered as follow-up chips after a general-knowledge answer. */

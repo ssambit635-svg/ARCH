@@ -84,6 +84,10 @@ Ye checklist har command ke saath hai (`/dashboard/chat`):
       shuru ho, neeche **Tech pack** citation dikhe, aur answer mein koi workspace hawala na ho.
 - [ ] Hinglish mein poochein: `docker vs kubernetes kya farak hai?` — jawab Hinglish mein aaye,
       technical terms English mein rahein.
+- [ ] Hinglish definition shapes: `docker kya hai`, `redis kaise kaam karta hai`, `slo burn rate kya
+      hota hai` — pehle do Tech pack se aayein, teesra workspace-aware concept answer ho (SLO ka
+      matlab aapke numbers ke saath). `hamare redis ke baare mein batao` — yeh workspace sawaal hi
+      rahe (Tech pack citation na aaye).
 - [ ] Status code wala definition sawaal: `what does http 503 mean?` — 5xx ka matlab batao; par
       `we keep seeing 503s after the deploy, what should we do?` — yeh incident advisor ke paas hi
       rahe (koi Tech pack citation na aaye).

@@ -430,6 +430,63 @@ describe('built-in tech knowledge pack', () => {
     expect(answer.answer).toMatch(/Knowledge/);
   });
 
+  it('routes a table of real questions to the right topic, and refuses the rest', () => {
+    const recall: [string, string][] = [
+      ['which language is the oldest in tech?', 'language-history'],
+      ['what is the difference between ci and cd', 'infra-cicd'],
+      ['how do i reduce cloud cost', 'cloud-cost'],
+      ['where should secrets live', 'security-secrets'],
+      ['merge or rebase', 'code-git'],
+      ['what is a bloom filter', 'db-bloom-filter'],
+      ['monorepo vs polyrepo', 'eng-monorepo'],
+      ['how does https actually work', 'web-tls'],
+      ['what is the CAP theorem', 'db-cap'],
+      ['what is a connection pool', 'db-connection-pool'],
+    ];
+    for (const [question, expected] of recall) {
+      expect(matchTechFact(question)?.fact.id, question).toBe(expected);
+    }
+
+    // A bare topic name is a question ("redis", "kafka"); a bare word inside a workspace sentence
+    // is not — the matcher only takes the one-word path when nothing else matched.
+    expect(matchTechFact('redis')?.fact.id).toBe('db-redis');
+    expect(matchTechFact('kafka')?.fact.id).toBe('infra-queues');
+
+    const refuse = [
+      'who is on call tonight',
+      'what is the status of the payments service',
+      'why did we get paged at 3am',
+      'what is good for lunch',
+      'tell me about last week',
+      'our cache incident yesterday',
+      'the deploy went out at 4pm',
+    ];
+    for (const question of refuse) {
+      const match = matchTechFact(question);
+      expect(match === null || match.score < 3, question).toBe(true);
+    }
+  });
+
+  it('answers Hinglish definition questions instead of treating them as triage or app help', () => {
+    // "kya hai" shapes used to land on the advice path ("looks like database slowness") or on the
+    // app-help walkthrough; with a known topic they belong to the pack.
+    const docker = answerChat({ question: 'docker kya hai', snapshot: snapshot() });
+    expect(docker.intent).toBe('tech_fact');
+    expect(docker.answer).toMatch(/container/i);
+
+    const redis = answerChat({ question: 'redis kaise kaam karta hai', snapshot: snapshot() });
+    expect(redis.intent).toBe('tech_fact');
+    expect(redis.answer).toMatch(/redis/i);
+
+    // Ops concepts keep the workspace-aware answer, and "our" keeps the question on the workspace.
+    const budget = answerChat({ question: 'what is our error budget', snapshot: snapshot() });
+    expect(budget.intent).toBe('concept_explain');
+    expect(budget.citations[0]?.label).toContain('Error budget');
+
+    const ours = answerChat({ question: 'hamare redis ke baare mein batao', snapshot: snapshot() });
+    expect(ours.citations.some((citation) => citation.source === 'reference')).toBe(false);
+  });
+
   it('keeps the pack data well formed', () => {
     const ids = new Set<string>();
     for (const fact of TECH_FACTS) {

@@ -44,7 +44,14 @@ no API key, no model download, still ₹0 per answer.
   a fact or answering a different question.
 - **Workspace questions are never shadowed.** Matching is scored (alias phrase > cue > keyword) with a
   confidence floor, so "our cache incident yesterday" stays an incident question and "what is open right
-  now?" is still the open queue. Definition questions that merely contain an error code ("what does HTTP
+  now?" is still the open queue.
+- **It understands how engineers actually ask.** Acronyms, articles and either/or phrasings are
+  normalised ("what is *the* CAP theorem", "websocket *or* polling"), a bare topic name is treated as a
+  question ("redis", "kafka"), and the Hinglish definition shape — "docker kya hai", "redis kaise kaam
+  karta hai", "slo burn rate kya hota hai" — routes to knowledge instead of to triage advice or the app
+  walkthrough. Ops concepts that ARCH answers with *your* numbers (MTTR, SLO/SLI, runbooks, error
+  budget, MTTD/MTBF) keep the workspace-aware answer even when the classifier is unsure, and the error
+  budget concept now has its own explanation rather than falling through to postmortems. Definition questions that merely contain an error code ("what does HTTP
   503 mean?") go to the pack; the same words about your own estate ("we keep seeing 503s after the
   deploy — what do we do?") stay with the incident advisor.
 - **Growing it is a data change, not a code change.** Append an entry (title, aliases, keywords, EN +

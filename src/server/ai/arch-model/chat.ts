@@ -649,7 +649,25 @@ const INTENT_RULES: IntentRule[] = [
  * must stay with the incident advisor. Together these two tests separate the two cases.
  */
 const DEFINITION_QUESTION = /^(what(?:'s| is| are| does| do)\b|explain\b|define\b|meaning of\b|difference between\b|which\b|how (?:does|do|are|is|to|can|should)\b)/i;
-const WORKSPACE_SUBJECT = /\b(we|us|our|ours|my|team|this|these|those|here|today|yesterday|tonight|currently|now|incident|incidents|on ?call|page[ds]?)\b/i;
+/** The same shape in Hinglish: "slo burn rate kya hota hai" is a definition, not an outage. */
+const HINGLISH_DEFINITION = /\b(kya hai|kya hain|kya hota hai|kya hoti hai|kya hota|kya matlab|matlab kya|samjha?o|samjha do|bata ?o|bata do|kaise kaam karta hai|kaise kaam karti hai)\b/i;
+const WORKSPACE_SUBJECT = /\b(we|us|our|ours|my|team|this|these|those|here|today|yesterday|tonight|currently|now|incident|incidents|on ?call|page[ds]?|hamara|hamare|humara|humare|hum|apna|apne|aaj|kal|abhi|yahan|iske|iski|ink[ae])\b/i;
+
+/** True when the member is asking for a definition — in either language — rather than for triage. */
+function isDefinitionQuestion(question: string): boolean {
+  return DEFINITION_QUESTION.test(question) || HINGLISH_DEFINITION.test(question);
+}
+
+/** True when the sentence is about *this* workspace, not about engineering in general. */
+function isWorkspaceQuestion(question: string): boolean {
+  return WORKSPACE_SUBJECT.test(question);
+}
+
+/**
+ * Concepts that ARCH answers with the workspace's own numbers ("your median resolve time", "your
+ * runbooks"), so they never fall through to the general pack.
+ */
+const OPS_CONCEPTS = /\b(mttr|mttd|mtbf|slo|sla|sli|runbook|playbook|blast radius|error budget)\b/i;
 
 export function classifyChatIntent(question: string): ChatIntent {
   const scores = new Map<ChatIntent, number>();
@@ -1420,7 +1438,20 @@ function answerConceptExplain(question: string, snapshot: ChatSnapshot, lang: Ch
     concept = 'SLO, SLA, and SLI';
     explanationEn = `• **SLI (Service Level Indicator)**: A measurable metric of service behavior (e.g., successful request rate, latency < 200ms).\n• **SLO (Service Level Objective)**: The internal target reliability goal agreed upon by the engineering team (e.g., 99.9% of requests succeed).\n• **SLA (Service Level Agreement)**: The external contractual commitment made to customers with business/financial penalties if breached.`;
     explanationHi = `• **SLI (Service Level Indicator)**: Ek quantifiable metric jo measure karta hai service kaisa perform kar rahi hai (jaise error rate ya latency).\n• **SLO (Service Level Objective)**: Engineering team ka internal target goal (jaise 99.9% uptime).\n• **SLA (Service Level Agreement)**: Customers ke saath official contract jisme breach hone par penalty hoti hai.`;
-  } else if (/\brunbook\b/i.test(q)) {
+  } else if (/\b(mttd|mtbf)\b/i.test(q)) {
+    const isDetect = /\bmttd\b/i.test(q);
+    concept = isDetect ? 'MTTD (Mean Time to Detect)' : 'MTBF (Mean Time Between Failures)';
+    explanationEn = isDetect
+      ? '**MTTD (Mean Time to Detect)** measures how long a problem exists before anyone is alerted — from the first bad request to the page. It is the metric to attack first: if detection is slow, every other number looks worse. Cut it with better signals (symptom-based alerts on user-facing errors) and synthetic checks, not with more alerts.'
+      : '**MTBF (Mean Time Between Failures)** measures the average gap between two failures of the same service. It is a reliability trend metric: falling MTBF means the fixes are not holding, even if each individual incident was resolved quickly.';
+    explanationHi = isDetect
+      ? '**MTTD (Mean Time to Detect)** measure karta hai ki problem shuru hone se kisi ko alert hone tak kitna time laga. Isko pehle theek karo: detection slow ho to baaki har number kharab dikhta hai. Better signals (user-facing symptoms par alert) aur synthetic checks se kam karo, alerts ki ginti badha kar nahi.'
+      : '**MTBF (Mean Time Between Failures)** ek hi service ke do failures ke beech ka average gap batata hai. Yeh reliability trend metric hai: MTBF gir raha hai matlab fixes hold nahi kar rahe, chahe har incident jaldi resolve hua ho.';
+  } else if (/\berror budget\b/i.test(q)) {
+    concept = 'Error budget';
+    explanationEn = `An **error budget** is the amount of unreliability your SLO allows: a 99.9% SLO leaves 0.1% of requests (about 43 minutes a month) as budget. It exists to make the trade-off explicit instead of arguing about it during a release:\n\n• Budget healthy → ship faster, take the risky change.\n• Budget nearly spent → slow down and spend the time on reliability.\n• Budget blown → freeze feature work until it is back, unless something is adding availability.\n\nIn ARCH, the **SLOs** page holds your targets, and alerts are meant to fire on **burn rate** (how fast the budget is going) rather than on every symptom.`;
+    explanationHi = `**Error budget** wo unreliability hai jo aapka SLO allow karta hai: 99.9% SLO ka matlab 0.1% requests (lagbhag 43 minute per month) budget. Iska maksad trade-off ko explicit banana hai, release ke waqt bahas karne ki jagah:\n\n• Budget healthy → tez ship karo, risky change le lo.\n• Budget khatam hone ko hai → slow karo aur reliability par time do.\n• Budget khatam → jab tak wapas na aaye, feature work freeze (jab tak koi cheez availability na badha rahi ho).\n\nARCH mein **SLOs** page par targets hote hain, aur alerts **burn rate** (budget kitni tezi se ja raha hai) par fire hone chahiye, har symptom par nahi.`;
+  } else if (/\b(runbook|playbook)\b/i.test(q)) {
     concept = 'Runbook';
     explanationEn = `A **Runbook** (or playbook) is a documented, step-by-step procedure that responders follow to diagnose, mitigate, and resolve specific production incidents. In ARCH, runbooks are indexed in your Knowledge base so the model can cite relevant troubleshooting steps directly during an outage.`;
     explanationHi = `**Runbook** ek documented step-by-step guide hoti hai jise on-call engineers follow karte hain kisi specific production problem ko diagnose aur fix karne ke liye. ARCH mein runbooks Knowledge Base mein index hote hain jisse incident ke time exact steps mil sakein.`;
@@ -1581,14 +1612,10 @@ export function answerChat(params: {
       return result(say('smalltalk', lang, memory.userName ?? memory.accountName ?? undefined), intent, 'high', lang, [], ['What is open right now?', 'What can you do?']);
     case 'identity':
       return result(say('identity', lang, modelLabel), intent, 'high', lang, [{ source: 'workspace', label: `Model ${modelLabel} · v${snapshot.model.version}`, detail: `trained on ${snapshot.model.teamDocuments} of your incidents, ${snapshot.model.totalDocuments} documents total` }], ['How accurate are you?', 'How does training work?', 'What can you do?']);
-    case 'help':
-      return result(say('help', lang), intent, 'high', lang, [], ['What is open right now?', 'Which incidents keep repeating?', 'Redis misses are spiking — what should I check?']);
     case 'code_request':
       return result(say('codeRefusal', lang), intent, 'high', lang, [], ['Explain the stack trace I am looking at', 'What usually fixes a database timeout?', 'What did we do last time this broke?']);
     case 'datetime':
       return spread(answerDateTime(snapshot, lang), intent, lang);
-    case 'workflow_guide':
-      return spread(answerWorkflowGuide(snapshot, lang), intent, lang);
     case 'tech_stack_advice':
       return spread(answerTechStackAdvice(subject, snapshot, lang, memory), intent, lang);
     case 'memory_store':
@@ -1598,9 +1625,8 @@ export function answerChat(params: {
     case 'memory_clear':
       return spread(answerMemoryClear(lang), intent, lang);
     case 'concept_explain': {
-      // The four concepts below are answered with workspace context (your median resolve time, your
+      // The ops concepts above are answered with workspace context (your median resolve time, your
       // knowledge base). Anything else goes to the built-in tech pack before the generic fallback.
-      const OPS_CONCEPTS = /\b(mttr|mttd|mtbf|slo|sla|sli|runbook|playbook|blast radius|error budget)\b/i;
       if (!OPS_CONCEPTS.test(subject)) {
         const match = matchTechFact(subject);
         if (match) return spread(answerTechFact(match.fact, lang), 'tech_fact', lang);
@@ -1636,19 +1662,28 @@ export function answerChat(params: {
     }
     case 'runbook':
       return spread(answerRunbook(snapshot, lang), intent, lang);
-    case 'advice': {
-      // "What does HTTP 503 mean?" is a general question that merely contains an error code — the
-      // pack answers it better than incident triage does. The two guards keep that honest: the
-      // question must *ask for a definition*, and it must not be about this workspace ("we", "our",
-      // "tonight", "this incident"). "502s after the deploy, what do we do?" stays with the advisor.
-      if (DEFINITION_QUESTION.test(question) && !WORKSPACE_SUBJECT.test(question)) {
+    case 'advice':
+    case 'help':
+    case 'workflow_guide': {
+      // These three are the "sink" intents: generic triage advice, app help and the app walkthrough.
+      // A definition question that happens to classify into one of them is better answered from the
+      // pack — but only when it asks for a definition *and* does not mention this workspace ("we",
+      // "our", "tonight", "hamara"). So "what does HTTP 503 mean?" gets the status code back,
+      // "redis kaise kaam karta hai?" gets Redis, and "we keep seeing 503s after the deploy — what
+      // do we do?" stays with the incident advisor.
+      if (isDefinitionQuestion(question) && !isWorkspaceQuestion(question)) {
         const match = matchTechFact(subject);
         if (match) return spread(answerTechFact(match.fact, lang), 'tech_fact', lang);
       }
+      if (intent === 'help') return result(say('help', lang), intent, 'high', lang, [], ['What is open right now?', 'Which incidents keep repeating?', 'Redis misses are spiking — what should I check?']);
+      if (intent === 'workflow_guide') return spread(answerWorkflowGuide(snapshot, lang), intent, lang);
       return spread(answerAdvice(subject, snapshot, lang), intent, lang);
     }
     case 'unknown':
     default: {
+      // "what is our error budget" is a concept question even when the classifier did not call it
+      // one — answer it with the workspace's numbers rather than with general material.
+      if (OPS_CONCEPTS.test(subject)) return spread(answerConceptExplain(subject, snapshot, lang), 'concept_explain', lang);
       // A general engineering question ("which language is the oldest?") is not an incident
       // question — but it is still a question we can answer honestly, from the built-in pack.
       const match = matchTechFact(subject);
