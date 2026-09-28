@@ -22,32 +22,33 @@ ChatGPT is a **frontier general-purpose language model wrapped in a consumer pro
 in ChatGPT — the model — is not what makes it *feel* like ChatGPT to a user. Streaming, regenerate,
 copy/export, memory, projects, voice input, file reading, feedback and shortcuts are **product
 surface**, and almost all of that surface is buildable on a CPU, with no API key, no GPU and no
-vendor. What we cannot copy at ₹0 is the **pretrained knowledge, the reasoning depth and the
-multimodality** — those are bought with data centres, not with code.
+vendor. What we cannot copy at ₹0 is **frontier-level pretrained knowledge, reasoning depth and
+multimodality** — those still require data centres. A small open-weight model can add general
+knowledge without an API bill, but it has a much lower quality ceiling and needs local compute.
 
 So the strategy is one sentence: **match the shape, not the weights.** Close the product surface
 feature by feature (this is where users notice the difference in the first 60 seconds), keep
-ARCH's grounding rules as the moat (citations, no invented incidents, nothing leaves the server,
-human approval for every action), and use a *small local* model — still ₹0 in licence — only where
-fluency genuinely matters. Everything below is that plan, with phases and acceptance tests.
+ARCH's workspace grounding and privacy boundaries as the moat (the native path cites supplied
+records; optional chat generation stays on a private endpoint; actions still require human approval),
+and use a *small local* model — still ₹0 in licence — only where fluency genuinely matters. Everything below is that plan, with phases and acceptance tests.
 
 ---
 
 ## 1. What the two things actually are
 
-| | **ChatGPT** | **ARCH AI (V8)** |
+| | **ChatGPT** | **ARCH AI (V10.4)** |
 |---|---|---|
-| Core | Frontier LLM (hundreds of billions of parameters, RLHF-tuned) | Deterministic engine: intent classifier + Naive-Bayes category/severity + TF-IDF/dense hybrid retrieval + templated answers |
-| Where it runs | OpenAI data centres, GPU clusters | Your server, one Node process, CPU only |
-| Training data | Trillions of tokens of the public web, books, code | *Your* resolved incidents, a built-in library of 44 failure patterns, optionally ~340 public postmortems, your knowledge base |
-| Knowledge | World knowledge, frozen at a training cutoff | Only what is in the workspace — nothing "general" except the ops playbooks and concepts we shipped |
-| Per turn | Priced per token (rupees per question, per seat, per month) | ₹0 per turn, no quota, no token meter |
-| Answers | Generated prose, can be fluent and wrong | Selected + filled facts from rows it was handed; every factual sentence carries a citation |
-| Data path | Prompt leaves your machine | Nothing leaves the deployment (`ARCH_OFFLINE_ONLY=true` by default) |
-| Determinism | Sampling; same question may answer differently | Same question + same workspace = same answer, and it is unit-tested |
-| Latency | Seconds | Tens of milliseconds warm |
+| Core | Frontier LLM (hundreds of billions of parameters, RLHF-tuned) | Deterministic native engine for workspace facts; optional private open-weight generation for open-ended chat and Copilot drafts |
+| Where it runs | OpenAI data centres, GPU clusters | Your server and, when enabled, a local Ollama/llama.cpp model; CPU-only works, though slowly |
+| Training data | Trillions of tokens of the public web, books, code | *Your* resolved incidents for the native classifier, a built-in failure-pattern/tech library and optional pretrained open weights for general chat |
+| Knowledge | World knowledge, frozen at a training cutoff | Workspace facts from tenant-scoped retrieval; optional local model adds general pretrained knowledge with a lower quality ceiling |
+| Per turn | Priced per token (rupees per question, per seat, per month) | ₹0 per turn for native or local inference; compute, RAM and disk are yours |
+| Answers | Generated prose, can be fluent and wrong | Native answers stay deterministic and cited; hybrid chat writes natural prose from retrieved evidence plus pretrained knowledge |
+| Data path | Prompt leaves your machine | No public model service in private hybrid mode; `ARCH_OFFLINE_ONLY=true` also blocks external AI providers |
+| Determinism | Sampling; same question may answer differently | Native mode is deterministic; hybrid mode is generative, reviewed once, and falls back to native on failure |
+| Latency | Seconds | Tens of milliseconds native; local generation can take seconds, especially on CPU |
 | Where it lives | A chat product | Inside the incident, plus `/dashboard/chat`, Code Assist, `/dashboard/model` |
-| Optional upgrade | — | `AI_PROVIDER="arch-hybrid"`: an open-weights model (e.g. `qwen2.5-coder:7b`) via Ollama/llama.cpp on the same box — still no vendor, no API key |
+| Optional upgrade | — | `AI_PROVIDER="arch-hybrid"`: an open-weight model (e.g. `qwen2.5:7b`) via Ollama/llama.cpp on the same private infrastructure — no vendor or API key |
 
 **Read that table again before any planning.** We are not behind on *one* axis; we are a different
 kind of system. The gap that matters commercially is only the one a user notices while doing their
@@ -72,7 +73,7 @@ Legend — **Closeable at ₹0?**
 | Keyboard shortcuts (new chat, search) | ✅ | ❌ | ✅ | `⌘/Ctrl+Shift+O` new chat, `⌘/Ctrl+K` search, `Esc` close | **P1** |
 | Edit a message and resend | ✅ | ❌ | ✅ | Truncate the transcript after that user message, re-answer, audit as one event | P2 |
 | Full-text search across *message bodies* | ✅ | title + preview only | ✅ | Postgres `ILIKE`/FTS over `arch_chat_messages` (org + user scoped) — no extension needed | P2 |
-| Message feedback (👍/👎) that trains the product | ✅ | ❌ (chat turns are deliberately not training rows) | ✅ | Store the verdict, feed it into the existing correction loop at 3× weight | P2 |
+| Message feedback (👍/👎) | ✅ | ✅ **V10.4** — one private rating per answer | ✅ | Store shape-only evaluation metadata; do not turn a one-click rating into a supervised target or silently train on chat text | shipped (V10.4) |
 | Branching / edit fork | ✅ | ❌ | ✅ | Requires a parent-pointer on messages — cheap in schema, expensive in UI clarity; only if asked | P4 |
 | Share a conversation by link | ✅ | ❌ | ✅ | Org-scoped read-only share token; must respect "chats are personal" — needs a deliberate decision first | P4 |
 | Temporary chat (no history) | ✅ | ❌ | ✅ | A session flag that skips persistence | P4 |
@@ -105,12 +106,12 @@ Legend — **Closeable at ₹0?**
 
 | Capability | ChatGPT | ARCH today | ₹0? | How we close it | Phase |
 |---|---|---|---|---|---|
-| Answers about the world | ✅ | 🟡 **V10 · V10.3** — a built-in tech pack of 161 topics across 16 families (languages, web, databases, infra, distributed, cloud, ops, security, testing, systems, performance, data, engineering practice, AI, CS fundamentals, emerging tech), offline, cited, EN + Hinglish; comparison questions are composed from both entries; outside the pack we say so *and* name the closest topics | 🔶 | Coverage is a data file, not a model: grow `tech-knowledge.ts` (data-only change), ground the rest in the workspace's own Knowledge sources, and keep `AI_PROVIDER=arch-hybrid` (local weights, free, slower, needs RAM) as the opt-in path for the long tail. A pretrained model's breadth is not reachable at ₹0 — and a hallucinated fact in an incident tool is worse than "not in the pack" | **shipped (V10) · P5 for the long tail** |
+| Answers about the world | ✅ | 🟡 **V10 · V10.3 · V10.4** — the native 161-topic cited tech pack stays deterministic; opt-in `arch-hybrid` adds a private local instruct model for open-ended answers beyond the pack, grounded with tenant RAG and a one-pass reflection review | 🔶 | Default `arch` remains free, fast and template/retrieval based. `arch-hybrid` has no API/token bill but needs local model storage, RAM/CPU and accepts the smaller model's reasoning/hallucination ceiling. It never routes workspace data to a public chat service. Keep live workspace questions native and cite retrieved sources | **shipped (V10/V10.4), local model optional** |
 | Answers about *your* incidents, runbooks, services, roster | 🟡 only if you paste them | ✅ **this is the product** | — | Keep widening the corpus (SLOs, changes, dependencies, postmortems) rather than widening the model | ongoing |
 | Citations you can click | ✅ (web + memory sources) | ✅ incident / runbook / pattern / postmortem | — | Add citations for SLO, change and dependency rows as they enter answers | P3 |
 | Web browsing / deep research | ✅ | ❌ deliberately (SSRF-bounded fetch is a human action, not inference) | 🔶 | A **"research this incident" action** that fetches a URL the human names, shows what it read, then answers — human-in-the-loop version of the same outcome | P4 |
 | Long context (100k+) | ✅ | 🟡 12 turns of history + retrieval over the whole corpus | 🔶 | Retrieval already covers more history than a context window does; raise the turn window and add transcript memory when tests show it helps | P3 |
-| Multi-step reasoning / maths / novel code | ✅ | ⛔ templates, not reasoning | 🟡 | A local 3B–7B model does *some* of this; never frontier level, and slower than a human's patience on a CPU | P5 |
+| Multi-step reasoning / maths / novel code | ✅ | 🟡 `arch-hybrid` can plan a bounded task and review an open-ended answer locally; native `arch` remains deterministic | 🟡 | A local 3B–7B model can do some decomposition and self-review for ₹0 in API fees, but it is not frontier reasoning. ARCH does not expose hidden chain-of-thought or run arbitrary Python from chat; code changes stay in Code Assist | V10.4 partial |
 
 ### 2.5 Actions in the world (where an ops product actually wins)
 
@@ -126,10 +127,10 @@ Legend — **Closeable at ₹0?**
 |---|---|---|---|---|
 | Data never leaves the deployment | ⛔ (it is a cloud service) | ✅ by default | — | **Our strongest single line in a security review** |
 | Per-user privacy inside one tenant | 🟡 workspace + projects | ✅ chat sessions are per member, foreign id → `404` | — | Keep it |
-| Audit trail | ⛔ | ✅ every generate/approve/dismiss, metadata only | — | Extend to regenerate/feedback/export |
-| Deterministic, testable output | ⛔ sampling | ✅ golden-set + unit tested | — | The reason our answers cannot hallucinate an incident |
+| Audit trail | ⛔ | ✅ generate/regenerate/feedback events store metadata only | — | Export is client-side; chat text is never copied into the audit log |
+| Deterministic, testable output | ⛔ sampling | ✅ native path is golden-set + unit tested; hybrid path has adapter/grounding tests | — | Native answers are deterministic; local generations can vary |
 | Rate limiting / abuse control | ✅ | ✅ per organization, `429` | — | Same budget as Copilot |
-| Hallucinated facts | 🟡 reduced, still possible | ⛔ **structurally unlikely** (answers are selected rows) | — | Say it exactly this way — not "no hallucinations" |
+| Hallucinated facts | 🟡 reduced, still possible | ✅ native path uses selected rows; 🟡 hybrid is a small generative model | — | Hybrid reflection and source mapping help, but verify general facts and advice before acting |
 | Cost per active user | per seat + per token | ₹0 marginal | — | Price and cost are aligned for us; this is why our pricing page works |
 
 ---
@@ -161,16 +162,17 @@ the bottom of the list.
 
 ## 4. What ARCH already does better (keep saying this)
 
-- **It cannot invent your incidents.** Every factual sentence is a row the engine was handed, with
-  a citation. ChatGPT can describe a plausible outage you never had.
+- **The native path cannot invent your incidents.** It uses only the workspace snapshot and retrieved
+  rows, with citations. Hybrid chat is more fluent but still a small generative model: it is instructed
+  to ground workspace claims, reviewed once, and may be wrong about general facts. Verify before acting.
 - **Nothing leaves the building.** `ARCH_OFFLINE_ONLY=true` is the default; the *only* place a local
   LLM is allowed is a private address.
 - **Free at the margin.** No tokens, no seats, no quota. A 25-person team can ask 10 000 questions a
   month and the bill does not move — which is also why we can say "everyone can be in the tool".
 - **Private per person.** Your chats are yours even inside your own organization — a foreign id is
   `404`, not "someone else's reading list".
-- **Auditable and deterministic.** Same question, same workspace, same answer — and the answer is in
-  the test suite. A frontier model cannot make that claim.
+- **Auditable by design.** Native mode is deterministic and tested; hybrid generations record their
+  provider, model and latency, while feedback audit events store rating shape only, never chat text.
 - **Hinglish by default.** The team here writes in both languages; ARCH answers in the language it
   was asked in, including for ops advice.
 - **It advises; a human acts.** Nothing on the incident, the status page or a repository changes
@@ -237,14 +239,16 @@ and can be refused by role exactly like the manual path.
 **Why it wins:** ChatGPT's agent mode touches *your computer*; ours touches *your incident*, inside
 your permissions, with your audit trail.
 
-### P5 — "Fluent on a local model" *(T2/T3 — optional)*
-Turn on `arch-hybrid` for chat as an *opt-in toggle*: the local model gets ARCH's grounded facts and
-may only phrase them; every generated sentence is checked back against the facts before display
-(unsupported sentences are dropped and the templated answer is used instead). Ship it with a
-publishable eval (`npm run model:eval` + a chat golden set), a RAM/time budget shown in the UI, and
-a one-line fallback story: "if the model is slow or down, the ARCH engine answers".
-**Acceptance:** with the LLM unplugged every test still passes; with it plugged in, no answer
-contains a fact that is not in the snapshot.
+### V10.4 — "Fluent on a local model" *(shipped, opt-in)*
+In `AI_PROVIDER="arch-hybrid"`, selected open-ended chat intents can use a private local model. ARCH
+passes bounded conversation context, explicitly stored member memory and tenant-scoped retrieval; the model gets a
+small task plan and one optional reflection pass. Citation markers map back only to sources actually
+retrieved, and an unavailable/slow model falls back to the deterministic answer. There are adapter,
+intent-routing, citation, fallback and service tests; no live Ollama model is bundled or required.
+
+**Known limit:** the local model can still be wrong about general facts. Reflection is not a formal
+fact-checker, and generated prose is not guaranteed to be entailed by a citation. Keep the native
+path as default for deterministic answers, and verify advice before acting.
 
 ### Explicitly not on the plan
 Image generation · web browsing at inference time · autonomous actions without approval · a general
@@ -256,8 +260,9 @@ chatbot detached from a workspace · training a frontier model · paying per tok
 
 1. **Golden set first.** Every phase adds cases to the chat eval (intent, grounding, refusal,
    language, latency). No phase ships on vibes.
-2. **Grounding test, not a prompt.** The rule is enforced in code and asserted in tests: a fact not
-   in the snapshot must not appear in the answer.
+2. **Grounding test, not just a prompt.** Native workspace answers use the supplied snapshot. In
+   hybrid mode, invented citation ids are dropped and cited ids map only to retrieved sources; this
+   does not prove that every general-world statement from a small model is true or entailed.
 3. **The unplugged rule.** `npm test` and `npm run model:eval` must pass with no local model
    installed and no network.
 4. **Latency budget.** Chat turns stay in the "instant" band (target < 300 ms warm); a phase that
@@ -272,10 +277,11 @@ chatbot detached from a workspace · training a frontier model · paying per tok
 already knows your incidents — and can prove every sentence."*
 
 **To a customer who asks "is this ChatGPT?":**
-> "No. ChatGPT is a general model that has never seen your systems — you paste context in and hope.
-> ARCH runs its own model on your server: it reads your incidents, your runbooks and your history,
-> cites every claim, and nothing leaves your infrastructure. It will not write you a poem. It will
-> tell you what broke, what fixed it last time, and what to do next — in milliseconds, for free."
+> "No. ARCH is an incident-management assistant. Its default engine is deterministic and uses your
+> tenant-scoped incidents, runbooks and history; those workspace answers include source citations.
+> If you enable it, a small open-weight model can make open-ended chat more natural while staying on
+> your private infrastructure — no paid API, but it uses local compute and can still be wrong about
+> general facts. Either way, ARCH never takes an operational action without a human approval."
 
 **What we do not say:** "as good as ChatGPT" · "no hallucinations" · "we have an LLM" · anything
 about parameter counts or benchmarks we have not run ourselves.
@@ -286,12 +292,12 @@ about parameter counts or benchmarks we have not run ourselves.
 
 | Date | Decision | Why |
 |---|---|---|
-| 2026-09-28 | Strategy: match the shape, not the weights | The model is the one thing ₹0 cannot buy; the surface is mostly free |
+| 2026-09-28 | Strategy: match the useful shape, not frontier weights | Open weights make local inference free of API fees, but compute and frontier-level quality are not free |
 | 2026-09-28 | P1 shipped: regenerate, copy/export, shortcuts, reveal | First-minute parity, no dependency, no grounding risk |
 | 2026-09-28 | Code generation stays refused in chat | A wrong snippet in production is worse than no snippet; Code Assist owns that job |
 | 2026-09-28 | Local LLM stays an opt-in upgrade, never a dependency | Keeps the offline/free guarantee true for every deployment |
 | 2026-09-28 | Memory is stored, visible and deletable (V9) before feedback/learning (P2) | "I will remember that" must be true before any model tuning — trust first, and the panel is what makes memory acceptable to a team |
-| 2026-09-28 | No neural network or local LLM in the default path | CPU-only, instant, deterministic, testable; a 0.5B–7B model is a *later* opt-in tier (P5), not a replacement for grounding |
+| 2026-09-28 | No neural network or local LLM in the default path | Native chat stays CPU-only, instant and deterministic; V10.4 adds a separate opt-in local generation path, not a replacement for grounding |
 
 **Next review:** after P2 lands (or any time a customer asks for something ChatGPT-shaped that is
 not in §2).

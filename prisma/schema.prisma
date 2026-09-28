@@ -139,6 +139,12 @@ enum ArchChatTitleSource {
   USER
 }
 
+/// V10 — one private usefulness rating on an ARCH chat answer.
+enum ArchChatFeedbackRating {
+  UP
+  DOWN
+}
+
 // ---------- Auth (Auth.js compatible) ----------
 
 model User {
@@ -990,6 +996,8 @@ model ArchChatMessage {
   provider       String?
   model          String?
   latencyMs      Int?
+  /// Optional thumbs feedback; not training data and never copied into model-training corpora.
+  feedbackRating ArchChatFeedbackRating?
   createdAt      DateTime     @default(now())
 
   session      ArchChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)

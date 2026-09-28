@@ -221,7 +221,7 @@ Everything is JSON under `/api`. Success is `{ "data": ... }`; failures are
 | Audit | `GET /api/audit` (OWNER/ADMIN, paginated, `?summary=true`) |
 | Copilot (V2) | `POST /api/incidents/{id}/copilot/{summary,triage,status-draft,postmortem}`, `GET /api/incidents/{id}/copilot/suggestions?status=`, `POST /api/copilot/suggestions/{id}/{approve,dismiss}` |
 | ARCH Model + Code Assist (V3) | `POST /api/incidents/{id}/copilot/code-fix` (`{attachment?}`), `POST /api/copilot/code-review` (`{code, mode?, language?}`), `GET /api/copilot/model`, `POST /api/copilot/model/train` (OWNER/ADMIN) |
-| Chat with ARCH (V8/V9) | `GET/POST/DELETE /api/copilot/chat/sessions`, `GET/PATCH/DELETE /api/copilot/chat/sessions/{id}`, `POST /api/copilot/chat/sessions/{id}/messages`, `POST /api/copilot/chat/sessions/{id}/regenerate`, `GET/PATCH/DELETE /api/copilot/chat/memory` — page `/dashboard/chat` |
+| Chat with ARCH (V8/V9/V10.4) | `GET/POST/DELETE /api/copilot/chat/sessions`, `GET/PATCH/DELETE /api/copilot/chat/sessions/{id}`, `POST /api/copilot/chat/sessions/{id}/messages`, `POST /api/copilot/chat/sessions/{id}/regenerate`, `PATCH /api/copilot/chat/sessions/{id}/messages/{messageId}/feedback`, `GET/PATCH/DELETE /api/copilot/chat/memory` — page `/dashboard/chat` |
 
 Webhook senders sign `"{timestamp}.{rawBody}"` with the endpoint secret and send
 `X-Arch-Signature: t=<unix>,v1=<hex>`; GitHub-style `X-Hub-Signature-256` is also accepted.
@@ -275,9 +275,12 @@ code never go to OpenAI or Anthropic. Full guide: [`docs/engineering/ARCH-MODEL.
   resolved incidents, a built-in library of 44 failure patterns, and optionally about 340 public
   postmortems. It retrains automatically (worker) or on demand (`/dashboard/model`, OWNER/ADMIN).
   Drafts cite what fixed similar incidents before.
-- **Optional local LLM** (`AI_PROVIDER="arch-hybrid"`). An open-source model such as
-  `qwen2.5-coder:7b` runs via Ollama or llama.cpp on the same machine (8–16 GB RAM, no GPU) for
-  fluent drafts and code rewrites. If it is slow or down, the ARCH model answers.
+- **Optional local LLM** (`AI_PROVIDER="arch-hybrid"`). An open-weight model runs via Ollama or
+  llama.cpp on your own machine: no API key or per-token charge. It writes fluent Copilot drafts
+  and answers open-ended chat questions from the local model's general knowledge plus ARCH's
+  tenant-scoped RAG. A one-pass reflection checks its draft; if the model is slow or down, the
+  deterministic ARCH answer remains available. For general chat, set `LOCAL_CHAT_MODEL` to a
+  conversational instruct model; blank reuses `LOCAL_LLM_MODEL`.
 - **Code fix in the incident panel.** Paste a stack trace or snippet to get a diagnosis, the first
   frame in your code, fixes and a patch.
 - **Code Assist** (`/dashboard/code`). Paste code to get a review, a safer version, or a
@@ -314,11 +317,13 @@ npm run knowledge:fetch -- --org <organizationId> --user <userId>   # seed from 
 npm run model:eval                                                  # golden-set accuracy, no database
 ```
 
-### Chat with ARCH (V8): a real chat, on your own model
+### Chat with ARCH (V8/V9/V10.4): a private, conversational workspace assistant
 
-`/dashboard/chat` is a ChatGPT-style assistant that runs entirely on ARCH's own model — no vendor,
-no API key, nothing leaves your server. It is grounded, not generative: every answer is built from
-this workspace (open incidents, history, runbooks, the trained model) and cites what it used.
+`/dashboard/chat` is a free workspace assistant. By default it uses ARCH's deterministic native
+engine: no vendor, no API key, no model download, and every workspace fact comes from tenant-scoped
+data. For more natural, open-ended answers, opt into `AI_PROVIDER="arch-hybrid"` to use a local
+open-weight model; the model stays on your private server, combines pretrained knowledge with
+ARCH's RAG, and falls back to the native answer if it is unavailable.
 
 - **A real chat.** Conversations persist: previous sessions in the sidebar (grouped by recency,
   searchable), rename inline, delete one or clear all. Follow-ups keep the thread. Sessions are
@@ -334,17 +339,19 @@ this workspace (open incidents, history, runbooks, the trained model) and cites 
 - **Honest when it does not know.** An empty workspace gets "I have nothing to ground this on"
   plus how to fix that — never an invented incident. Chat answers from a 30-day resolve-time
   window and the open queue only.
-- **General tech questions, answered offline (V10 · V10.3).** A built-in tech pack of 161 topics —
-  the oldest language, 502 vs 503 vs 504, CAP, indexes and N+1, Docker vs Kubernetes, queues, SLO burn
-  rate, OAuth vs OIDC, load testing, processes vs threads, code review, how LLMs work, and (V10.3)
-  Rust ownership, CORS, sagas, zero trust, ETL, transformers, quantum computing and more — answers in
-  English or Hinglish with a "Tech pack" citation, from a file in your own repository, with no vendor
-  call. Ask for a comparison ("redis vs postgres") and it quotes both entries, with both citations.
-  Outside the pack it says so, names the closest topics it *does* cover, and points at your Knowledge
-  sources; for the long tail, `AI_PROVIDER=arch-hybrid` can route to a local model you run yourself.
-- **Fast and free.** Warm answers land in tens of milliseconds (the engine is deterministic
-  retrieval + templates, not an LLM call), it is rate-limited per organization like the rest of the
-  Copilot surface, and it works with `ARCH_OFFLINE_ONLY="true"`.
+- **General knowledge, still free.** The native engine keeps its 161-topic, offline tech pack and
+  honest unknown-answer fallback. In `arch-hybrid`, a local instruct model can handle questions
+  outside those fixed entries, explain concepts in natural prose, and tailor advice using member
+  memory plus retrieved runbooks, past incidents and reference patterns. Only open-ended intents
+  go to generation; live status, team, memory, identity and code-refusal paths stay deterministic.
+- **Reflection + feedback.** Hybrid answers get one private review pass for relevance, unsupported
+  workspace claims, uncertainty and tone. Hidden chain-of-thought is not requested or shown. Each
+  answer also has private thumbs-up/down feedback for evaluation; ratings do not silently fine-tune
+  the model or enter incident-training data.
+- **Free tier stays the default.** Native answers are deterministic and typically land in tens of
+  milliseconds. Hybrid inference has no API/token charge but uses your machine's RAM/CPU and is
+  slower; it remains private-only and rate-limited per organization. Both modes work with
+  `ARCH_OFFLINE_ONLY="true"`.
 - **The mechanics every chat has.** Copy one answer, copy the conversation, or export it as
   Markdown; **Try again** re-asks the last question against the workspace as it is now and rewrites
   the stored answer in place (`POST /api/copilot/chat/sessions/{id}/regenerate`, audited with shape

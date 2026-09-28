@@ -1,5 +1,5 @@
 import { db, type DbClient } from '@/lib/db';
-import type { ArchChatRole } from '@/generated/prisma/client';
+import type { ArchChatFeedbackRating, ArchChatRole } from '@/generated/prisma/client';
 
 /**
  * Chat storage. Every function takes `organizationId` *and* `userId`: a chat is personal, so a
@@ -26,6 +26,22 @@ export const archChatRepository = {
 
   findSession(organizationId: string, userId: string, id: string, client: DbClient = db) {
     return client.archChatSession.findFirst({ where: { id, organizationId, userId } });
+  },
+
+  findOwnedAssistantMessage(organizationId: string, userId: string, sessionId: string, messageId: string, client: DbClient = db) {
+    return client.archChatMessage.findFirst({
+      where: {
+        id: messageId,
+        sessionId,
+        organizationId,
+        role: 'ARCH',
+        session: { is: { organizationId, userId } },
+      },
+    });
+  },
+
+  updateFeedback(messageId: string, rating: ArchChatFeedbackRating | null, client: DbClient = db) {
+    return client.archChatMessage.update({ where: { id: messageId }, data: { feedbackRating: rating } });
   },
 
   createSession(data: { organizationId: string; userId: string; title?: string }, client: DbClient = db) {
@@ -112,6 +128,7 @@ export const archChatRepository = {
       provider?: string | null;
       model?: string | null;
       latencyMs?: number | null;
+      feedbackRating?: ArchChatFeedbackRating | null;
     },
     client: DbClient = db,
   ) {

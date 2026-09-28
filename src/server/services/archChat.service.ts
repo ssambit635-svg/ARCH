@@ -19,6 +19,8 @@ import {
   type ChatTurn,
 } from '../ai/arch-model/chat';
 import type { SimilarDoc } from '../ai/arch-model/runtime';
+import { generateLocalChatAnswer, shouldUseLocalChat } from '../ai/arch-model/chat-agent';
+import { getLocalChatModel } from '../ai/local-chat';
 import { archChatRepository } from '../repositories/archChat.repository';
 import { incidentRepository } from '../repositories/incident.repository';
 import { organizationRepository } from '../repositories/organization.repository';
@@ -37,8 +39,8 @@ import { retrieveKnowledge } from './knowledge.service';
  *
  * Everything here is tenant-scoped by construction: sessions belong to (organization, user), every
  * data read goes through an organization-scoped repository, and the engine never sees a row it was
- * not handed. Chat is free — no vendor, no tokens, no network — so it is available to every member
- * who can read incidents, not just admins.
+ * not handed. The default is free native inference; optional hybrid generation uses only a private
+ * local model (no API/token bill), so chat remains available without vendor credentials.
  */
 
 export const CHAT_RATE_LIMIT_WINDOW_MS = 60_000;
@@ -87,6 +89,7 @@ export type ChatMessageView = {
   provider: string | null;
   model: string | null;
   latencyMs: number | null;
+  feedbackRating: 'UP' | 'DOWN' | null;
   createdAt: string;
 };
 
@@ -500,6 +503,7 @@ function toMessageView(row: {
   provider: string | null;
   model: string | null;
   latencyMs: number | null;
+  feedbackRating: 'UP' | 'DOWN' | null;
   createdAt: Date;
 }): ChatMessageView {
   return {
@@ -513,6 +517,7 @@ function toMessageView(row: {
     provider: row.provider,
     model: row.model,
     latencyMs: row.latencyMs,
+    feedbackRating: row.feedbackRating,
     createdAt: row.createdAt.toISOString(),
   };
 }
@@ -647,7 +652,7 @@ async function answerQuestion(
   params: Params,
   question: string,
   history: ChatTurn[],
-): Promise<{ answer: ChatAnswer; engineModel: string; latencyMs: number; memoryCleared: boolean }> {
+): Promise<{ answer: ChatAnswer; engineModel: string; provider: string; latencyMs: number; memoryCleared: boolean }> {
   const intent = classifyChatIntent(question);
   const startedAt = Date.now();
   try {
@@ -656,9 +661,43 @@ async function answerQuestion(
     const extracted = extractMemory({ history, question });
     const { facts, cleared } = await rememberFromTurn(params, extracted, stored.facts);
     const snapshot = toSnapshot(await buildSnapshotInputs(params, intent, question, toChatMemory(facts, undefined, cleared)));
+    const nativeAnswer = answerChat({ question, snapshot, history });
+    const localModel = getLocalChatModel();
+
+    // In the default free ARCH mode the native engine is unchanged. When a private local model is
+    // explicitly enabled, it takes only open-ended answer intents; live workspace facts, memory
+    // operations, identity, and code refusals stay on the deterministic path.
+    if (localModel && shouldUseLocalChat(nativeAnswer.intent)) {
+      try {
+        const generated = await generateLocalChatAnswer({
+          model: localModel,
+          question,
+          snapshot,
+          history,
+          nativeAnswer,
+          signal: AbortSignal.timeout(env.LOCAL_CHAT_TIMEOUT_MS),
+          reflect: env.LOCAL_CHAT_REFLECTION,
+        });
+        if (generated) {
+          return {
+            answer: generated,
+            engineModel: localModel.model,
+            provider: 'arch-hybrid',
+            latencyMs: Date.now() - startedAt,
+            memoryCleared: cleared,
+          };
+        }
+      } catch (error) {
+        // Never log the prompt, retrieved docs, or answer; these can contain tenant data.
+        const reason = error instanceof Error ? error.name : 'unknown_error';
+        console.warn(`[chat] local model unavailable (${reason}); using the native ARCH answer`);
+      }
+    }
+
     return {
-      answer: answerChat({ question, snapshot, history }),
+      answer: nativeAnswer,
       engineModel: snapshot.model.name,
+      provider: 'arch',
       latencyMs: Date.now() - startedAt,
       memoryCleared: cleared,
     };
@@ -693,7 +732,7 @@ export async function sendChatMessage(
 
   const history: ChatTurn[] = (await archChatRepository.recentMessages(session.id, CHAT_LIMITS.maxHistoryTurns)).map(toChatTurn);
 
-  const { answer, engineModel, latencyMs, memoryCleared } = await answerQuestion({ organizationId, userId }, content, history);
+  const { answer, engineModel, provider, latencyMs, memoryCleared } = await answerQuestion({ organizationId, userId }, content, history);
 
   const userMessage = await archChatRepository.createMessage({
     sessionId: session.id,
@@ -711,7 +750,7 @@ export async function sendChatMessage(
     confidence: answer.confidence,
     citations: answer.citations,
     suggestions: answer.suggestions,
-    provider: 'arch',
+    provider,
     model: engineModel,
     latencyMs,
   });
@@ -727,7 +766,7 @@ export async function sendChatMessage(
     entityType: 'arch_chat_session',
     entityId: session.id,
     // Metadata carries shape, never the conversation itself: content is the user's to keep, not the audit log's.
-    metadata: { intent: answer.intent, confidence: answer.confidence, provider: 'arch', latencyMs, chars: content.length },
+    metadata: { intent: answer.intent, confidence: answer.confidence, provider, latencyMs, chars: content.length },
   });
 
   return {
@@ -774,7 +813,7 @@ export async function regenerateChatAnswer(params: Params & { sessionId: string 
   if (!question) throw AppError.badRequest('That answer has no question in this chat to retry.');
 
   const history = tail.slice(0, questionIndex).slice(-CHAT_LIMITS.maxHistoryTurns).map(toChatTurn);
-  const { answer, engineModel, latencyMs, memoryCleared } = await answerQuestion({ organizationId, userId }, question.content, history);
+  const { answer, engineModel, provider, latencyMs, memoryCleared } = await answerQuestion({ organizationId, userId }, question.content, history);
 
   const updated = await archChatRepository.updateMessage(last.id, {
     content: answer.answer,
@@ -782,9 +821,10 @@ export async function regenerateChatAnswer(params: Params & { sessionId: string 
     confidence: answer.confidence,
     citations: answer.citations,
     suggestions: answer.suggestions,
-    provider: 'arch',
+    provider,
     model: engineModel,
     latencyMs,
+    feedbackRating: null,
   });
 
   await writeAudit({
@@ -793,10 +833,32 @@ export async function regenerateChatAnswer(params: Params & { sessionId: string 
     action: 'chat.message.regenerate',
     entityType: 'arch_chat_session',
     entityId: sessionId,
-    metadata: { messageId: last.id, intent: answer.intent, confidence: answer.confidence, provider: 'arch', latencyMs },
+    metadata: { messageId: last.id, intent: answer.intent, confidence: answer.confidence, provider, latencyMs },
   });
 
   return { session: toSessionSummary(session, previewOf(answer.answer)), archMessage: toMessageView(updated), memoryCleared };
+}
+
+/** Save (or clear) the caller's one-tap rating on an answer in their own private chat. */
+export async function setChatMessageFeedback(
+  params: Params & { sessionId: string; messageId: string; rating: 'UP' | 'DOWN' | null },
+): Promise<{ messageId: string; rating: 'UP' | 'DOWN' | null }> {
+  const { organizationId, userId, sessionId, messageId, rating } = params;
+  await requirePermission(organizationId, userId, 'copilot.generate');
+  const message = await archChatRepository.findOwnedAssistantMessage(organizationId, userId, sessionId, messageId);
+  if (!message) throw AppError.notFound('Chat answer not found.');
+
+  const updated = await archChatRepository.updateFeedback(messageId, rating);
+  await writeAudit({
+    organizationId,
+    actorId: userId,
+    action: rating ? 'chat.feedback' : 'chat.feedback.clear',
+    entityType: 'arch_chat_message',
+    entityId: messageId,
+    // Ratings are evaluation metadata only. Never store the answer or question in the audit log.
+    metadata: { rating },
+  });
+  return { messageId, rating: updated.feedbackRating };
 }
 
 export type ChatCorpusSummary = {

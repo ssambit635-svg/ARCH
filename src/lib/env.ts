@@ -65,8 +65,13 @@ const envSchema = z.object({
   LOCAL_LLM_URL: z.string().url().default('http://127.0.0.1:11434'),
   LOCAL_LLM_API: z.enum(['ollama', 'openai']).default('ollama'),
   LOCAL_LLM_MODEL: z.string().min(1).default('qwen2.5-coder:7b'),
+  // Optional general-instruct model for free-form chat; defaults to the Copilot model above.
+  LOCAL_CHAT_MODEL: optionalTrimmed(),
   // CPU inference is slow; the ARCH model answers instead if the LLM misses this deadline.
   LOCAL_LLM_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(600_000).default(90_000),
+  // Whole budget for chat draft + one optional reflection pass; failure falls back to native ARCH.
+  LOCAL_CHAT_TIMEOUT_MS: z.coerce.number().int().min(1_000).max(180_000).default(60_000),
+  LOCAL_CHAT_REFLECTION: booleanish.default(true),
   LOCAL_LLM_CONTEXT: z.coerce.number().int().min(2048).max(131_072).default(8192),
   // Where `npm run model:fetch-public` stores downloaded public postmortems (git-ignored).
   ARCH_MODEL_DATA_DIR: z.string().default('model-data'),

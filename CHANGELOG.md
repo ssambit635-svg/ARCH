@@ -15,6 +15,20 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Added — V10.4 · more conversational, private chat beyond the pack
+
+- **Optional local generation for open-ended chat.** In `AI_PROVIDER="arch-hybrid"`, a private
+  open-weight model can answer beyond ARCH's deterministic tech pack, grounded in tenant-scoped
+  runbooks, team incidents, public patterns and explicitly stored member memory. One bounded reflection pass
+  reviews the draft; timeouts, model failures and unusable output fall back to native ARCH.
+- **Planning without exposing hidden reasoning.** A small intent-based task plan guides answers; ARCH
+  does not request, store or display chain-of-thought, and chat has no tools that can execute code or
+  change workspace state.
+- **Answer feedback.** Members can mark an answer helpful or not helpful, or clear a rating. It is
+  private evaluation metadata only — not automatically included in training data or model fine-tuning.
+- **No required paid API.** The native engine remains the default. Hybrid inference uses local CPU/RAM
+  and has no per-token charge; see the README and model guide for Ollama setup and privacy limits.
+
 ### Added — V10.3 · the pack grows to 161 topics, and answers comparisons
 
 The honest limit from V10 has not changed — a curated pack is not a pretrained model. What changed is
