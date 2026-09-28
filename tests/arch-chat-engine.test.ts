@@ -262,6 +262,21 @@ describe('chat answers', () => {
     expect(answer.intent).not.toBe('unknown');
   });
 
+  it('does not let a complete new question inherit the previous subject', () => {
+    // A follow-up ("and the fix?") inherits the subject; a self-contained question does not — even
+    // when it lands in a conversation that was about an incident.
+    const history = [
+      { role: 'user' as const, content: 'we keep seeing 503s after the deploy, what should we do?' },
+      { role: 'arch' as const, content: 'That looks like an error spike…' },
+    ];
+    const complete = answerChat({ question: 'what is quantum tunnelling in GPUs?', snapshot: snapshot(), history });
+    expect(complete.intent).toBe('unknown');
+    expect(complete.answer).toMatch(/strongest on|sabse acha/i);
+
+    const followUp = answerChat({ question: 'and the fix?', snapshot: snapshot(), history });
+    expect(followUp.intent).not.toBe('unknown');
+  });
+
   it('answers unknown questions honestly instead of pretending', () => {
     const answer = answerChat({ question: 'zzzz qqqq', snapshot: snapshot() });
     expect(answer.intent).toBe('unknown');

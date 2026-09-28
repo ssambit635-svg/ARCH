@@ -39,6 +39,10 @@ no API key, no model download, still ₹0 per answer.
   (how LLMs work, RAG, hallucination, local vs API, judging an AI feature) — plus the ARCH-specific topics.
 - **Every answer carries a "Tech pack" citation** — so a reader can tell general knowledge from
   workspace knowledge, which is the distinction that matters when deciding whether to act on a reply.
+- **It answers the question you asked, not the previous one.** A complete new question inside a
+  conversation ("what is quantum tunnelling in GPUs?") no longer inherits the subject of the turn
+  before it; genuine follow-ups ("and the fix?", "uska root cause kya tha?") still do. Questions the
+  pack cannot cover keep the honest fallback, mid-conversation as well as at the start.
 - **It says what it does not know.** Outside the pack, the fallback names how many topics are built in,
   suggests the closest family, and points at Knowledge sources for your own docs — instead of inventing
   a fact or answering a different question.

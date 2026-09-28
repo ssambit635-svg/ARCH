@@ -663,6 +663,9 @@ function isWorkspaceQuestion(question: string): boolean {
   return WORKSPACE_SUBJECT.test(question);
 }
 
+/** Openers that mean "same subject as before" in English and Hinglish. */
+const FOLLOW_UP_OPENER = /^(and\b|also\b|then\b|but\b|aur\b|uska\b|uske\b|uski\b|iska\b|iske\b|iski\b|wo\b|woh\b|that\b|it\b|what about\b|how about\b|why\?|why$)/i;
+
 /**
  * Concepts that ARCH answers with the workspace's own numbers ("your median resolve time", "your
  * runbooks"), so they never fall through to the general pack.
@@ -1581,8 +1584,17 @@ export function answerChat(params: {
   let subject = question;
 
   // Follow-up resolution: an unrecognized turn inherits the subject of the previous question, so
-  // "and the fix?" / "uska root cause?" work right after an answer.
-  if (intent === 'unknown' && history?.length) {
+  // "and the fix?" / "uska root cause?" work right after an answer. Only turns that *look* like
+  // follow-ups qualify: short ones, or ones that open with a connector. A complete new question
+  // ("what is quantum tunnelling in GPUs?") must not inherit the previous subject just because it
+  // arrived in the same conversation.
+  const questionWords = question.split(/\s+/).filter(Boolean).length;
+  // A turn stands on its own when it is a definition question of real length ("what is quantum
+  // tunnelling in GPUs?") or when the pack recognises its subject ("what is redis?"). Those never
+  // inherit the previous subject — the rest of the rule keeps "and the fix?" working.
+  const standsAlone = (isDefinitionQuestion(question) && questionWords >= 5) || matchTechFact(question) !== null;
+  const looksLikeFollowUp = !standsAlone && (questionWords <= 5 || FOLLOW_UP_OPENER.test(question));
+  if (intent === 'unknown' && looksLikeFollowUp && history?.length) {
     const previous = [...history].reverse().find((turn) => turn.role === 'user');
     if (previous) {
       const merged = `${previous.content} ${question}`;

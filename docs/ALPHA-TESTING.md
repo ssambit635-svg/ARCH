@@ -95,6 +95,10 @@ Ye checklist har command ke saath hai (`/dashboard/chat`):
       built-in topics mein nahi hai, kitne topics built-in hain bataye, aur Knowledge page ka raasta
       suggest kare. Koi banaya hua fact na aaye.
 - [ ] Workspace sawaal abhi bhi theek: `what is open right now?` — open queue aaye, Tech pack nahi.
+- [ ] Ek incident sawaal ke baad (`we keep seeing 503s after the deploy, what should we do?`) ek naya
+      complete sawaal poochein — `what is quantum tunnelling in GPUs?` — jawab us naye sawaal ka aaye
+      (honest "yeh mere built-in topics mein nahi hai"), pichhle incident ka advice na dohraye. Phir
+      `and the fix?` poochein — wahi pichhle subject ko follow-up kare.
 
 Har jawab ke neeche latency header mein `latencyMs` chhupa hota hai (API response mein bhi aata
 hai). Alpha ka target: **warm answer < 300 ms**, pehla answer < 1.5 s.
