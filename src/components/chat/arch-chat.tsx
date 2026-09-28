@@ -86,6 +86,14 @@ const INTENT_LABEL: Record<string, string> = {
   identity: 'about me',
   help: 'capabilities',
   code_request: 'code (declined)',
+  datetime: 'date & time',
+  workflow_guide: 'getting started',
+  tech_stack_advice: 'tech stack advice',
+  memory_store: 'memory saved',
+  memory_recall: 'memory',
+  memory_clear: 'memory cleared',
+  concept_explain: 'concept',
+  health_summary: 'system health',
   unknown: 'best effort',
 };
 
@@ -191,11 +199,11 @@ function groupLabel(iso: string): string {
 
 const EXAMPLES = [
   'What is open right now?',
+  'What is the date today?',
+  'What should I do in here?',
   'Have we seen a database timeout before?',
-  'How are we doing this month?',
-  'Which service fails most often?',
+  'Which language should I use for microservices?',
   'Redis misses are spiking — what should I check?',
-  'What does our runbook say about deploys?',
 ];
 
 export function ArchChat({
@@ -592,11 +600,11 @@ export function ArchChat({
                 </span>
                 <div className="space-y-1">
                   <p className="text-[15px] font-semibold text-white">
-                    {activeSession ? 'This chat is empty — ask me anything.' : `Hi, I'm ${AI_NAME}.`}
+                    {activeSession ? 'This chat is empty — ask me anything.' : `Hello developer! I'm ${AI_NAME}.`}
                   </p>
                   <p className="text-sm leading-relaxed text-slate-400">
-                    I read this workspace: every incident, its timeline, your runbooks and what the ARCH model learned from
-                    your history. Ask in English or Hinglish. I do not write code — Code Assist handles that.
+                    I'm your operations copilot: I monitor active incidents, recall history & root causes, check runbooks,
+                    guide tech decisions, and track conversation context. Chat with me in English or Hindi / Hinglish.
                   </p>
                 </div>
               </div>

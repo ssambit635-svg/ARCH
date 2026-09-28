@@ -87,6 +87,17 @@ describe('chat language detection', () => {
     expect(detectChatLanguage('what is open right now?')).toBe('en');
     expect(detectChatLanguage('thanks')).toBe('en');
   });
+
+  it('maintains language continuity based on conversation history', () => {
+    const hinglishHistory = [{ role: 'user' as const, content: 'kaise ho bhai' }];
+    expect(detectChatLanguage('what is date today ?', hinglishHistory)).toBe('hinglish');
+    expect(detectChatLanguage('what should i do in here', hinglishHistory)).toBe('hinglish');
+    expect(detectChatLanguage('status', hinglishHistory)).toBe('hinglish');
+
+    const englishHistory = [{ role: 'user' as const, content: 'hello how are you' }];
+    expect(detectChatLanguage('what is date today ?', englishHistory)).toBe('en');
+    expect(detectChatLanguage('aaj kya date hai', englishHistory)).toBe('hinglish');
+  });
 });
 
 describe('chat intent classification', () => {
@@ -255,6 +266,72 @@ describe('chat answers', () => {
     expect(answer.intent).toBe('unknown');
     expect(answer.answer).toMatch(/strongest on|sabse acha/i);
     expect(answer.confidence).toBe('low');
+  });
+
+  it('answers date and time questions accurately from the snapshot clock', () => {
+    const answer = answerChat({ question: 'what is date today ?', snapshot: snapshot() });
+    expect(answer.intent).toBe('datetime');
+    expect(answer.answer).toMatch(/Today is|UTC/);
+    expect(answer.citations[0]?.source).toBe('workspace');
+
+    const hinglishAnswer = answerChat({ question: 'aaj kya date hai', snapshot: snapshot() });
+    expect(hinglishAnswer.intent).toBe('datetime');
+    expect(hinglishAnswer.lang).toBe('hinglish');
+    expect(hinglishAnswer.answer).toMatch(/Aaj ki date/);
+  });
+
+  it('guides the developer on what to do in the workspace', () => {
+    const answer = answerChat({ question: 'what should i do in here', snapshot: snapshot() });
+    expect(answer.intent).toBe('workflow_guide');
+    expect(answer.answer).toMatch(/Welcome to ARCH/);
+    expect(answer.answer).toMatch(/Check Live Incidents|Code Assist/);
+
+    const hinglishAnswer = answerChat({ question: 'main yahan kya karu', snapshot: snapshot() });
+    expect(hinglishAnswer.intent).toBe('workflow_guide');
+    expect(hinglishAnswer.lang).toBe('hinglish');
+    expect(hinglishAnswer.answer).toMatch(/ARCH workspace mein aapka swagat hai/);
+  });
+
+  it('provides technology and programming language guidance', () => {
+    const answer = answerChat({ question: 'which language should i use for microservices?', snapshot: snapshot() });
+    expect(answer.intent).toBe('tech_stack_advice');
+    expect(answer.answer).toMatch(/Go|Rust/);
+    expect(answer.answer).toMatch(/TypeScript|Python/);
+    expect(answer.answer).toMatch(/Code Assist/);
+  });
+
+  it('stores and recalls user memory across conversation turns', () => {
+    const history = [
+      { role: 'user' as const, content: 'mera naam Vikram hai aur hum python and redis use karte hain' },
+      { role: 'arch' as const, content: 'Samajh gaya Vikram!' },
+    ];
+
+    const recallName = answerChat({ question: 'mera naam kya hai?', snapshot: snapshot(), history });
+    expect(recallName.intent).toBe('memory_recall');
+    expect(recallName.answer).toContain('Vikram');
+
+    const recallStack = answerChat({ question: 'what is my stack?', snapshot: snapshot(), history });
+    expect(recallStack.intent).toBe('memory_recall');
+    expect(recallStack.answer).toMatch(/Redis|Python/);
+
+    const clearedHistory = [
+      ...history,
+      { role: 'user' as const, content: 'clear memory' },
+      { role: 'arch' as const, content: 'Memory cleared!' },
+    ];
+    const afterClear = answerChat({ question: 'what do you remember about me?', snapshot: snapshot(), history: clearedHistory });
+    expect(afterClear.answer).toMatch(/koi saved details nahi hain|do not have any saved notes/i);
+  });
+
+  it('explains engineering concepts such as MTTR and SLO', () => {
+    const mttr = answerChat({ question: 'what is MTTR?', snapshot: snapshot() });
+    expect(mttr.intent).toBe('concept_explain');
+    expect(mttr.answer).toMatch(/Mean Time to Resolve/);
+    expect(mttr.answer).toContain('55 min');
+
+    const slo = answerChat({ question: 'what is an SLO?', snapshot: snapshot() });
+    expect(slo.intent).toBe('concept_explain');
+    expect(slo.answer).toMatch(/Service Level Objective/);
   });
 
   it('never returns an empty answer or an empty suggestion list', () => {
