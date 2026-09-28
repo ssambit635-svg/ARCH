@@ -9,8 +9,10 @@ import {
   answerChat,
   CHAT_LIMITS,
   classifyChatIntent,
+  extractMemory,
   titleFromMessage,
   type ChatAnswer,
+  type ChatMemory,
   type ChatIncident,
   type ChatIntent,
   type ChatSnapshot,
@@ -58,6 +60,10 @@ const RECENT_INCIDENT_LIMIT = 25;
 const MATCH_LIMIT = 5;
 /** How far back "resolve time" statistics look. */
 const STATS_WINDOW_DAYS = 30;
+/** V9 memory: bounded so one member can never grow a row without limit. */
+const MEMORY_MAX_NOTES = 25;
+const MEMORY_NOTE_CHARS = 240;
+const MEMORY_MAX_STACK = 12;
 
 export type ChatSessionSummary = {
   id: string;
@@ -148,10 +154,92 @@ function median(values: number[]): number | null {
   return sorted.length % 2 === 0 ? Math.round((sorted[middle - 1]! + sorted[middle]!) / 2) : sorted[middle]!;
 }
 
+// ---------------------------------------------------------------------------------------------
+// V9 memory — what ARCH actually remembers about one member
+// ---------------------------------------------------------------------------------------------
+
+type MemoryFacts = { userName: string | null; userRole: string | null; techStack: string[]; notes: string[] };
+
+const EMPTY_FACTS: MemoryFacts = { userName: null, userRole: null, techStack: [], notes: [] };
+
+/** Read one member's stored memory. Never throws: a broken row must not break the chat. */
+async function loadMemory(organizationId: string, userId: string): Promise<{ facts: MemoryFacts; clearedAt: Date | null }> {
+  const row = await archChatRepository.findMemory(organizationId, userId).catch(() => null);
+  if (!row) return { facts: { ...EMPTY_FACTS }, clearedAt: null };
+  const raw = (row.facts ?? {}) as Partial<MemoryFacts>;
+  return {
+    facts: {
+      userName: typeof raw.userName === 'string' && raw.userName.trim() ? raw.userName.trim() : null,
+      userRole: typeof raw.userRole === 'string' && raw.userRole.trim() ? raw.userRole.trim() : null,
+      techStack: Array.isArray(raw.techStack) ? raw.techStack.filter((item): item is string => typeof item === 'string').slice(0, MEMORY_MAX_STACK) : [],
+      notes: Array.isArray(raw.notes) ? raw.notes.filter((item): item is string => typeof item === 'string').slice(-MEMORY_MAX_NOTES) : [],
+    },
+    clearedAt: row.clearedAt,
+  };
+}
+
+/**
+ * Fold this turn's extraction into what is already stored and persist the result.
+ *
+ * A new name or role replaces the old one (people correct themselves), the tech stack accumulates
+ * without duplicates, and notes are appended — bounded, because memory that grows forever is a
+ * liability, not a feature. `cleared` (the member asked to forget) wipes the row instead.
+ *
+ * Returns the facts as they now stand, so the answer being built uses exactly what was saved.
+ */
+async function rememberFromTurn(
+  params: Params,
+  extracted: ChatMemory,
+  stored: MemoryFacts,
+): Promise<{ facts: MemoryFacts; cleared: boolean }> {
+  if (extracted.cleared) {
+    // The row stays (with `clearedAt`) so the Memory panel can say *when* it was wiped; the facts go.
+    await archChatRepository.saveMemory(params.organizationId, params.userId, { ...EMPTY_FACTS }, { cleared: true }).catch(() => undefined);
+    return { facts: { ...EMPTY_FACTS }, cleared: true };
+  }
+
+  const merged: MemoryFacts = {
+    userName: extracted.userName?.trim() || stored.userName,
+    userRole: extracted.userRole?.trim() || stored.userRole,
+    techStack: dedupe([...stored.techStack, ...(extracted.techStack ?? [])]).slice(0, MEMORY_MAX_STACK),
+    notes: [
+      ...stored.notes,
+      ...(extracted.notes ?? []).map((note) => note.trim().slice(0, MEMORY_NOTE_CHARS)).filter((note) => note.length > 0),
+    ].reduce<string[]>((all: string[], note: string) => (all.includes(note) ? all : [...all, note]), []).slice(-MEMORY_MAX_NOTES),
+  };
+
+  const changed =
+    merged.userName !== stored.userName ||
+    merged.userRole !== stored.userRole ||
+    merged.techStack.length !== stored.techStack.length ||
+    merged.notes.length !== stored.notes.length;
+
+  if (changed) await archChatRepository.saveMemory(params.organizationId, params.userId, merged).catch(() => undefined);
+  return { facts: merged, cleared: false };
+}
+
+/** The remembered facts as the engine expects them (plus the live name from the account). */
+function toChatMemory(facts: MemoryFacts, user: { name: string | null; email: string | null } | undefined, cleared: boolean): ChatMemory {
+  return {
+    userName: facts.userName,
+    // The account name greets people; it is never reported as something ARCH "remembered".
+    accountName: user?.name ?? null,
+    userRole: facts.userRole,
+    techStack: facts.techStack,
+    notes: facts.notes,
+    ...(cleared ? { cleared: true } : {}),
+  };
+}
+
+function dedupe(values: string[]): string[] {
+  return [...new Set(values.map((value) => value.trim()).filter((value) => value.length > 0))];
+}
+
 type SnapshotInputs = {
   organizationName: string;
   now: Date;
   user?: { name: string | null; email: string | null };
+  memory: ChatMemory;
   counts: ChatSnapshot['counts'];
   openIncidents: ChatIncident[];
   recentIncidents: ChatIncident[];
@@ -169,7 +257,7 @@ type SnapshotInputs = {
  * per-query work is bounded (25 rows here, 50 there), so a chat turn costs a handful of indexed
  * queries rather than a full-workspace scan.
  */
-async function buildSnapshotInputs(params: Params, intent: ChatIntent, question: string): Promise<SnapshotInputs> {
+async function buildSnapshotInputs(params: Params, intent: ChatIntent, question: string, memory: ChatMemory): Promise<SnapshotInputs> {
   const { organizationId, userId } = params;
   const now = new Date();
   const since7 = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1_000);
@@ -347,6 +435,7 @@ async function buildSnapshotInputs(params: Params, intent: ChatIntent, question:
     knowledgeChunks,
     hasKnowledge,
     user: { name: userRecord?.name ?? null, email: userRecord?.email ?? null },
+    memory,
   };
 }
 
@@ -355,6 +444,7 @@ function toSnapshot(inputs: SnapshotInputs): ChatSnapshot {
     organizationName: inputs.organizationName,
     now: inputs.now.toISOString(),
     user: inputs.user,
+    memory: inputs.memory,
     model: inputs.model,
     counts: inputs.counts,
     openIncidents: inputs.openIncidents,
@@ -537,6 +627,8 @@ export type SendChatMessageResult = {
   session: ChatSessionSummary;
   userMessage: ChatMessageView;
   archMessage: ChatMessageView;
+  /** True when this turn wiped the member's memory ("forget everything"). */
+  memoryCleared: boolean;
 };
 
 function toChatTurn(row: { role: 'USER' | 'ARCH'; content: string }): ChatTurn {
@@ -555,12 +647,21 @@ async function answerQuestion(
   params: Params,
   question: string,
   history: ChatTurn[],
-): Promise<{ answer: ChatAnswer; engineModel: string; latencyMs: number }> {
+): Promise<{ answer: ChatAnswer; engineModel: string; latencyMs: number; memoryCleared: boolean }> {
   const intent = classifyChatIntent(question);
   const startedAt = Date.now();
   try {
-    const snapshot = toSnapshot(await buildSnapshotInputs(params, intent, question));
-    return { answer: answerChat({ question, snapshot, history }), engineModel: snapshot.model.name, latencyMs: Date.now() - startedAt };
+    const stored = await loadMemory(params.organizationId, params.userId);
+    // What the member said *this turn* (and everything still visible in the history window).
+    const extracted = extractMemory({ history, question });
+    const { facts, cleared } = await rememberFromTurn(params, extracted, stored.facts);
+    const snapshot = toSnapshot(await buildSnapshotInputs(params, intent, question, toChatMemory(facts, undefined, cleared)));
+    return {
+      answer: answerChat({ question, snapshot, history }),
+      engineModel: snapshot.model.name,
+      latencyMs: Date.now() - startedAt,
+      memoryCleared: cleared,
+    };
   } catch (error) {
     // Chat is the interface people reach for when something is broken — it must not 500.
     console.error('[chat] failed to answer', error instanceof Error ? error.message : String(error));
@@ -592,7 +693,7 @@ export async function sendChatMessage(
 
   const history: ChatTurn[] = (await archChatRepository.recentMessages(session.id, CHAT_LIMITS.maxHistoryTurns)).map(toChatTurn);
 
-  const { answer, engineModel, latencyMs } = await answerQuestion({ organizationId, userId }, content, history);
+  const { answer, engineModel, latencyMs, memoryCleared } = await answerQuestion({ organizationId, userId }, content, history);
 
   const userMessage = await archChatRepository.createMessage({
     sessionId: session.id,
@@ -633,6 +734,7 @@ export async function sendChatMessage(
     session: toSessionSummary(updated, previewOf(answer.answer)),
     userMessage: toMessageView(userMessage),
     archMessage: toMessageView(archMessage),
+    memoryCleared,
   };
 }
 
@@ -643,6 +745,7 @@ export async function sendChatMessage(
 export type RegenerateChatAnswerResult = {
   session: ChatSessionSummary;
   archMessage: ChatMessageView;
+  memoryCleared: boolean;
 };
 
 /**
@@ -671,7 +774,7 @@ export async function regenerateChatAnswer(params: Params & { sessionId: string 
   if (!question) throw AppError.badRequest('That answer has no question in this chat to retry.');
 
   const history = tail.slice(0, questionIndex).slice(-CHAT_LIMITS.maxHistoryTurns).map(toChatTurn);
-  const { answer, engineModel, latencyMs } = await answerQuestion({ organizationId, userId }, question.content, history);
+  const { answer, engineModel, latencyMs, memoryCleared } = await answerQuestion({ organizationId, userId }, question.content, history);
 
   const updated = await archChatRepository.updateMessage(last.id, {
     content: answer.answer,
@@ -693,7 +796,7 @@ export async function regenerateChatAnswer(params: Params & { sessionId: string 
     metadata: { messageId: last.id, intent: answer.intent, confidence: answer.confidence, provider: 'arch', latencyMs },
   });
 
-  return { session: toSessionSummary(session, previewOf(answer.answer)), archMessage: toMessageView(updated) };
+  return { session: toSessionSummary(session, previewOf(answer.answer)), archMessage: toMessageView(updated), memoryCleared };
 }
 
 export type ChatCorpusSummary = {
@@ -730,4 +833,117 @@ export async function chatCorpusSummary(params: Params): Promise<ChatCorpusSumma
     modelVersion: model?.version ?? 1,
     modelTrained: Boolean(model) && (model?.teamDocuments ?? 0) > 0,
   };
+}
+
+// ---------------------------------------------------------------------------------------------
+// Memory, as the member sees and controls it (V9)
+// ---------------------------------------------------------------------------------------------
+
+export type ChatMemoryView = {
+  /** True when ARCH has actually saved something about this member. */
+  hasFacts: boolean;
+  userName: string | null;
+  userRole: string | null;
+  techStack: string[];
+  notes: string[];
+  memory: boolean;
+  updatedAt: string | null;
+  clearedAt: string | null;
+  /** What a new chat would be able to answer from, in one line — shown in the panel. */
+  summary: string;
+  limits: { maxNotes: number; maxNoteChars: number; maxStack: number };
+};
+
+function memorySummary(facts: MemoryFacts): string {
+  const parts = [
+    facts.userName ? `name: ${facts.userName}` : null,
+    facts.userRole ? `role: ${facts.userRole}` : null,
+    facts.techStack.length ? `stack: ${facts.techStack.join(', ')}` : null,
+    facts.notes.length ? `${facts.notes.length} note${facts.notes.length === 1 ? '' : 's'}` : null,
+  ].filter(Boolean);
+  return parts.length ? parts.join(' · ') : 'Nothing saved yet';
+}
+
+/**
+ * Everything ARCH remembers about the caller, for the Memory panel. Read permission is the same as
+ * reading a chat (`copilot.read`) because it is the member's own row — nobody else's.
+ */
+export async function getChatMemory(params: Params): Promise<ChatMemoryView> {
+  const { organizationId, userId } = params;
+  await requirePermission(organizationId, userId, 'copilot.read');
+  const row = await archChatRepository.findMemory(organizationId, userId);
+  const { facts } = await loadMemory(organizationId, userId);
+  const hasFacts = Boolean(facts.userName || facts.userRole || facts.techStack.length || facts.notes.length);
+  return {
+    hasFacts,
+    ...facts,
+    memory: true,
+    updatedAt: row?.updatedAt.toISOString() ?? null,
+    clearedAt: row?.clearedAt?.toISOString() ?? null,
+    summary: memorySummary(facts),
+    limits: { maxNotes: MEMORY_MAX_NOTES, maxNoteChars: MEMORY_NOTE_CHARS, maxStack: MEMORY_MAX_STACK },
+  };
+}
+
+/**
+ * Edit memory by hand: add a note, remove one, correct the name or role. The panel needs this for
+ * the same reason ChatGPT has one — memory the user cannot see is memory the user cannot trust.
+ */
+export async function updateChatMemory(
+  params: Params & {
+    notes?: { add?: string; remove?: string };
+    userName?: string | null;
+    userRole?: string | null;
+    clearStack?: boolean;
+  },
+): Promise<ChatMemoryView> {
+  const { organizationId, userId } = params;
+  await requirePermission(organizationId, userId, 'copilot.generate');
+  const stored = await loadMemory(organizationId, userId);
+  const next: MemoryFacts = { ...stored.facts, techStack: [...stored.facts.techStack], notes: [...stored.facts.notes] };
+
+  if (params.notes?.add !== undefined) {
+    const note = params.notes.add.trim().slice(0, MEMORY_NOTE_CHARS);
+    if (note.length < 3) throw AppError.badRequest('A memory needs at least a few characters.');
+    if (!next.notes.includes(note)) next.notes = [...next.notes, note].slice(-MEMORY_MAX_NOTES);
+  }
+  if (params.notes?.remove !== undefined) {
+    const target = params.notes.remove.trim();
+    const before = next.notes.length;
+    next.notes = next.notes.filter((note) => note !== target);
+    if (next.notes.length === before) throw AppError.notFound('That memory entry was not found.');
+  }
+  if (params.userName !== undefined) next.userName = params.userName?.trim().slice(0, 60) || null;
+  if (params.userRole !== undefined) next.userRole = params.userRole?.trim().slice(0, 60) || null;
+  if (params.clearStack) next.techStack = [];
+
+  await archChatRepository.saveMemory(organizationId, userId, next);
+  await writeAudit({
+    organizationId,
+    actorId: userId,
+    action: 'chat.memory.update',
+    entityType: 'arch_chat_memory',
+    entityId: userId,
+    // Metadata carries shape only — never what was remembered.
+    metadata: { notes: next.notes.length, stack: next.techStack.length, hasName: Boolean(next.userName), hasRole: Boolean(next.userRole) },
+  });
+  return getChatMemory(params);
+}
+
+/** Forget everything — the one click that makes "ARCH remembers things" acceptable. */
+export async function clearChatMemory(params: Params): Promise<ChatMemoryView> {
+  const { organizationId, userId } = params;
+  await requirePermission(organizationId, userId, 'copilot.generate');
+  const existing = await archChatRepository.findMemory(organizationId, userId);
+  // A cleared row is kept (with `clearedAt`) so the panel can say *when* — the facts themselves go.
+  await archChatRepository.saveMemory(organizationId, userId, { ...EMPTY_FACTS }, { cleared: true });
+  await writeAudit({
+    organizationId,
+    actorId: userId,
+    action: 'chat.memory.clear',
+    entityType: 'arch_chat_memory',
+    entityId: userId,
+    metadata: { existed: Boolean(existing) },
+  });
+  return getChatMemory(params);
 }

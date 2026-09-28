@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { requireDashboardContext } from '@/lib/session';
 import { roleHasPermission } from '@/lib/permissions';
 import { copilotConfig } from '@/server/ai/provider';
-import { chatCorpusSummary, listChatSessions } from '@/server/services/archChat.service';
+import { chatCorpusSummary, getChatMemory, listChatSessions } from '@/server/services/archChat.service';
 import { Alert } from '@/components/ui';
 import { ArchChat } from '@/components/chat/arch-chat';
 
@@ -21,9 +21,12 @@ export default async function ChatPage() {
   const canChat = roleHasPermission(organization.role, 'copilot.generate');
   const config = copilotConfig();
 
-  const [sessions, corpus] = await Promise.all([
+  const [sessions, corpus, memory] = await Promise.all([
     listChatSessions({ organizationId: organization.id, userId: user.id }).catch(() => []),
     chatCorpusSummary({ organizationId: organization.id, userId: user.id }).catch(() => null),
+    // V9: the facts ARCH actually saved for this member — the Memory panel opens on real data,
+    // not an empty list that fills in a second later.
+    getChatMemory({ organizationId: organization.id, userId: user.id }).catch(() => null),
   ]);
 
   return (
@@ -43,6 +46,19 @@ export default async function ChatPage() {
       ) : null}
       <ArchChat
         initialSessions={sessions}
+        initialMemory={
+          memory ?? {
+            hasFacts: false,
+            userName: null,
+            userRole: null,
+            techStack: [],
+            notes: [],
+            summary: 'Nothing saved yet',
+            updatedAt: null,
+            clearedAt: null,
+            limits: { maxNotes: 25, maxNoteChars: 240, maxStack: 12 },
+          }
+        }
         canChat={canChat && config.enabled}
         engineLabel={config.model}
         workspaceName={organization.name}

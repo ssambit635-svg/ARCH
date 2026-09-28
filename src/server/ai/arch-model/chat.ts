@@ -93,7 +93,10 @@ export type ChatKnowledgeChunk = {
 };
 
 export type ChatMemory = {
+  /** A name the member typed, or one saved earlier — the only name that counts as "remembered". */
   userName?: string | null;
+  /** The name on the account. Used to greet someone, never reported as something ARCH remembers. */
+  accountName?: string | null;
   userRole?: string | null;
   techStack?: string[];
   notes?: string[];
@@ -261,7 +264,10 @@ export function extractMemory(params: {
   userProfile?: { name: string | null; email: string | null };
 }): ChatMemory {
   const memory: ChatMemory = {
-    userName: params.userProfile?.name ?? null,
+    // Deliberately *not* pre-filled from the account profile: a name the member typed themselves
+    // must beat the account name, and a stored memory must beat both (see mergeChatMemory). The
+    // profile name is applied at the end, only when nothing better was found.
+    userName: null,
     userRole: null,
     techStack: [],
     notes: [],
@@ -347,7 +353,40 @@ export function extractMemory(params: {
 
   memory.techStack = Array.from(stackSet);
   memory.notes = notesList;
+  memory.userName = memory.userName ?? params.userProfile?.name?.trim() ?? null;
   return memory;
+}
+
+/**
+ * Fold this turn's extraction into the facts already stored for this member (V9).
+ *
+ * Precedence is deliberate: something the member just said this turn wins over an old value (people
+ * correct themselves), and a stored value wins over the fallback name from the account. A "forget
+ * everything" in the visible history clears both sides.
+ */
+function mergeChatMemory(extracted: ChatMemory, stored?: ChatMemory, profileName: string | null = null): ChatMemory {
+  // The account name is *not* memory: it is used to greet someone, but never reported as a fact
+  // ARCH remembered — otherwise wiping memory would still leave "I remember your name".
+  const accountName = profileName ?? stored?.accountName ?? null;
+  if (extracted.cleared || stored?.cleared) {
+    // The service wipes the stored row on clear; until this turn ends, the engine must act as if it
+    // is already gone — otherwise something in the visible history would resurrect the old facts.
+    return {
+      userName: extracted.cleared ? null : extracted.userName ?? stored?.userName ?? null,
+      accountName,
+      userRole: extracted.cleared ? null : extracted.userRole ?? stored?.userRole ?? null,
+      techStack: extracted.cleared ? [] : [...new Set([...(stored?.techStack ?? []), ...(extracted.techStack ?? [])])],
+      notes: extracted.cleared ? [] : [...new Set([...(stored?.notes ?? []), ...(extracted.notes ?? [])])],
+      cleared: true,
+    };
+  }
+  return {
+    userName: extracted.userName ?? stored?.userName ?? null,
+    accountName,
+    userRole: extracted.userRole ?? stored?.userRole ?? null,
+    techStack: [...new Set([...(stored?.techStack ?? []), ...(extracted.techStack ?? [])])],
+    notes: [...new Set([...(stored?.notes ?? []), ...(extracted.notes ?? [])])],
+  };
 }
 
 /**
@@ -1204,18 +1243,18 @@ function answerMemoryStore(question: string, memory: ChatMemory, lang: ChatLang)
   const nameGreeting = memory.userName ? `${memory.userName}, ` : '';
 
   if (lang === 'hinglish') {
-    parts.push(`Samajh gaya! ${nameGreeting}Maine yeh information memory mein save kar li hai:`);
-    parts.push(bullet(storedItems.length ? storedItems : ['Detail saved to conversation memory']));
-    parts.push('Aage conversation mein main is context ka dhyan rakhunga. Aap kabhi bhi *"tumhe mere baare mein kya yaad hai?"* poochh sakte hain.');
+    parts.push(`Samajh gaya! ${nameGreeting}Maine yeh yaad rakh liya:`);
+    parts.push(bullet(storedItems.length ? storedItems : ['Note save kar liya']));
+    parts.push('Yeh ab *har* nayi chat mein yaad rahega (sirf aapke liye). Memory page par jaakar aap ise kabhi bhi edit ya delete kar sakte hain.');
   } else {
-    parts.push(`Got it! ${nameGreeting}I've saved this information to memory:`);
-    parts.push(bullet(storedItems.length ? storedItems : ['Detail saved to conversation memory']));
-    parts.push('I will keep this context in mind throughout our conversation. You can ask *"What do you remember about me?"* anytime.');
+    parts.push(`Got it! ${nameGreeting}Here is what I will remember:`);
+    parts.push(bullet(storedItems.length ? storedItems : ['Note saved']));
+    parts.push('This now carries across *every* chat — only for you. You can edit or delete any of it from the Memory panel whenever you like.');
   }
 
   return {
     text: parts.join('\n\n'),
-    cites: [{ source: 'workspace', label: 'Conversation memory', detail: storedItems.join(' · ') || 'Updated' }],
+    cites: [{ source: 'workspace', label: 'Memory (saved)', detail: storedItems.join(' · ') || 'Updated' }],
     suggestions: ['What do you remember about me?', 'What is open right now?', 'What should I do in here?'],
     confidence: 'high',
   };
@@ -1226,6 +1265,18 @@ function answerMemoryRecall(question: string, memory: ChatMemory, lang: ChatLang
   const isAskingStack = /\b(stack|technology|framework|database|db)\b/i.test(question);
 
   if (isAskingName) {
+    if (!memory.userName && memory.accountName) {
+      // Honest: the account has a name, but the member never told ARCH to remember one.
+      const text = lang === 'hinglish'
+        ? `Aapke account par naam **${memory.accountName}** hai, lekin aapne mujhe koi naam yaad rakhne ko nahi kaha. *"Mera naam ... hai"* likhein aur main use hamesha ke liye yaad rakhunga.`
+        : `Your account name is **${memory.accountName}**, but you have not asked me to remember a name. Say *"my name is ..."* and I will keep it across every chat.`;
+      return {
+        text,
+        cites: [{ source: 'workspace', label: 'Account', detail: 'Profile name — not saved memory' }],
+        suggestions: ['My name is...', 'What do you remember about me?', 'What is open right now?'],
+        confidence: 'medium',
+      };
+    }
     if (memory.userName) {
       const text = lang === 'hinglish'
         ? `Aapka naam **${memory.userName}** hai.`
@@ -1290,8 +1341,8 @@ function answerMemoryRecall(question: string, memory: ChatMemory, lang: ChatLang
 
   if (items.length === 0) {
     const text = lang === 'hinglish'
-      ? 'Abhi is conversation mein mere paas aapke baare mein koi saved details nahi hain.\n\nAap mujhe apna naam ("Mera naam Rahul hai"), tech stack ("Hum Postgres use karte hain") ya koi note ("Yaad rakhna ki...") bata sakte hain, aur main yaad rakhunga!'
-      : 'I do not have any saved notes about you in this conversation yet.\n\nYou can tell me your name (*"My name is Alex"*), your stack (*"We use Postgres and Redis"*), or ask me to remember something (*"Remember that..."*), and I will keep track of it!';
+      ? 'Abhi mere paas aapke baare mein kuch bhi saved nahi hai (main sirf wahi yaad rakhta hoon jo aap batao — khud se kuch nahi maanta).\n\nAap mujhe apna naam ("Mera naam Rahul hai"), tech stack ("Hum Postgres use karte hain") ya koi note ("Yaad rakhna ki...") bata sakte hain, aur main use hamesha ke liye yaad rakhunga!'
+      : 'I have nothing saved about you yet — I only remember what you actually tell me, never guess.\n\nYou can tell me your name (*"My name is Alex"*), your stack (*"We use Postgres and Redis"*), or ask me to remember something (*"Remember that..."*), and I will keep it across every chat!';
     return {
       text,
       cites: [],
@@ -1301,12 +1352,12 @@ function answerMemoryRecall(question: string, memory: ChatMemory, lang: ChatLang
   }
 
   const text = lang === 'hinglish'
-    ? `Mujhe is conversation se aapke baare mein yeh sab yaad hai:\n\n${bullet(items)}\n\nAap jab chahein nayi details add kar sakte hain ya *"clear memory"* bol kar reset kar sakte hain.`
-    : `Here is what I have saved about you in this conversation:\n\n${bullet(items)}\n\nYou can add more details anytime or say *"clear memory"* to reset.`;
+    ? `Mujhe aapke baare mein yeh sab yaad hai:\n\n${bullet(items)}\n\nYeh har chat mein saath chalta hai — Memory page se aap kabhi bhi edit/delete kar sakte hain, ya *"clear memory"* bol kar sab reset.`
+    : `Here is what I remember about you:\n\n${bullet(items)}\n\nThis carries across every chat — edit or delete any of it from the Memory panel, or say *"clear memory"* to reset.`;
 
   return {
     text,
-    cites: [{ source: 'workspace', label: 'Memory', detail: `${items.length} items recorded` }],
+    cites: [{ source: 'workspace', label: 'Memory (saved)', detail: `${items.length} items recorded` }],
     suggestions: ['What is open right now?', 'Which language should I use?', 'Clear memory'],
     confidence: 'high',
   };
@@ -1314,8 +1365,8 @@ function answerMemoryRecall(question: string, memory: ChatMemory, lang: ChatLang
 
 function answerMemoryClear(lang: ChatLang): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
   const text = lang === 'hinglish'
-    ? 'Memory clear kar di gayi hai! Is conversation ke saare saved user details aur notes wipe kar diye gaye hain.'
-    : 'Memory cleared! I have wiped all saved notes and context for this conversation.';
+    ? 'Memory clear kar di gayi hai! Maine aapke saare saved details (naam, role, tech stack, notes) wipe kar diye hain — ab main aapke baare mein kuch yaad nahi rakhta.'
+    : 'Memory cleared! Every saved detail — name, role, tech stack, notes — is wiped. I no longer remember anything about you.';
   return {
     text,
     cites: [{ source: 'workspace', label: 'Memory reset', detail: 'All conversational context cleared' }],
@@ -1433,11 +1484,14 @@ export function answerChat(params: {
   const snapshot = params.snapshot;
   const history = params.history;
 
-  const memory = extractMemory({
-    history,
-    question,
-    userProfile: snapshot.user,
-  });
+  // What the member said in the visible window, folded into what was already stored (V9). The
+  // stored facts are what make "what do you remember about me?" work in a brand-new chat; the
+  // extraction keeps the current turn immediate, so "remember that ..." answers correctly even
+  // before the row is read back.
+  // Note: the account profile is *not* handed to the extractor — it is the weakest source and is
+  // only used inside the merge, after what the member typed and what was stored.
+  const extracted = extractMemory({ history, question });
+  const memory = mergeChatMemory(extracted, snapshot.memory, snapshot.user?.name ?? null);
 
   const lang = detectChatLanguage(question, history);
 
@@ -1469,11 +1523,11 @@ export function answerChat(params: {
   const modelLabel = snapshot.model.name;
   switch (intent) {
     case 'greet':
-      return result(say('greeting', lang, memory.userName ?? undefined), intent, 'high', lang, [], ['What is open right now?', 'What should I do in here?', 'What is the date today?']);
+      return result(say('greeting', lang, memory.userName ?? memory.accountName ?? undefined), intent, 'high', lang, [], ['What is open right now?', 'What should I do in here?', 'What is the date today?']);
     case 'thanks':
       return result(say('thanks', lang), intent, 'high', lang, [], ['Show me what is open', 'Have we seen this before?']);
     case 'smalltalk':
-      return result(say('smalltalk', lang, memory.userName ?? undefined), intent, 'high', lang, [], ['What is open right now?', 'What can you do?']);
+      return result(say('smalltalk', lang, memory.userName ?? memory.accountName ?? undefined), intent, 'high', lang, [], ['What is open right now?', 'What can you do?']);
     case 'identity':
       return result(say('identity', lang, modelLabel), intent, 'high', lang, [{ source: 'workspace', label: `Model ${modelLabel} · v${snapshot.model.version}`, detail: `trained on ${snapshot.model.teamDocuments} of your incidents, ${snapshot.model.totalDocuments} documents total` }], ['How accurate are you?', 'How does training work?', 'What can you do?']);
     case 'help':

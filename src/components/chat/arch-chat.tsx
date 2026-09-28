@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AI_NAME } from '@/lib/brand';
 import { Dialog } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/toast';
-import { IconChat, IconCopy, IconDownload, IconPencil, IconPlus, IconRetry, IconSearch, IconSpark, IconTrash } from '@/components/shell/icons';
+import { IconChat, IconCopy, IconDownload, IconMemory, IconPencil, IconPlus, IconRetry, IconSearch, IconSpark, IconTrash } from '@/components/shell/icons';
 
 /**
  * Chat with ARCH — the conversational surface.
@@ -39,6 +39,19 @@ type Message = {
   model: string | null;
   latencyMs: number | null;
   createdAt: string;
+};
+
+/** What ARCH actually remembers about the signed-in member (V9) — the panel shows the truth. */
+type MemoryView = {
+  hasFacts: boolean;
+  userName: string | null;
+  userRole: string | null;
+  techStack: string[];
+  notes: string[];
+  summary: string;
+  updatedAt: string | null;
+  clearedAt: string | null;
+  limits: { maxNotes: number; maxNoteChars: number; maxStack: number };
 };
 
 type Session = {
@@ -279,6 +292,7 @@ const EXAMPLES = [
 
 export function ArchChat({
   initialSessions,
+  initialMemory,
   canChat,
   engineLabel,
   workspaceName,
@@ -286,6 +300,7 @@ export function ArchChat({
   incidentsTracked,
 }: {
   initialSessions: Session[];
+  initialMemory: MemoryView;
   canChat: boolean;
   engineLabel: string;
   workspaceName: string;
@@ -308,6 +323,11 @@ export function ArchChat({
   const [retrying, setRetrying] = useState(false);
   /** The one message that should reveal itself; everything else renders instantly. */
   const [animateId, setAnimateId] = useState<string | null>(null);
+  /** V9 memory panel: what ARCH remembers about this member, and the note being typed. */
+  const [memory, setMemory] = useState<MemoryView>(initialMemory);
+  const [memoryOpen, setMemoryOpen] = useState(false);
+  const [memoryNote, setMemoryNote] = useState('');
+  const [memoryBusy, setMemoryBusy] = useState(false);
   const didInit = useRef(false);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -410,10 +430,17 @@ export function ArchChat({
           setSessions((previous) => [session, ...previous]);
           setActiveId(session.id);
         }
-        const result = await request<{ session: Session; userMessage: Message; archMessage: Message }>(
+        const result = await request<{ session: Session; userMessage: Message; archMessage: Message; memoryCleared: boolean }>(
           `/api/copilot/chat/sessions/${sessionId}/messages`,
           { method: 'POST', body: JSON.stringify({ content }) },
         );
+        if (result.memoryCleared) {
+          toast('Memory cleared — ARCH no longer remembers anything about you.');
+          setMemory((previous) => ({ ...previous, hasFacts: false, userName: null, userRole: null, techStack: [], notes: [], summary: 'Nothing saved yet' }));
+        } else {
+          // A turn can add facts ("remember that ..."), so the panel must not show a stale list.
+          void refreshMemory();
+        }
         setMessages((previous) => [...previous.filter((message) => message.id !== temporaryId), result.userMessage, result.archMessage]);
         setSessions((previous) => {
           const others = previous.filter((session) => session.id !== result.session.id);
@@ -501,6 +528,57 @@ export function ArchChat({
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [newChat]);
+
+  // ---------------- V9 memory panel ----------------
+
+  /** Re-read what ARCH remembers (after a turn that may have saved something). */
+  const refreshMemory = useCallback(async () => {
+    try {
+      setMemory(await request<MemoryView>('/api/copilot/chat/memory'));
+    } catch {
+      // The panel is a convenience; a failed refresh must never break the conversation.
+    }
+  }, []);
+
+  const saveMemoryNote = useCallback(async () => {
+    const note = memoryNote.trim();
+    if (note.length < 3 || memoryBusy) return;
+    setMemoryBusy(true);
+    try {
+      setMemory(await request<MemoryView>('/api/copilot/chat/memory', { method: 'PATCH', body: JSON.stringify({ notes: { add: note } }) }));
+      setMemoryNote('');
+      toast('ARCH will remember that.');
+    } catch (cause) {
+      toast(cause instanceof Error ? cause.message : 'Could not save that.', 'error');
+    } finally {
+      setMemoryBusy(false);
+    }
+  }, [memoryNote, memoryBusy]);
+
+  const forgetMemoryItem = useCallback(async (payload: { notes?: { remove: string }; clearStack?: boolean; userName?: null; userRole?: null }) => {
+    if (memoryBusy) return;
+    setMemoryBusy(true);
+    try {
+      setMemory(await request<MemoryView>('/api/copilot/chat/memory', { method: 'PATCH', body: JSON.stringify(payload) }));
+    } catch (cause) {
+      toast(cause instanceof Error ? cause.message : 'Could not update memory.', 'error');
+    } finally {
+      setMemoryBusy(false);
+    }
+  }, [memoryBusy]);
+
+  const forgetEverything = useCallback(async () => {
+    if (memoryBusy) return;
+    setMemoryBusy(true);
+    try {
+      setMemory(await request<MemoryView>('/api/copilot/chat/memory', { method: 'DELETE' }));
+      toast('Memory wiped. ARCH remembers nothing about you now.');
+    } catch (cause) {
+      toast(cause instanceof Error ? cause.message : 'Could not clear memory.', 'error');
+    } finally {
+      setMemoryBusy(false);
+    }
+  }, [memoryBusy]);
 
   const rename = useCallback(async () => {
     if (!renaming) return;
@@ -725,6 +803,18 @@ export function ArchChat({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setMemoryOpen(true);
+                void refreshMemory();
+              }}
+              title="What ARCH remembers about you"
+              className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] px-2 py-1 text-[11px] text-slate-300 transition hover:bg-white/[0.06]"
+            >
+              <IconMemory className="size-3.5" /> Memory
+              {memory.hasFacts ? <span aria-hidden className="size-1.5 rounded-full bg-violet-400" /> : null}
+            </button>
             {messages.length > 0 ? (
               <button
                 type="button"
@@ -972,6 +1062,105 @@ export function ArchChat({
           </p>
         </form>
       </section>
+
+      <Dialog
+        open={memoryOpen}
+        onClose={() => setMemoryOpen(false)}
+        title="What ARCH remembers about you"
+        description="Only what you told it — never guessed, never shared with your team, and never used to train the model. Everything here is yours to delete."
+      >
+        <div className="space-y-4 text-sm">
+          <div className="rounded-xl border border-white/[0.07] bg-abyss-950/50 px-3 py-2.5">
+            <p className="text-[11px] uppercase tracking-wide text-slate-500">Saved</p>
+            <p className="mt-0.5 text-[13px] text-slate-200">{memory.summary}</p>
+            <p className="mt-1 text-[10.5px] text-slate-500">
+              {memory.clearedAt ? `Last wiped ${relativeTime(memory.clearedAt)} · ` : ''}
+              {memory.updatedAt ? `updated ${relativeTime(memory.updatedAt)}` : 'nothing stored yet'}
+            </p>
+          </div>
+
+          {memory.userName || memory.userRole || memory.techStack.length ? (
+            <ul className="space-y-1.5">
+              {memory.userName ? (
+                <li className="flex items-center justify-between gap-2 rounded-lg border border-white/[0.07] px-3 py-2">
+                  <span className="text-slate-300">Name: <span className="text-white">{memory.userName}</span></span>
+                  <button type="button" disabled={!canChat || memoryBusy} onClick={() => void forgetMemoryItem({ userName: null })} className="text-[11px] text-slate-500 transition hover:text-rose-300 disabled:opacity-40">
+                    Forget
+                  </button>
+                </li>
+              ) : null}
+              {memory.userRole ? (
+                <li className="flex items-center justify-between gap-2 rounded-lg border border-white/[0.07] px-3 py-2">
+                  <span className="text-slate-300">Role: <span className="text-white">{memory.userRole}</span></span>
+                  <button type="button" disabled={!canChat || memoryBusy} onClick={() => void forgetMemoryItem({ userRole: null })} className="text-[11px] text-slate-500 transition hover:text-rose-300 disabled:opacity-40">
+                    Forget
+                  </button>
+                </li>
+              ) : null}
+              {memory.techStack.length ? (
+                <li className="flex items-center justify-between gap-2 rounded-lg border border-white/[0.07] px-3 py-2">
+                  <span className="min-w-0 text-slate-300">Stack: <span className="text-white">{memory.techStack.join(', ')}</span></span>
+                  <button type="button" disabled={!canChat || memoryBusy} onClick={() => void forgetMemoryItem({ clearStack: true })} className="shrink-0 text-[11px] text-slate-500 transition hover:text-rose-300 disabled:opacity-40">
+                    Forget
+                  </button>
+                </li>
+              ) : null}
+            </ul>
+          ) : null}
+
+          {memory.notes.length ? (
+            <ul className="space-y-1.5">
+              {memory.notes.map((note) => (
+                <li key={note} className="flex items-start justify-between gap-2 rounded-lg border border-white/[0.07] px-3 py-2">
+                  <span className="min-w-0 text-slate-300">{note}</span>
+                  <button type="button" disabled={!canChat || memoryBusy} onClick={() => void forgetMemoryItem({ notes: { remove: note } })} className="shrink-0 text-[11px] text-slate-500 transition hover:text-rose-300 disabled:opacity-40">
+                    Forget
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          <form
+            className="flex items-center gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void saveMemoryNote();
+            }}
+          >
+            <input
+              value={memoryNote}
+              onChange={(event) => setMemoryNote(event.target.value)}
+              maxLength={memory.limits.maxNoteChars}
+              disabled={!canChat || memoryBusy}
+              placeholder="Tell ARCH something to remember (e.g. we deploy on Thursdays)"
+              aria-label="Add a memory"
+              className="flex-1 rounded-lg border border-white/[0.08] bg-abyss-950/70 px-3 py-2 text-[13px] text-slate-200 placeholder:text-slate-600 focus:border-violet-500/50 focus:outline-none disabled:opacity-50"
+            />
+            <button
+              type="submit"
+              disabled={!canChat || memoryBusy || memoryNote.trim().length < 3}
+              className="rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-600 px-3 py-2 text-xs font-semibold text-white transition hover:from-indigo-400 hover:to-indigo-500 disabled:opacity-40"
+            >
+              Remember
+            </button>
+          </form>
+
+          <div className="flex items-center justify-between gap-2 border-t border-white/[0.06] pt-3">
+            <p className="text-[10.5px] text-slate-600">
+              Up to {memory.limits.maxNotes} notes. In chat you can also say &quot;remember that …&quot; or &quot;clear memory&quot;.
+            </p>
+            <button
+              type="button"
+              disabled={!canChat || memoryBusy || (!memory.hasFacts && !memory.clearedAt)}
+              onClick={() => void forgetEverything()}
+              className="shrink-0 rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-rose-500 disabled:opacity-40"
+            >
+              Forget everything
+            </button>
+          </div>
+        </div>
+      </Dialog>
 
       <Dialog
         open={confirmDelete !== null}

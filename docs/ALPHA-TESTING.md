@@ -74,6 +74,12 @@ Ye checklist har command ke saath hai (`/dashboard/chat`):
       answer na banein, aur message count na badhe. Beech mein ek naya incident declare karke
       dobara **Try again** karein — naya incident jawab mein aana chahiye.
 - [ ] `⌘/Ctrl+Shift+O` = naya chat, `⌘/Ctrl+K` = chat search focus, `Esc` = list/dialog band.
+- [ ] Ek chat mein kahein: `mera naam <aapka naam> hai aur hum redis use karte hain` — phir ek
+      **naya** chat khol kar poochein `what do you remember about me?` — naam aur stack aana chahiye.
+- [ ] Header mein **Memory** dabayein: jo save hua wo list mein dikhe, ek note add karein, ek
+      item **Forget** karein, aur aakhir mein **Forget everything** — list khaali ho jani chahiye.
+- [ ] Chat mein `clear memory` likhein — jawab ke baad Memory panel khaali dikhe (aur `clearedAt`
+      ka time ho).
 
 Har jawab ke neeche latency header mein `latencyMs` chhupa hota hai (API response mein bhi aata
 hai). Alpha ka target: **warm answer < 300 ms**, pehla answer < 1.5 s.

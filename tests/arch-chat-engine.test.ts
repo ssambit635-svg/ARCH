@@ -320,7 +320,28 @@ describe('chat answers', () => {
       { role: 'arch' as const, content: 'Memory cleared!' },
     ];
     const afterClear = answerChat({ question: 'what do you remember about me?', snapshot: snapshot(), history: clearedHistory });
-    expect(afterClear.answer).toMatch(/koi saved details nahi hain|do not have any saved notes/i);
+    expect(afterClear.answer).toMatch(/kuch bhi saved nahi hai|nothing saved about you/i);
+    expect(afterClear.answer).not.toContain('Vikram');
+  });
+
+  it('answers from stored memory (V9) even when the conversation history is empty', () => {
+    // The facts live in the workspace database now, so a brand-new chat still knows them.
+    const stored = { userName: 'Vikram', userRole: 'SRE', techStack: ['Postgres'], notes: ['Deploys are Thursdays'] };
+
+    const recall = answerChat({ question: 'what do you remember about me?', snapshot: snapshot({ memory: stored }) });
+    expect(recall.intent).toBe('memory_recall');
+    expect(recall.answer).toContain('Vikram');
+    expect(recall.answer).toContain('Postgres');
+    expect(recall.answer).toContain('Deploys are Thursdays');
+
+    // The stored stack also feeds the tech-advice answer, the way a colleague would use it.
+    const advice = answerChat({ question: 'which language should i use for microservices?', snapshot: snapshot({ memory: stored }) });
+    expect(advice.intent).toBe('tech_stack_advice');
+    expect(advice.answer).toContain('Postgres');
+
+    // Something said now beats something stored earlier (people correct themselves).
+    const corrected = answerChat({ question: 'my name is Asha', snapshot: snapshot({ memory: stored }) });
+    expect(corrected.answer).toContain('Asha');
   });
 
   it('explains engineering concepts such as MTTR and SLO', () => {

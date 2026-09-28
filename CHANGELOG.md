@@ -15,6 +15,30 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Added — V9 · memory that is actually saved (and yours to delete)
+
+Asked "what do you remember about me?", ARCH used to answer from whatever happened to still be in
+the last 12 turns — and said "I have saved that" when nothing had been saved anywhere. V9 makes the
+sentence true: the facts live in the workspace database, survive the conversation, and appear in a
+Memory panel you control. Still no vendor, no API key, and nothing leaves your server.
+
+- **Memory across conversations.** Introduce yourself once ("mera naam Vikram hai, hum Postgres aur
+  Redis use karte hain") and *every* later chat knows it — including "which language should I use
+  for microservices?", which now factors in the stack you told it about. The facts are stored per
+  member (`arch_chat_memory`, migration `20260928120000_v9_chat_memory`): name, role, tech stack and
+  notes, bounded to 25 notes / 12 stack items.
+- **A Memory panel, not a black box** (`Memory` in the chat header): see exactly what ARCH stored,
+  add a note by hand, forget a single item, or **Forget everything**. Reading needs `copilot.read`;
+  changing needs `copilot.generate`. "What ARCH knows about you" is a list you can edit — that is
+  the only version of memory a team should accept.
+- **"Clear memory" really clears it** — in chat or in the panel. The row keeps a `clearedAt`
+  timestamp so the panel can say when it was last wiped, but the facts are gone, immediately, for
+  every future conversation.
+- **Nothing is guessed and nothing is shared.** Memory is filled only from what the member types
+  (plus the account name as a last-resort fallback), is visible only to that member, and never
+  trains the model — chat turns are still not training rows. Every add and wipe is audited with
+  metadata only: counts and booleans, never the text.
+
 ### Added — Chat P1 · the mechanics every chat has: copy, export, and "Try again"
 
 The V8 chat answered well but you could not *handle* an answer: no copy button, no way to retry a

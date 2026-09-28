@@ -170,3 +170,10 @@ export const IconDownload = (p: P) => (
     <path d="M4 15.5h12" />
   </Base>
 );
+
+export const IconMemory = (p: P) => (
+  <Base {...p}>
+    <rect x="3" y="3" width="14" height="14" rx="3" />
+    <path d="M7.5 3v14M12.5 3v14M3 7.5h14M3 12.5h14" />
+  </Base>
+);

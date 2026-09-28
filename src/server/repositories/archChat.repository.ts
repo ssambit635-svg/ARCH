@@ -101,8 +101,7 @@ export const archChatRepository = {
   /**
    * Rewrite one stored answer (regenerate). The row keeps its id, so the transcript still reads as
    * one question → one answer; only the words change.
-   */
-  updateMessage(
+   */  updateMessage(
     id: string,
     data: {
       content: string;
@@ -121,5 +120,26 @@ export const archChatRepository = {
 
   countMessages(sessionId: string, client: DbClient = db) {
     return client.archChatMessage.count({ where: { sessionId } });
+  },
+
+  // ---- memory (V9): one row per (organization, user), never shared, never trained on ----
+
+  findMemory(organizationId: string, userId: string, client: DbClient = db) {
+    return client.archChatMemory.findUnique({ where: { organizationId_userId: { organizationId, userId } } });
+  },
+
+  saveMemory(
+    organizationId: string,
+    userId: string,
+    facts: { userName: string | null; userRole: string | null; techStack: string[]; notes: string[] },
+    options: { cleared?: boolean } = {},
+    client: DbClient = db,
+  ) {
+    const data = { facts: facts as never, clearedAt: options.cleared ? new Date() : null };
+    return client.archChatMemory.upsert({
+      where: { organizationId_userId: { organizationId, userId } },
+      create: { organizationId, userId, ...data },
+      update: data,
+    });
   },
 };

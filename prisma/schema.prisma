@@ -164,6 +164,7 @@ model User {
   aiSuggestionsCreated  AiSuggestion[] @relation("AiSuggestionCreator")
   aiSuggestionsReviewed AiSuggestion[] @relation("AiSuggestionReviewer")
   archChatSessions      ArchChatSession[]
+  archChatMemory        ArchChatMemory[]
 
   @@map("users")
 }
@@ -240,6 +241,7 @@ model Organization {
   knowledgeChunks  KnowledgeChunk[]
   archChatSessions ArchChatSession[]
   archChatMessages ArchChatMessage[]
+  archChatMemory   ArchChatMemory[]
 
   @@map("organizations")
 }
@@ -996,4 +998,30 @@ model ArchChatMessage {
   @@index([sessionId, createdAt])
   @@index([organizationId, createdAt])
   @@map("arch_chat_messages")
+}
+
+/// V9 — what ARCH remembers about one member: the name and role they introduced themselves with,
+/// the tech stack they mentioned, and the notes they explicitly asked to be remembered.
+///
+/// This is the difference between *saying* "I saved that" and actually saving it: memory survives
+/// the conversation (and the 12-turn history window), so "what do you remember about me?" answers
+/// in a brand-new chat. It is personal — one row per (organization, user) — and every value is
+/// editable or deletable by that member from the chat's Memory panel. Machine-extracted, human-
+/// controlled: nothing here is shared with other members and nothing trains the model.
+model ArchChatMemory {
+  id             String    @id @default(cuid())
+  organizationId String
+  userId         String
+  /// { userName: string | null, userRole: string | null, techStack: string[], notes: string[] }
+  facts          Json      @default("{}")
+  /// Set when the member wiped memory ("forget everything"); kept so the UI can say when.
+  clearedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@map("arch_chat_memory")
 }

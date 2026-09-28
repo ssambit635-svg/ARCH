@@ -256,7 +256,8 @@ src/server/ai/
   arch-model/train.ts       Naive Bayes + TF-IDF training, holdout metrics, artifact format
   arch-model/runtime.ts     ArchModelRuntime: classify, similar; baseArchModel()
   arch-model/engine.ts      buildKnowledge + archDraft(task) for every Copilot task
-  arch-model/chat.ts        pure Chat with ARCH engine: intents, EN/Hinglish answers, citations
+  arch-model/chat.ts        pure Chat with ARCH engine: intents, EN/Hinglish answers, citations,
+                            conversational memory merge (typed > stored > account name)
   code/analyzer.ts          language detection, stack-trace diagnosis, rules, safe fixes, scrubSecrets
   code/review.ts            Code Assist input/output
   arch-native.ts            AI_PROVIDER="arch" and the hybrid fallback wrapper
@@ -275,6 +276,10 @@ tests/arch-chat-engine.test.ts (pure) · tests/arch-chat.test.ts (service, real 
 Database tables (V3): `arch_models` (active pointer), `arch_model_versions` (registry —
 migration `20260925180000_v3_model_registry`), `arch_model_jobs` (background training queue).
 V8 adds `arch_chat_sessions` / `arch_chat_messages` (migration `20260928000000_v8_arch_chat`).
+V9 adds `arch_chat_memory` (migration `20260928120000_v9_chat_memory`) — what ARCH remembers about
+one member across conversations: name, role, tech stack and notes, one row per (organization, user),
+editable and deletable by that member from the chat's Memory panel. It is *not* training data: only
+approve/edit/dismiss feedback trains the model.
 
 The rule from V2 still holds: **nothing in `src/server/ai/` touches the database or reads files.**
 Services load data through tenant-scoped repositories and pass it in.

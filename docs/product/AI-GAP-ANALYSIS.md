@@ -83,8 +83,8 @@ Legend — **Closeable at ₹0?**
 
 | Capability | ChatGPT | ARCH today | ₹0? | How we close it | Phase |
 |---|---|---|---|---|---|
-| Remembers facts across sessions | ✅ (memory profile + past-chat references) | 🟡 partial: `memory_store`/`recall`/`clear` intents, tech-stack notes in the chat engine | ✅ | Ship a **Memory page** (list / edit / delete every stored note) — the ChatGPT memory UI is a list, not a model | **P2** |
-| Custom instructions | ✅ | Memory doubles as this, but it is invisible | ✅ | Same page: "how ARCH should answer you" (tone, language default) | P2 |
+| Remembers facts across sessions | ✅ (memory profile + past-chat references) | ✅ **shipped (V9)** — facts persist in `arch_chat_memory`, survive the 12-turn window, and are governed by a Memory panel (list / add / forget one / forget everything) | — | Done. Next: use remembered facts in more answers (tone, default language, service names) | P2·done |
+| Custom instructions | ✅ | Memory panel exists; tone/language defaults not yet | ✅ | Extend the same panel: "how ARCH should answer you" (tone, language default) | P2 (partly shipped) |
 | Projects / folders with scoped memory | ✅ (project-only memory, files) | ❌ | ✅ | ARCH already has the real project concept — **Project**. Group chats by project instead of inventing folders | P3 |
 | Memory references past chats | ✅ | ❌ | 🔶 | Retrieval over your own transcripts with the same embedding code we already run; honest ceiling: our retriever, not a reasoning model | P4 |
 | Scheduled/recurring tasks | ✅ | 🟡 worker exists, no user-facing schedules | 🔶 | Only useful with a delivery channel (Slack/email); park until integrations land | P5 |
@@ -198,7 +198,12 @@ the chat, export as Markdown, keyboard shortcuts, and a short reveal on the newe
 one answer per question; the audit log records the retry without the text.
 **Why first:** visible in the first minute, zero dependencies, zero risk to grounding.
 
-### P2 — "It learns from you" *(T1)*
+### P2 — "It learns from you" *(T1 · first slice shipped as V9)*
+
+**Shipped:** persistent per-member memory with a panel to read, edit and wipe it — see
+[`../README.md`](../../README.md#chat-with-arch-v8-a-real-chat-on-your-own-model) and the V9 entry in
+`CHANGELOG.md`. **Still open:** thumbs up/down with reasons, edit-and-resend, and message-body search.
+
 Thumbs up/down + a three-chip reason ("wrong", "outdated", "missed my incident") on every answer,
 stored as a correction row and fed into the existing 3×-weight learning loop; edit-and-resend;
 full-text search across message bodies; a **Memory page** (view/edit/delete everything ARCH
@@ -281,6 +286,8 @@ about parameter counts or benchmarks we have not run ourselves.
 | 2026-09-28 | P1 shipped: regenerate, copy/export, shortcuts, reveal | First-minute parity, no dependency, no grounding risk |
 | 2026-09-28 | Code generation stays refused in chat | A wrong snippet in production is worse than no snippet; Code Assist owns that job |
 | 2026-09-28 | Local LLM stays an opt-in upgrade, never a dependency | Keeps the offline/free guarantee true for every deployment |
+| 2026-09-28 | Memory is stored, visible and deletable (V9) before feedback/learning (P2) | "I will remember that" must be true before any model tuning — trust first, and the panel is what makes memory acceptable to a team |
+| 2026-09-28 | No neural network or local LLM in the default path | CPU-only, instant, deterministic, testable; a 0.5B–7B model is a *later* opt-in tier (P5), not a replacement for grounding |
 
 **Next review:** after P2 lands (or any time a customer asks for something ChatGPT-shaped that is
 not in §2).

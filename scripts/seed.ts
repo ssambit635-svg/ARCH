@@ -49,9 +49,13 @@ async function ensureUser(email: string, name: string, passwordHash: string) {
 }
 
 async function main() {
-  const existing = await db.organization.findUnique({ where: { slug: 'acme' } });
+  // The demo tenant is created as "Acme Inc", which slugifies to `acme-inc` — not `acme`. Looking up
+  // the wrong slug meant a second `npm run db:seed` (or any `npm run dev` restart, which seeds on
+  // boot when ARCH_SEED_DEMO=true) fell through to `createStatusPage` and died on the already-taken
+  // `demo` slug, taking the dev server down with it.
+  const existing = await db.organization.findFirst({ where: { name: 'Acme Inc' }, select: { slug: true } });
   if (existing) {
-    console.log('[seed] acme organization already exists — nothing to do');
+    console.log(`[seed] demo data already exists (organization "${existing.slug}") — nothing to do`);
     console.log(`[seed] sign in with owner@arch.dev / ${DEMO_PASSWORD}`);
     return;
   }
