@@ -47,6 +47,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { kind: 'page', label: 'Incidents', hint: 'Every incident, filterable', href: '/dashboard/incidents' },
     { kind: 'page', label: 'Projects & services', hint: 'Topology and live status', href: '/dashboard/projects' },
     { kind: 'page', label: 'Status pages', hint: 'Publish customer-facing pages', href: '/dashboard/status' },
+    { kind: 'page', label: 'Chat with ARCH', hint: 'Talk to ARCH about incidents, history and runbooks', href: '/dashboard/chat' },
     { kind: 'page', label: 'ARCH V1.1', hint: 'Native intelligence, versions, training', href: '/dashboard/model' },
     { kind: 'page', label: 'Code Assist', hint: 'Review, fix, explain', href: '/dashboard/code' },
     { kind: 'page', label: 'Knowledge', hint: 'Runbooks and RAG sources', href: '/dashboard/knowledge' },

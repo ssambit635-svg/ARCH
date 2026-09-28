@@ -127,6 +127,18 @@ enum TokenScope {
   READ_WRITE
 }
 
+/// V8 — who wrote a chat message.
+enum ArchChatRole {
+  USER
+  ARCH
+}
+
+/// V8 — where a session title came from: the first user message (AUTO) or a human rename (USER).
+enum ArchChatTitleSource {
+  AUTO
+  USER
+}
+
 // ---------- Auth (Auth.js compatible) ----------
 
 model User {
@@ -151,6 +163,7 @@ model User {
   invitationsSent   Invitation[]    @relation("InvitationInviter")
   aiSuggestionsCreated  AiSuggestion[] @relation("AiSuggestionCreator")
   aiSuggestionsReviewed AiSuggestion[] @relation("AiSuggestionReviewer")
+  archChatSessions      ArchChatSession[]
 
   @@map("users")
 }
@@ -225,6 +238,8 @@ model Organization {
   knowledgeSources KnowledgeSource[]
   modelFeedback    ArchModelFeedback[]
   knowledgeChunks  KnowledgeChunk[]
+  archChatSessions ArchChatSession[]
+  archChatMessages ArchChatMessage[]
 
   @@map("organizations")
 }
@@ -921,4 +936,64 @@ model ArchModelFeedback {
   @@index([organizationId, createdAt])
   @@index([organizationId, task, kind])
   @@map("arch_model_feedback")
+}
+
+// ---------- V8 — Chat with ARCH (conversations, like every other AI, but org-scoped) ----------
+
+/// One conversation with ARCH V1.1. Chat is personal — each member has their own threads — but
+/// always tenant-scoped: every query filters on `organizationId` *and* `userId`, so a session id
+/// from another workspace (or another member) is indistinguishable from one that does not exist.
+///
+/// Sessions keep their full transcript so a responder can come back days later and re-read what
+/// ARCH said about a past incident. Nothing here is training data: chat turns are recorded for the
+/// human, and only the model page's explicit feedback (approve/edit/dismiss) trains the model.
+model ArchChatSession {
+  id             String               @id @default(cuid())
+  organizationId String
+  userId         String
+  /// "New chat" until the first message names it (AUTO) or a human renames it (USER).
+  title          String               @default("New chat")
+  titleSource    ArchChatTitleSource  @default(AUTO)
+  messageCount   Int                  @default(0)
+  /// Ordered by this in the sidebar, exactly like a chat product's recents list.
+  lastMessageAt  DateTime             @default(now())
+  archivedAt     DateTime?
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages     ArchChatMessage[]
+
+  @@index([organizationId, userId, lastMessageAt(sort: Desc)])
+  @@map("arch_chat_sessions")
+}
+
+/// One turn of a conversation. `content` is the exact text the human saw; ARCH's row also records
+/// how it was produced (intent, confidence, citations, engine) so an answer can always be traced
+/// back to the incident, runbook or pattern library it came from.
+model ArchChatMessage {
+  id             String       @id @default(cuid())
+  sessionId      String
+  organizationId String
+  role           ArchChatRole
+  content        String
+  /// Native-engine intent id (open_incidents, incident_search, advice, greet, code_request, …).
+  intent         String?
+  confidence     String?
+  /// AnswerCitation[] for ARCH rows — timeline/incident/runbook/pattern evidence with links.
+  citations      Json?
+  /// Suggested follow-up questions shown as chips under the answer.
+  suggestions    Json?
+  provider       String?
+  model          String?
+  latencyMs      Int?
+  createdAt      DateTime     @default(now())
+
+  session      ArchChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@index([organizationId, createdAt])
+  @@map("arch_chat_messages")
 }

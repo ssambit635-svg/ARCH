@@ -15,6 +15,54 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Added — V8 · Chat with ARCH: your own model, in a real chat
+
+Until now ARCH's own model was visible mostly through the incident panel and the model page — a
+new workspace saw "train on your incidents" and nothing conversational. V8 adds the missing
+surface: **Chat with ARCH** at `/dashboard/chat`, a ChatGPT-style assistant that runs on ARCH's
+native engine — no external vendor, no API key, nothing leaving the server.
+
+- **A real chat product, not a demo panel.** Conversations are stored per member: previous
+  sessions in a sidebar (grouped Today / Yesterday / 7 days / 30 days, with search), an inline
+  rename, delete one or clear all, and a transcript that keeps the thread across follow-ups. The
+  first message names the chat automatically (60 characters); a human rename always wins over the
+  auto-title. Sessions are private to their creator even inside one organization — a foreign id
+  answers `404`, and the recents list never leaks someone else's chat.
+- **Grounded answers with clickable evidence.** Every turn loads the workspace picture (open
+  queue, recent resolutions, services, roster, 30-day resolve times) and, when the question needs
+  it, the ARCH model's own similarity search over your incidents plus your knowledge base, pattern
+  library and public postmortems. Answers cite what they used — incident, runbook, pattern,
+  postmortem, workspace totals — and each citation links to the row it came from. No invented
+  incidents: follow-up turns recall the subject you were discussing ("what did we learn from
+  it?"), and an empty workspace gets the honest "nothing to ground this on yet" plus how to fix
+  it.
+- **Conversation, English or Hinglish.** Greetings, thanks, "who is on the team?", "kya open
+  hai?", "kaise ho bhai", "what should I do next?" — ARCH answers in the language you asked in.
+  Stats answers report an open-only severity mix and a 30-day resolve-time window so "Open now: 0"
+  and "HIGH: 3" can never contradict each other.
+- **No code generation, by design.** A code request is refused with the reason (a wrong snippet
+  pasted into production is worse than no snippet) and redirected to Code Assist — Review, Fix or
+  Thinker — which have the repository, the tests and the review loop. This is enforced in the
+  engine with its own test, not a prompt instruction.
+- **Free, offline, rate-limited and audited.** The engine is deterministic retrieval + templates,
+  so warm answers land in tens of milliseconds and it works with `ARCH_OFFLINE_ONLY=true`.
+  Reading your chats needs `copilot.read`; sending, renaming and deleting need `copilot.generate`
+  (VIEWER gets `403`). A per-organization limit (`AI_RATE_LIMIT_PER_MINUTE`, 60-second window)
+  answers `429` like the rest of Copilot, and the audit log records session create/rename/delete
+  and message shape — intent, confidence, latency, characters — never the conversation itself.
+- **The model page now leads to it.** `/dashboard/model` gets a **Chat with ARCH** button, the
+  sidebar's Intelligence group lists chat first, and the command palette opens it.
+- **Knowledge retrieval got a cache while we were here.** The retrieval corpus (chunks + metadata)
+  is cached per organization for 8 seconds and invalidated on ingest, reindex and delete, so a
+  burst of questions does not re-read and re-rank the whole knowledge base every turn. Chat's
+  reliability is covered by 22 engine tests (intents, Hinglish, empty-workspace honesty, code
+  refusal, citations) and 19 service tests against a real database (persistence order, per-user
+  privacy, tenant isolation, sticky renames, delete/clear, rate limit, VIEWER `403`, latency
+  budget).
+- Testing guidance for a solo founder — alpha on your own data, beta with 3–7 friendly users,
+  then load and failure-injection testing — is new in [`docs/ALPHA-TESTING.md`](docs/ALPHA-TESTING.md);
+  the smoke suite now covers chat too (122 checks).
+
 ### Fixed — "Could not create your account" when the database is reachable but not migrated
 
 - **Sign-up and sign-in now tell you when migrations are missing.** `npm run dev:next`, `npm start`
@@ -64,7 +112,7 @@ the whole product failing. Four real causes, all fixed:
   `turbopackMemoryEviction: 'full'`: a full walk of the API surface peaks near 2 GB in warm runs
   instead of being killed at 3.5 GB. It is not a hard guarantee — a cold dev server compiling ~80
   routes can still climb past 3 GB — so run the whole `smoke:api` sweep against a production build
-  (`npm run build && npm run start`), which answers the same 108 checks from ~300 MB.
+  (`npm run build && npm run start`), which answers the same 122 checks from ~300 MB.
   `ARCH_DEV_SOURCE_MAPS="true"` restores full stack traces when memory is not the constraint;
   production builds are unaffected.
 

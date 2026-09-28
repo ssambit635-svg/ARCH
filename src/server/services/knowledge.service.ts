@@ -68,13 +68,34 @@ export type KnowledgeSourceSummary = {
 type SpaceCacheEntry = { signature: string; space: EmbeddingSpace; idf: Record<string, number> };
 const spaceCache = new Map<string, SpaceCacheEntry>();
 
+type ChunkRow = Awaited<ReturnType<typeof knowledgeSourceRepository.listChunks>>[number];
+type CorpusCacheEntry = { rows: ChunkRow[]; expiresAt: number };
+
+/**
+ * The organization's chunks, cached briefly. Retrieval used to re-read the whole corpus (embedding
+ * vectors included) twice per request; on a chat surface — where every turn retrieves — that is the
+ * single most expensive thing ARCH does. The cache is invalidated by every write path (ingest,
+ * reindex, delete, training) and expires after a few seconds, so another process's ingest is picked
+ * up without a restart.
+ */
+const CORPUS_TTL_MS = 8_000;
+const corpusCache = new Map<string, CorpusCacheEntry>();
+
+async function chunksFor(organizationId: string): Promise<ChunkRow[]> {
+  const cached = corpusCache.get(organizationId);
+  if (cached && cached.expiresAt > Date.now()) return cached.rows;
+  const rows = await knowledgeSourceRepository.listChunks(organizationId, { take: 2_000 });
+  corpusCache.set(organizationId, { rows, expiresAt: Date.now() + CORPUS_TTL_MS });
+  return rows;
+}
+
 /**
  * The space every chunk embedding lives in. Built from the built-in pattern library (original ARCH
  * content — a stable backbone of failure vocabulary) plus the organization's own chunks. Cached
  * with a signature so a changed corpus is picked up without restarting the process.
  */
 async function embeddingSpaceFor(organizationId: string): Promise<{ space: EmbeddingSpace; idf: Record<string, number> }> {
-  const chunks = await knowledgeSourceRepository.listChunks(organizationId, { take: 2_000 });
+  const chunks = await chunksFor(organizationId);
   const signature = `${chunks.length}:${chunks[chunks.length - 1]?.createdAt.toISOString() ?? 'none'}`;
   const cached = spaceCache.get(organizationId);
   if (cached?.signature === signature) return { space: cached.space, idf: cached.idf };
@@ -91,6 +112,13 @@ async function embeddingSpaceFor(organizationId: string): Promise<{ space: Embed
 
 export function resetKnowledgeCaches(): void {
   spaceCache.clear();
+  corpusCache.clear();
+}
+
+/** Drop the cached corpus for one organization (called by every write path). */
+function invalidateCorpus(organizationId: string): void {
+  spaceCache.delete(organizationId);
+  corpusCache.delete(organizationId);
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -165,7 +193,7 @@ export async function ingestKnowledgeSource(params: IngestParams): Promise<{ sou
       chunkCount: stored.length,
       tokenCount: stored.reduce((sum, chunk) => sum + chunk.tokenCount, 0),
     });
-    spaceCache.delete(params.organizationId);
+    invalidateCorpus(params.organizationId);
 
     await writeAudit({
       organizationId: params.organizationId,
@@ -211,7 +239,7 @@ export async function reindexKnowledgeSource(params: { organizationId: string; u
     chunkCount: stored.length,
     tokenCount: stored.reduce((sum, chunk) => sum + chunk.tokenCount, 0),
   });
-  spaceCache.delete(params.organizationId);
+  invalidateCorpus(params.organizationId);
   await writeAudit({
     organizationId: params.organizationId,
     actorId: params.userId,
@@ -234,7 +262,7 @@ export async function deleteKnowledgeSource(params: { organizationId: string; us
   const source = await knowledgeSourceRepository.findById(params.organizationId, params.sourceId);
   if (!source) throw AppError.notFound('Knowledge source not found.');
   await knowledgeSourceRepository.delete(params.organizationId, params.sourceId);
-  spaceCache.delete(params.organizationId);
+  invalidateCorpus(params.organizationId);
   await writeAudit({
     organizationId: params.organizationId,
     actorId: params.userId,
@@ -256,8 +284,10 @@ export async function deleteKnowledgeSource(params: { organizationId: string; us
  */
 export async function retrieveKnowledge(params: { organizationId: string; query: string; k?: number }): Promise<KnowledgeChunkHint[]> {
   const k = params.k ?? KNOWLEDGE_LIMITS.maxRetrievedChunks;
-  const rows = await knowledgeSourceRepository.listChunks(params.organizationId, { take: 1_000 });
-  if (rows.length === 0) return [];
+  const all = await chunksFor(params.organizationId);
+  if (all.length === 0) return [];
+  // Ranking is O(chunks) over dense vectors — one request ranks at most the newest 1,000.
+  const rows = all.length > 1_000 ? all.slice(0, 1_000) : all;
 
   const { space, idf } = await embeddingSpaceFor(params.organizationId);
   const candidates: RetrievableChunk[] = rows.map((row) => ({

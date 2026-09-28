@@ -65,8 +65,13 @@ export const incidentRepository = {
     return new Map(rows.filter((row) => row.assignedToId).map((row) => [row.assignedToId as string, row._count._all]));
   },
 
-  countBySeverity(organizationId: string, client: DbClient = db) {
-    return client.incident.groupBy({ by: ['severity'], where: { organizationId }, _count: { _all: true } });
+  /** Incident counts per severity. `open: true` counts only unresolved ones (the live picture). */
+  countBySeverity(organizationId: string, options: { open?: boolean } = {}, client: DbClient = db) {
+    return client.incident.groupBy({
+      by: ['severity'],
+      where: { organizationId, ...(options.open ? { status: { not: 'RESOLVED' } } : {}) },
+      _count: { _all: true },
+    });
   },
 
   findById(organizationId: string, id: string, client: DbClient = db) {
@@ -110,6 +115,23 @@ export const incidentRepository = {
       orderBy: { startedAt: 'desc' },
       take,
     });
+  },
+
+  /**
+   * Minutes-to-resolve for incidents resolved in a window, newest first. A narrow select (two
+   * timestamps, no relations, no timeline) so statistics can be computed without loading rows the
+   * caller will never read — this is what the chat snapshot and the model page use.
+   */
+  async resolveDurationsSince(organizationId: string, since: Date, take = 200, client: DbClient = db): Promise<number[]> {
+    const rows = await client.incident.findMany({
+      where: { organizationId, status: 'RESOLVED', resolvedAt: { gte: since } },
+      select: { startedAt: true, resolvedAt: true },
+      orderBy: { resolvedAt: 'desc' },
+      take,
+    });
+    return rows
+      .filter((row) => row.resolvedAt !== null)
+      .map((row) => Math.max(0, Math.round((row.resolvedAt!.getTime() - row.startedAt.getTime()) / 60_000)));
   },
 
   /** Open incident previously created by the same alert source (alert-storm suppression). */

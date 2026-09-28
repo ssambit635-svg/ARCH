@@ -25,8 +25,9 @@ responder → timeline collaboration → resolution → public status page updat
 4. **Publishes a status page** your customers can read, so you stop answering "is it down?" by hand.
 5. **Keeps tenants separate** — every query is scoped to one organization, enforced on the server.
 
-ARCH is explicitly **not**: an AI model, an IDE, a code generator, a debugger, a hosting platform,
-a CI/CD system, a Kubernetes manager, a billing system, or a replacement for GitHub / Slack / AWS.
+ARCH is explicitly **not**: a general-purpose chatbot, a code generator, an IDE, a debugger, a
+hosting platform, a CI/CD system, a Kubernetes manager, a billing system, or a replacement for
+GitHub / Slack / AWS.
 
 ---
 
@@ -220,6 +221,7 @@ Everything is JSON under `/api`. Success is `{ "data": ... }`; failures are
 | Audit | `GET /api/audit` (OWNER/ADMIN, paginated, `?summary=true`) |
 | Copilot (V2) | `POST /api/incidents/{id}/copilot/{summary,triage,status-draft,postmortem}`, `GET /api/incidents/{id}/copilot/suggestions?status=`, `POST /api/copilot/suggestions/{id}/{approve,dismiss}` |
 | ARCH Model + Code Assist (V3) | `POST /api/incidents/{id}/copilot/code-fix` (`{attachment?}`), `POST /api/copilot/code-review` (`{code, mode?, language?}`), `GET /api/copilot/model`, `POST /api/copilot/model/train` (OWNER/ADMIN) |
+| Chat with ARCH (V8) | `GET/POST/DELETE /api/copilot/chat/sessions`, `GET/PATCH/DELETE /api/copilot/chat/sessions/{id}`, `POST /api/copilot/chat/sessions/{id}/messages` — page `/dashboard/chat` |
 
 Webhook senders sign `"{timestamp}.{rawBody}"` with the endpoint secret and send
 `X-Arch-Signature: t=<unix>,v1=<hex>`; GitHub-style `X-Hub-Signature-256` is also accepted.
@@ -311,6 +313,34 @@ Guardrails and their enforcement points: [`docs/engineering/AI-GUARDRAILS.md`](d
 npm run knowledge:fetch -- --org <organizationId> --user <userId>   # seed from public docs
 npm run model:eval                                                  # golden-set accuracy, no database
 ```
+
+### Chat with ARCH (V8): a real chat, on your own model
+
+`/dashboard/chat` is a ChatGPT-style assistant that runs entirely on ARCH's own model — no vendor,
+no API key, nothing leaves your server. It is grounded, not generative: every answer is built from
+this workspace (open incidents, history, runbooks, the trained model) and cites what it used.
+
+- **A real chat.** Conversations persist: previous sessions in the sidebar (grouped by recency,
+  searchable), rename inline, delete one or clear all. Follow-ups keep the thread. Sessions are
+  private to the member who created them — even inside the same organization.
+- **Answers with evidence.** "What is open right now?" lists the live queue; "what did we learn
+  from <incident>?" pulls the root cause and fix the model extracted; "have we seen this before?"
+  searches your incidents first, then the pattern library, and each source appears as a clickable
+  citation. Ask about the roster, services, runbooks, or an ops problem in plain English or
+  Hinglish.
+- **No code generation, by design.** Ask for a function and ARCH refuses, explains why, and points
+  at Code Assist (Review / Fix / Thinker) instead. A wrong snippet pasted into production is worse
+  than no snippet, and code needs the repo, not a chat window.
+- **Honest when it does not know.** An empty workspace gets "I have nothing to ground this on"
+  plus how to fix that — never an invented incident. Chat answers from a 30-day resolve-time
+  window and the open queue only.
+- **Fast and free.** Warm answers land in tens of milliseconds (the engine is deterministic
+  retrieval + templates, not an LLM call), it is rate-limited per organization like the rest of the
+  Copilot surface, and it works with `ARCH_OFFLINE_ONLY="true"`.
+
+Permission: reading your own chats needs `copilot.read`; sending messages, renaming and deleting
+need `copilot.generate` (RESPONDER or above). Every session write is audited with metadata only —
+the conversation itself is never written to the audit log. Testing guide: [`docs/ALPHA-TESTING.md`](docs/ALPHA-TESTING.md).
 
 ---
 

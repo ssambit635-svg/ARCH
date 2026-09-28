@@ -5,7 +5,7 @@ How to prove the backend works, feature by feature. Written for someone who just
 
 ---
 
-## 1. Fast path — one command, 108 checks
+## 1. Fast path — one command, 122 checks
 
 ```bash
 npm run dev          # generates the Prisma client, starts PostgreSQL, applies migrations, starts Next.js
@@ -14,10 +14,14 @@ npm run smoke:api    # in a second terminal; default target http://localhost:300
 
 The smoke test registers a throwaway account (`smoke-<timestamp>@example.com`), signs in through the
 real Auth.js credentials callback, and then walks the API: organizations, projects, services,
-incidents (+ timeline, correlation, similar, blast radius), the Copilot surface, status pages,
-webhook ingestion, dependencies, changes, SLOs, knowledge sources, repo connections, the v1 bearer
-API, invitations and member removal — plus the negative paths (anonymous 401s, cross-tenant 404s,
-duplicate email 409, short password 422, unsigned webhook 401, revoked token 401).
+incidents (+ timeline, correlation, similar, blast radius), the Copilot surface, **Chat with ARCH**
+(sessions, send, follow-up, rename, transcript, delete, clear), status pages, webhook ingestion,
+dependencies, changes, SLOs, knowledge sources, repo connections, the v1 bearer API, invitations
+and member removal — plus the negative paths (anonymous 401s, cross-tenant 404s — including a
+foreign chat id, duplicate email 409, short password 422, unsigned webhook 401, revoked token 401).
+
+For a solo-founder walkthrough of alpha and beta testing (what to click, what to measure, how to
+load-test safely), see [`ALPHA-TESTING.md`](ALPHA-TESTING.md).
 
 | Environment variable | Effect |
 |---|---|
@@ -98,6 +102,7 @@ hand: sign in first (section 2), then send the request with the session cookie.
 | SLOs | upsert budget, list status | `GET/POST /api/slos` | `200/201`; burn rate falls out of incidents |
 | Insights | recurring incident patterns | `GET /api/insights/recurring?sinceDays=90` | clusters with counts |
 | Knowledge base | ingest, list, reindex, fetch, delete | `/api/knowledge-sources[/:id[/reindex]]`, `/api/knowledge-sources/fetch` | `201`; `fetch` refuses private IPs (`400/422`) |
+| Chat with ARCH | list, create, send, follow-up, rename, transcript, delete, clear all | `GET/POST/DELETE /api/copilot/chat/sessions`, `GET/PATCH/DELETE /api/copilot/chat/sessions/:id`, `POST /api/copilot/chat/sessions/:id/messages` | `201` on send; first message auto-titles; a rename sticks (`titleSource=USER`); empty message `400/422`; unknown/foreign chat `404`; `403` without `copilot.generate` |
 | Repositories | connect, pin a commit, ask | `/api/repo-connections[/:id[/pin]]`, `POST /api/repos/insight` | `201`; mock mode without a token |
 | GitHub | mode + token check | `GET /api/github` | `mode`, `tokenConfigured`; no token leak |
 | Audit log | every attributed write | `GET /api/audit` | append-only, actor + action + target |
@@ -126,7 +131,8 @@ open incident and records the repeat.
 | Attempt | Must fail with |
 |---|---|
 | Any `/api/*` route without a session | `401 UNAUTHORIZED` |
-| Tenant B reading tenant A's project/incident/status page/token | `404` (never `403` — no existence leak) |
+| Tenant B reading tenant A's project/incident/status page/token/chat (list, read or delete) | `404` (never `403` — no existence leak) |
+| A VIEWER sending a chat message (`copilot.generate` missing) | `403` |
 | `POST /api/auth/register` with an existing email | `409 CONFLICT` |
 | Password shorter than 10 characters, or a malformed email | `422 VALIDATION_FAILED` with `issues[]` |
 | Malformed JSON body | `400 BAD_REQUEST` |
@@ -144,4 +150,4 @@ open incident and records the repeat.
 
 ---
 
-*Owner: Engineering · Last reviewed: 2026-09-27 · Related: `api.md`, `engineering/OPERATIONS-RUNBOOK.md`, `../README.md` (local development)*
+*Owner: Engineering · Last reviewed: 2026-09-28 · Related: `api.md`, `engineering/OPERATIONS-RUNBOOK.md`, `../README.md` (local development)*

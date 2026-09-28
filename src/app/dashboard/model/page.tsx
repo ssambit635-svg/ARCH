@@ -8,6 +8,7 @@ import { getModelStatus, type VersionSummary } from '@/server/services/archModel
 import { feedbackSummary } from '@/server/services/modelLearning.service';
 import { listKnowledgeSources } from '@/server/services/knowledge.service';
 import { Alert, Badge, Card, CardBody, CardHeader, DefinitionList, PageHeader } from '@/components/ui';
+import { ButtonLink } from '@/components/ui/button';
 import { ActionForm } from '@/components/dashboard/action-form';
 import { RefreshWhile } from '@/components/dashboard/refresh-while';
 import { activateModelVersionAction, rollbackModelAction, trainModelAction } from '@/app/dashboard/actions';
@@ -122,6 +123,7 @@ export default async function ModelPage() {
         eyebrow="Intelligence"
         title="ARCH V1.1"
         description="ARCH's own AI, trained on this workspace's incidents. It runs on your server: no OpenAI, no Anthropic, no GPU bill."
+        action={<ButtonLink href="/dashboard/chat" variant="ai" size="sm">Chat with ARCH</ButtonLink>}
       />
 
       <Card>

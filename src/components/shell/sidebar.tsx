@@ -7,6 +7,7 @@ import { Logo } from '@/components/ui/logo';
 import {
   IconAudit,
   IconBook,
+  IconChat,
   IconCode,
   IconGauge,
   IconGraph,
@@ -34,6 +35,7 @@ const sections: { label: string; items: Item[] }[] = [
   {
     label: 'Intelligence',
     items: [
+      { href: '/dashboard/chat', label: 'Chat with ARCH', icon: IconChat, ai: true },
       { href: '/dashboard/model', label: AI_NAME, icon: IconSpark, ai: true },
       { href: '/dashboard/code', label: 'Code Assist', icon: IconCode },
       { href: '/dashboard/knowledge', label: 'Knowledge', icon: IconBook },
