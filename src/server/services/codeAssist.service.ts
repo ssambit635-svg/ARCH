@@ -8,7 +8,7 @@ import { extractCodeReviewAttachments, type CodeReviewAttachment } from '../ai/c
 import { buildCodeReviewInput, buildCodeReviewOutput, type CodeReviewMode } from '../ai/code/review';
 import { CopilotCallError, callWithGuardrails } from '../ai/guardrails';
 import { buildCodeReviewPrompt } from '../ai/prompts';
-import { copilotAttempts, copilotConfig, copilotTimeoutMs, getAiProvider } from '../ai/provider';
+import { copilotConfig, copilotTimeoutMs, getAiProvider } from '../ai/provider';
 import { parseCodeReview, type CodeReviewOutput } from '../ai/schemas';
 import { COPILOT_RATE_LIMIT_WINDOW_MS, copilotRateLimitKey } from './copilot.service';
 import { getOrganizationModel } from './archModel.service';
@@ -17,9 +17,8 @@ import { getOrganizationModel } from './archModel.service';
  * ARCH Code Assist — "make this code better" / "explain this stack trace", on your own server.
  *
  *   1. The built-in analyzer always runs on the raw code (secrets are detected, never echoed).
- *   2. AI_PROVIDER="arch": the analyzer's answer is returned directly — no model call at all.
- *      AI_PROVIDER="arch-hybrid": the code (with secrets scrubbed) + analyzer findings go to the
- *      LOCAL LLM for a deeper review / rewrite; the analyzer answers if the LLM is unavailable.
+ *   2. The answer comes from ARCH's own native engines (analyzer + review/thinker templates) —
+ *      there is no second model, no local LLM and no vendor call anywhere in this path.
  *   3. The code is not stored. The audit log records who asked, the language and the finding
  *      counts — never the code itself.
  */
@@ -38,7 +37,7 @@ export type CodeReviewResult = CodeReviewOutput & {
 
 const FRIENDLY_FAILURE: Record<CopilotCallError['reason'], string> = {
   timeout: 'Code Assist took too long to respond. Try a smaller snippet or try again.',
-  provider_error: 'Code Assist could not reach the local model. Try again in a moment.',
+  provider_error: 'Code Assist could not reach the ARCH engine. Try again in a moment.',
   invalid_output: 'Code Assist produced an answer it could not validate. Please try again.',
   not_configured: 'Code Assist is not configured. Ask an administrator to check AI_PROVIDER.',
 };
@@ -75,7 +74,7 @@ export async function reviewCode(params: { organizationId: string; userId: strin
   let model = config.model;
   let tokens = { prompt: 0, completion: 0 };
 
-  // Thinker is always native: templates + risks, never a local LLM rewriting a whole feature.
+  // Thinker is native: templates + risks, never a model rewriting a whole feature.
   if (config.provider === 'arch' || mode === 'scaffold') {
     if (mode === 'scaffold') {
       provider = 'arch';
@@ -123,7 +122,6 @@ export async function reviewCode(params: { organizationId: string; userId: strin
         user: prompt.user,
         maxTokens: Math.max(env.AI_MAX_TOKENS, 3000),
         timeoutMs: copilotTimeoutMs(),
-        attempts: copilotAttempts(),
         parse: parseCodeReview,
       });
       output = call.value;

@@ -10,7 +10,7 @@ import { detectLanguage, looksLikeStackTrace, scrubSecrets } from '../ai/code/an
 import { buildCopilotContext, type CopilotContext } from '../ai/context';
 import { CopilotCallError, LIMITS, callWithGuardrails, redact, truncate } from '../ai/guardrails';
 import { buildPrompt } from '../ai/prompts';
-import { copilotAttempts, copilotConfig, copilotTimeoutMs, getAiProvider, type CopilotTask } from '../ai/provider';
+import { copilotConfig, copilotTimeoutMs, getAiProvider, type CopilotTask } from '../ai/provider';
 import {
   parseCodeFix,
   parsePostmortem,
@@ -165,7 +165,6 @@ export async function generateSuggestion(params: Params & { incidentId: string; 
       user: prompt.user,
       maxTokens: type === 'CODE_FIX' || type === 'POSTMORTEM' || type === 'VERIFIED_FIX' ? Math.max(env.AI_MAX_TOKENS, 1500) : env.AI_MAX_TOKENS,
       timeoutMs: copilotTimeoutMs(),
-      attempts: copilotAttempts(),
       parse,
     });
 
@@ -239,8 +238,8 @@ export async function generateSuggestion(params: Params & { incidentId: string; 
  * (the exchange is NOT persisted — it is a read-only helper, perfect for fast "what do I do?"
  * questions in the dashboard). Rate limited the same way as the other Copilot endpoints.
  *
- * For hybrid/external providers we still try the native engine first because it is grounded on
- * the team's actual timeline/runbooks and citations are clickable.
+ * The native engine IS the answer path: it is grounded on the team's actual timeline/runbooks
+ * and its citations are clickable.
  */
 export async function askArch(
   params: Params & { incidentId: string; question: string; history?: { question: string; answer: string }[] },

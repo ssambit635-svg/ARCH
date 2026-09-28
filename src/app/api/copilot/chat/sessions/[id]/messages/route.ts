@@ -7,10 +7,9 @@ import { sendChatMessage } from '@/server/services/archChat.service';
 /**
  * POST — one turn of a conversation: the human's message and ARCH's answer, both persisted.
  *
- * By default, the native engine answers from the workspace snapshot and local retrieval with no
- * LLM call. In opt-in `arch-hybrid` mode, open-ended intents may use a private local model with
- * retrieved context and a reflection pass; structured workspace questions remain native. Never
- * sends chat data to a public model service. Rate limited per organization like other Copilot APIs.
+ * The native engine answers from the workspace snapshot and local retrieval — no LLM call, no
+ * hybrid mode, no vendor. Chat data never leaves this server. Rate limited per organization like
+ * other Copilot APIs.
  */
 
 const schema = z.object({

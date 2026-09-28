@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { baseArchModel, ArchModelRuntime, loadArchModel } from '@/server/ai/arch-model/runtime';
 import { trainArchModel, type TrainingDoc } from '@/server/ai/arch-model/train';
 import { archDraft, buildKnowledge } from '@/server/ai/arch-model/engine';
 import { analyzeCode, analyzeStackTrace, detectLanguage, looksLikeStackTrace, scrubSecrets } from '@/server/ai/code/analyzer';
 import { buildCodeReviewInput, buildCodeReviewOutput } from '@/server/ai/code/review';
-import { isLocalEndpoint } from '@/server/ai/local-llm';
-import { createArchNativeProvider, createHybridProvider } from '@/server/ai/arch-native';
+import { createArchNativeProvider } from '@/server/ai/arch-native';
 import { buildCodeReviewPrompt, buildPrompt } from '@/server/ai/prompts';
 import { parseCodeFix, parseCodeReview, parsePostmortem, parseStatusUpdate, parseSummary, parseTriage } from '@/server/ai/schemas';
-import { AiProviderError, type AiProvider } from '@/server/ai/provider';
+import { copilotConfig, DEFAULT_MODELS, getAiProvider } from '@/server/ai/provider';
 import type { CopilotContext } from '@/server/ai/context';
 
 /**
@@ -161,41 +162,33 @@ describe('ARCH Code Assist — analyzer', () => {
   });
 });
 
-describe('arch-hybrid — local LLM with native fallback', () => {
-  const signal = () => new AbortController().signal;
-  const ctx = context({}, NOTES);
-  const prompt = buildPrompt('summary', ctx);
-
-  it('uses the local LLM when it answers with valid output', async () => {
-    const llm: AiProvider = { name: 'local', model: 'qwen2.5-coder:7b', generate: async () => ({ text: '{"bullets":["From the LLM."]}', promptTokens: 1, completionTokens: 1, model: 'qwen2.5-coder:7b' }) };
-    const result = await createHybridProvider({ llm, llmTimeoutMs: 1000 }).generate(prompt.system, prompt.user, { task: 'summary', maxTokens: 500, signal: signal(), accept: (text) => text.includes('bullets') });
-    expect(result.model).toBe('qwen2.5-coder:7b');
+describe('provider surface — ARCH ships no external AI', () => {
+  it('reports every shipped provider as on-premise with the native model name', () => {
+    // In tests AI_PROVIDER="mock"; both allowed values are in-process engines.
+    const config = copilotConfig();
+    expect(['arch', 'mock']).toContain(config.provider);
+    expect(config.onPremise).toBe(true);
+    expect(config.enabled).toBe(true);
+    expect(config.model).toBe(config.provider === 'mock' ? DEFAULT_MODELS.mock : DEFAULT_MODELS.arch);
   });
 
-  it('falls back to the ARCH model when the LLM is down, slow or returns junk', async () => {
-    const reasons: string[] = [];
-    const down: AiProvider = { name: 'local', model: 'm', generate: async () => { throw new AiProviderError('ECONNREFUSED', { retryable: true }); } };
-    const slow: AiProvider = { name: 'local', model: 'm', generate: (_s, _u, options) => new Promise((_, reject) => options.signal.addEventListener('abort', () => reject(options.signal.reason))) };
-    const junk: AiProvider = { name: 'local', model: 'm', generate: async () => ({ text: 'Sure! Here is a summary…', promptTokens: 1, completionTokens: 1, model: 'm' }) };
-    for (const llm of [down, slow, junk]) {
-      const result = await createHybridProvider({ llm, llmTimeoutMs: 50, onFallback: (reason) => reasons.push(reason) }).generate(prompt.system, prompt.user, {
-        task: 'summary',
-        maxTokens: 500,
-        signal: signal(),
-        accept: (text) => { try { parseSummary(text); return true; } catch { return false; } },
-      });
-      expect(parseSummary(result.text).bullets.length).toBeGreaterThan(0);
-      expect(result.model).toMatch(/arch-native-1 \(fallback/);
-    }
-    expect(reasons).toEqual(['llm_unavailable', 'llm_timeout', 'invalid_output']);
+  it('resolves to an in-process provider (native engine or test mock)', () => {
+    const provider = getAiProvider();
+    expect(['arch', 'mock']).toContain(provider.name);
+    expect(provider.model).toMatch(/^(arch-native-1|mock-copilot-1)$/);
   });
 
-  it('only private / local LLM endpoints count as on-premise', () => {
-    for (const url of ['http://127.0.0.1:11434', 'http://localhost:8080', 'http://10.0.3.4:11434', 'http://192.168.1.20', 'http://ollama:11434', 'http://llm.internal', 'http://[::1]:11434']) {
-      expect(isLocalEndpoint(url), url).toBe(true);
+  it('the vendor adapters are gone from the tree — no openai/anthropic/ollama/hybrid code path', () => {
+    const root = path.join(process.cwd(), 'src', 'server', 'ai');
+    for (const removed of ['openai.ts', 'anthropic.ts', 'local-llm.ts', 'local-chat.ts', 'arch-model/chat-agent.ts']) {
+      expect(fs.existsSync(path.join(root, removed)), `${removed} must not exist`).toBe(false);
     }
-    for (const url of ['https://api.openai.com', 'http://8.8.8.8', 'http://169.254.169.254', 'https://my-llm.example.com', 'not a url']) {
-      expect(isLocalEndpoint(url), url).toBe(false);
-    }
+    const native = fs.readFileSync(path.join(root, 'arch-native.ts'), 'utf8');
+    expect(native).not.toContain('createHybridProvider');
+    const provider = fs.readFileSync(path.join(root, 'provider.ts'), 'utf8');
+    // Match real code paths, not the doc comments that state these things are gone.
+    expect(provider).not.toMatch(/from '\.\/(openai|anthropic|local-llm)'/);
+    expect(provider).not.toMatch(/case '(arch-hybrid|openai|anthropic|local-llm)'/);
+    expect(provider).not.toContain('AI_API_KEY');
   });
 });

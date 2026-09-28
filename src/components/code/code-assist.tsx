@@ -6,8 +6,8 @@ import { reviewCodeAction, type CodeReviewState } from '@/app/dashboard/actions'
 
 /**
  * ARCH Code Assist — paste code or a stack trace, get a review / fix / explanation from ARCH's
- * own model (and the local LLM in arch-hybrid mode). The server re-checks permissions and rate
- * limits; nothing is stored.
+ * own model only — no vendor call, no second inference server. The server re-checks permissions
+ * and rate limits; nothing is stored.
  */
 
 const SAMPLE = `async function getUser(id) {

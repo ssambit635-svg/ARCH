@@ -16,9 +16,8 @@ import { IconChat, IconCopy, IconDownload, IconMemory, IconPencil, IconPlus, Ico
  * (`⌘/Ctrl+Shift+O` new chat, `⌘/Ctrl+K` search). Everything is stored server-side, so reloading the
  * page or coming back tomorrow shows exactly the same conversation.
  *
- * By default, answers come from ARCH's native engine. An opt-in hybrid mode can use a private local
- * open-weight model for open-ended answers, grounded by retrieved workspace sources and reviewed
- * once before display. Workspace claims cite the source the reader can click through to.
+ * Answers come from ARCH's native engine only — no vendor API, no local LLM, no hybrid mode.
+ * Workspace claims cite the source the reader can click through to.
  */
 
 type Citation = {

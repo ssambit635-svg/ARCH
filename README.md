@@ -262,9 +262,10 @@ incident page a responder can ask for a **summary** (≤ 5 bullets), a **triage*
 - **Guardrails.** 15 s timeout per attempt, one retry, schema-validated output, then a friendly
   `503`. Status drafts are scrubbed of hostnames/IPs/URLs after generation. 20 calls/min per org.
   Every generate, failure, approve and dismiss writes an audit entry with token usage.
-- **Providers.** Since V3 the default is **ARCH's own model** (`AI_PROVIDER="arch"`), see below.
-  `"mock"` is used by the tests. `"openai"` / `"anthropic"` still exist but are refused while
-  `ARCH_OFFLINE_ONLY="true"`. Code lives in `src/server/ai/`; prompts only in `src/server/ai/prompts.ts`.
+- **Providers.** ARCH ships exactly two engines: **ARCH's own model** (`AI_PROVIDER="arch"`, the
+  default) and `"mock"` for tests. There is no OpenAI/Anthropic adapter, no Ollama client and no
+  hybrid mode in the binary — any other `AI_PROVIDER` value fails at boot. Code lives in
+  `src/server/ai/`; prompts only in `src/server/ai/prompts.ts`.
 
 ### ARCH Model + Code Assist (V3): no external AI
 
@@ -275,12 +276,12 @@ code never go to OpenAI or Anthropic. Full guide: [`docs/engineering/ARCH-MODEL.
   resolved incidents, a built-in library of 44 failure patterns, and optionally about 340 public
   postmortems. It retrains automatically (worker) or on demand (`/dashboard/model`, OWNER/ADMIN).
   Drafts cite what fixed similar incidents before.
-- **Optional local LLM** (`AI_PROVIDER="arch-hybrid"`). An open-weight model runs via Ollama or
-  llama.cpp on your own machine: no API key or per-token charge. It writes fluent Copilot drafts
-  and answers open-ended chat questions from the local model's general knowledge plus ARCH's
-  tenant-scoped RAG. A one-pass reflection checks its draft; if the model is slow or down, the
-  deterministic ARCH answer remains available. For general chat, set `LOCAL_CHAT_MODEL` to a
-  conversational instruct model; blank reuses `LOCAL_LLM_MODEL`.
+- **ARCH Agent (built in).** Complex prompts are intercepted by a chain-of-thought planner
+  (`<thinking>` / `<plan>` tags are scanned and managed server-side; only the final answer is
+  shown), requests can call native tools from a plain function registry (calculator, clock, scoped
+  file read/list), and a requested Python script is written to a temp `.py` file, run in a
+  sandboxed subprocess, and sent back to the engine with its exact error until it passes — all on
+  your CPU, no second model. Guide: [`docs/engineering/ARCH-AGENT.md`](docs/engineering/ARCH-AGENT.md).
 - **Code fix in the incident panel.** Paste a stack trace or snippet to get a diagnosis, the first
   frame in your code, fixes and a patch.
 - **Code Assist** (`/dashboard/code`). Paste code to get a review, a safer version, or a
@@ -290,7 +291,7 @@ code never go to OpenAI or Anthropic. Full guide: [`docs/engineering/ARCH-MODEL.
 npm run model:fetch-public     # optional: download public postmortems (git-ignored, check licences)
 npm run model:train            # train every workspace now (the worker also does this hourly)
 npm run model:eval             # offline accuracy report, no database needed
-npm run model:export-finetune -- --org <slug>   # JSONL to fine-tune the local LLM
+npm run model:export-finetune -- --org <slug>   # JSONL training set for a derivative model of your own
 ```
 
 ### Knowledge base + learning (V6): Copilot cites your own runbooks
@@ -319,11 +320,11 @@ npm run model:eval                                                  # golden-set
 
 ### Chat with ARCH (V8/V9/V10.4): a private, conversational workspace assistant
 
-`/dashboard/chat` is a free workspace assistant. By default it uses ARCH's deterministic native
-engine: no vendor, no API key, no model download, and every workspace fact comes from tenant-scoped
-data. For more natural, open-ended answers, opt into `AI_PROVIDER="arch-hybrid"` to use a local
-open-weight model; the model stays on your private server, combines pretrained knowledge with
-ARCH's RAG, and falls back to the native answer if it is unavailable.
+`/dashboard/chat` is a free workspace assistant powered by ARCH's deterministic native engine:
+no vendor, no API key, no model download, and every workspace fact comes from tenant-scoped data.
+Complex prompts additionally go through the built-in agent loop — a plan is forced and parsed
+server-side, native tools execute exactly, and requested scripts are run and verified in a
+sandboxed subprocess before the answer is presented.
 
 - **A real chat.** Conversations persist: previous sessions in the sidebar (grouped by recency,
   searchable), rename inline, delete one or clear all. Follow-ups keep the thread. Sessions are
@@ -340,12 +341,10 @@ ARCH's RAG, and falls back to the native answer if it is unavailable.
   plus how to fix that — never an invented incident. Chat answers from a 30-day resolve-time
   window and the open queue only.
 - **General knowledge, still free.** The native engine keeps its 161-topic, offline tech pack and
-  honest unknown-answer fallback. In `arch-hybrid`, a local instruct model can handle questions
-  outside those fixed entries, explain concepts in natural prose, and tailor advice using member
-  memory plus retrieved runbooks, past incidents and reference patterns. Only open-ended intents
-  go to generation; live status, team, memory, identity and code-refusal paths stay deterministic.
-- **Reflection + feedback.** Hybrid answers get one private review pass for relevance, unsupported
-  workspace claims, uncertainty and tone. Hidden chain-of-thought is not requested or shown. Each
+  honest unknown-answer fallback, tailored with member memory plus retrieved runbooks, past
+  incidents and reference patterns — all deterministic, all on this server.
+- **Planning, not leaked reasoning.** For complex asks the agent loop forces a `<thinking>` /
+  `<plan>` protocol and manages the steps internally; hidden chain-of-thought is never shown. Each
   answer also has private thumbs-up/down feedback for evaluation; ratings do not silently fine-tune
   the model or enter incident-training data.
 - **Free tier stays the default.** Native answers are deterministic and typically land in tens of

@@ -12,7 +12,7 @@ export type CodeReviewInput = {
   mode: CodeReviewMode;
   language: CodeLanguage;
   code: string;
-  /** Built-in analyzer output, included so a local LLM is grounded on concrete findings. */
+  /** Built-in analyzer output — the concrete findings every draft stays grounded on. */
   staticFindings: { line: number; severity: FindingSeverity; rule: string; message: string }[];
   errorDiagnoses: { title: string; explanation: string; evidence: string }[];
   topFrame: string | null;
@@ -32,7 +32,7 @@ export function buildCodeReviewInput(code: string, mode: CodeReviewMode, analysi
   };
 }
 
-/** Deterministic answer in the same JSON shape a local LLM is asked for (schemas.ts). */
+/** Deterministic answer in the JSON shape the Copilot contract expects (schemas.ts). */
 export function buildCodeReviewOutput(input: CodeReviewInput) {
   if (input.mode === 'scaffold') return buildThinkerOutput(input.code || (input.attachments ?? []).map((item) => item.content).join('\n'));
   // If the user uploaded only a screenshot / context file, analyze its extracted text as the main
@@ -65,7 +65,7 @@ export function buildCodeReviewOutput(input: CodeReviewInput) {
     explanation.push(...important.slice(0, 5).map((finding) => `  • Line ${finding.line}: ${finding.suggestion}`));
   }
   if (input.code && analysis.appliedFixes.length) explanation.push(`Applied automatically in the improved version: ${analysis.appliedFixes.join('; ')}.`);
-  if (!explanation.length) explanation.push('Nothing risky stood out. For a deeper rewrite (naming, structure, idioms) enable the local LLM (AI_PROVIDER="arch-hybrid").');
+  if (!explanation.length) explanation.push("Nothing risky stood out. For a deeper rewrite (naming, structure, idioms), describe the target shape in Code Assist's scaffold mode.");
 
   return {
     summary: analysis.summary,

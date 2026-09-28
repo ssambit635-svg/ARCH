@@ -5,7 +5,7 @@ import { reviewCode } from '@/server/services/codeAssist.service';
 
 /**
  * POST — ARCH Code Assist. Body: { "code": string, "mode"?: "review" | "fix" | "explain" | "scaffold", "language"?: string }.
- * Runs on this server only (ARCH model, or the local LLM in arch-hybrid mode). The code is not stored.
+ * Runs on this server only (ARCH's native engine). The code is not stored.
  * OWNER/ADMIN/RESPONDER; shares the per-organization Copilot rate limit.
  */
 export const POST = handleRoute(async (request) => {

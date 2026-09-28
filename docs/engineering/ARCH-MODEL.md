@@ -1,35 +1,39 @@
 # ARCH Model — ARCH's own AI (V3)
 
-> **What this is:** ARCH Copilot and Code Assist without OpenAI or Anthropic. Incident data and code
-> stay on your server. Free, CPU-only, no API key.
+> **What this is:** ARCH Copilot and Code Assist with no external AI at all — no OpenAI, no
+> Anthropic, no Ollama, no hybrid mode. Incident data and code stay on your server. Free, CPU-only,
+> no API key.
 >
 > **What this is not:** a from-scratch GPT/Claude-class language model. Nobody can train one of those
-> for free on a CPU. ARCH combines (1) a small model it trains itself on your incidents with
-> (2) an *optional* open-source LLM that runs on your own machine.
+> for free on a CPU. ARCH is (1) a small model it trains itself on your incidents, (2) a built-in
+> agent loop (chain-of-thought planner, native tools, sandboxed Python self-correction) and
+> (3) deterministic templates on top — one engine, compiled into this repository.
 
 ---
 
-## 1. The two engines
+## 1. The engine (there is only one)
 
-| | `AI_PROVIDER="arch"` (default) | `AI_PROVIDER="arch-hybrid"` |
+| | `AI_PROVIDER="arch"` (default) | `AI_PROVIDER="mock"` (tests) |
 |---|---|---|
-| What runs | **ARCH native model**: classifiers + retrieval + templates, in pure TypeScript | A local LLM (Ollama / llama.cpp) writes the draft, grounded on the ARCH model's knowledge |
-| Hardware | Any server ARCH already runs on (a few MB of RAM per organization model) | 8–16 GB RAM, CPU only, with a 7B model at Q4 (default `qwen2.5-coder:7b`) |
-| Latency | 5–100 ms | 10–90 s on CPU (the ARCH model answers if it takes longer than `LOCAL_LLM_TIMEOUT_MS`) |
-| Network | none | only to `LOCAL_LLM_URL`, which must be a private or localhost address while `ARCH_OFFLINE_ONLY=true` |
-| Quality | Factual and extractive. Every sentence comes from your timeline, your history or the curated pattern library. | Fluent, rewrites code, and follows instructions |
-| Setup | none | `ollama pull qwen2.5-coder:7b` |
+| What runs | **ARCH native model**: classifiers + retrieval + templates + the agent loop, in pure TypeScript | Canned drafts so dev/tests never call anything |
+| Hardware | Any server ARCH already runs on (a few MB of RAM per organization model) | n/a |
+| Latency | 5–100 ms (agent turns add one sandboxed Python run when a script is requested) | instant |
+| Network | none | none |
+| Quality | Factual and extractive. Every sentence comes from your timeline, your history or the curated pattern library. | n/a |
+| Setup | none | none |
 
-**Code Assist → Thinker (`mode: "scaffold"`)** is always the native engine, even under
-`arch-hybrid`. It classifies a short request (CRUD route, Zod schema, Prisma model, webhook,
+Any other `AI_PROVIDER` value (including the removed `arch-hybrid`, `openai`, `anthropic`) fails at
+boot with a readable error: those adapters are not in the binary.
+
+**Code Assist → Thinker (`mode: "scaffold"`)** is always the native engine. It classifies a short request (CRUD route, Zod schema, Prisma model, webhook,
 status machine, unit test, React form), emits **one small snippet**, the **file path**, and
 **what will break if you paste it blindly**. It is a support tool for humans and coding agents,
 not a multi-file coding agent and not vibe-coding.
 
-Both engines produce **the same JSON contracts**, validated by the same Zod schemas
-(`src/server/ai/schemas.ts`) as the old vendor adapters. Everything that existed before still works
-unchanged: drafts, human approval, audit, rate limits and redaction. `openai` and `anthropic` still
-exist, but they are refused while `ARCH_OFFLINE_ONLY="true"` (the default).
+Both modes produce **the same JSON contracts**, validated by the same Zod schemas
+(`src/server/ai/schemas.ts`). Everything that existed before still works unchanged: drafts, human
+approval, audit, rate limits and redaction. The old `openai` / `anthropic` adapters were deleted,
+and `ARCH_OFFLINE_ONLY` now only gates public-URL knowledge fetching.
 
 ```
                        ┌──────────── copilot.service / codeAssist.service ────────────┐
@@ -38,9 +42,8 @@ scoped repositories) ──▶ + knowledge = buildKnowledge(org's ARCH model, co
                        │ buildPrompt ──▶ provider.generate ──▶ schema validation ──▶ draft
                        └───────────────────────────────┬──────────────────────────────┘
                                                        │
-                     arch: archDraft(task, context)  ◀─┴─▶  arch-hybrid: local LLM
-                     (no LLM, deterministic)                  └─ on error / timeout / invalid JSON
-                                                                 → archDraft (fallback)
+                                     arch: archDraft(task, context)
+                                     (no LLM, no network, deterministic)
 ```
 
 ## 2. What the ARCH model learns
@@ -142,24 +145,19 @@ cache incident yesterday" and "we keep seeing 503s after the deploy" on the inci
 a new topic means appending one entry to that file — no engine change, and the pack data is asserted
 well formed (unique ids, resolvable related ids, both languages) in `tests/arch-chat-engine.test.ts`.
 
-### Optional generative chat (`AI_PROVIDER="arch-hybrid"`)
+### Agent-assisted chat (built in, no second model)
 
-The default `arch` provider stays deterministic and dependency-free. In hybrid mode only, the chat
-service may route open-ended intents (`unknown`, `advice`, general concepts and tech facts) to a
-private local chat model. Structured workspace questions, identity/memory commands and code
-refusals remain native. Before generation, ARCH has already selected the read-only context: tenant
-runbook chunks, similar team incidents, public patterns and a matching built-in tech-pack entry.
-The local model can also use its own pretrained knowledge for questions the pack does not cover.
-
-`src/server/ai/arch-model/chat-agent.ts` supplies a small intent-based task plan, asks for a direct
-answer in English or Hinglish, then runs one private review pass for relevance, grounding, uncertainty
-and tone. The plan and review are not returned; prompts explicitly do not request hidden chain of
-thought. Workspace claims can cite retrieved items with source markers, which the server maps back
-to real citations. User memory/history and indexed document text are treated as untrusted data, the
-chat model is private-only, and it receives no tools that can execute code or mutate ARCH. If either
-the first pass times out or returns unusable output, the deterministic native answer is used; if only
-the review pass fails, the usable draft is kept. `LOCAL_CHAT_REFLECTION=false` disables the review
-pass for slow machines.
+Every chat turn runs on the native engine. When a prompt is complex (or tool-worthy, or asks for a
+bounded script), the chat service intercepts it and runs one bounded agent turn
+(`src/server/ai/agent/`): the planner prefixes a chain-of-thought system prompt, the reply is
+scanned for `<thinking>` / `<plan>` tags, native tools are executed from a plain function registry,
+and a requested Python script runs in a sandboxed subprocess with the self-correction loop feeding
+failures back to the engine. The plan and thinking are managed server-side — members only ever see
+the final, tag-free answer. Workspace claims can cite retrieved items with source markers, which the
+server maps back to real citations. User memory/history and indexed document text are treated as
+untrusted data, and the loop has no tools that can mutate ARCH (file tools are confined to
+`ARCH_AGENT_WORKDIR`). If the loop fails for any reason, the deterministic native answer is used
+unchanged. Full guide: [`ARCH-AGENT.md`](ARCH-AGENT.md).
 
 Thumbs-up/down ratings are stored on the private chat message and audited without answer text. They
 are evaluation signals only: ratings are not incident-training examples and do not automatically
@@ -179,7 +177,7 @@ invalidated on ingest/reindex/delete.
 Persistence is `ArchChatSession` / `ArchChatMessage` (migration `20260928000000_v8_arch_chat`),
 always scoped to `(organizationId, userId)`; a session id that is not yours is a `404`. A turn
 stores the user message, the ARCH message (with intent, confidence, citations, suggestions,
-actual provider (`arch` or `arch-hybrid`), model name and `latencyMs`) and bumps the session. Audit
+actual provider (`arch`), model name and `latencyMs`) and bumps the session. Audit
 entries record shape only — never the content. `feedbackRating` is optional, private to that
 session, and clears if the answer is regenerated. Code generation is refused by the engine itself (intent
 `code_request`), not by a prompt, and the refusal points at Code Assist.
@@ -199,40 +197,30 @@ Paste code or a stack trace and choose **Review**, **Fix** or **Explain**.
 - **Permissions and limits:** requires `copilot.generate` (RESPONDER+), shares the Copilot rate limit
   (20/min per organization) and accepts at most 20,000 characters.
 
-## 5. Running a local LLM (optional, free, CPU)
+## 5. The ARCH Agent (planner · native tools · self-correction)
+
+Complex prompts do not go straight to an answer. A Python-style loop — implemented in TypeScript in
+`src/server/ai/agent/`, executed against ARCH's own engine — intercepts them:
+
+1. **Planner.** The prompt is prefixed with a chain-of-thought system prompt; the reply is scanned
+   for `<thinking>` and `<plan>` tags and the steps are managed before the final answer is shown.
+2. **Native tools.** A plain dictionary of functions (`calculator`, `current_time`, `list_files`,
+   `read_file`) called through one JSON structure: `{"tool": "<name>", "arguments": {…}}`. The
+   result is fed back to the engine for the next step.
+3. **Self-correction.** A generated Python script is saved to a temporary `.py` file and run with
+   the Python subprocess (credential-free env, hard timeout, temp dir cleaned every run). On error
+   the exact error string goes back to the engine — *"The code failed with this error: … Fix it."* —
+   until it passes or the attempt budget runs out.
 
 ```bash
-# Option A — native install: https://ollama.com
-ollama pull qwen2.5-coder:7b
-# Optional general-instruct model for more natural open-domain chat (check its model-card licence)
-ollama pull qwen2.5:7b
-# Option B — Docker (bound to 127.0.0.1 only)
-docker compose --profile ai up -d
-docker compose exec ollama ollama pull qwen2.5-coder:7b
-
-# Optional tuned profile (low temperature, 8k context)
-ollama create arch-copilot -f ai/Modelfile
-
-# .env
-AI_PROVIDER="arch-hybrid"
-LOCAL_LLM_URL="http://127.0.0.1:11434"
-LOCAL_LLM_MODEL="qwen2.5-coder:7b"      # Copilot model; or arch-copilot
-LOCAL_CHAT_MODEL="qwen2.5:7b"           # optional; blank reuses LOCAL_LLM_MODEL
-LOCAL_CHAT_TIMEOUT_MS="60000"
-LOCAL_CHAT_REFLECTION="true"
+# .env — the only agent knobs (defaults shown)
+ARCH_AGENT_WORKDIR="model-data"      # directory the list/read tools may touch
+ARCH_AGENT_MAX_FIX_ATTEMPTS="3"      # executions allowed in the correction loop
 ```
 
-`LOCAL_LLM_API="openai"` works with llama.cpp `llama-server`, LM Studio, vLLM and LocalAI.
+Full guide with the security model and tests: [`ARCH-AGENT.md`](ARCH-AGENT.md).
 
-| RAM | Suggested model | Licence |
-|---|---|---|
-| 8 GB | `qwen2.5-coder:3b`, `llama3.2:3b` | Qwen research licence (check it for commercial use) / Llama 3.2 community licence |
-| **16 GB** | **`qwen2.5-coder:7b`** (default) | Apache-2.0 |
-| 32 GB+ | `qwen2.5-coder:14b` | Apache-2.0 |
-
-`/dashboard/model` shows whether the LLM is reachable and whether the model has been pulled.
-
-## 6. Fine-tuning the local LLM on your incidents (optional)
+## 6. Exporting a training set for a derivative model (optional)
 
 ```bash
 npm run model:export-finetune -- --org <organization-slug>
@@ -241,9 +229,9 @@ npm run model:export-finetune -- --org <organization-slug>
 
 Each line is `{"messages":[system, user, assistant]}`: the exact prompt ARCH sends at runtime,
 paired with a draft a responder **approved** (their edited text when they edited it) or, for triage,
-the severity the team settled on. The format works with Unsloth, Axolotl and most LoRA tooling. You
-need a few hundred examples before a LoRA is worth it; train it wherever you like (Colab or a rented
-GPU for an hour), convert it to GGUF and point `FROM` in `ai/Modelfile` at it.
+the severity the team settled on. The format works with Unsloth, Axolotl and most LoRA tooling — use
+it if you want to train a derivative model of your own elsewhere. ARCH itself never loads it: the
+runtime engine is this repository's native model.
 
 ## 7. Public data: sources and licences
 
@@ -273,16 +261,10 @@ without any of it: the pattern library is original ARCH text, and your own incid
 
 | Variable | Default | |
 |---|---|---|
-| `AI_PROVIDER` | `arch` | `arch` · `arch-hybrid` · `mock` · `openai` · `anthropic` |
-| `ARCH_OFFLINE_ONLY` | `true` | Refuses external vendors and non-private `LOCAL_LLM_URL` values |
-| `LOCAL_LLM_URL` | `http://127.0.0.1:11434` | |
-| `LOCAL_LLM_API` | `ollama` | or `openai` (OpenAI-compatible local servers) |
-| `LOCAL_LLM_MODEL` | `qwen2.5-coder:7b` | Copilot model |
-| `LOCAL_CHAT_MODEL` | unset | Chat model; blank reuses `LOCAL_LLM_MODEL` |
-| `LOCAL_LLM_TIMEOUT_MS` | `90000` | Copilot timeout |
-| `LOCAL_CHAT_TIMEOUT_MS` | `60000` | Whole chat draft + reflection budget; timeout falls back to native |
-| `LOCAL_CHAT_REFLECTION` | `true` | One private self-review pass; set `false` for faster inference |
-| `LOCAL_LLM_CONTEXT` | `8192` | `num_ctx` for Ollama |
+| `AI_PROVIDER` | `arch` | `arch` · `mock` (anything else fails at boot — no vendor code exists) |
+| `ARCH_OFFLINE_ONLY` | `true` | Refuses public-URL knowledge fetching (external AI vendors are not configurable at all) |
+| `ARCH_AGENT_WORKDIR` | `model-data` | The only directory the agent's list/read tools can touch |
+| `ARCH_AGENT_MAX_FIX_ATTEMPTS` | `3` | Executions allowed in the self-correction loop (1–10) |
 | `ARCH_MODEL_DATA_DIR` | `model-data` | Public corpus and fine-tune exports (git-ignored) |
 | `ARCH_MODEL_RETRAIN_MINUTES` | `60` | `0` = never (manual or CLI only) |
 
@@ -301,8 +283,12 @@ src/server/ai/
   arch-model/engine.ts      buildKnowledge + archDraft(task) for every Copilot task
   arch-model/chat.ts        pure native chat engine: intents, EN/Hinglish answers, citations,
                             conversational memory merge (typed > stored > account name)
-  arch-model/chat-agent.ts  local generative path: task plan, tenant RAG context, reflection + citations
-  local-chat.ts             plain-text Ollama / OpenAI-compatible local chat adapter (private-only)
+  agent/planner.ts          chain-of-thought intercept: system prompt + <thinking>/<plan> tag scan
+  agent/tools.ts            native tool registry (calculator, clock, scoped file tools) + JSON parse
+  agent/self-correct.ts     temp .py + sandboxed Python subprocess + the fix loop
+  agent/loop.ts             one bounded agent turn: plan → tools → code → final answer
+  agent/native.ts           ARCH's engine speaking the agent protocol
+  agent/script.ts           fixed Python templates + deterministic repair for the fix round
   arch-model/tech-knowledge.ts  V10/V10.3 built-in tech knowledge pack: 161 general topics across 16
                             families (aliases + keywords + cues, EN/Hinglish, related) and the scored
                             matcher (alias phrase > cue > keyword, confidence floor so workspace
@@ -311,8 +297,7 @@ src/server/ai/
                             suggester used by the "not in the pack" fallback
   code/analyzer.ts          language detection, stack-trace diagnosis, rules, safe fixes, scrubSecrets
   code/review.ts            Code Assist input/output
-  arch-native.ts            AI_PROVIDER="arch" and the hybrid fallback wrapper
-  local-llm.ts              Ollama / OpenAI-compatible local client, isLocalEndpoint, health check
+  arch-native.ts            AI_PROVIDER="arch" — the native Copilot provider
 src/server/services/archModel.service.ts   corpora, train/eval/promote, jobs, registry, status
 src/server/services/archChat.service.ts    chat sessions + grounded turns (send, regenerate)
 src/server/services/codeAssist.service.ts  Code Assist (+ retrieval over the code corpora)
@@ -340,14 +325,13 @@ Services load data through tenant-scoped repositories and pass it in.
 ## 10. Honest limitations
 
 - The native engine **does not write new prose**. It selects, classifies and fills templates. That
-  makes native answers predictable, but they can read like structured notes. In `arch-hybrid`, only
-  eligible open-ended chat intents use a private local model for more natural answers; the model may
-  still be wrong about general facts, and reflection is not a formal fact-checker. Use the native
-  path when determinism matters. Code rewrites stay in Code Assist.
-- Native chat does not invent workspace history: it uses the snapshot and retrieved rows. Hybrid
-  answers cite retrieved sources when used but are still generative, so verify advice before acting.
-  If incidents are not resolved (or the model has not trained yet), "have we seen this before?"
-  falls back to the pattern library and labels the difference.
+  makes native answers predictable, but they can read like structured notes — that is the trade for
+  determinism, zero cost and zero vendor risk. The agent loop adds planning discipline and exact
+  tool/script execution, not fluency. Feature/production code generation stays in Code Assist.
+- Native chat does not invent workspace history: it uses the snapshot and retrieved rows. Chat
+  answers cite their sources, so verify advice before acting. If incidents are not resolved (or the
+  model has not trained yet), "have we seen this before?" falls back to the pattern library and
+  labels the difference.
 - Accuracy grows with data. Below about 10 resolved incidents, severity accuracy is not measured
   and the model leans on built-in examples.
 - Code Assist rules are heuristics. They catch common incident-causing patterns, not every bug, and

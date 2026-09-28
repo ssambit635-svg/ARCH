@@ -34,22 +34,23 @@ and passes after it.
 | Rule | Enforced in | Test |
 | --- | --- | --- |
 | A Copilot provider receives only the incident, its timeline, its service, and a bounded number of similar incidents — never the org's whole history. | `LIMITS` in `src/server/ai/guardrails.ts` (`maxTimelineEntries: 60`, `maxSimilarIncidents: 4`, `maxContextChars: 16_000`), `buildContext()` in `src/server/ai/context.ts` | `tests/copilot-guardrails.test.ts` |
-| Chat generation receives a bounded conversation, explicitly stored member memory and selected tenant-scoped evidence; account email and other members' data are excluded. | `buildUserPrompt()` in `src/server/ai/arch-model/chat-agent.ts`, `answerQuestion()` in `archChat.service.ts` | `tests/arch-chat-agent.test.ts`, `tests/arch-chat.test.ts` |
+| Chat answers receive a bounded conversation, explicitly stored member memory and selected tenant-scoped evidence; account email and other members' data are excluded. | `answerQuestion()` / `runChatAgent()` in `archChat.service.ts` | `tests/arch-chat.test.ts` |
 | Every repository takes `organizationId` as a required first parameter; a row belonging to another org is not readable. | all of `src/server/repositories/*` | `tests/tenant-isolation.test.ts`, `tests/v6-rag-learning.test.ts` |
-| Copilot credentials and personal fields are redacted *before* the text reaches a provider, local or remote. Chat is sent only to a private local model endpoint. | `redact()` in `src/server/ai/guardrails.ts`, `getLocalChatModel()` in `local-chat.ts` | `tests/copilot-guardrails.test.ts`, `tests/local-chat.test.ts` |
+| Copilot credentials and personal fields are redacted *before* any text leaves the calling module; chat never reaches a network endpoint of any kind. | `redact()` in `src/server/ai/guardrails.ts` | `tests/copilot-guardrails.test.ts`, `tests/agent-tools.test.ts` |
 | Similar incidents and retrieved knowledge are always filtered to the caller's organization. | `retrieveKnowledge()` in `src/server/services/knowledge.service.ts`, `insights.service.ts` | `tests/v6-rag-learning.test.ts`, `tests/arch-chat.test.ts` |
 
 ## 3. Pure domain logic; narrow IO adapters
 
 The classifiers, retrieval ranking, prompt planning and answer composition stay pure: they do not
 import a database client, repository or filesystem API. Database reads and tenant-scoped context
-assembly live in services. Network access is limited to explicit provider adapters: Copilot's
-configured provider, the private-only local chat adapter, and human-triggered knowledge fetches.
+assembly live in services. The AI path performs **no network IO at all** (ARCH's engine and the
+agent loop are in-process); the only outbound network calls in the product are human-triggered,
+SSRF-guarded knowledge fetches and explicit GitHub actions.
 
 | Rule | Enforced in | Test |
 | --- | --- | --- |
 | No `@/lib/db`, `fs`, or repository imports under `src/server/ai/`. | code review + the module boundaries in `train.ts`, `runtime.ts`, `embeddings.ts`, `chunking.ts`, `retrieve.ts`, `risk.ts`, `reproduction.ts` | `tests/arch-model.test.ts`, `tests/arch-rag.test.ts`, `tests/arch-eval.test.ts` |
-| Provider network IO is isolated to adapters; hybrid chat accepts only a private `LOCAL_LLM_URL` and refuses redirects. | `src/server/ai/local-llm.ts`, `src/server/ai/local-chat.ts`, `getLocalChatModel()` | `tests/local-chat.test.ts`, `tests/copilot-guardrails.test.ts` |
+| The AI path performs no network IO: no vendor adapter, no local-LLM client, no hybrid mode exists in the tree. | `src/server/ai/provider.ts`, `src/server/ai/agent/*` | `tests/arch-model.test.ts` (asserts the vendor adapter files are gone), `tests/agent-*.test.ts` |
 | DB reads and tenant context assembly stay in services; public-document fetch is human-triggered and SSRF-guarded. | `src/server/services/*`, `knowledge.service.ts` | `tests/v6-rag-learning.test.ts`, `tests/arch-chat.test.ts` |
 
 ## 4. Bounded calls
@@ -65,10 +66,11 @@ configured provider, the private-only local chat adapter, and human-triggered kn
 
 | Rule | Enforced in | Test |
 | --- | --- | --- |
-| `ARCH_OFFLINE_ONLY=true` (the default) refuses every external AI vendor. | `src/server/ai/provider.ts` | `tests/copilot-guardrails.test.ts` |
-| A local LLM URL must resolve to a private address; a public `LOCAL_LLM_URL` is refused while offline-only is on. | `isLocalEndpoint()` in `src/server/ai/local-llm.ts`, checked in `provider.ts` | `tests/copilot-guardrails.test.ts` |
-| Switching to an external provider is an explicit, audited configuration change — not something a request can do. | `env.AI_PROVIDER` + `ARCH_OFFLINE_ONLY` in `src/lib/env.ts` | — |
-| The native classifier/retriever runs in-process. Optional chat generation calls only a private local adapter; it never sends chat to a public model service. | `src/server/ai/arch-model/chat.ts`, `chat-agent.ts`, `local-chat.ts` | `tests/arch-model.test.ts`, `tests/local-chat.test.ts`, `tests/arch-chat-agent.test.ts` |
+| External AI vendors cannot be configured at all: `AI_PROVIDER` is a two-value enum (`arch`, `mock`) validated at boot. | `src/lib/env.ts`, `src/server/ai/provider.ts` | `tests/arch-model.test.ts` |
+| `ARCH_OFFLINE_ONLY=true` (the default) additionally refuses public-URL knowledge fetches. | `src/server/services/knowledge.service.ts` | `tests/v6-rag-learning.test.ts` |
+| Agent file tools are confined to `ARCH_AGENT_WORKDIR`, refuse credential-shaped filenames, and redact secrets from anything they return. | `src/server/ai/agent/tools.ts` | `tests/agent-tools.test.ts` |
+| Generated Python runs in a temp dir with a credential-free environment, a hard timeout and bounded output; failures are fed back to the engine with their exact error. | `src/server/ai/agent/self-correct.ts` | `tests/agent-self-correct.test.ts` |
+| Chat never sends data to a model service: the classifier/retriever and the agent loop run in-process. | `src/server/ai/arch-model/chat.ts`, `src/server/ai/agent/*` | `tests/arch-chat.test.ts`, `tests/agent-loop.test.ts` |
 
 ## 6. Audit
 

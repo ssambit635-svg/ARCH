@@ -7,9 +7,7 @@ Add ARCH Copilot (AI assistance inside the incident workspace) +
 Slack/status-page improvements. Nothing else.
 
 ## New environment variables
-AI_API_KEY=""            # OpenAI or Anthropic key
-AI_PROVIDER="openai"     # switchable adapter
-AI_MODEL="gpt-4o-mini"   # default model
+AI_PROVIDER="arch"       # arch (native, default) | mock (tests) — no vendor adapters exist
 AI_MAX_TOKENS="1000"
 AI_TIMEOUT_MS="15000"
 
@@ -33,8 +31,9 @@ POST   /api/status-pages/:id/subscribe          # P1
 ## Copilot architecture
 src/server/ai/
   provider.ts        # interface: generate(system, user): Promise<string>
-  openai.ts          # implementation
-  anthropic.ts       # implementation
+  arch-native.ts     # the only real implementation (ARCH's own model)
+  mock.ts            # canned output for dev/tests
+  agent/             # planner + native tools + Python self-correction loop
   prompts.ts         # all prompt templates live HERE only
   guardrails.ts      # redaction, size limits, timeout
 
@@ -86,8 +85,10 @@ M4 (P1): Slack notifications, password reset, status-page subscribers,
     [each ships with tests, one at a time]
 
 ## Implementation status
-- [x] M1 — `src/server/ai/{provider,openai,anthropic,mock,prompts,guardrails,context,schemas}.ts`,
-      `AiSuggestion` + migration `20260925000000_v2_ai_suggestions`, per-org rate limit.
+- [x] M1 — `src/server/ai/{provider,mock,prompts,guardrails,context,schemas}.ts` (the vendor
+      adapters `openai.ts` / `anthropic.ts` shipped here and were later **removed**: ARCH is
+      native-only end to end), `AiSuggestion` + migration `20260925000000_v2_ai_suggestions`,
+      per-org rate limit.
 - [x] M2 — summary + triage endpoints, Copilot panel on `/dashboard/incidents/[id]`.
 - [x] M3 — status draft + postmortem, approve/dismiss (API + UI), approved drafts posted to the
       timeline (status updates surface on the public status page), triage applied via
@@ -103,9 +104,10 @@ Implementation notes:
 ## V3 addendum: ARCH's own AI (implemented)
 The external-vendor dependency is replaced; every V2 rule above still applies. Full spec:
 `docs/engineering/ARCH-MODEL.md`.
-- `AI_PROVIDER`: `arch` (default: ARCH native model, no LLM, no network) · `arch-hybrid` (local LLM
-  via Ollama or an OpenAI-compatible server, with native fallback) · `mock` · `openai` ·
-  `anthropic`. `ARCH_OFFLINE_ONLY=true` (default) refuses vendors and non-private `LOCAL_LLM_URL`s.
+- `AI_PROVIDER`: `arch` (default: ARCH native model, no LLM, no network) · `mock` (tests). The
+  hybrid/local-LLM/vendor options (`arch-hybrid`, `openai`, `anthropic`, `LOCAL_LLM_*`) were
+  **removed** — there is no second model to call and no AI API key to configure. See the V11
+  addendum below for the built-in agent loop.
 - New: `ArchModel` (one per org, `arch_models`, migration `20260925120000_v3_arch_model`),
   `AiSuggestionType.CODE_FIX`, permission `copilot.train` (OWNER/ADMIN).
 - New routes: `POST /api/incidents/:id/copilot/code-fix`, `POST /api/copilot/code-review`,
@@ -127,6 +129,17 @@ The external-vendor dependency is replaced; every V2 rule above still applies. F
   - Nothing in `src/server/ai/` touches the DB or the filesystem.
 - "Code generation, debugging" is no longer out of scope, but only as **drafts and suggestions**:
   nothing is applied to a repository.
+
+## V11 addendum: native-only + the ARCH Agent (implemented)
+Everything that called a second model is deleted (`arch-hybrid`, `local-llm.ts`, `local-chat.ts`,
+`chat-agent.ts`, `openai.ts`, `anthropic.ts`, the `ollama` compose service). The whole AI path is
+now: `provider.ts` → `arch-native.ts` (or `mock`), plus the agent loop:
+- `AI_PROVIDER`: `arch` | `mock` only. No `AI_API_KEY` / `AI_MODEL` / `LOCAL_LLM_*` exist.
+- `src/server/ai/agent/` — planner (CoT system prompt + `<thinking>`/`<plan>` scan), native tool
+  registry (plain dictionary + one JSON call structure), and the self-correction loop (extract code
+  → temp `.py` → Python subprocess → feed the exact error back as "…Fix it.").
+- Chat intercepts complex prompts through the loop; the plan stays server-side, the answer arrives
+  tag-free. Full spec: `docs/engineering/ARCH-AGENT.md`.
 
 ## Out of scope for V2
 AI auto-resolving incidents, auto-publishing status updates, code

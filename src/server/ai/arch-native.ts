@@ -7,6 +7,7 @@ import { AiProviderError, estimateTokens, type AiProvider, type GenerateOptions,
 
 /**
  * ARCH native provider (AI_PROVIDER="arch") — ARCH's own model, no language model and no network.
+ * There is no hybrid/fallback path: this engine (or the test mock) is the whole model layer.
  *
  * It reads the same prompt every other provider receives, recovers the structured context from
  * it, and drafts with the ARCH engine using the knowledge the service attached (the
@@ -30,33 +31,6 @@ export function createArchNativeProvider(): AiProvider {
       }
       const text = JSON.stringify(output);
       return { text, promptTokens: estimateTokens(system) + estimateTokens(user), completionTokens: estimateTokens(text), model: ARCH_MODEL_NAME };
-    },
-  };
-}
-
-/**
- * arch-hybrid — a local LLM writes the draft, grounded on the ARCH model's knowledge; if the LLM
- * is down, slow, or returns something that fails validation, the native engine answers instead.
- * Copilot therefore never goes dark just because the model server is restarting.
- */
-export function createHybridProvider(config: { llm: AiProvider; native?: AiProvider; llmTimeoutMs: number; onFallback?: (reason: string) => void }): AiProvider {
-  const native = config.native ?? createArchNativeProvider();
-  return {
-    name: 'arch-hybrid',
-    model: `${config.llm.model} + ${native.model}`,
-    async generate(system: string, user: string, options: GenerateOptions): Promise<GenerateResult> {
-      let reason = 'invalid_output';
-      try {
-        const signal = AbortSignal.any([options.signal, AbortSignal.timeout(config.llmTimeoutMs)]);
-        const result = await config.llm.generate(system, user, { ...options, signal });
-        if (!options.accept || options.accept(result.text)) return result;
-      } catch (error) {
-        if (options.signal.aborted) throw error; // the overall deadline passed — do not keep going
-        reason = error instanceof Error && error.name === 'TimeoutError' ? 'llm_timeout' : 'llm_unavailable';
-      }
-      config.onFallback?.(reason);
-      const fallback = await native.generate(system, user, options);
-      return { ...fallback, model: `${native.model} (fallback: ${reason})` };
     },
   };
 }

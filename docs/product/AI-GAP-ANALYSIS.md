@@ -38,17 +38,17 @@ and use a *small local* model — still ₹0 in licence — only where fluency g
 
 | | **ChatGPT** | **ARCH AI (V10.4)** |
 |---|---|---|
-| Core | Frontier LLM (hundreds of billions of parameters, RLHF-tuned) | Deterministic native engine for workspace facts; optional private open-weight generation for open-ended chat and Copilot drafts |
-| Where it runs | OpenAI data centres, GPU clusters | Your server and, when enabled, a local Ollama/llama.cpp model; CPU-only works, though slowly |
-| Training data | Trillions of tokens of the public web, books, code | *Your* resolved incidents for the native classifier, a built-in failure-pattern/tech library and optional pretrained open weights for general chat |
-| Knowledge | World knowledge, frozen at a training cutoff | Workspace facts from tenant-scoped retrieval; optional local model adds general pretrained knowledge with a lower quality ceiling |
-| Per turn | Priced per token (rupees per question, per seat, per month) | ₹0 per turn for native or local inference; compute, RAM and disk are yours |
-| Answers | Generated prose, can be fluent and wrong | Native answers stay deterministic and cited; hybrid chat writes natural prose from retrieved evidence plus pretrained knowledge |
-| Data path | Prompt leaves your machine | No public model service in private hybrid mode; `ARCH_OFFLINE_ONLY=true` also blocks external AI providers |
-| Determinism | Sampling; same question may answer differently | Native mode is deterministic; hybrid mode is generative, reviewed once, and falls back to native on failure |
-| Latency | Seconds | Tens of milliseconds native; local generation can take seconds, especially on CPU |
+| Core | Frontier LLM (hundreds of billions of parameters, RLHF-tuned) | Deterministic native engine for workspace facts + the built-in agent loop (planner, native tools, sandboxed Python) |
+| Where it runs | OpenAI data centres, GPU clusters | Your server only — CPU-only, one process, no second model |
+| Training data | Trillions of tokens of the public web, books, code | *Your* resolved incidents for the native classifier and a built-in failure-pattern/tech library |
+| Knowledge | World knowledge, frozen at a training cutoff | Workspace facts from tenant-scoped retrieval plus the built-in cited tech pack |
+| Per turn | Priced per token (rupees per question, per seat, per month) | ₹0 per turn; compute, RAM and disk are yours |
+| Answers | Generated prose, can be fluent and wrong | Native answers stay deterministic and cited; complex prompts get a server-managed plan before the answer |
+| Data path | Prompt leaves your machine | Nothing leaves: no AI vendor adapter exists in the binary (`ARCH_OFFLINE_ONLY` additionally blocks public knowledge fetches) |
+| Determinism | Sampling; same question may answer differently | Always deterministic — one engine, same input, same output |
+| Latency | Seconds | Tens of milliseconds (one sandboxed Python run when a script is requested) |
 | Where it lives | A chat product | Inside the incident, plus `/dashboard/chat`, Code Assist, `/dashboard/model` |
-| Optional upgrade | — | `AI_PROVIDER="arch-hybrid"`: an open-weight model (e.g. `qwen2.5:7b`) via Ollama/llama.cpp on the same private infrastructure — no vendor or API key |
+| Optional upgrade | — | None needed: planner, tools and code execution are built in; a derivative training set can be exported with `model:export-finetune` |
 
 **Read that table again before any planning.** We are not behind on *one* axis; we are a different
 kind of system. The gap that matters commercially is only the one a user notices while doing their
@@ -78,7 +78,7 @@ Legend — **Closeable at ₹0?**
 | Share a conversation by link | ✅ | ❌ | ✅ | Org-scoped read-only share token; must respect "chats are personal" — needs a deliberate decision first | P4 |
 | Temporary chat (no history) | ✅ | ❌ | ✅ | A session flag that skips persistence | P4 |
 | Stop generating | ✅ | n/a (answers are instant) | — | Nothing to stop | — |
-| Model picker | ✅ (GPT-5.x tiers) | One engine, `arch-hybrid` optional | ✅ | Already exists at the deployment level (`AI_PROVIDER`) — expose per-chat only if a second engine earns its keep | P4 |
+| Model picker | ✅ (GPT-5.x tiers) | One engine, by design (`AI_PROVIDER` accepts `arch` / `mock` only) | ✅ | No picker until a second engine earns its keep — there is no second engine in the binary | P4 |
 
 ### 2.2 Memory, personalization, projects
 
@@ -106,12 +106,12 @@ Legend — **Closeable at ₹0?**
 
 | Capability | ChatGPT | ARCH today | ₹0? | How we close it | Phase |
 |---|---|---|---|---|---|
-| Answers about the world | ✅ | 🟡 **V10 · V10.3 · V10.4** — the native 161-topic cited tech pack stays deterministic; opt-in `arch-hybrid` adds a private local instruct model for open-ended answers beyond the pack, grounded with tenant RAG and a one-pass reflection review | 🔶 | Default `arch` remains free, fast and template/retrieval based. `arch-hybrid` has no API/token bill but needs local model storage, RAM/CPU and accepts the smaller model's reasoning/hallucination ceiling. It never routes workspace data to a public chat service. Keep live workspace questions native and cite retrieved sources | **shipped (V10/V10.4), local model optional** |
+| Answers about the world | ✅ | 🟡 **V10 · V10.3** — the native 161-topic cited tech pack stays deterministic; there is deliberately no general-purpose generator | 🔶 | Keep widening the cited pack (new topics are one entry each) rather than bolting on a second model. Workspace questions stay retrieval-grounded and cited | **shipped, pack keeps growing** |
 | Answers about *your* incidents, runbooks, services, roster | 🟡 only if you paste them | ✅ **this is the product** | — | Keep widening the corpus (SLOs, changes, dependencies, postmortems) rather than widening the model | ongoing |
 | Citations you can click | ✅ (web + memory sources) | ✅ incident / runbook / pattern / postmortem | — | Add citations for SLO, change and dependency rows as they enter answers | P3 |
 | Web browsing / deep research | ✅ | ❌ deliberately (SSRF-bounded fetch is a human action, not inference) | 🔶 | A **"research this incident" action** that fetches a URL the human names, shows what it read, then answers — human-in-the-loop version of the same outcome | P4 |
 | Long context (100k+) | ✅ | 🟡 12 turns of history + retrieval over the whole corpus | 🔶 | Retrieval already covers more history than a context window does; raise the turn window and add transcript memory when tests show it helps | P3 |
-| Multi-step reasoning / maths / novel code | ✅ | 🟡 `arch-hybrid` can plan a bounded task and review an open-ended answer locally; native `arch` remains deterministic | 🟡 | A local 3B–7B model can do some decomposition and self-review for ₹0 in API fees, but it is not frontier reasoning. ARCH does not expose hidden chain-of-thought or run arbitrary Python from chat; code changes stay in Code Assist | V10.4 partial |
+| Multi-step reasoning / maths / novel code | ✅ | 🟡 **V11** — the agent loop plans complex prompts (`<thinking>`/`<plan>` scanned server-side), runs exact maths through the native calculator tool, and executes verified Python scripts in a sandbox; hidden chain-of-thought is never shown | 🟡 | Bounded computations are covered at ₹0; open-ended novel code stays in Code Assist (repo context + review loop). No arbitrary-Python escape hatch: scripts come from fixed templates with numeric literals only | **shipped (V11, bounded)** |
 
 ### 2.5 Actions in the world (where an ops product actually wins)
 
@@ -185,9 +185,9 @@ the bottom of the list.
 | Tier | Cost | Examples | Rule |
 |---|---|---|---|
 | **T1 — code only** | ₹0 forever, CPU | Regenerate, copy, export, shortcuts, search, feedback, memory page, markdown tables, voice *input*, share links | Ship these freely |
-| **T2 — free licence, needs a machine** | ₹0 in licence; 8–16 GB RAM, no GPU | Ollama + `qwen2.5-coder:7b` / `llama3.2:3b` (already supported via `arch-hybrid`) | Optional, documented, never required for the product to work |
-| **T3 — free but slow** | ₹0, minutes of CPU per answer | Bigger quantised models, small local VLMs for image description | Only behind an explicit toggle, never in the default path |
-| **T4 — actually costs money** | rupees per token | OpenAI/Anthropic APIs | Blocked by `ARCH_OFFLINE_ONLY`; a customer may switch it on consciously, we never default to it |
+| **T2 — free licence, needs a machine** | ₹0 in licence; 8–16 GB RAM, no GPU | *(removed in V11)* the optional local-LLM tier is gone — one engine only | Never reintroduced without a new decision record |
+| **T3 — free but slow** | ₹0, minutes of CPU per answer | Bigger quantised models, small local VLMs for image description | Not in the product; documented as an idea only |
+| **T4 — actually costs money** | rupees per token | OpenAI/Anthropic APIs | **No adapter exists in the binary** — cannot be switched on |
 
 Everything in §6 is T1 unless marked otherwise. **Every phase must leave the product fully
 functional with `ARCH_OFFLINE_ONLY=true` and no local LLM installed** — the models are an upgrade,
@@ -239,16 +239,14 @@ and can be refused by role exactly like the manual path.
 **Why it wins:** ChatGPT's agent mode touches *your computer*; ours touches *your incident*, inside
 your permissions, with your audit trail.
 
-### V10.4 — "Fluent on a local model" *(shipped, opt-in)*
-In `AI_PROVIDER="arch-hybrid"`, selected open-ended chat intents can use a private local model. ARCH
-passes bounded conversation context, explicitly stored member memory and tenant-scoped retrieval; the model gets a
-small task plan and one optional reflection pass. Citation markers map back only to sources actually
-retrieved, and an unavailable/slow model falls back to the deterministic answer. There are adapter,
-intent-routing, citation, fallback and service tests; no live Ollama model is bundled or required.
+### V10.4 → V11 — *"Fluent on a local model" removed*
+V10.4 briefly shipped opt-in hybrid chat (`AI_PROVIDER="arch-hybrid"`); **V11 deleted that path**
+along with every other second-model adapter. The task-plan idea survived and was rewritten as the
+V11 agent planner: the plan is built and parsed server-side from ARCH's own state, never from a
+generative model.
 
-**Known limit:** the local model can still be wrong about general facts. Reflection is not a formal
-fact-checker, and generated prose is not guaranteed to be entailed by a citation. Keep the native
-path as default for deterministic answers, and verify advice before acting.
+**Still true:** there is no generator to be wrong with — every workspace claim is extractive and
+cited. General-facts answers come from the built-in tech pack and say so when the pack has nothing.
 
 ### Explicitly not on the plan
 Image generation · web browsing at inference time · autonomous actions without approval · a general

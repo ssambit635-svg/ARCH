@@ -19,8 +19,7 @@ import {
   type ChatTurn,
 } from '../ai/arch-model/chat';
 import type { SimilarDoc } from '../ai/arch-model/runtime';
-import { generateLocalChatAnswer, shouldUseLocalChat } from '../ai/arch-model/chat-agent';
-import { getLocalChatModel } from '../ai/local-chat';
+import { createNativeChatAgentModel, createNativeTools, detectToolRequest, needsPlanning, runAgentTurn, scriptForTask } from '../ai/agent';
 import { archChatRepository } from '../repositories/archChat.repository';
 import { incidentRepository } from '../repositories/incident.repository';
 import { organizationRepository } from '../repositories/organization.repository';
@@ -39,8 +38,14 @@ import { retrieveKnowledge } from './knowledge.service';
  *
  * Everything here is tenant-scoped by construction: sessions belong to (organization, user), every
  * data read goes through an organization-scoped repository, and the engine never sees a row it was
- * not handed. The default is free native inference; optional hybrid generation uses only a private
- * local model (no API/token bill), so chat remains available without vendor credentials.
+ * not handed. Every answer comes from ARCH's own native engine — there is no vendor model, no API
+ * key and no second inference server anywhere in the chat path.
+ *
+ * Complex prompts are additionally intercepted by the ARCH Agent loop (`src/server/ai/agent`):
+ * the planner prefixes a chain-of-thought system prompt and scans the reply for <thinking>/<plan>
+ * tags, native tools run from a plain function registry, and generated Python is executed in a
+ * sandboxed subprocess with the self-correction loop feeding failures back to the engine. The
+ * steps are managed server-side; the member only ever sees the final, tag-free answer.
  */
 
 export const CHAT_RATE_LIMIT_WINDOW_MS = 60_000;
@@ -641,6 +646,56 @@ function toChatTurn(row: { role: 'USER' | 'ARCH'; content: string }): ChatTurn {
 }
 
 /**
+ * The agent intercept: decide whether this prompt needs the loop (complex / tool-worthy / a
+ * bounded script), run one bounded agent turn if so, and fall back to the untouched native answer
+ * on any failure. The engine answer is authoritative — the agent only adds planning discipline,
+ * exact tool results, or a verified script on top of it.
+ */
+async function runChatAgent(params: { question: string; nativeAnswer: ChatAnswer; snapshot: ChatSnapshot }): Promise<ChatAnswer> {
+  const { question, nativeAnswer, snapshot } = params;
+  const script = scriptForTask(question);
+  const shouldIntercept = needsPlanning(question) || Boolean(script) || Boolean(detectToolRequest(question));
+  if (!shouldIntercept) return nativeAnswer;
+
+  try {
+    const result = await runAgentTurn({
+      input: question,
+      model: createNativeChatAgentModel({
+        answer: nativeAnswer.answer,
+        intent: nativeAnswer.intent,
+        language: nativeAnswer.lang,
+        notes: [
+          `intent=${nativeAnswer.intent}`,
+          `confidence=${nativeAnswer.confidence}`,
+          `${nativeAnswer.citations.length} citation(s) for this answer`,
+          `${snapshot.knowledgeChunks.length} knowledge chunk(s) retrieved`,
+          `${snapshot.matches.length} similar team incident(s) matched`,
+          `${snapshot.openIncidents.length} open incident(s) in the workspace`,
+        ],
+        script,
+      }),
+      tools: createNativeTools({ workdir: env.ARCH_AGENT_WORKDIR }),
+      maxFixAttempts: env.ARCH_AGENT_MAX_FIX_ATTEMPTS,
+      // Budget for the whole turn: engine calls are instant, up to three Python runs at 5s each.
+      signal: AbortSignal.timeout(20_000),
+    });
+
+    if (result.outcome !== 'answered' || !result.answer.trim()) return nativeAnswer;
+    // A script answer replaces the engine's "use Code Assist" refusal wholesale; tool/plan turns
+    // keep the engine's grounded text as the base, so citations stay honest.
+    return {
+      ...nativeAnswer,
+      answer: result.answer,
+      citations: script && result.steps.some((step) => step.type === 'code') ? [] : nativeAnswer.citations,
+    };
+  } catch (error) {
+    // Never log the prompt or the answer — only why the loop bailed.
+    console.warn(`[chat] agent turn unavailable (${error instanceof Error ? error.name : 'unknown_error'}); using the native answer`);
+    return nativeAnswer;
+  }
+}
+
+/**
  * One grounded answer: build the workspace snapshot, then let the pure engine speak.
  *
  * Shared by a normal send and by regenerate, so a retried answer is produced exactly the way the
@@ -662,40 +717,10 @@ async function answerQuestion(
     const { facts, cleared } = await rememberFromTurn(params, extracted, stored.facts);
     const snapshot = toSnapshot(await buildSnapshotInputs(params, intent, question, toChatMemory(facts, undefined, cleared)));
     const nativeAnswer = answerChat({ question, snapshot, history });
-    const localModel = getLocalChatModel();
-
-    // In the default free ARCH mode the native engine is unchanged. When a private local model is
-    // explicitly enabled, it takes only open-ended answer intents; live workspace facts, memory
-    // operations, identity, and code refusals stay on the deterministic path.
-    if (localModel && shouldUseLocalChat(nativeAnswer.intent)) {
-      try {
-        const generated = await generateLocalChatAnswer({
-          model: localModel,
-          question,
-          snapshot,
-          history,
-          nativeAnswer,
-          signal: AbortSignal.timeout(env.LOCAL_CHAT_TIMEOUT_MS),
-          reflect: env.LOCAL_CHAT_REFLECTION,
-        });
-        if (generated) {
-          return {
-            answer: generated,
-            engineModel: localModel.model,
-            provider: 'arch-hybrid',
-            latencyMs: Date.now() - startedAt,
-            memoryCleared: cleared,
-          };
-        }
-      } catch (error) {
-        // Never log the prompt, retrieved docs, or answer; these can contain tenant data.
-        const reason = error instanceof Error ? error.name : 'unknown_error';
-        console.warn(`[chat] local model unavailable (${reason}); using the native ARCH answer`);
-      }
-    }
+    const answer = await runChatAgent({ question, nativeAnswer, snapshot });
 
     return {
-      answer: nativeAnswer,
+      answer,
       engineModel: snapshot.model.name,
       provider: 'arch',
       latencyMs: Date.now() - startedAt,

@@ -65,8 +65,8 @@ export type KnowledgeChunkHint = {
 
 /**
  * What the organization's ARCH model thinks, computed on the server before any prompt is built.
- * Every provider gets it: the built-in engine drafts from it directly, a local LLM uses it as
- * retrieval-augmented grounding ("this looks like your March database incident").
+ * The built-in engines draft from it directly: it is the retrieval-augmented grounding that makes
+ * an answer read like "this looks like your March database incident".
  */
 export type CopilotKnowledge = {
   model: string;

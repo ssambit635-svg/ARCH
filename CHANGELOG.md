@@ -15,19 +15,46 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Removed — external AI is gone, end to end (breaking for hybrid users)
+
+- **No Ollama, no local LLM, no hybrid mode, no vendors.** The `arch-hybrid` provider, the
+  Ollama/llama.cpp clients (`local-llm.ts`, `local-chat.ts`), the hybrid chat agent and the
+  `openai.ts` / `anthropic.ts` adapters were deleted from the codebase. `AI_PROVIDER` now accepts
+  only `arch` (the native engine, the default) or `mock` (tests); any other value — including old
+  `.env` files with `AI_PROVIDER="arch-hybrid"` — fails at boot with a readable error.
+- **Config removed.** `AI_API_KEY`, `AI_MODEL`, `LOCAL_LLM_*` and `LOCAL_CHAT_*` variables are gone
+  from `.env.example` and the schema; `docker-compose.yml` no longer ships an `ollama` service.
+  Migration: delete those lines from your `.env` and (if you used hybrid) set `AI_PROVIDER="arch"`.
+- **`ARCH_OFFLINE_ONLY`** now only gates public-URL knowledge fetching — external AI vendors are no
+  longer a setting at all.
+
+### Added — V11 · ARCH Agent (planner, native tools, self-correction)
+
+- **Task planning via raw prompts.** Complex chat prompts are intercepted and prefixed with a
+  chain-of-thought system prompt; the reply is scanned for `<thinking>` / `<plan>` tags and the
+  steps are managed server-side. Members only ever see the final, tag-free answer.
+- **Native tool execution without a framework.** A plain dictionary of functions (`calculator`,
+  `current_time`, `list_files`, `read_file` — workdir-confined, secret-refusing, output-redacted)
+  called through one JSON structure (`{"tool": …, "arguments": …}`); the result is fed back to the
+  engine for the next step.
+- **Self-correction loop for generated Python.** The script is extracted from the reply, written to
+  a temporary `.py` file and run with the Python subprocess in a credential-free environment with a
+  hard timeout; failures are sent back to the engine as *"The code failed with this error: … Fix
+  it."* until it passes or `ARCH_AGENT_MAX_FIX_ATTEMPTS` runs out. Chat answers show the verified
+  script and its real output; production/feature code still routes to Code Assist.
+- **Tests.** `tests/agent-planner.test.ts`, `tests/agent-tools.test.ts`,
+  `tests/agent-self-correct.test.ts` (real Python subprocess) and `tests/agent-loop.test.ts`,
+  plus chat-level end-to-end cases — 551 tests green.
+
 ### Added — V10.4 · more conversational, private chat beyond the pack
 
-- **Optional local generation for open-ended chat.** In `AI_PROVIDER="arch-hybrid"`, a private
-  open-weight model can answer beyond ARCH's deterministic tech pack, grounded in tenant-scoped
-  runbooks, team incidents, public patterns and explicitly stored member memory. One bounded reflection pass
-  reviews the draft; timeouts, model failures and unusable output fall back to native ARCH.
 - **Planning without exposing hidden reasoning.** A small intent-based task plan guides answers; ARCH
   does not request, store or display chain-of-thought, and chat has no tools that can execute code or
   change workspace state.
 - **Answer feedback.** Members can mark an answer helpful or not helpful, or clear a rating. It is
   private evaluation metadata only — not automatically included in training data or model fine-tuning.
-- **No required paid API.** The native engine remains the default. Hybrid inference uses local CPU/RAM
-  and has no per-token charge; see the README and model guide for Ollama setup and privacy limits.
+- **No required paid API.** The native engine is the only model; hybrid local generation was removed
+  in V11 (see above), so there is nothing external to configure or pay for.
 
 ### Added — V10.3 · the pack grows to 161 topics, and answers comparisons
 
