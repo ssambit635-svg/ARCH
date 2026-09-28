@@ -129,7 +129,7 @@ export function Topbar({
 
           <Link
             href="/dashboard/incidents/new"
-            className="hidden items-center gap-1.5 rounded-xl bg-gradient-to-b from-rose-500 to-rose-600 px-3.5 py-2 text-[13px] font-semibold text-white shadow-[0_4px_16px_-4px_rgb(244_63_94/0.6)] ring-1 ring-inset ring-white/10 transition hover:from-rose-400 hover:to-rose-500 active:scale-[0.98] sm:inline-flex"
+            className="hidden items-center gap-1.5 rounded-xl bg-gradient-to-b from-rose-500 to-rose-600 px-3.5 py-2 text-[13px] font-semibold text-white shadow-[0_4px_16px_-4px_rgb(244_63_94/0.6)] ring-1 ring-inset ring-ink-1000/10 transition hover:from-rose-400 hover:to-rose-500 active:scale-[0.98] sm:inline-flex"
           >
             <IconPlus className="size-4" />
             Declare incident

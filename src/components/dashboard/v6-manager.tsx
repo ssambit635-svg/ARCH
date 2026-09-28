@@ -81,7 +81,7 @@ export function DependencyManager({
             </label>
             <button
               disabled={busy || !from || !to}
-              className="rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-3.5 py-2 text-sm font-medium text-white transition hover:from-indigo-400 hover:to-indigo-500 disabled:opacity-50"
+              className="rounded-xl bg-bone px-3.5 py-2 text-sm font-medium text-ink-1000 transition hover:bg-white disabled:opacity-50"
             >
               {busy ? 'Saving…' : 'Save relationship'}
             </button>
@@ -178,7 +178,7 @@ export function SloManager({
           </label>
           <button
             disabled={!serviceId || busy}
-            className="rounded-xl bg-gradient-to-b from-indigo-500 to-indigo-600 px-3.5 py-2 text-sm font-medium text-white transition hover:from-indigo-400 hover:to-indigo-500 disabled:opacity-50"
+            className="rounded-xl bg-bone px-3.5 py-2 text-sm font-medium text-ink-1000 transition hover:bg-white disabled:opacity-50"
           >
             {busy ? 'Saving…' : 'Save SLO'}
           </button>

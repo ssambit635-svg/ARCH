@@ -65,7 +65,7 @@ export function SidebarNav({ openIncidents, onNavigate }: { openIncidents: numbe
     <nav className="flex-1 space-y-5 overflow-y-auto scroll-thin px-3 pb-4" aria-label="Dashboard">
       {sections.map((section) => (
         <div key={section.label}>
-          <p className="px-2.5 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600">{section.label}</p>
+          <p className="arch-mono px-2.5 pb-2 text-[9.5px] font-semibold uppercase tracking-[0.18em] text-ash-700">{section.label}</p>
           <ul className="space-y-0.5">
             {section.items.map((item) => {
               const active = item.href === '/dashboard' ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -76,22 +76,24 @@ export function SidebarNav({ openIncidents, onNavigate }: { openIncidents: numbe
                     href={item.href}
                     onClick={onNavigate}
                     aria-current={active ? 'page' : undefined}
-                    className={`group relative flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13.5px] font-medium transition ${
-                      active ? 'bg-white/[0.07] text-white shadow-[0_1px_8px_rgb(0_0_0/0.35)] ring-1 ring-inset ring-white/[0.08]' : 'text-slate-400 hover:bg-white/[0.04] hover:text-slate-100'
+                    className={`group relative flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-[13.5px] font-medium transition-colors duration-200 ${
+                      active ? 'bg-white/[0.055] text-bone ring-1 ring-inset ring-white/[0.09]' : 'text-ash-400 hover:bg-white/[0.035] hover:text-bone'
                     }`}
                   >
-                    {active ? <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-gradient-to-b from-indigo-400 to-violet-500" aria-hidden /> : null}
-                    <span className={active ? 'text-indigo-300' : item.ai ? 'text-violet-400/90' : 'text-slate-500 group-hover:text-slate-300'}>
+                    {active ? (
+                      <span className="absolute -left-3 top-1/2 h-4 w-[2px] -translate-y-1/2 rounded-r-full bg-signal-500" aria-hidden />
+                    ) : null}
+                    <span className={active ? 'text-signal-400' : item.ai ? 'text-signal-500/80' : 'text-ash-600 group-hover:text-ash-300'}>
                       <item.icon />
                     </span>
                     <span className="flex-1 truncate">{item.label}</span>
                     {item.ai ? (
-                      <span className="rounded-md bg-gradient-to-r from-indigo-500/25 to-violet-500/25 px-1.5 py-px text-[10px] font-bold tracking-wide text-violet-200 ring-1 ring-inset ring-violet-500/30">
+                      <span className="arch-mono rounded-[4px] border border-signal-500/25 bg-signal-500/[0.08] px-1.5 py-px text-[9px] font-bold tracking-[0.1em] text-signal-300">
                         AI
                       </span>
                     ) : null}
                     {badge > 0 ? (
-                      <span className="min-w-5 rounded-full bg-rose-500/20 px-1.5 py-px text-center text-[11px] font-bold tabular-nums text-rose-300 ring-1 ring-inset ring-rose-500/30">
+                      <span className="arch-mono min-w-5 rounded-[4px] border border-sev-critical/30 bg-sev-critical/[0.12] px-1.5 py-px text-center text-[10.5px] font-bold tabular-nums text-sev-critical">
                         {badge}
                       </span>
                     ) : null}

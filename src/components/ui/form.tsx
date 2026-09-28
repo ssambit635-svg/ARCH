@@ -123,10 +123,10 @@ export function SubmitButton({
   const { pending } = useFormStatus();
   const variants = {
     primary:
-      'bg-gradient-to-b from-indigo-500 to-indigo-600 text-white shadow-[0_4px_16px_-4px_rgb(99_102_241/0.6)] ring-1 ring-inset ring-white/10 hover:from-indigo-400 hover:to-indigo-500',
+      'bg-bone text-ink-1000 shadow-[0_10px_24px_-14px_rgb(0_0_0/0.9)] ring-1 ring-inset ring-ink-1000/10 hover:bg-white',
     secondary: 'border border-white/10 bg-white/[0.04] text-slate-200 hover:border-white/20 hover:bg-white/[0.08]',
     danger:
-      'bg-gradient-to-b from-rose-500 to-rose-600 text-white shadow-[0_4px_16px_-4px_rgb(244_63_94/0.6)] ring-1 ring-inset ring-white/10 hover:from-rose-400 hover:to-rose-500',
+      'bg-gradient-to-b from-rose-500 to-rose-600 text-white shadow-[0_4px_16px_-4px_rgb(244_63_94/0.6)] ring-1 ring-inset ring-ink-1000/10 hover:from-rose-400 hover:to-rose-500',
     ai: 'bg-gradient-to-r from-indigo-500/30 to-violet-500/30 text-violet-100 ring-1 ring-inset ring-violet-500/40 hover:from-indigo-500/40 hover:to-violet-500/40',
   } as const;
 

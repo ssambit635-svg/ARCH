@@ -50,11 +50,14 @@ export function Shell({
       <div className="arch-backdrop pointer-events-none fixed inset-0" aria-hidden />
 
       {/* Desktop sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[248px] flex-col border-r border-white/[0.06] bg-abyss-900/80 backdrop-blur lg:flex">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[248px] flex-col border-r border-white/[0.07] bg-ink-950/85 backdrop-blur-xl lg:flex">
         <SidebarBrand />
         <SidebarNav openIncidents={openIncidents} />
-        <div className="border-t border-white/[0.06] px-5 py-3.5">
-          <p className="arch-mono text-[10px] uppercase tracking-[0.14em] text-slate-600">ARCH · on-prem ready</p>
+        <div className="border-t border-white/[0.07] px-5 py-3.5">
+          <p className="arch-mono flex items-center gap-2 text-[9.5px] uppercase tracking-[0.16em] text-ash-600">
+            <span className="size-1.5 rounded-full bg-state-ok" aria-hidden />
+            ARCH · on-prem ready
+          </p>
         </div>
       </aside>
 
@@ -62,7 +65,7 @@ export function Shell({
       {menuOpen ? (
         <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label="Navigation">
           <div className="absolute inset-0 animate-fade-in bg-black/70 backdrop-blur-sm" onClick={() => setMenuOpen(false)} aria-hidden />
-          <aside className="absolute inset-y-0 left-0 flex w-72 animate-slide-in-right flex-col border-r border-white/10 bg-abyss-900">
+          <aside className="absolute inset-y-0 left-0 flex w-72 animate-slide-in-right flex-col border-r border-white/[0.09] bg-ink-950">
             <SidebarBrand />
             <SidebarNav openIncidents={openIncidents} onNavigate={() => setMenuOpen(false)} />
           </aside>
@@ -80,8 +83,8 @@ export function Shell({
           onSearch={() => setPaletteOpen(true)}
         />
         <main className="mx-auto w-full max-w-[1200px] min-w-0 flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
-        <footer className="border-t border-white/[0.05] px-6 py-4 lg:px-8">
-          <p className="mx-auto max-w-[1200px] text-xs text-slate-600">
+        <footer className="border-t border-white/[0.06] px-6 py-4 lg:px-8">
+          <p className="arch-mono mx-auto max-w-[1200px] text-[10.5px] uppercase tracking-[0.12em] text-ash-700">
             Every write is audited · Status colors mean status — nothing else
           </p>
         </footer>

@@ -25,7 +25,7 @@ export function SegmentedControl({
           aria-selected={option.active}
           className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition ${
             option.active
-              ? 'bg-white/[0.09] text-white shadow-[0_1px_8px_rgb(0_0_0/0.4)] ring-1 ring-inset ring-white/10'
+              ? 'bg-white/[0.09] text-white shadow-[0_1px_8px_rgb(0_0_0/0.4)] ring-1 ring-inset ring-ink-1000/10'
               : 'text-slate-400 hover:bg-white/[0.05] hover:text-slate-200'
           }`}
         >
