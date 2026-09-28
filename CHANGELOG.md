@@ -15,6 +15,150 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Added — V10.3 · the pack grows to 161 topics, and answers comparisons
+
+The honest limit from V10 has not changed — a curated pack is not a pretrained model. What changed is
+the size of the canon, and what the pack does with a question that names *two* topics instead of one:
+**161 hand-written topics across 16 families**, still offline, still cited, still ₹0 per answer.
+
+- **+72 topics.** New coverage that engineers actually ask for: **languages** (JVM and bytecode, Rust
+  ownership and borrow checking, memory-managed mobile targets, SQL as a language, compiled vs
+  interpreted vs JIT, functional vs object-oriented), **web** (CORS, cookies and storage, cache
+  headers, CDNs, pagination, API versioning, API gateways, the event loop, browser performance,
+  accessibility, i18n, SEO, feature flags), **databases** (isolation levels and dirty reads,
+  normalisation, NoSQL families, search engines and inverted indexes, time-series data, partitioning,
+  backups/PITR, locks and deadlocks), **infra** (Dockerfiles and image size, Kubernetes networking,
+  autoscaling, triage on a Linux box, SSH and bastions, cron and schedulers, immutable artefacts),
+  **distributed systems** (consensus and quorums, distributed locks, sagas, message ordering,
+  consistent hashing, CRDTs), **security** (zero trust, JWT vs sessions, injection and XSS/CSRF,
+  password hashing, RBAC/ABAC, audit logging, threat modelling), **engineering** (TDD, code review,
+  technical debt, debugging, documentation), **data** (ETL/ELT, warehouse/lake/lakehouse, stream
+  processing, data quality, governance and PII), **AI** (transformers, embeddings and vector search,
+  fine-tuning vs RAG, MLOps, agents and tool use, cost and guardrails), **performance** (profiling and
+  flame graphs, slow-query tuning), **computer-science fundamentals** (data structures and Big-O,
+  compilers and ASTs) and **emerging tech** (quantum computing, blockchains, IoT/embedded, game
+  development).
+- **Comparison questions are composed from both entries.** "Redis vs Postgres — which should I use?"
+  now answers with *both* topics, each in its own words, with **both** citations, and one line that
+  says plainly that the two pack entries are being quoted rather than a verdict generated. When a
+  single entry already covers both sides (Docker vs Kubernetes, REST vs GraphQL) that entry is the
+  answer — no stitched-together pair.
+- **A near miss is no longer a dead end.** When a question is genuinely outside the pack, the honest
+  fallback now names the **closest topics** it does cover and offers them as follow-ups — as a hint,
+  not as an answer: no citation is invented, confidence stays `low`, and a question with no shared
+  vocabulary ("what is good for lunch") still gets no invented suggestion at all.
+- **Definition questions win against a workspace intent that only matched a word.** "what is a service
+  mesh" used to be answered as a *services* question, "how do you do a postmortem" as *lessons*,
+  "what is a document database" as a *runbook* one and "explain the twelve-factor app" with a recent
+  incident. Definition wording now goes to the pack; wording about *this* workspace ("our runbook",
+  "what services are degraded right now?") stays with the workspace.
+- **Data hygiene, enforced by a test.** One alias now belongs to exactly one topic — leaked aliases
+  ("what is a cdn" living inside the caching entry, duplicate `cors`/`jwt`/`xss`/`bcrypt`/`zero trust`
+  phrases) were fixed, and the data-shape test fails if a leak comes back.
+- **Measured, not asserted:** 497 tests green (41 in the chat engine), `npm run smoke:api` 124/124, and
+  a fresh **89-question battery** (one question per topic family, written *after* the pack was built)
+  answered **89/89** from the pack; the original 79-question canon and the 10-question precision set
+  still pass.
+
+### Added — V10 · a built-in tech knowledge pack (and an honest limit)
+
+"Can it answer any tech question in the world?" — a curated pack cannot equal a pretrained model's
+coverage, and pretending otherwise would be the one thing an incident tool must never do. What V10
+does instead: answer the canon — the 89 questions engineers actually ask — offline, deterministically,
+with a citation, in English or Hinglish, and say plainly when a topic is outside the pack. No vendor,
+no API key, no model download, still ₹0 per answer.
+
+- **89 built-in topics across 11 families** (`src/server/ai/arch-model/tech-knowledge.ts`):
+  languages (oldest language, Go vs Rust, choosing a stack), web (HTTP status codes, REST/GraphQL/gRPC,
+  DNS, TLS, caching, HTTP/2 vs 3, TCP, rate limiting, backpressure), databases (SQL vs NoSQL, ACID, CAP,
+  eventual consistency, Postgres vs MySQL, indexes and N+1, replication and sharding, migrations,
+  connection pools, event sourcing/CQRS, OLTP vs OLAP, hot partitions, Bloom filters), infra (Docker vs
+  Kubernetes, pods and probes, Helm and operators, service mesh, CI/CD and IaC, queues/Kafka, serverless,
+  monolith vs microservices), cloud (IaaS/PaaS, why the bill is big), ops (MTTR and error budgets, SLO/SLI
+  burn rate, alert fatigue, on-call, postmortems, runbooks, idempotency, retries and circuit breakers,
+  deploy strategies, observability, chaos, change management, toil, 12-factor), security (authn vs authz,
+  OAuth/OIDC/JWT/SAML, MFA and zero trust, encryption vs hashing, secrets and HMAC, network controls and
+  DDoS, OWASP attacks, supply chain), testing (test pyramid, incident regression tests, load and capacity),
+  systems (processes/threads, GC and leaks, deadlocks and races, virtual memory/cgroups/OOM), engineering
+  practice (code review, design docs and ADRs, tech debt, agile/estimates, monorepo vs polyrepo) and AI
+  (how LLMs work, RAG, hallucination, local vs API, judging an AI feature) — plus the ARCH-specific topics.
+- **Every answer carries a "Tech pack" citation** — so a reader can tell general knowledge from
+  workspace knowledge, which is the distinction that matters when deciding whether to act on a reply.
+- **It answers the question you asked, not the previous one.** A complete new question inside a
+  conversation ("what is quantum tunnelling in GPUs?") no longer inherits the subject of the turn
+  before it; genuine follow-ups ("and the fix?", "uska root cause kya tha?") still do. Questions the
+  pack cannot cover keep the honest fallback, mid-conversation as well as at the start.
+- **It says what it does not know.** Outside the pack, the fallback names how many topics are built in,
+  suggests the closest family, and points at Knowledge sources for your own docs — instead of inventing
+  a fact or answering a different question.
+- **Workspace questions are never shadowed.** Matching is scored (alias phrase > cue > keyword) with a
+  confidence floor, so "our cache incident yesterday" stays an incident question and "what is open right
+  now?" is still the open queue.
+- **It understands how engineers actually ask.** Acronyms, articles and either/or phrasings are
+  normalised ("what is *the* CAP theorem", "websocket *or* polling"), a bare topic name is treated as a
+  question ("redis", "kafka"), and the Hinglish definition shape — "docker kya hai", "redis kaise kaam
+  karta hai", "slo burn rate kya hota hai" — routes to knowledge instead of to triage advice or the app
+  walkthrough. Ops concepts that ARCH answers with *your* numbers (MTTR, SLO/SLI, runbooks, error
+  budget, MTTD/MTBF) keep the workspace-aware answer even when the classifier is unsure, and the error
+  budget concept now has its own explanation rather than falling through to postmortems. Definition questions that merely contain an error code ("what does HTTP
+  503 mean?") go to the pack; the same words about your own estate ("we keep seeing 503s after the
+  deploy — what do we do?") stay with the incident advisor.
+- **Growing it is a data change, not a code change.** Append an entry (title, aliases, keywords, EN +
+  Hinglish answer, related topics) and it is live in chat and in tests; the engine's matching never
+  changes. For the long tail beyond the pack, the opt-in local model (`AI_PROVIDER=arch-hybrid`) stays
+  the documented path — it runs on the same server, free, but slower and only as good as the model your
+  hardware can hold.
+- **Also fixed in this release:** asking "who is on call tonight?" in a workspace with no members now
+  says that the roster is empty and where to invite people, instead of recycling the empty-incidents
+  line; and "explain the CAP theorem" answers the theorem rather than listing your recent incidents.
+
+
+### Added — V9 · memory that is actually saved (and yours to delete)
+
+Asked "what do you remember about me?", ARCH used to answer from whatever happened to still be in
+the last 12 turns — and said "I have saved that" when nothing had been saved anywhere. V9 makes the
+sentence true: the facts live in the workspace database, survive the conversation, and appear in a
+Memory panel you control. Still no vendor, no API key, and nothing leaves your server.
+
+- **Memory across conversations.** Introduce yourself once ("mera naam Vikram hai, hum Postgres aur
+  Redis use karte hain") and *every* later chat knows it — including "which language should I use
+  for microservices?", which now factors in the stack you told it about. The facts are stored per
+  member (`arch_chat_memory`, migration `20260928120000_v9_chat_memory`): name, role, tech stack and
+  notes, bounded to 25 notes / 12 stack items.
+- **A Memory panel, not a black box** (`Memory` in the chat header): see exactly what ARCH stored,
+  add a note by hand, forget a single item, or **Forget everything**. Reading needs `copilot.read`;
+  changing needs `copilot.generate`. "What ARCH knows about you" is a list you can edit — that is
+  the only version of memory a team should accept.
+- **"Clear memory" really clears it** — in chat or in the panel. The row keeps a `clearedAt`
+  timestamp so the panel can say when it was last wiped, but the facts are gone, immediately, for
+  every future conversation.
+- **Nothing is guessed and nothing is shared.** Memory is filled only from what the member types
+  (plus the account name as a last-resort fallback), is visible only to that member, and never
+  trains the model — chat turns are still not training rows. Every add and wipe is audited with
+  metadata only: counts and booleans, never the text.
+
+### Added — Chat P1 · the mechanics every chat has: copy, export, and "Try again"
+
+The V8 chat answered well but you could not *handle* an answer: no copy button, no way to retry a
+weak answer without retyping the question, nothing to paste into a postmortem. Chat P1 closes that
+opening minute of use — code only, still ₹0 per turn, still nothing leaving the server.
+
+- **"Try again" on the last answer.** One click re-asks the same question against the workspace *as
+  it is now* — declare an incident after asking "what is open?", hit Try again, and the answer
+  includes it. The stored answer is rewritten in place (`POST /api/copilot/chat/sessions/{id}/regenerate`):
+  the transcript keeps one answer per question, the message count does not drift, and the retry is
+  audited with shape only — intent, confidence, latency — never the text.
+- **Copy an answer, copy the whole chat, export it.** Each answer has a Copy button; the header
+  copies the conversation or downloads it as a Markdown file (title, turns, and the sources each
+  answer cited) — ready to paste into a postmortem or a handover doc. Entirely client-side.
+- **It reads like a chat.** The newest answer reveals itself over a few hundred milliseconds instead
+  of appearing fully formed (respecting `prefers-reduced-motion`), and the shortcuts are the
+  familiar ones: `⌘/Ctrl+Shift+O` new chat, `⌘/Ctrl+K` search, `Esc` to close.
+- **The wider plan is written down.** [`docs/product/AI-GAP-ANALYSIS.md`](docs/product/AI-GAP-ANALYSIS.md)
+  is the honest diff between ARCH's own AI and ChatGPT — what is already better (grounding,
+  privacy, cost, audit), what is closeable for ₹0 (this release is phase P1 of five), and what ₹0
+  can never buy. The smoke suite covers `regenerate` too.
+
 ### Added — V8 · Chat with ARCH: your own model, in a real chat
 
 Until now ARCH's own model was visible mostly through the incident panel and the model page — a

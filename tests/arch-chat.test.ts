@@ -3,14 +3,18 @@ import { resetRateLimits } from '@/lib/rate-limit';
 import { env } from '@/lib/env';
 import {
   chatCorpusSummary,
+  clearChatMemory,
   createChatSession,
   deleteAllChatSessions,
   deleteChatSession,
+  getChatMemory,
   getChatSession,
   listChatSessions,
+  regenerateChatAnswer,
   renameChatSession,
   sendChatMessage,
   titleFromMessage,
+  updateChatMemory,
 } from '@/server/services/archChat.service';
 import { ingestKnowledgeSource, resetKnowledgeCaches } from '@/server/services/knowledge.service';
 import { approveSuggestion, generateSuggestion } from '@/server/services/copilot.service';
@@ -393,6 +397,153 @@ describe('Chat with ARCH (service)', () => {
     expect(turn5.archMessage.intent).toBe('tech_stack_advice');
     expect(turn5.archMessage.content).toMatch(/Go|Rust/);
   });
+
+  it('regenerates the last answer in place — same row, no second answer, count unchanged', async () => {
+    const { organization, owner, project, service } = await setup('regen');
+    await createTestIncident({ organizationId: organization.id, projectId: project.id, serviceId: service.id, title: 'Queue backlog' });
+    const session = await createChatSession({ organizationId: organization.id, userId: owner.id });
+    const turn = await sendChatMessage({ organizationId: organization.id, userId: owner.id, sessionId: session.id, content: 'what is open right now?' });
+    expect(turn.session.messageCount).toBe(2);
+
+    const regenerated = await regenerateChatAnswer({ organizationId: organization.id, userId: owner.id, sessionId: session.id });
+
+    // The transcript keeps its shape: the same ARCH row is rewritten, nothing is appended.
+    expect(regenerated.archMessage.id).toBe(turn.archMessage.id);
+    expect(regenerated.archMessage.content.length).toBeGreaterThan(0);
+    expect(regenerated.archMessage.content).toContain('Queue backlog');
+    expect(regenerated.session.messageCount).toBe(2);
+    const stored = await db.archChatMessage.findMany({ where: { sessionId: session.id }, orderBy: { createdAt: 'asc' } });
+    expect(stored).toHaveLength(2);
+    expect(stored[0]!.role).toBe('USER');
+    expect(stored[1]!.role).toBe('ARCH');
+    expect(stored[1]!.content).toBe(regenerated.archMessage.content);
+    // …and the conversation still works as a thread afterwards.
+    const followUp = await sendChatMessage({ organizationId: organization.id, userId: owner.id, sessionId: session.id, content: 'what should I do about it?' });
+    expect(followUp.session.messageCount).toBe(4);
+  }, 60_000);
+
+  it('regenerates against the workspace as it is now, and audits the retry without any text', async () => {
+    const { organization, owner, project, service } = await setup('regen-fresh');
+    const session = await createChatSession({ organizationId: organization.id, userId: owner.id });
+    const before = await sendChatMessage({ organizationId: organization.id, userId: owner.id, sessionId: session.id, content: 'what is open right now?' });
+    expect(before.archMessage.content).not.toContain('Fresh outage after deploy');
+
+    // The workspace changed between the question and the retry — that is the point of "Try again".
+    await createTestIncident({ organizationId: organization.id, projectId: project.id, serviceId: service.id, title: 'Fresh outage after deploy', severity: 'CRITICAL' });
+    await regenerateChatAnswer({ organizationId: organization.id, userId: owner.id, sessionId: session.id });
+
+    const stored = await db.archChatMessage.findFirstOrThrow({ where: { sessionId: session.id, role: 'ARCH' } });
+    expect(stored.content).toContain('Fresh outage after deploy');
+
+    const audit = await db.auditLog.findFirstOrThrow({ where: { organizationId: organization.id, action: 'chat.message.regenerate' } });
+    const metadata = JSON.stringify(audit.metadata);
+    expect(metadata).not.toContain('Fresh outage after deploy');
+    expect(metadata).not.toContain('what is open right now');
+    expect((audit.metadata as { intent?: string }).intent).toBe('open_incidents');
+  }, 60_000);
+
+  it('refuses regenerating someone else’s chat, a chat with no answer, and a VIEWER', async () => {
+    const { organization, owner, viewer } = await setup('regen-scope');
+    const stranger = await createTestUser('stranger-regen@regen-scope.test', 'Regen Stranger');
+    await addMember(organization.id, stranger.id, 'RESPONDER');
+    const session = await createChatSession({ organizationId: organization.id, userId: owner.id });
+    await sendChatMessage({ organizationId: organization.id, userId: owner.id, sessionId: session.id, content: 'what is open right now?' });
+
+    // Another member of the same workspace gets the same 404 as an id that never existed.
+    await expect(regenerateChatAnswer({ organizationId: organization.id, userId: stranger.id, sessionId: session.id })).rejects.toMatchObject({ status: 404 });
+    await expect(regenerateChatAnswer({ organizationId: organization.id, userId: viewer.id, sessionId: session.id })).rejects.toMatchObject({ status: 403 });
+
+    const empty = await createChatSession({ organizationId: organization.id, userId: owner.id });
+    await expect(regenerateChatAnswer({ organizationId: organization.id, userId: owner.id, sessionId: empty.id })).rejects.toMatchObject({ status: 400 });
+  }, 60_000);
+
+  it('remembers across conversations — a new chat still knows what was saved (V9)', async () => {
+    const { organization, owner } = await setup('memory-persist');
+    const first = await createChatSession({ organizationId: organization.id, userId: owner.id });
+    const saved = await sendChatMessage({
+      organizationId: organization.id,
+      userId: owner.id,
+      sessionId: first.id,
+      content: 'mera naam Vikram hai aur hum postgres aur redis use karte hain',
+    });
+    expect(saved.archMessage.intent).toBe('memory_store');
+
+    // The row is really there — this is the whole point of V9.
+    const row = await db.archChatMemory.findUniqueOrThrow({ where: { organizationId_userId: { organizationId: organization.id, userId: owner.id } } });
+    expect((row.facts as { userName?: string }).userName).toBe('Vikram');
+
+    // A brand-new conversation, no history at all: memory must come from the database.
+    const second = await createChatSession({ organizationId: organization.id, userId: owner.id });
+    const recall = await sendChatMessage({ organizationId: organization.id, userId: owner.id, sessionId: second.id, content: 'what do you remember about me?' });
+    expect(recall.archMessage.content).toContain('Vikram');
+    expect(recall.archMessage.content).toMatch(/Postgres|postgres/i);
+  }, 60_000);
+
+  it('clears memory everywhere when asked, and keeps the row so the panel can say when', async () => {
+    const { organization, owner } = await setup('memory-clear');
+    const session = await createChatSession({ organizationId: organization.id, userId: owner.id });
+    await sendChatMessage({ organizationId: organization.id, userId: owner.id, sessionId: session.id, content: 'remember that deploys are on Thursdays' });
+
+    const cleared = await sendChatMessage({ organizationId: organization.id, userId: owner.id, sessionId: session.id, content: 'clear memory' });
+    expect(cleared.memoryCleared).toBe(true);
+    expect(cleared.archMessage.intent).toBe('memory_clear');
+
+    const after = await getChatMemory({ organizationId: organization.id, userId: owner.id });
+    expect(after.hasFacts).toBe(false);
+    expect(after.notes).toHaveLength(0);
+    expect(after.clearedAt).not.toBeNull();
+
+    // …and a fresh chat cannot recall what was wiped.
+    const second = await createChatSession({ organizationId: organization.id, userId: owner.id });
+    const recall = await sendChatMessage({ organizationId: organization.id, userId: owner.id, sessionId: second.id, content: 'what do you remember about me?' });
+    expect(recall.archMessage.content).not.toContain('Thursdays');
+    // `createTestUser` names this account "Memory Clear Owner": the account name is used to greet
+    // someone, never reported back as a remembered fact.
+    expect(recall.archMessage.content).toMatch(/kuch bhi saved nahi hai|nothing saved about you/i);
+    expect(recall.archMessage.content).not.toContain('Memory Clear Owner');
+
+    // A greeting, on the other hand, still uses the account name — that is not memory.
+    const greeting = await sendChatMessage({ organizationId: organization.id, userId: owner.id, sessionId: second.id, content: 'hi' });
+    expect(greeting.archMessage.content.length).toBeGreaterThan(10);
+  }, 60_000);
+
+  it('keeps memory personal: another member of the same workspace remembers nothing of it', async () => {
+    const { organization, owner, viewer } = await setup('memory-personal');
+    const session = await createChatSession({ organizationId: organization.id, userId: owner.id });
+    await sendChatMessage({ organizationId: organization.id, userId: owner.id, sessionId: session.id, content: 'my name is Vikram and we use kubernetes' });
+
+    expect(await getChatMemory({ organizationId: organization.id, userId: viewer.id })).toMatchObject({ hasFacts: false });
+    const viewerSession = await createChatSession({ organizationId: organization.id, userId: owner.id });
+    const viewerRecall = await sendChatMessage({ organizationId: organization.id, userId: owner.id, sessionId: viewerSession.id, content: 'what do you remember about me?' });
+    expect(viewerRecall.archMessage.content).toContain('Vikram'); // the owner still can
+
+    const strangerView = await getChatMemory({ organizationId: organization.id, userId: viewer.id });
+    expect(strangerView.notes).toEqual([]);
+    expect(strangerView.userName).toBeNull();
+  }, 60_000);
+
+  it('lets a member edit and delete their own memory, and audits it without the facts', async () => {
+    const { organization, owner, viewer } = await setup('memory-panel');
+    await updateChatMemory({ organizationId: organization.id, userId: owner.id, notes: { add: 'Prod deploys need two approvals' } });
+    const view = await updateChatMemory({ organizationId: organization.id, userId: owner.id, userName: 'Vikram', userRole: 'SRE' });
+    expect(view.notes).toContain('Prod deploys need two approvals');
+    expect(view.summary).toContain('Vikram');
+    expect(view.hasFacts).toBe(true);
+
+    await updateChatMemory({ organizationId: organization.id, userId: owner.id, notes: { remove: 'Prod deploys need two approvals' } });
+    expect((await getChatMemory({ organizationId: organization.id, userId: owner.id })).notes).toHaveLength(0);
+
+    // A VIEWER may read their (empty) memory but not edit it.
+    await expect(updateChatMemory({ organizationId: organization.id, userId: viewer.id, notes: { add: 'should not work' } })).rejects.toMatchObject({ status: 403 });
+
+    // The panel's "Forget everything" is the same wipe as saying "clear memory".
+    const wiped = await clearChatMemory({ organizationId: organization.id, userId: owner.id });
+    expect(wiped.hasFacts).toBe(false);
+    expect(wiped.clearedAt).not.toBeNull();
+
+    const audit = await db.auditLog.findFirstOrThrow({ where: { organizationId: organization.id, action: 'chat.memory.update' } });
+    expect(JSON.stringify(audit.metadata)).not.toContain('Prod deploys');
+  }, 60_000);
 
   it('does not train on chat text: turns are not feedback rows', async () => {
     const { organization, owner } = await setup('nolearn');

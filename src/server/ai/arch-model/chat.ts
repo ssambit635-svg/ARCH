@@ -21,6 +21,7 @@
 import type { IncidentSeverity, IncidentStatus } from '@/generated/prisma/client';
 import { AI_NAME } from '@/lib/brand';
 import { matchAdvisoryTopic, wantsAdvice } from './advisory';
+import { matchTechFact, matchTechComparison, suggestTechTopics, techComparisonDigest, techFactSuggestions, TECH_CATEGORY_LABELS, TECH_PACK_STATS, type TechFact } from './tech-knowledge';
 import { clip, formatDuration } from './text';
 
 // ---------------------------------------------------------------------------------------------
@@ -93,7 +94,10 @@ export type ChatKnowledgeChunk = {
 };
 
 export type ChatMemory = {
+  /** A name the member typed, or one saved earlier — the only name that counts as "remembered". */
   userName?: string | null;
+  /** The name on the account. Used to greet someone, never reported as something ARCH remembers. */
+  accountName?: string | null;
   userRole?: string | null;
   techStack?: string[];
   notes?: string[];
@@ -131,7 +135,8 @@ export type ChatSnapshot = {
 export type ChatTurn = { role: 'user' | 'arch'; content: string };
 
 export type ChatCitation = {
-  source: 'incident' | 'runbook' | 'past_incident' | 'pattern' | 'service' | 'workspace' | 'playbook';
+  /** `reference` = ARCH's built-in tech knowledge pack (general knowledge, not workspace data). */
+  source: 'incident' | 'runbook' | 'past_incident' | 'pattern' | 'service' | 'workspace' | 'playbook' | 'reference';
   label: string;
   detail?: string;
   /** Dashboard link for anything clickable. */
@@ -163,6 +168,8 @@ export type ChatIntent =
   | 'memory_recall'
   | 'memory_clear'
   | 'concept_explain'
+  /** General engineering knowledge answered from the built-in tech pack (oldest language, 502 vs 503…). */
+  | 'tech_fact'
   | 'health_summary'
   | 'unknown';
 
@@ -261,7 +268,10 @@ export function extractMemory(params: {
   userProfile?: { name: string | null; email: string | null };
 }): ChatMemory {
   const memory: ChatMemory = {
-    userName: params.userProfile?.name ?? null,
+    // Deliberately *not* pre-filled from the account profile: a name the member typed themselves
+    // must beat the account name, and a stored memory must beat both (see mergeChatMemory). The
+    // profile name is applied at the end, only when nothing better was found.
+    userName: null,
     userRole: null,
     techStack: [],
     notes: [],
@@ -347,7 +357,40 @@ export function extractMemory(params: {
 
   memory.techStack = Array.from(stackSet);
   memory.notes = notesList;
+  memory.userName = memory.userName ?? params.userProfile?.name?.trim() ?? null;
   return memory;
+}
+
+/**
+ * Fold this turn's extraction into the facts already stored for this member (V9).
+ *
+ * Precedence is deliberate: something the member just said this turn wins over an old value (people
+ * correct themselves), and a stored value wins over the fallback name from the account. A "forget
+ * everything" in the visible history clears both sides.
+ */
+function mergeChatMemory(extracted: ChatMemory, stored?: ChatMemory, profileName: string | null = null): ChatMemory {
+  // The account name is *not* memory: it is used to greet someone, but never reported as a fact
+  // ARCH remembered — otherwise wiping memory would still leave "I remember your name".
+  const accountName = profileName ?? stored?.accountName ?? null;
+  if (extracted.cleared || stored?.cleared) {
+    // The service wipes the stored row on clear; until this turn ends, the engine must act as if it
+    // is already gone — otherwise something in the visible history would resurrect the old facts.
+    return {
+      userName: extracted.cleared ? null : extracted.userName ?? stored?.userName ?? null,
+      accountName,
+      userRole: extracted.cleared ? null : extracted.userRole ?? stored?.userRole ?? null,
+      techStack: extracted.cleared ? [] : [...new Set([...(stored?.techStack ?? []), ...(extracted.techStack ?? [])])],
+      notes: extracted.cleared ? [] : [...new Set([...(stored?.notes ?? []), ...(extracted.notes ?? [])])],
+      cleared: true,
+    };
+  }
+  return {
+    userName: extracted.userName ?? stored?.userName ?? null,
+    accountName,
+    userRole: extracted.userRole ?? stored?.userRole ?? null,
+    techStack: [...new Set([...(stored?.techStack ?? []), ...(extracted.techStack ?? [])])],
+    notes: [...new Set([...(stored?.notes ?? []), ...(extracted.notes ?? [])])],
+  };
 }
 
 /**
@@ -597,6 +640,37 @@ const INTENT_RULES: IntentRule[] = [
     patterns: [/\b(tumhara din|how'?s? your day|what'?s up|kya chal raha hai|bored|joke|mazak|kaisi chal rahi|how are things|all good|kya haal chaal)\b/i],
   },
 ];
+
+/**
+ * Shapes used when the workspace intents would otherwise swallow a general question.
+ *
+ * "What does HTTP 503 mean?" classifies as incident *advice* (it contains an error code) but is a
+ * definition question; "502s after the deploy — what do we do?" is the same words about *us* and
+ * must stay with the incident advisor. Together these two tests separate the two cases.
+ */
+const DEFINITION_QUESTION = /^(what(?:'s| is| are| does| do)\b|explain\b|define\b|meaning of\b|difference between\b|which\b|how (?:does|do|are|is|to|can|should)\b)/i;
+/** The same shape in Hinglish: "slo burn rate kya hota hai" is a definition, not an outage. */
+const HINGLISH_DEFINITION = /\b(kya hai|kya hain|kya hota hai|kya hoti hai|kya hota|kya matlab|matlab kya|samjha?o|samjha do|bata ?o|bata do|kaise kaam karta hai|kaise kaam karti hai)\b/i;
+const WORKSPACE_SUBJECT = /\b(we|us|our|ours|my|team|this|these|those|here|today|yesterday|tonight|currently|now|incident|incidents|on ?call|page[ds]?|runbook|runbooks|playbook|playbooks|hamara|hamare|humara|humare|hum|apna|apne|aaj|kal|abhi|yahan|iske|iski|ink[ae])\b/i;
+
+/** True when the member is asking for a definition — in either language — rather than for triage. */
+function isDefinitionQuestion(question: string): boolean {
+  return DEFINITION_QUESTION.test(question) || HINGLISH_DEFINITION.test(question);
+}
+
+/** True when the sentence is about *this* workspace, not about engineering in general. */
+function isWorkspaceQuestion(question: string): boolean {
+  return WORKSPACE_SUBJECT.test(question);
+}
+
+/** Openers that mean "same subject as before" in English and Hinglish. */
+const FOLLOW_UP_OPENER = /^(and\b|also\b|then\b|but\b|aur\b|uska\b|uske\b|uski\b|iska\b|iske\b|iski\b|wo\b|woh\b|that\b|it\b|what about\b|how about\b|why\?|why$)/i;
+
+/**
+ * Concepts that ARCH answers with the workspace's own numbers ("your median resolve time", "your
+ * runbooks"), so they never fall through to the general pack.
+ */
+const OPS_CONCEPTS = /\b(mttr|mttd|mtbf|slo|sla|sli|runbook|playbook|blast radius|error budget)\b/i;
 
 export function classifyChatIntent(question: string): ChatIntent {
   const scores = new Map<ChatIntent, number>();
@@ -850,7 +924,17 @@ function answerServices(snapshot: ChatSnapshot, lang: ChatLang): { text: string;
 
 function answerTeam(snapshot: ChatSnapshot, lang: ChatLang): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
   if (snapshot.members.length === 0) {
-    return { text: emptyWorkspaceHint(lang), cites: [], suggestions: ['What can you do?'], confidence: 'low' };
+    // "Who is on call?" has nothing to do with incidents — say what is actually missing, and where
+    // to fix it, instead of recycling the empty-incidents line.
+    return {
+      text:
+        lang === 'hinglish'
+          ? 'Is workspace mein abhi team members load nahi hain, isliye roster ya load ka jawab nahi de sakta. **Settings → People** se log invite karo — uske baad "kaun on-call hai?" jaise sawaal real data se answer honge.\n\nTab tak general on-call practice mere built-in tech pack mein hai: "on call best practices" poochho.'
+          : 'I have no members loaded in this workspace yet, so there is no roster or load to read. Invite people in **Settings → People** and questions like "who is on call tonight?" answer from real data.\n\nUntil then, general on-call practice lives in my built-in tech pack — ask "on call best practices".',
+      cites: [],
+      suggestions: ['On call best practices', 'What can you do?'],
+      confidence: 'low',
+    };
   }
   const lines = snapshot.members
     .slice(0, 12)
@@ -1204,18 +1288,18 @@ function answerMemoryStore(question: string, memory: ChatMemory, lang: ChatLang)
   const nameGreeting = memory.userName ? `${memory.userName}, ` : '';
 
   if (lang === 'hinglish') {
-    parts.push(`Samajh gaya! ${nameGreeting}Maine yeh information memory mein save kar li hai:`);
-    parts.push(bullet(storedItems.length ? storedItems : ['Detail saved to conversation memory']));
-    parts.push('Aage conversation mein main is context ka dhyan rakhunga. Aap kabhi bhi *"tumhe mere baare mein kya yaad hai?"* poochh sakte hain.');
+    parts.push(`Samajh gaya! ${nameGreeting}Maine yeh yaad rakh liya:`);
+    parts.push(bullet(storedItems.length ? storedItems : ['Note save kar liya']));
+    parts.push('Yeh ab *har* nayi chat mein yaad rahega (sirf aapke liye). Memory page par jaakar aap ise kabhi bhi edit ya delete kar sakte hain.');
   } else {
-    parts.push(`Got it! ${nameGreeting}I've saved this information to memory:`);
-    parts.push(bullet(storedItems.length ? storedItems : ['Detail saved to conversation memory']));
-    parts.push('I will keep this context in mind throughout our conversation. You can ask *"What do you remember about me?"* anytime.');
+    parts.push(`Got it! ${nameGreeting}Here is what I will remember:`);
+    parts.push(bullet(storedItems.length ? storedItems : ['Note saved']));
+    parts.push('This now carries across *every* chat — only for you. You can edit or delete any of it from the Memory panel whenever you like.');
   }
 
   return {
     text: parts.join('\n\n'),
-    cites: [{ source: 'workspace', label: 'Conversation memory', detail: storedItems.join(' · ') || 'Updated' }],
+    cites: [{ source: 'workspace', label: 'Memory (saved)', detail: storedItems.join(' · ') || 'Updated' }],
     suggestions: ['What do you remember about me?', 'What is open right now?', 'What should I do in here?'],
     confidence: 'high',
   };
@@ -1226,6 +1310,18 @@ function answerMemoryRecall(question: string, memory: ChatMemory, lang: ChatLang
   const isAskingStack = /\b(stack|technology|framework|database|db)\b/i.test(question);
 
   if (isAskingName) {
+    if (!memory.userName && memory.accountName) {
+      // Honest: the account has a name, but the member never told ARCH to remember one.
+      const text = lang === 'hinglish'
+        ? `Aapke account par naam **${memory.accountName}** hai, lekin aapne mujhe koi naam yaad rakhne ko nahi kaha. *"Mera naam ... hai"* likhein aur main use hamesha ke liye yaad rakhunga.`
+        : `Your account name is **${memory.accountName}**, but you have not asked me to remember a name. Say *"my name is ..."* and I will keep it across every chat.`;
+      return {
+        text,
+        cites: [{ source: 'workspace', label: 'Account', detail: 'Profile name — not saved memory' }],
+        suggestions: ['My name is...', 'What do you remember about me?', 'What is open right now?'],
+        confidence: 'medium',
+      };
+    }
     if (memory.userName) {
       const text = lang === 'hinglish'
         ? `Aapka naam **${memory.userName}** hai.`
@@ -1290,8 +1386,8 @@ function answerMemoryRecall(question: string, memory: ChatMemory, lang: ChatLang
 
   if (items.length === 0) {
     const text = lang === 'hinglish'
-      ? 'Abhi is conversation mein mere paas aapke baare mein koi saved details nahi hain.\n\nAap mujhe apna naam ("Mera naam Rahul hai"), tech stack ("Hum Postgres use karte hain") ya koi note ("Yaad rakhna ki...") bata sakte hain, aur main yaad rakhunga!'
-      : 'I do not have any saved notes about you in this conversation yet.\n\nYou can tell me your name (*"My name is Alex"*), your stack (*"We use Postgres and Redis"*), or ask me to remember something (*"Remember that..."*), and I will keep track of it!';
+      ? 'Abhi mere paas aapke baare mein kuch bhi saved nahi hai (main sirf wahi yaad rakhta hoon jo aap batao — khud se kuch nahi maanta).\n\nAap mujhe apna naam ("Mera naam Rahul hai"), tech stack ("Hum Postgres use karte hain") ya koi note ("Yaad rakhna ki...") bata sakte hain, aur main use hamesha ke liye yaad rakhunga!'
+      : 'I have nothing saved about you yet — I only remember what you actually tell me, never guess.\n\nYou can tell me your name (*"My name is Alex"*), your stack (*"We use Postgres and Redis"*), or ask me to remember something (*"Remember that..."*), and I will keep it across every chat!';
     return {
       text,
       cites: [],
@@ -1301,12 +1397,12 @@ function answerMemoryRecall(question: string, memory: ChatMemory, lang: ChatLang
   }
 
   const text = lang === 'hinglish'
-    ? `Mujhe is conversation se aapke baare mein yeh sab yaad hai:\n\n${bullet(items)}\n\nAap jab chahein nayi details add kar sakte hain ya *"clear memory"* bol kar reset kar sakte hain.`
-    : `Here is what I have saved about you in this conversation:\n\n${bullet(items)}\n\nYou can add more details anytime or say *"clear memory"* to reset.`;
+    ? `Mujhe aapke baare mein yeh sab yaad hai:\n\n${bullet(items)}\n\nYeh har chat mein saath chalta hai — Memory page se aap kabhi bhi edit/delete kar sakte hain, ya *"clear memory"* bol kar sab reset.`
+    : `Here is what I remember about you:\n\n${bullet(items)}\n\nThis carries across every chat — edit or delete any of it from the Memory panel, or say *"clear memory"* to reset.`;
 
   return {
     text,
-    cites: [{ source: 'workspace', label: 'Memory', detail: `${items.length} items recorded` }],
+    cites: [{ source: 'workspace', label: 'Memory (saved)', detail: `${items.length} items recorded` }],
     suggestions: ['What is open right now?', 'Which language should I use?', 'Clear memory'],
     confidence: 'high',
   };
@@ -1314,8 +1410,8 @@ function answerMemoryRecall(question: string, memory: ChatMemory, lang: ChatLang
 
 function answerMemoryClear(lang: ChatLang): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
   const text = lang === 'hinglish'
-    ? 'Memory clear kar di gayi hai! Is conversation ke saare saved user details aur notes wipe kar diye gaye hain.'
-    : 'Memory cleared! I have wiped all saved notes and context for this conversation.';
+    ? 'Memory clear kar di gayi hai! Maine aapke saare saved details (naam, role, tech stack, notes) wipe kar diye hain — ab main aapke baare mein kuch yaad nahi rakhta.'
+    : 'Memory cleared! Every saved detail — name, role, tech stack, notes — is wiped. I no longer remember anything about you.';
   return {
     text,
     cites: [{ source: 'workspace', label: 'Memory reset', detail: 'All conversational context cleared' }],
@@ -1345,7 +1441,20 @@ function answerConceptExplain(question: string, snapshot: ChatSnapshot, lang: Ch
     concept = 'SLO, SLA, and SLI';
     explanationEn = `• **SLI (Service Level Indicator)**: A measurable metric of service behavior (e.g., successful request rate, latency < 200ms).\n• **SLO (Service Level Objective)**: The internal target reliability goal agreed upon by the engineering team (e.g., 99.9% of requests succeed).\n• **SLA (Service Level Agreement)**: The external contractual commitment made to customers with business/financial penalties if breached.`;
     explanationHi = `• **SLI (Service Level Indicator)**: Ek quantifiable metric jo measure karta hai service kaisa perform kar rahi hai (jaise error rate ya latency).\n• **SLO (Service Level Objective)**: Engineering team ka internal target goal (jaise 99.9% uptime).\n• **SLA (Service Level Agreement)**: Customers ke saath official contract jisme breach hone par penalty hoti hai.`;
-  } else if (/\brunbook\b/i.test(q)) {
+  } else if (/\b(mttd|mtbf)\b/i.test(q)) {
+    const isDetect = /\bmttd\b/i.test(q);
+    concept = isDetect ? 'MTTD (Mean Time to Detect)' : 'MTBF (Mean Time Between Failures)';
+    explanationEn = isDetect
+      ? '**MTTD (Mean Time to Detect)** measures how long a problem exists before anyone is alerted — from the first bad request to the page. It is the metric to attack first: if detection is slow, every other number looks worse. Cut it with better signals (symptom-based alerts on user-facing errors) and synthetic checks, not with more alerts.'
+      : '**MTBF (Mean Time Between Failures)** measures the average gap between two failures of the same service. It is a reliability trend metric: falling MTBF means the fixes are not holding, even if each individual incident was resolved quickly.';
+    explanationHi = isDetect
+      ? '**MTTD (Mean Time to Detect)** measure karta hai ki problem shuru hone se kisi ko alert hone tak kitna time laga. Isko pehle theek karo: detection slow ho to baaki har number kharab dikhta hai. Better signals (user-facing symptoms par alert) aur synthetic checks se kam karo, alerts ki ginti badha kar nahi.'
+      : '**MTBF (Mean Time Between Failures)** ek hi service ke do failures ke beech ka average gap batata hai. Yeh reliability trend metric hai: MTBF gir raha hai matlab fixes hold nahi kar rahe, chahe har incident jaldi resolve hua ho.';
+  } else if (/\berror budget\b/i.test(q)) {
+    concept = 'Error budget';
+    explanationEn = `An **error budget** is the amount of unreliability your SLO allows: a 99.9% SLO leaves 0.1% of requests (about 43 minutes a month) as budget. It exists to make the trade-off explicit instead of arguing about it during a release:\n\n• Budget healthy → ship faster, take the risky change.\n• Budget nearly spent → slow down and spend the time on reliability.\n• Budget blown → freeze feature work until it is back, unless something is adding availability.\n\nIn ARCH, the **SLOs** page holds your targets, and alerts are meant to fire on **burn rate** (how fast the budget is going) rather than on every symptom.`;
+    explanationHi = `**Error budget** wo unreliability hai jo aapka SLO allow karta hai: 99.9% SLO ka matlab 0.1% requests (lagbhag 43 minute per month) budget. Iska maksad trade-off ko explicit banana hai, release ke waqt bahas karne ki jagah:\n\n• Budget healthy → tez ship karo, risky change le lo.\n• Budget khatam hone ko hai → slow karo aur reliability par time do.\n• Budget khatam → jab tak wapas na aaye, feature work freeze (jab tak koi cheez availability na badha rahi ho).\n\nARCH mein **SLOs** page par targets hote hain, aur alerts **burn rate** (budget kitni tezi se ja raha hai) par fire hone chahiye, har symptom par nahi.`;
+  } else if (/\b(runbook|playbook)\b/i.test(q)) {
     concept = 'Runbook';
     explanationEn = `A **Runbook** (or playbook) is a documented, step-by-step procedure that responders follow to diagnose, mitigate, and resolve specific production incidents. In ARCH, runbooks are indexed in your Knowledge base so the model can cite relevant troubleshooting steps directly during an outage.`;
     explanationHi = `**Runbook** ek documented step-by-step guide hoti hai jise on-call engineers follow karte hain kisi specific production problem ko diagnose aur fix karne ke liye. ARCH mein runbooks Knowledge Base mein index hote hain jisse incident ke time exact steps mil sakein.`;
@@ -1397,7 +1506,11 @@ function answerHealthSummary(snapshot: ChatSnapshot, lang: ChatLang): { text: st
   };
 }
 
-function answerUnknown(snapshot: ChatSnapshot, lang: ChatLang): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
+function answerUnknown(
+  snapshot: ChatSnapshot,
+  lang: ChatLang,
+  closest: TechFact[] = [],
+): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
   const open = snapshot.openIncidents.length;
   const state =
     open > 0
@@ -1407,11 +1520,78 @@ function answerUnknown(snapshot: ChatSnapshot, lang: ChatLang): { text: string; 
       : lang === 'hinglish'
         ? 'Abhi kuch open nahi hai.'
         : 'Nothing is open right now.';
+  const pack =
+    lang === 'hinglish'
+      ? `Main general tech ke ${TECH_PACK_STATS.topics} topics built-in jaanta hoon (languages, databases, networking, k8s, queues, security, SRE, AI basics) — unme se kuch bhi poochho. Aapke apne docs ke liye Knowledge page par source add karo, phir main unse cite karunga.`
+      : `I know ${TECH_PACK_STATS.topics} general engineering topics built in (languages, databases, networking, Kubernetes, queues, security, SRE, AI basics) — ask me any of those. For answers about your own docs, add them as a Knowledge source and I will cite them.`;
+  // A dead end is not a helpful answer: when the question shares vocabulary with topics we *do*
+  // cover, point at the nearest ones. They are offered as follow-ups, never presented as an answer.
+  const nearest =
+    closest.length === 0
+      ? ''
+      : lang === 'hinglish'
+        ? `Sabse kareeb jo mere paas hai: ${closest.map((fact) => `**${fact.title}**`).join(', ')}.`
+        : `Closest topics I do cover: ${closest.map((fact) => `**${fact.title}**`).join(', ')}.`;
+  const suggestions = closest.length
+    ? [...closest.map((fact) => `What is ${fact.title.toLowerCase()}?`), 'What is open right now?'].slice(0, 4)
+    : ['Which language is the oldest?', 'What is the difference between 502 and 503?', 'What is open right now?'];
   return {
-    text: `${say('unknown', lang)}\n\n${state}`,
+    text: [say('unknown', lang), state, pack, nearest].filter(Boolean).join('\n\n'),
     cites: [],
-    suggestions: ['What is open right now?', 'Show me recent incidents', 'Has this happened before?'],
+    suggestions,
     confidence: 'low',
+  };
+}
+
+/**
+ * Answer a general engineering question from the built-in tech pack.
+ *
+ * This is deliberately labelled: the answer comes from ARCH's own reference material, not from the
+ * workspace and not from a vendor model. Every entry is hand-written (see `tech-knowledge.ts`), so
+ * the reply can be short, offline, deterministic — and, when the topic is not covered, we say so
+ * rather than improvise.
+ */
+function answerTechFact(fact: TechFact, lang: ChatLang): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
+  return {
+    text: fact[lang === 'hinglish' ? 'hi' : 'en'],
+    cites: [
+      {
+        source: 'reference',
+        label: fact.title,
+        detail: `ARCH built-in tech pack · ${TECH_CATEGORY_LABELS[fact.category]} · offline, no vendor`,
+      },
+    ],
+    suggestions: techFactSuggestions(fact),
+    confidence: 'high',
+  };
+}
+
+/**
+ * A question that names two topics gets both, side by side, with both citations.
+ *
+ * The two entries are quoted, not merged into a generated verdict — see `techComparisonDigest`.
+ */
+function answerTechComparison(
+  left: TechFact,
+  right: TechFact,
+  lang: ChatLang,
+): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
+  const cite = (fact: TechFact): ChatCitation => ({
+    source: 'reference',
+    label: fact.title,
+    detail: `ARCH built-in tech pack · ${TECH_CATEGORY_LABELS[fact.category]} · offline, no vendor`,
+  });
+  const suggestions = [
+    ...techFactSuggestions(left, 2),
+    ...techFactSuggestions(right, 2),
+    `What is ${left.title.toLowerCase()}?`,
+    `What is ${right.title.toLowerCase()}?`,
+  ];
+  return {
+    text: techComparisonDigest(left, right, lang === 'hinglish' ? 'hi' : 'en'),
+    cites: [cite(left), cite(right)],
+    suggestions: dedupe(suggestions, 4),
+    confidence: 'high',
   };
 }
 
@@ -1433,11 +1613,14 @@ export function answerChat(params: {
   const snapshot = params.snapshot;
   const history = params.history;
 
-  const memory = extractMemory({
-    history,
-    question,
-    userProfile: snapshot.user,
-  });
+  // What the member said in the visible window, folded into what was already stored (V9). The
+  // stored facts are what make "what do you remember about me?" work in a brand-new chat; the
+  // extraction keeps the current turn immediate, so "remember that ..." answers correctly even
+  // before the row is read back.
+  // Note: the account profile is *not* handed to the extractor — it is the weakest source and is
+  // only used inside the merge, after what the member typed and what was stored.
+  const extracted = extractMemory({ history, question });
+  const memory = mergeChatMemory(extracted, snapshot.memory, snapshot.user?.name ?? null);
 
   const lang = detectChatLanguage(question, history);
 
@@ -1445,8 +1628,17 @@ export function answerChat(params: {
   let subject = question;
 
   // Follow-up resolution: an unrecognized turn inherits the subject of the previous question, so
-  // "and the fix?" / "uska root cause?" work right after an answer.
-  if (intent === 'unknown' && history?.length) {
+  // "and the fix?" / "uska root cause?" work right after an answer. Only turns that *look* like
+  // follow-ups qualify: short ones, or ones that open with a connector. A complete new question
+  // ("what is quantum tunnelling in GPUs?") must not inherit the previous subject just because it
+  // arrived in the same conversation.
+  const questionWords = question.split(/\s+/).filter(Boolean).length;
+  // A turn stands on its own when it is a definition question of real length ("what is quantum
+  // tunnelling in GPUs?") or when the pack recognises its subject ("what is redis?"). Those never
+  // inherit the previous subject — the rest of the rule keeps "and the fix?" working.
+  const standsAlone = (isDefinitionQuestion(question) && questionWords >= 5) || matchTechFact(question) !== null;
+  const looksLikeFollowUp = !standsAlone && (questionWords <= 5 || FOLLOW_UP_OPENER.test(question));
+  if (intent === 'unknown' && looksLikeFollowUp && history?.length) {
     const previous = [...history].reverse().find((turn) => turn.role === 'user');
     if (previous) {
       const merged = `${previous.content} ${question}`;
@@ -1466,24 +1658,38 @@ export function answerChat(params: {
     subject = question;
   }
 
+  // The pack answer for the current subject: a two-topic comparison when the question names two
+  // *different* topics ("redis vs postgres"), otherwise the single best entry, otherwise nothing.
+  const packAnswer = (): ReturnType<typeof answerTechFact> | null => {
+    const comparison = matchTechComparison(subject);
+    if (comparison) return answerTechComparison(comparison.left, comparison.right, lang);
+    const match = matchTechFact(subject);
+    return match ? answerTechFact(match.fact, lang) : null;
+  };
+
+  /**
+   * Definition questions belong to the pack even when a workspace intent claims them first: "what
+   * is a service mesh" classifies as a *services* question, "how do you do a postmortem" as
+   * *lessons*, "what is a document database" as a *runbook* one. Wording about this workspace
+   * ("we", "our", "tonight", "runbook") keeps the question on the workspace instead.
+   */
+  const packForDefinitionQuestion = (): ReturnType<typeof answerTechFact> | null =>
+    isDefinitionQuestion(question) && !isWorkspaceQuestion(question) ? packAnswer() : null;
+
   const modelLabel = snapshot.model.name;
   switch (intent) {
     case 'greet':
-      return result(say('greeting', lang, memory.userName ?? undefined), intent, 'high', lang, [], ['What is open right now?', 'What should I do in here?', 'What is the date today?']);
+      return result(say('greeting', lang, memory.userName ?? memory.accountName ?? undefined), intent, 'high', lang, [], ['What is open right now?', 'What should I do in here?', 'What is the date today?']);
     case 'thanks':
       return result(say('thanks', lang), intent, 'high', lang, [], ['Show me what is open', 'Have we seen this before?']);
     case 'smalltalk':
-      return result(say('smalltalk', lang, memory.userName ?? undefined), intent, 'high', lang, [], ['What is open right now?', 'What can you do?']);
+      return result(say('smalltalk', lang, memory.userName ?? memory.accountName ?? undefined), intent, 'high', lang, [], ['What is open right now?', 'What can you do?']);
     case 'identity':
       return result(say('identity', lang, modelLabel), intent, 'high', lang, [{ source: 'workspace', label: `Model ${modelLabel} · v${snapshot.model.version}`, detail: `trained on ${snapshot.model.teamDocuments} of your incidents, ${snapshot.model.totalDocuments} documents total` }], ['How accurate are you?', 'How does training work?', 'What can you do?']);
-    case 'help':
-      return result(say('help', lang), intent, 'high', lang, [], ['What is open right now?', 'Which incidents keep repeating?', 'Redis misses are spiking — what should I check?']);
     case 'code_request':
       return result(say('codeRefusal', lang), intent, 'high', lang, [], ['Explain the stack trace I am looking at', 'What usually fixes a database timeout?', 'What did we do last time this broke?']);
     case 'datetime':
       return spread(answerDateTime(snapshot, lang), intent, lang);
-    case 'workflow_guide':
-      return spread(answerWorkflowGuide(snapshot, lang), intent, lang);
     case 'tech_stack_advice':
       return spread(answerTechStackAdvice(subject, snapshot, lang, memory), intent, lang);
     case 'memory_store':
@@ -1492,8 +1698,15 @@ export function answerChat(params: {
       return spread(answerMemoryRecall(subject, memory, lang), intent, lang);
     case 'memory_clear':
       return spread(answerMemoryClear(lang), intent, lang);
-    case 'concept_explain':
+    case 'concept_explain': {
+      // The ops concepts above are answered with workspace context (your median resolve time, your
+      // knowledge base). Anything else goes to the built-in tech pack before the generic fallback.
+      if (!OPS_CONCEPTS.test(subject)) {
+        const packed = packAnswer();
+        if (packed) return spread(packed, 'tech_fact', lang);
+      }
       return spread(answerConceptExplain(subject, snapshot, lang), intent, lang);
+    }
     case 'health_summary':
       return spread(answerHealthSummary(snapshot, lang), intent, lang);
     case 'open_incidents':
@@ -1502,23 +1715,68 @@ export function answerChat(params: {
       return spread(answerRecentIncidents(snapshot, lang), intent, lang);
     case 'stats':
       return spread(answerStats(snapshot, lang), intent, lang);
-    case 'services':
+    case 'services': {
+      const defined = packForDefinitionQuestion();
+      if (defined) return spread(defined, 'tech_fact', lang);
       return spread(answerServices(snapshot, lang), intent, lang);
+    }
     case 'team':
       return spread(answerTeam(snapshot, lang), intent, lang);
     case 'incident_search':
       return spread(answerSearch(snapshot, lang), intent, lang);
-    case 'lessons':
+    case 'lessons': {
+      const defined = packForDefinitionQuestion();
+      if (defined) return spread(defined, 'tech_fact', lang);
       return spread(answerLessons(subject, snapshot, lang), intent, lang);
-    case 'explain_incident':
+    }
+    case 'explain_incident': {
+      // "explain the CAP theorem" classifies as "explain an incident" because of the verb. Two
+      // things separate it from a real incident question: the wording ("explain X", not "explain
+      // what happened") and the subject (no runbook, no "our", no named incident).
+      const defined = packForDefinitionQuestion();
+      if (defined) return spread(defined, 'tech_fact', lang);
+      // When the subject is a general topic but the workspace has similar incidents, still prefer
+      // the pack — listing recent incidents would be answering a question nobody asked.
+      const hasWorkspaceIncident = findNamedIncident(subject, snapshot) !== null || snapshot.matches.length > 0;
+      if (!hasWorkspaceIncident) {
+        const packed = packAnswer();
+        if (packed) return spread(packed, 'tech_fact', lang);
+      }
       return spread(answerExplainIncident(subject, snapshot, lang), intent, lang);
-    case 'runbook':
+    }
+    case 'runbook': {
+      // "what is a document database" can classify as a runbook question because of the word
+      // "document"; a definition question that names a pack topic is general knowledge instead.
+      const defined = packForDefinitionQuestion();
+      if (defined) return spread(defined, 'tech_fact', lang);
       return spread(answerRunbook(snapshot, lang), intent, lang);
+    }
     case 'advice':
+    case 'help':
+    case 'workflow_guide': {
+      // These three are the "sink" intents: generic triage advice, app help and the app walkthrough.
+      // A definition question that happens to classify into one of them is better answered from the
+      // pack — but only when it asks for a definition *and* does not mention this workspace ("we",
+      // "our", "tonight", "hamara"). So "what does HTTP 503 mean?" gets the status code back,
+      // "redis kaise kaam karta hai?" gets Redis, and "we keep seeing 503s after the deploy — what
+      // do we do?" stays with the incident advisor.
+      const defined = packForDefinitionQuestion();
+      if (defined) return spread(defined, 'tech_fact', lang);
+      if (intent === 'help') return result(say('help', lang), intent, 'high', lang, [], ['What is open right now?', 'Which incidents keep repeating?', 'Redis misses are spiking — what should I check?']);
+      if (intent === 'workflow_guide') return spread(answerWorkflowGuide(snapshot, lang), intent, lang);
       return spread(answerAdvice(subject, snapshot, lang), intent, lang);
+    }
     case 'unknown':
-    default:
-      return spread(answerUnknown(snapshot, lang), intent, lang);
+    default: {
+      // "what is our error budget" is a concept question even when the classifier did not call it
+      // one — answer it with the workspace's numbers rather than with general material.
+      if (OPS_CONCEPTS.test(subject)) return spread(answerConceptExplain(subject, snapshot, lang), 'concept_explain', lang);
+      // A general engineering question ("which language is the oldest?") is not an incident
+      // question — but it is still a question we can answer honestly, from the built-in pack.
+      const packed = packAnswer();
+      if (packed) return spread(packed, 'tech_fact', lang);
+      return spread(answerUnknown(snapshot, lang, suggestTechTopics(subject)), intent, lang);
+    }
   }
 }
 

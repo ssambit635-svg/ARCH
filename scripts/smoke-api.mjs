@@ -356,6 +356,26 @@ await check('POST …/chat/sessions/:id/messages keeps the thread (follow-up)', 
   expect: 201,
   assert: (r) => r.json.data.session.messageCount === 4 && r.json.data.archMessage.intent === 'greet',
 });
+await check('POST …/chat/sessions/:id/regenerate rewrites the last answer in place', 'POST', `/api/copilot/chat/sessions/${chatSessionId}/regenerate`, {
+  expect: 201,
+  assert: (r) => {
+    const data = r.json.data;
+    if (data.archMessage?.role !== 'ARCH') throw new Error('no ARCH reply');
+    if (!data.archMessage.content || data.archMessage.content.length < 10) throw new Error('empty answer');
+    if (data.session.messageCount !== 4) throw new Error(`regenerate must not add messages, got ${data.session.messageCount}`);
+  },
+});
+await check('POST …/chat/sessions/:id/regenerate rejects an unknown session', 'POST', '/api/copilot/chat/sessions/does-not-exist/regenerate', { expect: 404 });
+await check('GET /api/copilot/chat/memory starts empty', 'GET', '/api/copilot/chat/memory', {
+  assert: (r) => r.json.data.hasFacts === false && Array.isArray(r.json.data.notes),
+});
+await check('PATCH /api/copilot/chat/memory remembers a note', 'PATCH', '/api/copilot/chat/memory', {
+  body: { notes: { add: 'Prod deploys need two approvals' } },
+  assert: (r) => r.json.data.hasFacts === true && r.json.data.notes.includes('Prod deploys need two approvals'),
+});
+await check('DELETE /api/copilot/chat/memory forgets everything', 'DELETE', '/api/copilot/chat/memory', {
+  assert: (r) => r.json.data.hasFacts === false && r.json.data.clearedAt !== null,
+});
 await check('PATCH …/chat/sessions/:id renames a conversation', 'PATCH', `/api/copilot/chat/sessions/${chatSessionId}`, {
   body: { title: 'On-call handover' },
   assert: (r) => r.json.data.title === 'On-call handover' && r.json.data.titleSource === 'USER',

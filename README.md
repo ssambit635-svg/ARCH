@@ -221,7 +221,7 @@ Everything is JSON under `/api`. Success is `{ "data": ... }`; failures are
 | Audit | `GET /api/audit` (OWNER/ADMIN, paginated, `?summary=true`) |
 | Copilot (V2) | `POST /api/incidents/{id}/copilot/{summary,triage,status-draft,postmortem}`, `GET /api/incidents/{id}/copilot/suggestions?status=`, `POST /api/copilot/suggestions/{id}/{approve,dismiss}` |
 | ARCH Model + Code Assist (V3) | `POST /api/incidents/{id}/copilot/code-fix` (`{attachment?}`), `POST /api/copilot/code-review` (`{code, mode?, language?}`), `GET /api/copilot/model`, `POST /api/copilot/model/train` (OWNER/ADMIN) |
-| Chat with ARCH (V8) | `GET/POST/DELETE /api/copilot/chat/sessions`, `GET/PATCH/DELETE /api/copilot/chat/sessions/{id}`, `POST /api/copilot/chat/sessions/{id}/messages` — page `/dashboard/chat` |
+| Chat with ARCH (V8/V9) | `GET/POST/DELETE /api/copilot/chat/sessions`, `GET/PATCH/DELETE /api/copilot/chat/sessions/{id}`, `POST /api/copilot/chat/sessions/{id}/messages`, `POST /api/copilot/chat/sessions/{id}/regenerate`, `GET/PATCH/DELETE /api/copilot/chat/memory` — page `/dashboard/chat` |
 
 Webhook senders sign `"{timestamp}.{rawBody}"` with the endpoint secret and send
 `X-Arch-Signature: t=<unix>,v1=<hex>`; GitHub-style `X-Hub-Signature-256` is also accepted.
@@ -334,9 +334,30 @@ this workspace (open incidents, history, runbooks, the trained model) and cites 
 - **Honest when it does not know.** An empty workspace gets "I have nothing to ground this on"
   plus how to fix that — never an invented incident. Chat answers from a 30-day resolve-time
   window and the open queue only.
+- **General tech questions, answered offline (V10 · V10.3).** A built-in tech pack of 161 topics —
+  the oldest language, 502 vs 503 vs 504, CAP, indexes and N+1, Docker vs Kubernetes, queues, SLO burn
+  rate, OAuth vs OIDC, load testing, processes vs threads, code review, how LLMs work, and (V10.3)
+  Rust ownership, CORS, sagas, zero trust, ETL, transformers, quantum computing and more — answers in
+  English or Hinglish with a "Tech pack" citation, from a file in your own repository, with no vendor
+  call. Ask for a comparison ("redis vs postgres") and it quotes both entries, with both citations.
+  Outside the pack it says so, names the closest topics it *does* cover, and points at your Knowledge
+  sources; for the long tail, `AI_PROVIDER=arch-hybrid` can route to a local model you run yourself.
 - **Fast and free.** Warm answers land in tens of milliseconds (the engine is deterministic
   retrieval + templates, not an LLM call), it is rate-limited per organization like the rest of the
   Copilot surface, and it works with `ARCH_OFFLINE_ONLY="true"`.
+- **The mechanics every chat has.** Copy one answer, copy the conversation, or export it as
+  Markdown; **Try again** re-asks the last question against the workspace as it is now and rewrites
+  the stored answer in place (`POST /api/copilot/chat/sessions/{id}/regenerate`, audited with shape
+  only); the newest answer reveals itself like a reply rather than appearing fully formed; and
+  `⌘/Ctrl+Shift+O` / `⌘/Ctrl+K` / `Esc` do what they do everywhere else. The full plan for closing
+  the rest of the ChatGPT-shaped surface — and what ₹0 can never buy — is
+  [`docs/product/AI-GAP-ANALYSIS.md`](docs/product/AI-GAP-ANALYSIS.md).
+- **Memory that is really saved, and yours to delete.** Tell ARCH something once ("mera naam Vikram
+  hai, hum Postgres use karte hain") and every later chat knows it — and so does advice about your
+  stack. The `Memory` panel in the chat header lists exactly what was stored (name, role, stack,
+  notes) with a delete button per item and a **Forget everything** wipe; "clear memory" in chat does
+  the same. Personal to the member, never shared with the team, never used for training, and every
+  change audited as shape only.
 
 Permission: reading your own chats needs `copilot.read`; sending messages, renaming and deleting
 need `copilot.generate` (RESPONDER or above). Every session write is audited with metadata only —

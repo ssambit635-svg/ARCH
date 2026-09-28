@@ -4,22 +4,24 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AI_NAME } from '@/lib/brand';
 import { Dialog } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/toast';
-import { IconChat, IconPencil, IconPlus, IconSearch, IconSpark, IconTrash } from '@/components/shell/icons';
+import { IconChat, IconCopy, IconDownload, IconMemory, IconPencil, IconPlus, IconRetry, IconSearch, IconSpark, IconTrash } from '@/components/shell/icons';
 
 /**
  * Chat with ARCH — the conversational surface.
  *
  * Behaves like the chat product everyone already knows: a recents list on the left (new chat,
  * rename, delete, search), the transcript in the middle, follow-up chips under each answer, and a
- * composer that sends on Enter. Everything is stored server-side, so reloading the page or coming
- * back tomorrow shows exactly the same conversation.
+ * composer that sends on Enter. Copy, export and "Try again" are one click away, the newest answer
+ * reveals itself instead of appearing fully formed, and the shortcuts are the familiar ones
+ * (`⌘/Ctrl+Shift+O` new chat, `⌘/Ctrl+K` search). Everything is stored server-side, so reloading the
+ * page or coming back tomorrow shows exactly the same conversation.
  *
  * The answer itself comes from ARCH's native engine — no vendor, no tokens, no network — and every
  * factual sentence carries a citation the reader can click through to the incident or runbook.
  */
 
 type Citation = {
-  source: 'incident' | 'runbook' | 'past_incident' | 'pattern' | 'service' | 'workspace' | 'playbook';
+  source: 'incident' | 'runbook' | 'past_incident' | 'pattern' | 'service' | 'workspace' | 'playbook' | 'reference';
   label: string;
   detail?: string;
   href?: string;
@@ -37,6 +39,19 @@ type Message = {
   model: string | null;
   latencyMs: number | null;
   createdAt: string;
+};
+
+/** What ARCH actually remembers about the signed-in member (V9) — the panel shows the truth. */
+type MemoryView = {
+  hasFacts: boolean;
+  userName: string | null;
+  userRole: string | null;
+  techStack: string[];
+  notes: string[];
+  summary: string;
+  updatedAt: string | null;
+  clearedAt: string | null;
+  limits: { maxNotes: number; maxNoteChars: number; maxStack: number };
 };
 
 type Session = {
@@ -57,6 +72,7 @@ const SOURCE_LABEL: Record<Citation['source'], string> = {
   service: 'Service',
   workspace: 'Workspace',
   playbook: 'Playbook',
+  reference: 'Tech pack',
 };
 
 const SOURCE_ICON: Record<Citation['source'], string> = {
@@ -67,6 +83,7 @@ const SOURCE_ICON: Record<Citation['source'], string> = {
   service: '▣',
   workspace: '▤',
   playbook: '✦',
+  reference: '⌘',
 };
 
 const INTENT_LABEL: Record<string, string> = {
@@ -93,6 +110,7 @@ const INTENT_LABEL: Record<string, string> = {
   memory_recall: 'memory',
   memory_clear: 'memory cleared',
   concept_explain: 'concept',
+  tech_fact: 'tech knowledge',
   health_summary: 'system health',
   unknown: 'best effort',
 };
@@ -167,6 +185,40 @@ function RichText({ text }: { text: string }) {
   );
 }
 
+// ---------------------------------------------------------------- reveal
+
+/**
+ * The newest answer arrives all at once (the engine is a retrieval pass, not a token stream), so it
+ * is revealed over a few hundred milliseconds — the same "it is writing" feel, honestly produced.
+ * Respects `prefers-reduced-motion`, and older messages render instantly on load.
+ */
+function RevealAnswer({ text, animate }: { text: string; animate: boolean }) {
+  const [visible, setVisible] = useState(animate ? 0 : text.length);
+
+  useEffect(() => {
+    if (!animate) {
+      setVisible(text.length);
+      return;
+    }
+    if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      setVisible(text.length);
+      return;
+    }
+    const duration = Math.min(900, Math.max(260, text.length * 2.2));
+    const startedAt = performance.now();
+    let frame = 0;
+    const tick = (now: number) => {
+      const progress = Math.min(1, (now - startedAt) / duration);
+      setVisible(Math.floor(progress * text.length));
+      if (progress < 1) frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [animate, text]);
+
+  return <RichText text={visible >= text.length ? text : text.slice(0, visible)} />;
+}
+
 // ---------------------------------------------------------------- helpers
 
 async function request<T>(url: string, init?: RequestInit): Promise<T> {
@@ -174,6 +226,41 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const payload = await response.json().catch(() => null);
   if (!response.ok) throw new Error(payload?.error?.message ?? 'Something went wrong. Try again.');
   return payload.data as T;
+}
+
+/** Copy without a library, and without silently failing in an insecure context. */
+async function copyText(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    try {
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      const copied = document.execCommand('copy');
+      document.body.removeChild(area);
+      return copied;
+    } catch {
+      return false;
+    }
+  }
+}
+
+/** The transcript as Markdown — what a user would paste into a postmortem or a handover doc. */
+function toMarkdown(session: Session | null, messages: Message[]): string {
+  const lines: string[] = [`# ${session?.title ?? 'Chat with ARCH'}`, ''];
+  lines.push(`_Exported from ARCH on ${new Date().toISOString().slice(0, 10)} · ${messages.length} messages · answers grounded on this workspace._`, '');
+  for (const message of messages) {
+    lines.push(message.role === 'USER' ? '**You**' : `**${AI_NAME}**`, '', message.content, '');
+    if (message.role === 'ARCH' && message.citations.length) {
+      lines.push(`Sources: ${message.citations.map((citation) => citation.label).join(' · ')}`, '');
+    }
+  }
+  return `${lines.join('\n').trimEnd()}\n`;
 }
 
 function relativeTime(iso: string): string {
@@ -208,6 +295,7 @@ const EXAMPLES = [
 
 export function ArchChat({
   initialSessions,
+  initialMemory,
   canChat,
   engineLabel,
   workspaceName,
@@ -215,6 +303,7 @@ export function ArchChat({
   incidentsTracked,
 }: {
   initialSessions: Session[];
+  initialMemory: MemoryView;
   canChat: boolean;
   engineLabel: string;
   workspaceName: string;
@@ -233,10 +322,20 @@ export function ArchChat({
   const [renaming, setRenaming] = useState<{ id: string; value: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Session | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
+  /** True while the last answer is being regenerated ("Try again"). */
+  const [retrying, setRetrying] = useState(false);
+  /** The one message that should reveal itself; everything else renders instantly. */
+  const [animateId, setAnimateId] = useState<string | null>(null);
+  /** V9 memory panel: what ARCH remembers about this member, and the note being typed. */
+  const [memory, setMemory] = useState<MemoryView>(initialMemory);
+  const [memoryOpen, setMemoryOpen] = useState(false);
+  const [memoryNote, setMemoryNote] = useState('');
+  const [memoryBusy, setMemoryBusy] = useState(false);
   const didInit = useRef(false);
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   const activeSession = sessions.find((session) => session.id === activeId) ?? null;
 
@@ -272,6 +371,7 @@ export function ArchChat({
       setActiveId(id);
       setListOpen(false);
       setError(null);
+      setAnimateId(null);
       setLoading(true);
       try {
         const data = await request<{ messages: Message[] }>(`/api/copilot/chat/sessions/${id}`);
@@ -333,15 +433,23 @@ export function ArchChat({
           setSessions((previous) => [session, ...previous]);
           setActiveId(session.id);
         }
-        const result = await request<{ session: Session; userMessage: Message; archMessage: Message }>(
+        const result = await request<{ session: Session; userMessage: Message; archMessage: Message; memoryCleared: boolean }>(
           `/api/copilot/chat/sessions/${sessionId}/messages`,
           { method: 'POST', body: JSON.stringify({ content }) },
         );
+        if (result.memoryCleared) {
+          toast('Memory cleared — ARCH no longer remembers anything about you.');
+          setMemory((previous) => ({ ...previous, hasFacts: false, userName: null, userRole: null, techStack: [], notes: [], summary: 'Nothing saved yet' }));
+        } else {
+          // A turn can add facts ("remember that ..."), so the panel must not show a stale list.
+          void refreshMemory();
+        }
         setMessages((previous) => [...previous.filter((message) => message.id !== temporaryId), result.userMessage, result.archMessage]);
         setSessions((previous) => {
           const others = previous.filter((session) => session.id !== result.session.id);
           return [{ ...result.session, preview: result.session.preview ?? null }, ...others];
         });
+        setAnimateId(result.archMessage.id);
       } catch (cause) {
         setMessages((previous) => previous.filter((message) => message.id !== temporaryId));
         setInput(content);
@@ -353,6 +461,127 @@ export function ArchChat({
     },
     [activeId, canChat, sending],
   );
+
+  /**
+   * "Try again" — re-answer the last question against the workspace as it is right now. The server
+   * rewrites the stored answer in place, so the transcript keeps its shape and we swap the row in.
+   */
+  const regenerate = useCallback(async () => {
+    if (!activeId || !canChat || sending || retrying) return;
+    setRetrying(true);
+    setError(null);
+    try {
+      const result = await request<{ session: Session; archMessage: Message }>(
+        `/api/copilot/chat/sessions/${activeId}/regenerate`,
+        { method: 'POST' },
+      );
+      setMessages((previous) => previous.map((message) => (message.id === result.archMessage.id ? result.archMessage : message)));
+      // A retry is not a new message: the conversation keeps its place in the recents list.
+      setSessions((previous) => previous.map((session) => (session.id === result.session.id ? { ...result.session, preview: result.session.preview ?? null } : session)));
+      setAnimateId(result.archMessage.id);
+      toast('Answer regenerated.');
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'ARCH could not regenerate that answer.');
+    } finally {
+      setRetrying(false);
+    }
+  }, [activeId, canChat, sending, retrying]);
+
+  const copyChat = useCallback(async () => {
+    const copied = await copyText(toMarkdown(activeSession, messages));
+    toast(copied ? 'Chat copied as Markdown.' : 'Copy failed — select the text instead.', copied ? 'success' : 'error');
+  }, [activeSession, messages]);
+
+  const exportChat = useCallback(() => {
+    const markdown = toMarkdown(activeSession, messages);
+    const url = URL.createObjectURL(new Blob([markdown], { type: 'text/markdown;charset=utf-8' }));
+    const link = document.createElement('a');
+    const name = (activeSession?.title ?? 'arch-chat').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase() || 'arch-chat';
+    link.href = url;
+    link.download = `${name}.md`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    toast('Chat exported as Markdown.');
+  }, [activeSession, messages]);
+
+  // The shortcuts every chat product has: new chat, search, close.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const modifier = event.metaKey || event.ctrlKey;
+      if (modifier && event.shiftKey && event.key.toLowerCase() === 'o') {
+        event.preventDefault();
+        void newChat();
+        return;
+      }
+      if (modifier && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setListOpen(true);
+        searchRef.current?.focus();
+        return;
+      }
+      if (event.key === 'Escape') {
+        setListOpen(false);
+        setRenaming(null);
+        setConfirmDelete(null);
+        setConfirmClear(false);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [newChat]);
+
+  // ---------------- V9 memory panel ----------------
+
+  /** Re-read what ARCH remembers (after a turn that may have saved something). */
+  const refreshMemory = useCallback(async () => {
+    try {
+      setMemory(await request<MemoryView>('/api/copilot/chat/memory'));
+    } catch {
+      // The panel is a convenience; a failed refresh must never break the conversation.
+    }
+  }, []);
+
+  const saveMemoryNote = useCallback(async () => {
+    const note = memoryNote.trim();
+    if (note.length < 3 || memoryBusy) return;
+    setMemoryBusy(true);
+    try {
+      setMemory(await request<MemoryView>('/api/copilot/chat/memory', { method: 'PATCH', body: JSON.stringify({ notes: { add: note } }) }));
+      setMemoryNote('');
+      toast('ARCH will remember that.');
+    } catch (cause) {
+      toast(cause instanceof Error ? cause.message : 'Could not save that.', 'error');
+    } finally {
+      setMemoryBusy(false);
+    }
+  }, [memoryNote, memoryBusy]);
+
+  const forgetMemoryItem = useCallback(async (payload: { notes?: { remove: string }; clearStack?: boolean; userName?: null; userRole?: null }) => {
+    if (memoryBusy) return;
+    setMemoryBusy(true);
+    try {
+      setMemory(await request<MemoryView>('/api/copilot/chat/memory', { method: 'PATCH', body: JSON.stringify(payload) }));
+    } catch (cause) {
+      toast(cause instanceof Error ? cause.message : 'Could not update memory.', 'error');
+    } finally {
+      setMemoryBusy(false);
+    }
+  }, [memoryBusy]);
+
+  const forgetEverything = useCallback(async () => {
+    if (memoryBusy) return;
+    setMemoryBusy(true);
+    try {
+      setMemory(await request<MemoryView>('/api/copilot/chat/memory', { method: 'DELETE' }));
+      toast('Memory wiped. ARCH remembers nothing about you now.');
+    } catch (cause) {
+      toast(cause instanceof Error ? cause.message : 'Could not clear memory.', 'error');
+    } finally {
+      setMemoryBusy(false);
+    }
+  }, [memoryBusy]);
 
   const rename = useCallback(async () => {
     if (!renaming) return;
@@ -454,9 +683,10 @@ export function ArchChat({
         <label className="relative m-3 mb-1 block">
           <IconSearch className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-500" />
           <input
+            ref={searchRef}
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
-            placeholder="Search chats"
+            placeholder="Search chats  ⌘K"
             aria-label="Search chats"
             className="w-full rounded-lg border border-white/[0.07] bg-abyss-950/70 py-1.5 pl-8 pr-2 text-xs text-slate-200 placeholder:text-slate-600 focus:border-violet-500/50 focus:outline-none"
           />
@@ -576,6 +806,38 @@ export function ArchChat({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setMemoryOpen(true);
+                void refreshMemory();
+              }}
+              title="What ARCH remembers about you"
+              className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] px-2 py-1 text-[11px] text-slate-300 transition hover:bg-white/[0.06]"
+            >
+              <IconMemory className="size-3.5" /> Memory
+              {memory.hasFacts ? <span aria-hidden className="size-1.5 rounded-full bg-violet-400" /> : null}
+            </button>
+            {messages.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => void copyChat()}
+                title="Copy this conversation as Markdown"
+                className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] px-2 py-1 text-[11px] text-slate-300 transition hover:bg-white/[0.06]"
+              >
+                <IconCopy className="size-3.5" /> Copy
+              </button>
+            ) : null}
+            {messages.length > 0 ? (
+              <button
+                type="button"
+                onClick={exportChat}
+                title="Download this conversation as a Markdown file"
+                className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] px-2 py-1 text-[11px] text-slate-300 transition hover:bg-white/[0.06]"
+              >
+                <IconDownload className="size-3.5" /> Export
+              </button>
+            ) : null}
             {activeSession && canChat ? (
               <button
                 type="button"
@@ -627,8 +889,9 @@ export function ArchChat({
           {loading ? <p className="py-8 text-center text-xs text-slate-500">Loading conversation…</p> : null}
 
           <div className="mx-auto max-w-3xl space-y-5">
-            {messages.map((message) =>
-              message.role === 'USER' ? (
+            {messages.map((message, index) => {
+              const isLastAnswer = message.role === 'ARCH' && index === messages.length - 1;
+              return message.role === 'USER' ? (
                 <div key={message.id} className="flex justify-end">
                   <div className="max-w-[85%] rounded-2xl rounded-br-md border border-indigo-500/25 bg-indigo-500/15 px-3.5 py-2.5 text-[13.5px] leading-relaxed text-indigo-50">
                     {message.content}
@@ -642,7 +905,7 @@ export function ArchChat({
                     </span>
                     <div className="min-w-0 flex-1 space-y-2">
                       <div className="rounded-2xl rounded-tl-md border border-white/[0.07] bg-abyss-850/80 px-4 py-3 text-[13.5px] leading-relaxed text-slate-200">
-                        <RichText text={message.content} />
+                        <RevealAnswer text={message.content} animate={message.id === animateId} />
                       </div>
 
                       {message.citations.length ? (
@@ -686,11 +949,35 @@ export function ArchChat({
                         {typeof message.latencyMs === 'number' ? <span>· {message.latencyMs} ms</span> : null}
                         {message.model ? <span className="arch-mono">· {message.model}</span> : null}
                       </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            const copied = await copyText(message.content);
+                            toast(copied ? 'Answer copied.' : 'Copy failed — select the text instead.', copied ? 'success' : 'error');
+                          }}
+                          className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10.5px] text-slate-500 transition hover:bg-white/[0.06] hover:text-slate-200"
+                        >
+                          <IconCopy className="size-3" /> Copy
+                        </button>
+                        {isLastAnswer && canChat ? (
+                          <button
+                            type="button"
+                            onClick={() => void regenerate()}
+                            disabled={sending || retrying}
+                            title="Ask the same question again — the workspace may have changed since"
+                            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10.5px] text-slate-500 transition hover:bg-white/[0.06] hover:text-slate-200 disabled:opacity-40"
+                          >
+                            <IconRetry className={`size-3 ${retrying ? 'animate-spin' : ''}`} /> {retrying ? 'Retrying…' : 'Try again'}
+                          </button>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
                 </div>
-              ),
-            )}
+              );
+            })}
 
             {sending ? (
               <div className="flex items-start gap-3">
@@ -770,12 +1057,113 @@ export function ArchChat({
               Send
             </button>
           </div>
-          <p className="mt-1.5 px-1 text-[10.5px] text-slate-600">
-            Answers are grounded on this workspace and cited. ARCH advises — it never changes anything on its own, and it does
-            not write code.
+          <p className="mt-1.5 flex flex-wrap items-center gap-x-2 px-1 text-[10.5px] text-slate-600">
+            <span>Answers are grounded on this workspace and cited. ARCH advises — it never changes anything on its own, and it does not write code.</span>
+            <span className="text-slate-700">
+              ⌘/Ctrl+Shift+O new chat · ⌘/Ctrl+K search · {AI_NAME} keeps the last 12 turns in context
+            </span>
           </p>
         </form>
       </section>
+
+      <Dialog
+        open={memoryOpen}
+        onClose={() => setMemoryOpen(false)}
+        title="What ARCH remembers about you"
+        description="Only what you told it — never guessed, never shared with your team, and never used to train the model. Everything here is yours to delete."
+      >
+        <div className="space-y-4 text-sm">
+          <div className="rounded-xl border border-white/[0.07] bg-abyss-950/50 px-3 py-2.5">
+            <p className="text-[11px] uppercase tracking-wide text-slate-500">Saved</p>
+            <p className="mt-0.5 text-[13px] text-slate-200">{memory.summary}</p>
+            <p className="mt-1 text-[10.5px] text-slate-500">
+              {memory.clearedAt ? `Last wiped ${relativeTime(memory.clearedAt)} · ` : ''}
+              {memory.updatedAt ? `updated ${relativeTime(memory.updatedAt)}` : 'nothing stored yet'}
+            </p>
+          </div>
+
+          {memory.userName || memory.userRole || memory.techStack.length ? (
+            <ul className="space-y-1.5">
+              {memory.userName ? (
+                <li className="flex items-center justify-between gap-2 rounded-lg border border-white/[0.07] px-3 py-2">
+                  <span className="text-slate-300">Name: <span className="text-white">{memory.userName}</span></span>
+                  <button type="button" disabled={!canChat || memoryBusy} onClick={() => void forgetMemoryItem({ userName: null })} className="text-[11px] text-slate-500 transition hover:text-rose-300 disabled:opacity-40">
+                    Forget
+                  </button>
+                </li>
+              ) : null}
+              {memory.userRole ? (
+                <li className="flex items-center justify-between gap-2 rounded-lg border border-white/[0.07] px-3 py-2">
+                  <span className="text-slate-300">Role: <span className="text-white">{memory.userRole}</span></span>
+                  <button type="button" disabled={!canChat || memoryBusy} onClick={() => void forgetMemoryItem({ userRole: null })} className="text-[11px] text-slate-500 transition hover:text-rose-300 disabled:opacity-40">
+                    Forget
+                  </button>
+                </li>
+              ) : null}
+              {memory.techStack.length ? (
+                <li className="flex items-center justify-between gap-2 rounded-lg border border-white/[0.07] px-3 py-2">
+                  <span className="min-w-0 text-slate-300">Stack: <span className="text-white">{memory.techStack.join(', ')}</span></span>
+                  <button type="button" disabled={!canChat || memoryBusy} onClick={() => void forgetMemoryItem({ clearStack: true })} className="shrink-0 text-[11px] text-slate-500 transition hover:text-rose-300 disabled:opacity-40">
+                    Forget
+                  </button>
+                </li>
+              ) : null}
+            </ul>
+          ) : null}
+
+          {memory.notes.length ? (
+            <ul className="space-y-1.5">
+              {memory.notes.map((note) => (
+                <li key={note} className="flex items-start justify-between gap-2 rounded-lg border border-white/[0.07] px-3 py-2">
+                  <span className="min-w-0 text-slate-300">{note}</span>
+                  <button type="button" disabled={!canChat || memoryBusy} onClick={() => void forgetMemoryItem({ notes: { remove: note } })} className="shrink-0 text-[11px] text-slate-500 transition hover:text-rose-300 disabled:opacity-40">
+                    Forget
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+
+          <form
+            className="flex items-center gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void saveMemoryNote();
+            }}
+          >
+            <input
+              value={memoryNote}
+              onChange={(event) => setMemoryNote(event.target.value)}
+              maxLength={memory.limits.maxNoteChars}
+              disabled={!canChat || memoryBusy}
+              placeholder="Tell ARCH something to remember (e.g. we deploy on Thursdays)"
+              aria-label="Add a memory"
+              className="flex-1 rounded-lg border border-white/[0.08] bg-abyss-950/70 px-3 py-2 text-[13px] text-slate-200 placeholder:text-slate-600 focus:border-violet-500/50 focus:outline-none disabled:opacity-50"
+            />
+            <button
+              type="submit"
+              disabled={!canChat || memoryBusy || memoryNote.trim().length < 3}
+              className="rounded-lg bg-gradient-to-b from-indigo-500 to-indigo-600 px-3 py-2 text-xs font-semibold text-white transition hover:from-indigo-400 hover:to-indigo-500 disabled:opacity-40"
+            >
+              Remember
+            </button>
+          </form>
+
+          <div className="flex items-center justify-between gap-2 border-t border-white/[0.06] pt-3">
+            <p className="text-[10.5px] text-slate-600">
+              Up to {memory.limits.maxNotes} notes. In chat you can also say &quot;remember that …&quot; or &quot;clear memory&quot;.
+            </p>
+            <button
+              type="button"
+              disabled={!canChat || memoryBusy || (!memory.hasFacts && !memory.clearedAt)}
+              onClick={() => void forgetEverything()}
+              className="shrink-0 rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-rose-500 disabled:opacity-40"
+            >
+              Forget everything
+            </button>
+          </div>
+        </div>
+      </Dialog>
 
       <Dialog
         open={confirmDelete !== null}
