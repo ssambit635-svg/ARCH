@@ -128,9 +128,9 @@ equivalent is `npm run model:train`, which trains synchronously (a CLI process, 
 The conversational surface of the same model. `src/server/ai/arch-model/chat.ts` is the pure
 engine: it classifies the question (greeting, identity, open queue, recent history, incident
 search, explain, stats, services, roster, runbook, lessons, advice, code request, concept, tech fact,
-unknown), fills language-aware templates (English or Hinglish, matched to the question) and returns
+unknown), fills language-aware native answers (English or Hinglish) and returns
 `{answer, intent, confidence, citations, suggestions, lang}`. It has no database and no network —
-the service hands it a snapshot.
+the service hands it an organization-scoped snapshot. This remains the default and fallback.
 
 General engineering questions ("which language is the oldest?", "what does 503 mean?", "what is the
 CAP theorem?") are answered from `arch-model/tech-knowledge.ts` — the built-in pack — and carry a
@@ -141,6 +141,30 @@ the `advice` or `explain_incident` intents. A matching floor and a workspace-mar
 cache incident yesterday" and "we keep seeing 503s after the deploy" on the incident path. Teaching it
 a new topic means appending one entry to that file — no engine change, and the pack data is asserted
 well formed (unique ids, resolvable related ids, both languages) in `tests/arch-chat-engine.test.ts`.
+
+### Optional generative chat (`AI_PROVIDER="arch-hybrid"`)
+
+The default `arch` provider stays deterministic and dependency-free. In hybrid mode only, the chat
+service may route open-ended intents (`unknown`, `advice`, general concepts and tech facts) to a
+private local chat model. Structured workspace questions, identity/memory commands and code
+refusals remain native. Before generation, ARCH has already selected the read-only context: tenant
+runbook chunks, similar team incidents, public patterns and a matching built-in tech-pack entry.
+The local model can also use its own pretrained knowledge for questions the pack does not cover.
+
+`src/server/ai/arch-model/chat-agent.ts` supplies a small intent-based task plan, asks for a direct
+answer in English or Hinglish, then runs one private review pass for relevance, grounding, uncertainty
+and tone. The plan and review are not returned; prompts explicitly do not request hidden chain of
+thought. Workspace claims can cite retrieved items with source markers, which the server maps back
+to real citations. User memory/history and indexed document text are treated as untrusted data, the
+chat model is private-only, and it receives no tools that can execute code or mutate ARCH. If either
+the first pass times out or returns unusable output, the deterministic native answer is used; if only
+the review pass fails, the usable draft is kept. `LOCAL_CHAT_REFLECTION=false` disables the review
+pass for slow machines.
+
+Thumbs-up/down ratings are stored on the private chat message and audited without answer text. They
+are evaluation signals only: ratings are not incident-training examples and do not automatically
+fine-tune model weights. This avoids poisoning the model from one-click feedback without a corrected
+answer.
 
 `src/server/services/archChat.service.ts` builds that snapshot per turn: status/severity counts
 (open-only severity mix), the open queue (25, severity-sorted), the 25 newest resolved incidents,
@@ -155,8 +179,9 @@ invalidated on ingest/reindex/delete.
 Persistence is `ArchChatSession` / `ArchChatMessage` (migration `20260928000000_v8_arch_chat`),
 always scoped to `(organizationId, userId)`; a session id that is not yours is a `404`. A turn
 stores the user message, the ARCH message (with intent, confidence, citations, suggestions,
-provider `arch`, model name and `latencyMs`) and bumps the session. Audit entries record shape
-only — never the content. Code generation is refused by the engine itself (intent
+actual provider (`arch` or `arch-hybrid`), model name and `latencyMs`) and bumps the session. Audit
+entries record shape only — never the content. `feedbackRating` is optional, private to that
+session, and clears if the answer is regenerated. Code generation is refused by the engine itself (intent
 `code_request`), not by a prompt, and the refusal points at Code Assist.
 
 ## 4. Code Assist (`/dashboard/code`, `POST /api/copilot/code-review`)
@@ -179,6 +204,8 @@ Paste code or a stack trace and choose **Review**, **Fix** or **Explain**.
 ```bash
 # Option A — native install: https://ollama.com
 ollama pull qwen2.5-coder:7b
+# Optional general-instruct model for more natural open-domain chat (check its model-card licence)
+ollama pull qwen2.5:7b
 # Option B — Docker (bound to 127.0.0.1 only)
 docker compose --profile ai up -d
 docker compose exec ollama ollama pull qwen2.5-coder:7b
@@ -189,7 +216,10 @@ ollama create arch-copilot -f ai/Modelfile
 # .env
 AI_PROVIDER="arch-hybrid"
 LOCAL_LLM_URL="http://127.0.0.1:11434"
-LOCAL_LLM_MODEL="qwen2.5-coder:7b"      # or arch-copilot
+LOCAL_LLM_MODEL="qwen2.5-coder:7b"      # Copilot model; or arch-copilot
+LOCAL_CHAT_MODEL="qwen2.5:7b"           # optional; blank reuses LOCAL_LLM_MODEL
+LOCAL_CHAT_TIMEOUT_MS="60000"
+LOCAL_CHAT_REFLECTION="true"
 ```
 
 `LOCAL_LLM_API="openai"` works with llama.cpp `llama-server`, LM Studio, vLLM and LocalAI.
@@ -247,8 +277,11 @@ without any of it: the pattern library is original ARCH text, and your own incid
 | `ARCH_OFFLINE_ONLY` | `true` | Refuses external vendors and non-private `LOCAL_LLM_URL` values |
 | `LOCAL_LLM_URL` | `http://127.0.0.1:11434` | |
 | `LOCAL_LLM_API` | `ollama` | or `openai` (OpenAI-compatible local servers) |
-| `LOCAL_LLM_MODEL` | `qwen2.5-coder:7b` | |
-| `LOCAL_LLM_TIMEOUT_MS` | `90000` | After this the ARCH model answers |
+| `LOCAL_LLM_MODEL` | `qwen2.5-coder:7b` | Copilot model |
+| `LOCAL_CHAT_MODEL` | unset | Chat model; blank reuses `LOCAL_LLM_MODEL` |
+| `LOCAL_LLM_TIMEOUT_MS` | `90000` | Copilot timeout |
+| `LOCAL_CHAT_TIMEOUT_MS` | `60000` | Whole chat draft + reflection budget; timeout falls back to native |
+| `LOCAL_CHAT_REFLECTION` | `true` | One private self-review pass; set `false` for faster inference |
 | `LOCAL_LLM_CONTEXT` | `8192` | `num_ctx` for Ollama |
 | `ARCH_MODEL_DATA_DIR` | `model-data` | Public corpus and fine-tune exports (git-ignored) |
 | `ARCH_MODEL_RETRAIN_MINUTES` | `60` | `0` = never (manual or CLI only) |
@@ -266,8 +299,10 @@ src/server/ai/
   arch-model/train.ts       Naive Bayes + TF-IDF training, holdout metrics, artifact format
   arch-model/runtime.ts     ArchModelRuntime: classify, similar; baseArchModel()
   arch-model/engine.ts      buildKnowledge + archDraft(task) for every Copilot task
-  arch-model/chat.ts        pure Chat with ARCH engine: intents, EN/Hinglish answers, citations,
+  arch-model/chat.ts        pure native chat engine: intents, EN/Hinglish answers, citations,
                             conversational memory merge (typed > stored > account name)
+  arch-model/chat-agent.ts  local generative path: task plan, tenant RAG context, reflection + citations
+  local-chat.ts             plain-text Ollama / OpenAI-compatible local chat adapter (private-only)
   arch-model/tech-knowledge.ts  V10/V10.3 built-in tech knowledge pack: 161 general topics across 16
                             families (aliases + keywords + cues, EN/Hinglish, related) and the scored
                             matcher (alias phrase > cue > keyword, confidence floor so workspace
@@ -294,8 +329,10 @@ migration `20260925180000_v3_model_registry`), `arch_model_jobs` (background tra
 V8 adds `arch_chat_sessions` / `arch_chat_messages` (migration `20260928000000_v8_arch_chat`).
 V9 adds `arch_chat_memory` (migration `20260928120000_v9_chat_memory`) — what ARCH remembers about
 one member across conversations: name, role, tech stack and notes, one row per (organization, user),
-editable and deletable by that member from the chat's Memory panel. It is *not* training data: only
-approve/edit/dismiss feedback trains the model.
+editable and deletable by that member from the chat's Memory panel. V10.4 adds nullable
+`ArchChatFeedbackRating` on assistant messages (migration `20260928150000_v10_local_chat_agent`).
+Memory and chat turns are *not* training data: explicit incident corrections train the native
+incident classifier; one-click chat ratings are evaluation metadata only, not fine-tuning examples.
 
 The rule from V2 still holds: **nothing in `src/server/ai/` touches the database or reads files.**
 Services load data through tenant-scoped repositories and pass it in.
@@ -303,12 +340,14 @@ Services load data through tenant-scoped repositories and pass it in.
 ## 10. Honest limitations
 
 - The native engine **does not write new prose**. It selects, classifies and fills templates. That
-  makes it predictable and hard to make hallucinate, but its drafts — and chat answers — read like
-  structured notes. Use `arch-hybrid` for fluent writing and real code rewrites. Chat deliberately
-  stays on the native engine: for this audience, a grounded answer beats a fluent guess.
-- Chat knows what its workspace has seen; it will not invent history. If your incidents are not
-  resolved (or the model has not trained yet), "have we seen this before?" falls back to the
-  pattern library and labels the difference.
+  makes native answers predictable, but they can read like structured notes. In `arch-hybrid`, only
+  eligible open-ended chat intents use a private local model for more natural answers; the model may
+  still be wrong about general facts, and reflection is not a formal fact-checker. Use the native
+  path when determinism matters. Code rewrites stay in Code Assist.
+- Native chat does not invent workspace history: it uses the snapshot and retrieved rows. Hybrid
+  answers cite retrieved sources when used but are still generative, so verify advice before acting.
+  If incidents are not resolved (or the model has not trained yet), "have we seen this before?"
+  falls back to the pattern library and labels the difference.
 - Accuracy grows with data. Below about 10 resolved incidents, severity accuracy is not measured
   and the model leans on built-in examples.
 - Code Assist rules are heuristics. They catch common incident-causing patterns, not every bug, and

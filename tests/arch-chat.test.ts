@@ -13,12 +13,14 @@ import {
   regenerateChatAnswer,
   renameChatSession,
   sendChatMessage,
+  setChatMessageFeedback,
   titleFromMessage,
   updateChatMemory,
 } from '@/server/services/archChat.service';
 import { ingestKnowledgeSource, resetKnowledgeCaches } from '@/server/services/knowledge.service';
 import { approveSuggestion, generateSuggestion } from '@/server/services/copilot.service';
 import { processTrainingJobs, resetArchModelCache, trainModel } from '@/server/services/archModel.service';
+import { setLocalChatModelForTesting, type LocalChatModel } from '../src/server/ai/local-chat';
 import { addMember, createTenant, createTestIncident, createTestUser, db, resetDatabase } from './helpers/db';
 
 /**
@@ -49,6 +51,7 @@ describe('Chat with ARCH (service)', () => {
     resetRateLimits();
     resetArchModelCache();
     resetKnowledgeCaches();
+    setLocalChatModelForTesting(undefined);
   });
 
   it('creates a conversation, answers the first message, and titles the chat from it', async () => {
@@ -76,6 +79,56 @@ describe('Chat with ARCH (service)', () => {
     expect(result.session.titleSource).toBe('AUTO');
   });
 
+  it('uses the opt-in local model for open-ended chat, reflects once, and records the provider', async () => {
+    const { organization, owner } = await setup('local-chat');
+    const session = await createChatSession({ organizationId: organization.id, userId: owner.id });
+    let calls = 0;
+    const localModel: LocalChatModel = {
+      model: 'local-test-model',
+      async generate() {
+        calls += 1;
+        return { model: 'local-test-model', text: calls === 1 ? 'Draft: Apologize clearly.' : 'A sincere, specific apology is a good start.' };
+      },
+    };
+    setLocalChatModelForTesting(localModel);
+
+    const result = await sendChatMessage({
+      organizationId: organization.id,
+      userId: owner.id,
+      sessionId: session.id,
+      content: 'How do I apologize to a friend?',
+    });
+
+    expect(calls).toBe(2);
+    expect(result.archMessage.content).toBe('A sincere, specific apology is a good start.');
+    expect(result.archMessage.provider).toBe('arch-hybrid');
+    expect(result.archMessage.model).toBe('local-test-model');
+    const stored = await db.archChatMessage.findFirstOrThrow({ where: { id: result.archMessage.id } });
+    expect(stored.provider).toBe('arch-hybrid');
+  }, 60_000);
+
+  it('uses the deterministic native answer when local generation fails', async () => {
+    const { organization, owner } = await setup('local-chat-fallback');
+    const session = await createChatSession({ organizationId: organization.id, userId: owner.id });
+    setLocalChatModelForTesting({
+      model: 'local-test-model',
+      async generate() {
+        throw new Error('private local inference unavailable');
+      },
+    });
+
+    const result = await sendChatMessage({
+      organizationId: organization.id,
+      userId: owner.id,
+      sessionId: session.id,
+      content: 'How do I apologize to a friend?',
+    });
+
+    expect(result.archMessage.provider).toBe('arch');
+    expect(result.archMessage.model).toBe('arch-native-1');
+    expect(result.archMessage.content.length).toBeGreaterThan(0);
+  }, 60_000);
+
   it('persists the transcript and returns it oldest-first', async () => {
     const { organization, owner } = await setup('persist');
     const session = await createChatSession({ organizationId: organization.id, userId: owner.id });
@@ -92,6 +145,32 @@ describe('Chat with ARCH (service)', () => {
     expect(list).toHaveLength(1);
     expect(list[0]!.preview).toBeTruthy();
   });
+
+  it('stores and clears answer feedback without exposing other members’ messages', async () => {
+    const { organization, owner, responder, viewer } = await setup('chat-feedback');
+    const session = await createChatSession({ organizationId: organization.id, userId: owner.id });
+    const sent = await sendChatMessage({ organizationId: organization.id, userId: owner.id, sessionId: session.id, content: 'what is open right now?' });
+
+    await expect(setChatMessageFeedback({ organizationId: organization.id, userId: owner.id, sessionId: session.id, messageId: sent.archMessage.id, rating: 'UP' }))
+      .resolves.toEqual({ messageId: sent.archMessage.id, rating: 'UP' });
+    expect((await getChatSession({ organizationId: organization.id, userId: owner.id, sessionId: session.id })).messages[1]!.feedbackRating).toBe('UP');
+
+    await setChatMessageFeedback({ organizationId: organization.id, userId: owner.id, sessionId: session.id, messageId: sent.archMessage.id, rating: 'DOWN' });
+    expect((await db.archChatMessage.findUniqueOrThrow({ where: { id: sent.archMessage.id } })).feedbackRating).toBe('DOWN');
+    await setChatMessageFeedback({ organizationId: organization.id, userId: owner.id, sessionId: session.id, messageId: sent.archMessage.id, rating: null });
+    expect((await db.archChatMessage.findUniqueOrThrow({ where: { id: sent.archMessage.id } })).feedbackRating).toBeNull();
+
+    await expect(setChatMessageFeedback({ organizationId: organization.id, userId: owner.id, sessionId: session.id, messageId: sent.userMessage.id, rating: 'UP' }))
+      .rejects.toMatchObject({ status: 404 });
+    await expect(setChatMessageFeedback({ organizationId: organization.id, userId: responder.id, sessionId: session.id, messageId: sent.archMessage.id, rating: 'UP' }))
+      .rejects.toMatchObject({ status: 404 });
+    await expect(setChatMessageFeedback({ organizationId: organization.id, userId: viewer.id, sessionId: session.id, messageId: sent.archMessage.id, rating: 'UP' }))
+      .rejects.toMatchObject({ status: 403 });
+
+    const audit = await db.auditLog.findFirstOrThrow({ where: { organizationId: organization.id, action: 'chat.feedback' } });
+    expect(JSON.stringify(audit.metadata)).not.toContain(sent.archMessage.content);
+    expect(audit.metadata).toEqual({ rating: 'UP' });
+  }, 60_000);
 
   it('keeps one member’s chats invisible to another member of the same workspace', async () => {
     const { organization, owner, responder } = await setup('personal');

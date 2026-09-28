@@ -16,8 +16,9 @@ import { IconChat, IconCopy, IconDownload, IconMemory, IconPencil, IconPlus, Ico
  * (`⌘/Ctrl+Shift+O` new chat, `⌘/Ctrl+K` search). Everything is stored server-side, so reloading the
  * page or coming back tomorrow shows exactly the same conversation.
  *
- * The answer itself comes from ARCH's native engine — no vendor, no tokens, no network — and every
- * factual sentence carries a citation the reader can click through to the incident or runbook.
+ * By default, answers come from ARCH's native engine. An opt-in hybrid mode can use a private local
+ * open-weight model for open-ended answers, grounded by retrieved workspace sources and reviewed
+ * once before display. Workspace claims cite the source the reader can click through to.
  */
 
 type Citation = {
@@ -38,6 +39,7 @@ type Message = {
   suggestions: string[];
   model: string | null;
   latencyMs: number | null;
+  feedbackRating: 'UP' | 'DOWN' | null;
   createdAt: string;
 };
 
@@ -324,6 +326,7 @@ export function ArchChat({
   const [confirmClear, setConfirmClear] = useState(false);
   /** True while the last answer is being regenerated ("Try again"). */
   const [retrying, setRetrying] = useState(false);
+  const [feedbackBusyId, setFeedbackBusyId] = useState<string | null>(null);
   /** The one message that should reveal itself; everything else renders instantly. */
   const [animateId, setAnimateId] = useState<string | null>(null);
   /** V9 memory panel: what ARCH remembers about this member, and the note being typed. */
@@ -421,7 +424,7 @@ export function ArchChat({
       const temporaryId = `pending-${Date.now()}`;
       setMessages((previous) => [
         ...previous,
-        { id: temporaryId, role: 'USER', content, intent: null, confidence: null, citations: [], suggestions: [], model: null, latencyMs: null, createdAt: new Date().toISOString() },
+        { id: temporaryId, role: 'USER', content, intent: null, confidence: null, citations: [], suggestions: [], model: null, latencyMs: null, feedbackRating: null, createdAt: new Date().toISOString() },
       ]);
 
       try {
@@ -486,6 +489,24 @@ export function ArchChat({
       setRetrying(false);
     }
   }, [activeId, canChat, sending, retrying]);
+
+  const rateAnswer = useCallback(async (message: Message, rating: 'UP' | 'DOWN') => {
+    if (!activeId || !canChat || sending || feedbackBusyId) return;
+    const nextRating = message.feedbackRating === rating ? null : rating;
+    setFeedbackBusyId(message.id);
+    try {
+      const result = await request<{ messageId: string; rating: 'UP' | 'DOWN' | null }>(
+        `/api/copilot/chat/sessions/${activeId}/messages/${message.id}/feedback`,
+        { method: 'PATCH', body: JSON.stringify({ rating: nextRating }) },
+      );
+      setMessages((previous) => previous.map((item) => item.id === message.id ? { ...item, feedbackRating: result.rating } : item));
+      toast(result.rating ? 'Thanks — feedback saved.' : 'Feedback removed.');
+    } catch (cause) {
+      toast(cause instanceof Error ? cause.message : 'Could not save feedback.', 'error');
+    } finally {
+      setFeedbackBusyId(null);
+    }
+  }, [activeId, canChat, sending, feedbackBusyId]);
 
   const copyChat = useCallback(async () => {
     const copied = await copyText(toMarkdown(activeSession, messages));
@@ -961,6 +982,32 @@ export function ArchChat({
                         >
                           <IconCopy className="size-3" /> Copy
                         </button>
+                        {canChat ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => void rateAnswer(message, 'UP')}
+                              disabled={sending || feedbackBusyId !== null}
+                              aria-label="This answer was helpful"
+                              aria-pressed={message.feedbackRating === 'UP'}
+                              title="Rate this answer as helpful"
+                              className={`rounded-md px-1.5 py-0.5 text-[10.5px] transition disabled:opacity-40 ${message.feedbackRating === 'UP' ? 'bg-emerald-500/15 text-emerald-300' : 'text-slate-500 hover:bg-white/[0.06] hover:text-slate-200'}`}
+                            >
+                              ↑ Helpful
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => void rateAnswer(message, 'DOWN')}
+                              disabled={sending || feedbackBusyId !== null}
+                              aria-label="This answer was not helpful"
+                              aria-pressed={message.feedbackRating === 'DOWN'}
+                              title="Rate this answer as not helpful"
+                              className={`rounded-md px-1.5 py-0.5 text-[10.5px] transition disabled:opacity-40 ${message.feedbackRating === 'DOWN' ? 'bg-rose-500/15 text-rose-300' : 'text-slate-500 hover:bg-white/[0.06] hover:text-slate-200'}`}
+                            >
+                              ↓ Not helpful
+                            </button>
+                          </>
+                        ) : null}
                         {isLastAnswer && canChat ? (
                           <button
                             type="button"
@@ -990,7 +1037,7 @@ export function ArchChat({
                     <span className="size-1.5 animate-bounce rounded-full bg-violet-400 [animation-delay:150ms]" />
                     <span className="size-1.5 animate-bounce rounded-full bg-violet-400 [animation-delay:300ms]" />
                   </span>
-                  Reading your workspace…
+                  Reading context and preparing an answer…
                 </p>
               </div>
             ) : null}
@@ -1058,7 +1105,7 @@ export function ArchChat({
             </button>
           </div>
           <p className="mt-1.5 flex flex-wrap items-center gap-x-2 px-1 text-[10.5px] text-slate-600">
-            <span>Answers are grounded on this workspace and cited. ARCH advises — it never changes anything on its own, and it does not write code.</span>
+            <span>Workspace claims use retrieved context and citations; general answers may come from local model knowledge. ARCH advises — it never changes anything on its own, and it does not write code.</span>
             <span className="text-slate-700">
               ⌘/Ctrl+Shift+O new chat · ⌘/Ctrl+K search · {AI_NAME} keeps the last 12 turns in context
             </span>

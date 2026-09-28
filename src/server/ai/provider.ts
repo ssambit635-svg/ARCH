@@ -89,7 +89,9 @@ export function copilotConfig(): CopilotConfig {
   if (provider === 'mock') return { enabled: true, provider, model: DEFAULT_MODELS.mock, onPremise: true };
 
   if (provider === 'arch-hybrid') {
-    const model = `${env.LOCAL_LLM_MODEL} + ${DEFAULT_MODELS.arch}`;
+    const chatModel = env.LOCAL_CHAT_MODEL?.trim();
+    const chatLabel = chatModel && chatModel !== env.LOCAL_LLM_MODEL ? ` (chat: ${chatModel})` : '';
+    const model = `${env.LOCAL_LLM_MODEL}${chatLabel} + ${DEFAULT_MODELS.arch}`;
     const local = isLocalEndpoint(env.LOCAL_LLM_URL);
     if (!local && env.ARCH_OFFLINE_ONLY) {
       return {
