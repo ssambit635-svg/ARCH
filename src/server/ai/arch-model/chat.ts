@@ -92,9 +92,19 @@ export type ChatKnowledgeChunk = {
   similarity: number;
 };
 
+export type ChatMemory = {
+  userName?: string | null;
+  userRole?: string | null;
+  techStack?: string[];
+  notes?: string[];
+  cleared?: boolean;
+};
+
 export type ChatSnapshot = {
   organizationName: string;
   now: string;
+  user?: { name: string | null; email: string | null };
+  memory?: ChatMemory;
   model: { name: string; version: number; trainedAt: string | null; teamDocuments: number; totalDocuments: number };
   counts: {
     open: number;
@@ -146,6 +156,14 @@ export type ChatIntent =
   | 'lessons'
   | 'advice'
   | 'code_request'
+  | 'datetime'
+  | 'workflow_guide'
+  | 'tech_stack_advice'
+  | 'memory_store'
+  | 'memory_recall'
+  | 'memory_clear'
+  | 'concept_explain'
+  | 'health_summary'
   | 'unknown';
 
 export type ChatAnswer = {
@@ -160,19 +178,176 @@ export type ChatAnswer = {
 export type ChatLang = 'en' | 'hinglish';
 
 // ---------------------------------------------------------------------------------------------
-// Language
+// Language & Conversational Memory
 // ---------------------------------------------------------------------------------------------
 
 const HINGLISH_MARKERS =
-  /\b(kya|kyu|kyun|kaise|kaisa|kaisi|hai|hain|ho|hoon|hu|bata|batao|karo|karu|karun|kaun|kab|kahan|kitna|kitne|kitni|nahi|nahin|haan|han|bhai|yaar|acha|achha|theek|thik|matlab|abhi|phir|wapas|sab|kuch|bhi|apna|hamara|hamare|tum|aap|mera|mere|de|do|raha|rahi|rahe|hua|huyi|hoga|chahiye|dikha|dikhao|batana|samjha|samjhao|pichla|pichhle|pehle|baad|mein|me|ka|ki|ke|se|par|aur|ya|thoda|zyada|bohot|bahut|bal|thoda|sahi|galat|konsa|kaunsa|chal|chalta|chalte|karna|krna|kr|wala|wali|wale|vala|jwab|jawab|sawal|sawaal|namaste|shukriya|dhanyavad)\b/i;
+  /\b(kya|kyu|kyun|kaise|kaisa|kaisi|hai|hain|ho|hoon|hu|bata|batao|karo|karu|karun|kaun|kab|kahan|kitna|kitne|kitni|nahi|nahin|haan|han|bhai|yaar|acha|achha|theek|thik|matlab|abhi|phir|wapas|sab|kuch|bhi|apna|hamara|hamare|tum|aap|mera|mere|de|do|raha|rahi|rahe|hua|huyi|hoga|chahiye|dikha|dikhao|batana|samjha|samjhao|pichla|pichhle|pehle|baad|mein|me|ka|ki|ke|se|par|aur|ya|thoda|zyada|bohot|bahut|bal|sahi|galat|konsa|kaunsa|chal|chalta|chalte|karna|krna|kr|wala|wali|wale|vala|jwab|jawab|sawal|sawaal|namaste|shukriya|dhanyavad|aaj|tareekh|samay)\b/i;
 
-export function detectChatLanguage(question: string): ChatLang {
-  if (/[\u0900-\u097F]/.test(question)) return 'hinglish';
-  const tokens = question.toLowerCase().split(/[^a-z]+/).filter(Boolean);
-  if (tokens.length === 0) return 'en';
+const ENGLISH_STRUCTURE_WORDS = new Set([
+  'the', 'is', 'are', 'was', 'were', 'what', 'where', 'when', 'why', 'how', 'which', 'who',
+  'this', 'that', 'these', 'those', 'please', 'could', 'would', 'should', 'can', 'explain',
+  'detail', 'architecture', 'switch', 'english', 'language', 'about', 'from', 'with', 'have',
+]);
+
+export function detectChatLanguage(question: string, history?: ChatTurn[]): ChatLang {
+  const trimmed = question.trim();
+
+  // 1. Explicit request to switch language
+  if (
+    /\b(speak|talk|reply|answer|switch to)\s+(in\s+)?(hindi|hinglish)\b/i.test(trimmed) ||
+    /\bhindi (me|mein|mai) (baat|bolo|jawab|batao)\b/i.test(trimmed)
+  ) {
+    return 'hinglish';
+  }
+  if (
+    /\b(speak|talk|reply|answer|switch to)\s+(in\s+)?english\b/i.test(trimmed) ||
+    /\benglish (me|mein|mai) (baat|bolo|reply)\b/i.test(trimmed)
+  ) {
+    return 'en';
+  }
+
+  // 2. Direct script / strong marker checks on the current question
+  if (/[\u0900-\u097F]/.test(trimmed)) return 'hinglish';
+
+  const tokens = trimmed.toLowerCase().split(/[^a-z]+/).filter(Boolean);
+  if (tokens.length === 0) {
+    if (history?.length) {
+      const prevUser = [...history].reverse().find((turn) => turn.role === 'user');
+      if (prevUser && detectChatLanguage(prevUser.content) === 'hinglish') return 'hinglish';
+    }
+    return 'en';
+  }
+
   const hits = tokens.filter((token) => HINGLISH_MARKERS.test(token)).length;
   // Two markers, or a quarter of a short question, is enough — "hai" alone is not.
-  return hits >= 2 || (tokens.length <= 4 && hits >= 1) ? 'hinglish' : 'en';
+  const isDirectHinglish = hits >= 2 || (tokens.length <= 4 && hits >= 1);
+  if (isDirectHinglish) return 'hinglish';
+
+  // 3. Conversational continuity: if user previously spoke in Hinglish, continue in Hinglish
+  // unless they clearly transitioned to English
+  if (history && history.length > 0) {
+    const prevUserTurns = history.filter((turn) => turn.role === 'user');
+    const lastUserTurn = prevUserTurns[prevUserTurns.length - 1];
+    if (lastUserTurn) {
+      const prevLang = detectChatLanguage(lastUserTurn.content);
+      if (prevLang === 'hinglish') {
+        let engCount = 0;
+        for (const token of tokens) {
+          if (ENGLISH_STRUCTURE_WORDS.has(token)) engCount++;
+        }
+        const isDeliberateEnglish =
+          tokens.length >= 7 &&
+          engCount >= 3 &&
+          hits === 0 &&
+          /\b(please|could you|would you|explain to me|in detail|can we switch|from now on)\b/i.test(trimmed);
+
+        if (!isDeliberateEnglish) {
+          return 'hinglish';
+        }
+      }
+    }
+  }
+
+  return 'en';
+}
+
+/**
+ * Extract user profile information, tech stack, preferences, and explicit notes from chat history.
+ */
+export function extractMemory(params: {
+  history?: ChatTurn[];
+  question?: string;
+  userProfile?: { name: string | null; email: string | null };
+}): ChatMemory {
+  const memory: ChatMemory = {
+    userName: params.userProfile?.name ?? null,
+    userRole: null,
+    techStack: [],
+    notes: [],
+  };
+
+  const turnsToInspect: string[] = [];
+  if (params.history) {
+    for (const turn of params.history) {
+      if (turn.role === 'user') turnsToInspect.push(turn.content);
+    }
+  }
+  if (params.question) {
+    turnsToInspect.push(params.question);
+  }
+
+  // If user asked to wipe or clear memory, discard everything before that turn
+  for (let i = turnsToInspect.length - 1; i >= 0; i--) {
+    const text = turnsToInspect[i]!;
+    if (/\b(clear (my )?memory|forget (what i said|everything|me)|wipe memory|memory clear|sab bhool jao)\b/i.test(text)) {
+      turnsToInspect.splice(0, i + 1);
+      memory.cleared = true;
+      memory.userName = null;
+      memory.userRole = null;
+      memory.techStack = [];
+      memory.notes = [];
+      break;
+    }
+  }
+
+  const stackSet = new Set<string>();
+  const notesList: string[] = [];
+
+  const FORBIDDEN_NAMES = new Set([
+    'arch', 'fine', 'good', 'developer', 'working', 'trying', 'here', 'ready', 'online',
+    'testing', 'busy', 'ok', 'yes', 'no', 'looking', 'asking', 'sorry', 'happy', 'the',
+    'an', 'a', 'just', 'not', 'very', 'having', 'going', 'doing', 'new', 'old', 'what', 'who',
+    'kya', 'kaun', 'kaisa', 'kaisi', 'kaise', 'kab', 'kahan', 'kitna', 'kitne', 'batao', 'bata',
+    'bolo', 'bhai', 'yaar', 'namaste', 'shukriya', 'remember', 'forget', 'clear', 'wipe', 'memory',
+    'tell', 'show', 'naam', 'name', 'hai', 'hain', 'hoon', 'hu', 'me', 'mein', 'mera', 'meri', 'mere',
+  ]);
+
+  for (const text of turnsToInspect) {
+    const isQuestionAboutName = /(\?|\b(kya|what|who|kaun|do you know|remember)\b)/i.test(text);
+
+    if (!isQuestionAboutName) {
+      const nameMatch =
+        text.match(/\b(?:my name is|call me|i am|i'm)\s+([A-Za-z]{2,20})\b/i) ||
+        text.match(/\b(?:mera naam)\s+([A-Za-z]{2,20})(?:\s+hai)?\b/i);
+      if (nameMatch && nameMatch[1]) {
+        const candidate = nameMatch[1].trim();
+        if (!FORBIDDEN_NAMES.has(candidate.toLowerCase()) && candidate.length >= 2) {
+          memory.userName = candidate.charAt(0).toUpperCase() + candidate.slice(1);
+        }
+      }
+    }
+
+    const roleMatch = text.match(/\b(?:i am an?|my role is|i work as|main\s+.*\shoon)\s+([A-Za-z\s]+(?:engineer|developer|sre|devops|architect|lead|manager|qa|admin))\b/i);
+    if (roleMatch && roleMatch[1]) {
+      memory.userRole = roleMatch[1].trim();
+    }
+
+    const TECH_KEYWORDS = [
+      'PostgreSQL', 'Postgres', 'MySQL', 'Redis', 'MongoDB', 'Kafka', 'RabbitMQ',
+      'Docker', 'Kubernetes', 'K8s', 'AWS', 'GCP', 'Azure',
+      'Python', 'Go', 'Golang', 'Rust', 'TypeScript', 'JavaScript', 'Node.js', 'Next.js',
+      'React', 'FastAPI', 'Django', 'GraphQL', 'Nginx', 'Elasticsearch',
+    ];
+    for (const tech of TECH_KEYWORDS) {
+      const regex = new RegExp(`\\b${tech.replace('.', '\\.')}\\b`, 'i');
+      if (regex.test(text)) {
+        stackSet.add(tech);
+      }
+    }
+
+    const rememberMatch = text.match(/\b(?:remember (?:that)?|note (?:that)?|save (?:this:?)?|yaad rakh(?:na|o)? (?:ki)?)\s+([^.!?\n]{3,120})/i);
+    if (rememberMatch && rememberMatch[1]) {
+      const note = rememberMatch[1].trim();
+      if (!notesList.includes(note)) {
+        notesList.push(note);
+      }
+    }
+  }
+
+  memory.techStack = Array.from(stackSet);
+  memory.notes = notesList;
+  return memory;
 }
 
 /**
@@ -181,12 +356,12 @@ export function detectChatLanguage(question: string): ChatLang {
  */
 const SAY = {
   greeting: {
-    en: () =>
-      `Hey! I'm ${AI_NAME} — your on-call intelligence for this workspace. ` +
-      'Ask me about incidents (open, past, one in particular), your runbooks, or any ops problem you are staring at.',
-    hinglish: () =>
-      `Namaste! Main ${AI_NAME} hoon — is workspace ka on-call intelligence. ` +
-      'Incidents (open, purane, koi bhi), runbooks, ya jo bhi ops problem aa rahi ho — pooch lo.',
+    en: (name?: string) =>
+      `Hello ${name ? `${name}! ` : 'developer! '}I'm ${AI_NAME} — your AI copilot and on-call intelligence for this workspace. ` +
+      'Ask me about incidents (open, past, one in particular), your runbooks, tech stack advice, current date/time, or any ops problem you are staring at.',
+    hinglish: (name?: string) =>
+      `Hello ${name ? `${name}! ` : 'developer! '}Main ${AI_NAME} hoon — is workspace ka AI copilot aur on-call intelligence. ` +
+      'Incidents (open, purane, koi bhi), runbooks, tech stack guidance, aaj ki date/time, ya jo bhi ops problem aa rahi ho — pooch lo.',
   },
   help: {
     en: () =>
@@ -211,14 +386,16 @@ const SAY = {
     hinglish: () => 'Koi baat nahi! Jab bhi picture badle, bata dena — main yahin hoon.',
   },
   smalltalk: {
-    en: () => 'Running fine, thanks — no incidents in my own stack today. How is the on-call shift treating you?',
-    hinglish: () => 'Main ekdum fit hoon, thanks — mere stack mein aaj koi incident nahi. Aapki on-call shift kaisi chal rahi hai?',
+    en: (name?: string) =>
+      `Running fine, thanks${name ? `, ${name}` : ''} — no incidents in my own stack today. How is the on-call shift or work treating you?`,
+    hinglish: (name?: string) =>
+      `Main ekdum fit hoon, thanks${name ? `, ${name}` : ''} — mere stack mein aaj koi incident nahi. Aapki on-call shift ya kaam kaisa chal raha hai?`,
   },
   identity: {
     en: (model: string) =>
-      `I am ${AI_NAME} — ARCH's own native model (\`${model}\`). I run on this server on CPU, with no API key and no external vendor: the classifiers, retrieval and templates are all ARCH's own code, trained on this workspace's incidents.`,
+      `I am ${AI_NAME} — ARCH's own native model (\`${model}\`). I run on this server on CPU, with no API key and no external vendor: the classifiers, memory, retrieval and templates are all ARCH's own code, trained on this workspace's incidents.`,
     hinglish: (model: string) =>
-      `Main ${AI_NAME} hoon — ARCH ka apna native model (\`${model}\`). Sab kuch isi server par, CPU par chalta hai — na API key, na koi external vendor. Classifier, retrieval aur templates sab ARCH ka apna code hai, jo is workspace ke incidents par train hota hai.`,
+      `Main ${AI_NAME} hoon — ARCH ka apna native model (\`${model}\`). Sab kuch isi server par, CPU par chalta hai — na API key, na koi external vendor. Classifier, memory, retrieval aur templates sab ARCH ka apna code hai, jo is workspace ke incidents par train hota hai.`,
   },
   codeRefusal: {
     en: () =>
@@ -228,14 +405,14 @@ const SAY = {
   },
   unknown: {
     en: () =>
-      'I did not quite catch what you are after. I am strongest on: what is open right now, what happened before, what your runbooks say, and how to approach a problem you describe.',
+      'I did not quite catch what you are after. I am strongest on: what is open right now, what happened before, what your runbooks say, current date and time, and how to approach a problem you describe.',
     hinglish: () =>
-      'Mujhe theek se samajh nahi aaya aap kya chahte ho. Main in cheezon mein sabse acha hoon: abhi kya open hai, pehle kya hua tha, aapke runbooks kya kehte hain, aur kisi problem ko kaise handle karna hai.',
+      'Mujhe theek se samajh nahi aaya aap kya chahte ho. Main in cheezon mein sabse acha hoon: abhi kya open hai, pehle kya hua tha, aapke runbooks kya kehte hain, aaj ki date/time, aur kisi problem ko kaise handle karna hai.',
   },
 } as const;
 
-function say(key: keyof typeof SAY, lang: ChatLang, ...args: string[]): string {
-  const entry = SAY[key] as unknown as Record<ChatLang, (...rest: string[]) => string>;
+function say(key: keyof typeof SAY, lang: ChatLang, ...args: (string | undefined)[]): string {
+  const entry = SAY[key] as unknown as Record<ChatLang, (...rest: (string | undefined)[]) => string>;
   return entry[lang](...args);
 }
 
@@ -246,9 +423,73 @@ function say(key: keyof typeof SAY, lang: ChatLang, ...args: string[]): string {
 type IntentRule = { id: ChatIntent; patterns: RegExp[]; weight?: number };
 
 /** Social intents never override a real question ("thanks — what's open?" is an incidents question). */
-const SOCIAL = new Set<ChatIntent>(['greet', 'thanks', 'smalltalk', 'help', 'identity']);
+const SOCIAL = new Set<ChatIntent>(['greet', 'thanks', 'smalltalk', 'identity']);
 
 const INTENT_RULES: IntentRule[] = [
+  {
+    id: 'datetime',
+    weight: 5,
+    patterns: [
+      /\b(what('?s| is) (the )?(date|time|day)( today)?|(today'?s?|current) (date|time|day)|aaj (kya|kaunsa|konsa) (din|date|tareekh|samay|time)|date kya hai|time kya (hai|hua)|what day is (it|today)|what time is it)\b/i,
+      /\b(what is today'?s? (date|day)|what date is (it|today)|todays date|today date|current date|aaj ki (tareekh|date))\b/i,
+      /^date\??$/i,
+    ],
+  },
+  {
+    id: 'workflow_guide',
+    weight: 4,
+    patterns: [
+      /\b(what should i do( in here)?|what do i do( in here| next)?|where (do|should) i (start|begin)|how (do|should) i get started|kahan se shuru karu|yahan kya kar(u|un)|main yahan kya karu|guide me( on what to do)?|what to do here|how to use (this|arch)|getting started)\b/i,
+      /\b(what should we do next|what to do now|what am i supposed to do|next steps|how do i begin)\b/i,
+    ],
+  },
+  {
+    id: 'tech_stack_advice',
+    weight: 4,
+    patterns: [
+      /\b(which language (should|to) (i|we) use|what language (should|to) (i|we) use|what code should i use|which tech stack|konsi language (use|chahiye|sahi|better|best)|kaunsi language (use|better|best)|what stack should (i|we) use|language recommendation|which framework|python vs (go|node|rust|java)|node vs python|should (i|we) use (python|go|rust|node|typescript))\b/i,
+      /\b(what programming language|best language for (microservices|backend|api|high throughput|web)|which language (is|are) best)\b/i,
+    ],
+  },
+  {
+    id: 'memory_clear',
+    weight: 5,
+    patterns: [
+      /\b(clear (my )?memory|forget (what i said|my notes|everything|me)|wipe memory|memory clear( karo)?|sab bhool jao|bhool jao)\b/i,
+    ],
+  },
+  {
+    id: 'memory_recall',
+    weight: 4,
+    patterns: [
+      /\b(what('?s| is) my (name|role|stack|tech stack)|do you know (my name|who i am|me)|mera naam kya hai|meri details|who am i|tumhe mere baare mein kya (yaad|pata) hai|what do you (remember|know)( about me)?|what have you saved|what did i (tell|ask) you to remember|what notes do you have|what do you remember)\b/i,
+      /\b(do you remember( me| my name| what i said)?|mera stack kya hai|kya yaad hai)\b/i,
+    ],
+  },
+  {
+    id: 'memory_store',
+    weight: 3,
+    patterns: [
+      /\b(remember (that|this)?|note (that|this)?|save (this|that)?|yaad rakh(?:na|o)? (?:ki)?)\s+[^.!?\n]{3,}/i,
+      /\b(my name is|call me|mera naam|main\s+[A-Za-z]+\shoon)\b/i,
+      /\b(we use|our (tech )?stack is|i work with|hamara stack|hum use karte hain)\s+[^.!?\n]{3,}/i,
+    ],
+  },
+  {
+    id: 'concept_explain',
+    weight: 4,
+    patterns: [
+      /\b(what is|what are|explain|kya (hota|hai))\s+(an?\s+)?(mttr|mttd|slo|sla|sli|runbook|blast radius|post-?mortem|incident response)\b/i,
+      /\b(mttr|mttd|slo|sla|runbook|blast radius) (kya hai|kya hota hai|means?|definition)\b/i,
+    ],
+  },
+  {
+    id: 'health_summary',
+    weight: 3,
+    patterns: [
+      /\b(is (the )?system healthy|are (we|all systems) (good|healthy|up|operational|ok)|system status|overall status|sab theek hai|sab kaisa hai|health summary|are we good)\b/i,
+    ],
+  },
   {
     id: 'code_request',
     weight: 3,
@@ -263,13 +504,13 @@ const INTENT_RULES: IntentRule[] = [
     id: 'open_incidents',
     weight: 2,
     patterns: [
-      /\b(what'?s? (open|broken|down|on fire|failing)|what (is|are) (open|broken|down|failing)|anything (open|down|broken|failing)|(open|live|current|active) incidents?|any incidents?|koi incidents?|kya (kuch )?(open|down|tuta|chal raha|problem)|abhi kya (open|problem|chal raha)|kuch (open|down)|kaunse incidents?|kitne incidents? open|on fire)\b/i,
+      /\b(what'?s? (open|broken|down|on fire|failing)|what (is|are) (open|broken|down|failing)|anything (open|down|broken|failing)|(open|live|current|active) incidents?|any incidents?|koi incidents?|kya (kuch )?(open|down|tuta|problem)|abhi kya (open|problem)|kuch (open|down)|kaunse incidents?|kitne incidents? open|on fire)\b/i,
     ],
   },
   {
     id: 'recent_incidents',
     patterns: [
-      /\b(recent|last (week|few days|month)|latest|yesterday|today|pichhl[ea]|pichl[ea]|haal hi|abhi tak ke|history of incidents|incident list|list.*incidents|incidents? (dikha|bata|list)|sab incidents?)\b/i,
+      /\b(recent|last (week|few days|month)|latest|yesterday|today'?s? incidents?|incidents? today|what happened today|pichhl[ea]|pichl[ea]|haal hi|abhi tak ke|history of incidents|incident list|list.*incidents|incidents? (dikha|bata|list)|sab incidents?)\b/i,
     ],
   },
   {
@@ -313,21 +554,21 @@ const INTENT_RULES: IntentRule[] = [
   {
     id: 'explain_incident',
     patterns: [
-      /\b(about (the|that) .*(incident|outage|issue)|explain (the|that|this)|tell me about|bata(o)? .* ke bare|kya hua tha|details? of|what happened (with|in|to)|status of)\b/i,
+      /\b(about (the|that) .*(incident|outage|issue)|explain (the|that|this)( incident| outage)?|tell me about (the|that|an) .*(incident|outage|issue|problem)|bata(o)? .* ke bare|kya hua tha|details? of|what happened (with|in|to)|status of (the )?incident)\b/i,
     ],
   },
   {
     id: 'identity',
-    weight: 3,
+    weight: 4,
     patterns: [
-      /\b(who are you|what are you|tum kaun|aap kaun|tumhara naam|your name|what model|kis model|which model|are you (gpt|chatgpt|claude|openai|anthropic|gemini)|kya tum (gpt|chatgpt|claude)|did (openai|anthropic) (make|build) you)\b/i,
+      /\b(who are you|what are you|who made you|who created you|who (is|are) your (creator|developer|maker|author)|tum kaun|aap kaun|tumhe kisne banaya|kisi ne banaya|tumhara naam|your name|what model|kis model|which model|are you (gpt|chatgpt|claude|openai|anthropic|gemini)|kya tum (gpt|chatgpt|claude)|did (openai|anthropic) (make|build) you|tell me about (yourself|arch)|what is arch)\b/i,
     ],
   },
   {
     id: 'help',
     weight: 3,
     patterns: [
-      /\b(what can you do|what do you do|help me use|capabilit|features? of|how (do|does) (you|arch)( chat)? work|tum kya kar sakte|aap kya kar sakte|kaise use karu|kaise kaam karta|kya kya kar sakte)\b/i,
+      /\b(what can you do|what do you do|help me( use)?|can you help me|how can you help|capabilit|features? of|how (do|does) (you|arch)( chat)? work|tum kya kar sakte|aap kya kar sakte|kaise use karu|kaise kaam karta|kya kya kar sakte)\b/i,
     ],
   },
   {
@@ -340,7 +581,11 @@ const INTENT_RULES: IntentRule[] = [
   {
     id: 'greet',
     weight: 3,
-    patterns: [/^(hi|hey|hello|yo|namaste|namaskar|salaam|good (morning|afternoon|evening)|hii+|helo)\b[\s!.]*$/i, /\b(kaise ho|kya haal|how are you|kaise hain)\b/i],
+    patterns: [
+      /\b(hi|hey|hello|yo|namaste|namaskar|salaam|good (morning|afternoon|evening)|hii+|helo|wassup|sup|hola|bonjour)\b/i,
+      /\b(hello developer|hey arch|hi arch|hello arch|namaste arch)\b/i,
+      /\b(kaise ho|kya haal|how are you|kaise hain|how do you do)\b/i,
+    ],
   },
   {
     id: 'thanks',
@@ -349,7 +594,7 @@ const INTENT_RULES: IntentRule[] = [
   },
   {
     id: 'smalltalk',
-    patterns: [/\b(tumhara din|how'?s? your day|what'?s up|kya chal raha hai tumhara|bored|joke|mazak|kaisi chal rahi)\b/i],
+    patterns: [/\b(tumhara din|how'?s? your day|what'?s up|kya chal raha hai|bored|joke|mazak|kaisi chal rahi|how are things|all good|kya haal chaal)\b/i],
   },
 ];
 
@@ -824,6 +1069,334 @@ function answerAdvice(question: string, snapshot: ChatSnapshot, lang: ChatLang):
   };
 }
 
+function formatCurrentDate(iso: string, lang: ChatLang): { dateText: string; timeText: string; fullDate: string } {
+  const d = new Date(iso);
+  const daysEn = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const monthsEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const dayNameEn = daysEn[d.getUTCDay()] ?? 'Monday';
+  const monthNameEn = monthsEn[d.getUTCMonth()] ?? 'September';
+  const dayOfMonth = d.getUTCDate();
+  const year = d.getUTCFullYear();
+  const hours = String(d.getUTCHours()).padStart(2, '0');
+  const minutes = String(d.getUTCMinutes()).padStart(2, '0');
+  const timeText = `${hours}:${minutes} UTC`;
+  const fullDateEn = `${dayNameEn}, ${monthNameEn} ${dayOfMonth}, ${year}`;
+  const fullDateHi = `${dayOfMonth} ${monthNameEn} ${year} (${dayNameEn})`;
+  return { dateText: lang === 'hinglish' ? fullDateHi : fullDateEn, timeText, fullDate: fullDateEn };
+}
+
+function answerDateTime(snapshot: ChatSnapshot, lang: ChatLang): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
+  const info = formatCurrentDate(snapshot.now, lang);
+  const openCount = snapshot.openIncidents.length;
+  const statusNote = openCount > 0
+    ? lang === 'hinglish'
+      ? `\n\nAbhi is waqt workspace mein **${openCount} open incident${openCount === 1 ? '' : 's'}** chal rahe hain.`
+      : `\n\nCurrently, there ${openCount === 1 ? 'is' : 'are'} **${openCount} active incident${openCount === 1 ? '' : 's'}** running in this workspace.`
+    : lang === 'hinglish'
+      ? '\n\nAaj abhi tak koi incident open nahi hai, sabhi services healthy hain.'
+      : '\n\nAll services are currently healthy with no open incidents.';
+
+  const text = lang === 'hinglish'
+    ? `Aaj ki date **${info.dateText}** hai aur current time **${info.timeText}** hai.${statusNote}`
+    : `Today is **${info.fullDate}** and current time is **${info.timeText}**.${statusNote}`;
+
+  return {
+    text,
+    cites: [{ source: 'workspace', label: 'System clock', detail: `Synchronized: ${info.timeText}` }],
+    suggestions: ['What is open right now?', 'Show me recent incidents', 'What should I do in here?'],
+    confidence: 'high',
+  };
+}
+
+function answerWorkflowGuide(snapshot: ChatSnapshot, lang: ChatLang): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
+  const open = snapshot.counts.open;
+  const services = snapshot.services.length;
+  const teamDocs = snapshot.model.teamDocuments;
+
+  if (lang === 'hinglish') {
+    const text =
+      `**ARCH workspace mein aapka swagat hai!** Yeh platform aapki team ke production incidents, status pages aur ops intelligence ke liye hai.\n\n` +
+      `Aap yahan se shuru kar sakte hain:\n\n` +
+      `1. **Active Incidents Dekhein** — Poochhein *"Abhi kya open hai?"* taaki koi ongoing outage miss na ho.\n` +
+      `2. **Workspace History Search Karein** — Poochhein *"Payment timeouts pehle bhi hue the?"* — main past incidents aur root causes nikal kar dunga.\n` +
+      `3. **Runbooks Consult Karein** — Apne documented runbooks se specific disaster recovery steps nikalne ke liye *"Runbook deploys ke baare mein kya kehta hai?"* poochhein.\n` +
+      `4. **Ops Troubleshooting** — Kisi bhi problem ko describe karein (*"Redis misses spike ho rahe hain, kya karu?"*) aur step-by-step checks paayein.\n` +
+      `5. **Code Assist (Review & Fix)** — Code PRs review karne ya automated mechanical fixes ke liye dashboard ke **Code Assist** section ko use karein.\n\n` +
+      `*Current snapshot: is workspace mein **${open} open incident${open === 1 ? '' : 's'}**, **${services} registered services**, aur **${teamDocs} learned incident records** hain.*`;
+    return {
+      text,
+      cites: [{ source: 'workspace', label: `${snapshot.organizationName} workspace`, detail: `${open} open · ${services} services` }],
+      suggestions: ['What is open right now?', 'Show me recent incidents', 'Which services need attention?'],
+      confidence: 'high',
+    };
+  }
+
+  const text =
+    `**Welcome to ARCH!** This workspace is your operations center for real-time incident management, status monitoring, and postmortem intelligence.\n\n` +
+    `Here is how you can get started right now:\n\n` +
+    `1. **Check Live Incidents** — Ask *"What is open right now?"* to see active outages, assigned responders, and elapsed times.\n` +
+    `2. **Search Workspace History** — Ask *"Have we seen database pool timeouts before?"* to uncover past root causes, fixes, and prevention items.\n` +
+    `3. **Consult Runbooks** — Ask *"What does our runbook say about failover?"* to search your indexed operational documentation.\n` +
+    `4. **Triage Production Problems** — Describe any symptom (*"504 Gateway Timeouts on checkout, what should I check?"*) for an immediate triage playbook.\n` +
+    `5. **Code Assist** — When you need code patches or pull request reviews, visit the **Code Assist** tab in your dashboard.\n\n` +
+    `*Current state: **${open} open incident${open === 1 ? '' : 's'}**, **${services} registered service${services === 1 ? '' : 's'}**, and **${teamDocs} learned records** in this workspace.*`;
+
+  return {
+    text,
+    cites: [{ source: 'workspace', label: `${snapshot.organizationName} workspace`, detail: `${open} open · ${services} services` }],
+    suggestions: ['What is open right now?', 'Show me recent incidents', 'How are we doing this month?'],
+    confidence: 'high',
+  };
+}
+
+function answerTechStackAdvice(question: string, snapshot: ChatSnapshot, lang: ChatLang, memory?: ChatMemory): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
+  const rememberedStack = memory?.techStack?.length ? ` (you previously mentioned using **${memory.techStack.join(', ')}**)` : '';
+
+  if (lang === 'hinglish') {
+    const text =
+      `Language aur tech stack chunna aapke application ke requirements par depend karta hai${rememberedStack}:\n\n` +
+      `• **Microservices aur High-Concurrency**: **Go** ya **Rust** — fast compile time, low memory footprint, aur built-in concurrency ke saath network services ke liye best hain.\n` +
+      `• **Web APIs aur Full-Stack Services**: **TypeScript / Node.js** (Next.js, Fastify) ya **Python** (FastAPI) — developer velocity aur great ecosystem.\n` +
+      `• **Data Pipelines aur Machine Learning**: **Python** — PyTorch, Pandas, aur rich AI libraries ke liye industry standard.\n` +
+      `• **Systems & Low-Level Tooling**: **Rust** ya **Go** — zero-cost abstractions aur memory safety.\n\n` +
+      `*Dhyan rahe: Main ARCH Chat mein architectural aur operational guidance deta hoon. Agar aapko actual code files generate karni hain, PR review karwana hai ya mechanical bug fixes chahiye, to dashboard mein **Code Assist (Review / Fix / Thinker)** use karein!*`;
+    return {
+      text,
+      cites: [{ source: 'playbook', label: 'Architecture & stack guidance', detail: 'Evaluated against operational best practices' }],
+      suggestions: ['What is open right now?', 'What should I do in here?', 'Show me recent incidents'],
+      confidence: 'high',
+    };
+  }
+
+  const text =
+    `Choosing the right language and tech stack depends on your service requirements${rememberedStack}:\n\n` +
+    `• **Microservices & Low-Latency Services**: **Go** or **Rust** — minimal memory overhead, lightning-fast boot times, and robust built-in concurrency make them ideal for high-throughput distributed systems.\n` +
+    `• **Web APIs & Full-Stack Apps**: **TypeScript / Node.js** (Next.js, Express, Fastify) — end-to-end type safety, unified frontend/backend tooling, and exceptional developer velocity. ARCH itself is built on TypeScript and Next.js!\n` +
+    `• **Data Processing, AI & Automation**: **Python** (FastAPI, PyTorch, Pandas) — the undisputed standard for data engineering, scripts, and model integrations.\n` +
+    `• **High-Reliability Enterprise Backends**: **Java / Kotlin** or **C# (.NET)** — mature JVM/CLR runtime tooling and extensive monitoring ecosystems.\n\n` +
+    `*Note: ARCH Chat provides architectural design and ops advice in conversation rather than outputting raw code snippets. For code generation, pull request reviews, and verified bug patches, head over to **Code Assist** in your dashboard!*`;
+
+  return {
+    text,
+    cites: [{ source: 'playbook', label: 'Architecture & stack guidance', detail: 'Evaluated against operational best practices' }],
+    suggestions: ['What is open right now?', 'What should I do in here?', 'Show me recent incidents'],
+    confidence: 'high',
+  };
+}
+
+function answerMemoryStore(question: string, memory: ChatMemory, lang: ChatLang): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
+  const parts: string[] = [];
+  const storedItems: string[] = [];
+
+  if (memory.userName) {
+    storedItems.push(lang === 'hinglish' ? `Aapka naam: **${memory.userName}**` : `Your name: **${memory.userName}**`);
+  }
+  if (memory.userRole) {
+    storedItems.push(lang === 'hinglish' ? `Aapka role: **${memory.userRole}**` : `Your role: **${memory.userRole}**`);
+  }
+  if (memory.techStack?.length) {
+    storedItems.push(lang === 'hinglish' ? `Tech stack: **${memory.techStack.join(', ')}**` : `Tech stack: **${memory.techStack.join(', ')}**`);
+  }
+  if (memory.notes?.length) {
+    storedItems.push(lang === 'hinglish' ? `Notes: *"${memory.notes[memory.notes.length - 1]}"*` : `Note: *"${memory.notes[memory.notes.length - 1]}"*`);
+  }
+
+  const nameGreeting = memory.userName ? `${memory.userName}, ` : '';
+
+  if (lang === 'hinglish') {
+    parts.push(`Samajh gaya! ${nameGreeting}Maine yeh information memory mein save kar li hai:`);
+    parts.push(bullet(storedItems.length ? storedItems : ['Detail saved to conversation memory']));
+    parts.push('Aage conversation mein main is context ka dhyan rakhunga. Aap kabhi bhi *"tumhe mere baare mein kya yaad hai?"* poochh sakte hain.');
+  } else {
+    parts.push(`Got it! ${nameGreeting}I've saved this information to memory:`);
+    parts.push(bullet(storedItems.length ? storedItems : ['Detail saved to conversation memory']));
+    parts.push('I will keep this context in mind throughout our conversation. You can ask *"What do you remember about me?"* anytime.');
+  }
+
+  return {
+    text: parts.join('\n\n'),
+    cites: [{ source: 'workspace', label: 'Conversation memory', detail: storedItems.join(' · ') || 'Updated' }],
+    suggestions: ['What do you remember about me?', 'What is open right now?', 'What should I do in here?'],
+    confidence: 'high',
+  };
+}
+
+function answerMemoryRecall(question: string, memory: ChatMemory, lang: ChatLang): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
+  const isAskingName = /\b(my name|mera naam|who am i|who i am|do you know me)\b/i.test(question);
+  const isAskingStack = /\b(stack|technology|framework|database|db)\b/i.test(question);
+
+  if (isAskingName) {
+    if (memory.userName) {
+      const text = lang === 'hinglish'
+        ? `Aapka naam **${memory.userName}** hai.`
+        : `Your name is **${memory.userName}**.`;
+      return {
+        text,
+        cites: [{ source: 'workspace', label: 'Memory', detail: `User name: ${memory.userName}` }],
+        suggestions: ['What do you remember about me?', 'What is open right now?', 'What should I do in here?'],
+        confidence: 'high',
+      };
+    } else {
+      const text = lang === 'hinglish'
+        ? 'Mujhe abhi aapka naam nahi pata. Aap mujhe bata sakte hain (*"Mera naam ... hai"*), aur main yaad rakhunga!'
+        : 'I do not have your name saved yet. You can introduce yourself by saying (*"My name is..."*), and I will remember it!';
+      return {
+        text,
+        cites: [],
+        suggestions: ['My name is...', 'What should I do in here?', 'What is open right now?'],
+        confidence: 'medium',
+      };
+    }
+  }
+
+  if (isAskingStack) {
+    if (memory.techStack?.length) {
+      const text = lang === 'hinglish'
+        ? `Aapka recorded tech stack hai: **${memory.techStack.join(', ')}**.`
+        : `Your recorded tech stack is: **${memory.techStack.join(', ')}**.`;
+      return {
+        text,
+        cites: [{ source: 'workspace', label: 'Memory', detail: `Tech stack: ${memory.techStack.join(', ')}` }],
+        suggestions: ['Which language should I use for microservices?', 'What is open right now?'],
+        confidence: 'high',
+      };
+    } else {
+      const text = lang === 'hinglish'
+        ? 'Mujhe abhi aapke tech stack ke baare mein nahi pata. Aap bata sakte hain (*"Hum Python aur Redis use karte hain"*)!'
+        : 'I do not have your tech stack saved yet. Tell me what tools or languages you use!';
+      return {
+        text,
+        cites: [],
+        suggestions: ['We use Postgres and Redis', 'Which language should I use?'],
+        confidence: 'medium',
+      };
+    }
+  }
+
+  const items: string[] = [];
+  if (memory.userName) {
+    items.push(lang === 'hinglish' ? `**Naam**: ${memory.userName}` : `**Name**: ${memory.userName}`);
+  }
+  if (memory.userRole) {
+    items.push(lang === 'hinglish' ? `**Role**: ${memory.userRole}` : `**Role**: ${memory.userRole}`);
+  }
+  if (memory.techStack?.length) {
+    items.push(lang === 'hinglish' ? `**Tech Stack**: ${memory.techStack.join(', ')}` : `**Tech Stack**: ${memory.techStack.join(', ')}`);
+  }
+  if (memory.notes?.length) {
+    const notesFormatted = memory.notes.map((n) => `"${n}"`).join(', ');
+    items.push(lang === 'hinglish' ? `**Saved Notes**: ${notesFormatted}` : `**Saved Notes**: ${notesFormatted}`);
+  }
+
+  if (items.length === 0) {
+    const text = lang === 'hinglish'
+      ? 'Abhi is conversation mein mere paas aapke baare mein koi saved details nahi hain.\n\nAap mujhe apna naam ("Mera naam Rahul hai"), tech stack ("Hum Postgres use karte hain") ya koi note ("Yaad rakhna ki...") bata sakte hain, aur main yaad rakhunga!'
+      : 'I do not have any saved notes about you in this conversation yet.\n\nYou can tell me your name (*"My name is Alex"*), your stack (*"We use Postgres and Redis"*), or ask me to remember something (*"Remember that..."*), and I will keep track of it!';
+    return {
+      text,
+      cites: [],
+      suggestions: ['My name is...', 'What should I do in here?', 'What is open right now?'],
+      confidence: 'medium',
+    };
+  }
+
+  const text = lang === 'hinglish'
+    ? `Mujhe is conversation se aapke baare mein yeh sab yaad hai:\n\n${bullet(items)}\n\nAap jab chahein nayi details add kar sakte hain ya *"clear memory"* bol kar reset kar sakte hain.`
+    : `Here is what I have saved about you in this conversation:\n\n${bullet(items)}\n\nYou can add more details anytime or say *"clear memory"* to reset.`;
+
+  return {
+    text,
+    cites: [{ source: 'workspace', label: 'Memory', detail: `${items.length} items recorded` }],
+    suggestions: ['What is open right now?', 'Which language should I use?', 'Clear memory'],
+    confidence: 'high',
+  };
+}
+
+function answerMemoryClear(lang: ChatLang): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
+  const text = lang === 'hinglish'
+    ? 'Memory clear kar di gayi hai! Is conversation ke saare saved user details aur notes wipe kar diye gaye hain.'
+    : 'Memory cleared! I have wiped all saved notes and context for this conversation.';
+  return {
+    text,
+    cites: [{ source: 'workspace', label: 'Memory reset', detail: 'All conversational context cleared' }],
+    suggestions: ['What is open right now?', 'What should I do in here?', 'Show me recent incidents'],
+    confidence: 'high',
+  };
+}
+
+function answerConceptExplain(question: string, snapshot: ChatSnapshot, lang: ChatLang): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
+  const q = question.toLowerCase();
+  let concept = 'General Ops Concepts';
+  let explanationEn = '';
+  let explanationHi = '';
+
+  if (/\bmttr\b/i.test(q)) {
+    concept = 'MTTR (Mean Time to Resolve)';
+    const median = snapshot.counts.medianResolveMinutes;
+    const currentWorkspaceStat = median !== null
+      ? ` In this workspace, your 30-day median resolve time is **${formatDuration(median)}**.`
+      : ' In this workspace, there is not yet enough data (requires 3+ resolved incidents) to calculate it.';
+    const currentWorkspaceStatHi = median !== null
+      ? ` Is workspace mein pichhle 30 din ka median resolve time **${formatDuration(median)}** hai.`
+      : ' Is workspace mein abhi 3+ resolved incidents ka data nahi hai ise measure karne ke liye.';
+    explanationEn = `**MTTR (Mean Time to Resolve)** measures the average or median time it takes from when an incident starts to when it is fully resolved and normal service is restored.${currentWorkspaceStat}`;
+    explanationHi = `**MTTR (Mean Time to Resolve)** ek key metric hai jo yeh measure karta hai ki kisi incident ke shuru hone se lekar uske fully resolve hone tak kitna average ya median time laga.${currentWorkspaceStatHi}`;
+  } else if (/\b(slo|sla|sli)\b/i.test(q)) {
+    concept = 'SLO, SLA, and SLI';
+    explanationEn = `• **SLI (Service Level Indicator)**: A measurable metric of service behavior (e.g., successful request rate, latency < 200ms).\n• **SLO (Service Level Objective)**: The internal target reliability goal agreed upon by the engineering team (e.g., 99.9% of requests succeed).\n• **SLA (Service Level Agreement)**: The external contractual commitment made to customers with business/financial penalties if breached.`;
+    explanationHi = `• **SLI (Service Level Indicator)**: Ek quantifiable metric jo measure karta hai service kaisa perform kar rahi hai (jaise error rate ya latency).\n• **SLO (Service Level Objective)**: Engineering team ka internal target goal (jaise 99.9% uptime).\n• **SLA (Service Level Agreement)**: Customers ke saath official contract jisme breach hone par penalty hoti hai.`;
+  } else if (/\brunbook\b/i.test(q)) {
+    concept = 'Runbook';
+    explanationEn = `A **Runbook** (or playbook) is a documented, step-by-step procedure that responders follow to diagnose, mitigate, and resolve specific production incidents. In ARCH, runbooks are indexed in your Knowledge base so the model can cite relevant troubleshooting steps directly during an outage.`;
+    explanationHi = `**Runbook** ek documented step-by-step guide hoti hai jise on-call engineers follow karte hain kisi specific production problem ko diagnose aur fix karne ke liye. ARCH mein runbooks Knowledge Base mein index hote hain jisse incident ke time exact steps mil sakein.`;
+  } else if (/\bblast radius\b/i.test(q)) {
+    concept = 'Blast Radius';
+    explanationEn = `**Blast Radius** is the extent of damage or disruption that can occur when a specific service, deployment, or dependency fails. In ARCH, service dependencies map out the blast radius so you immediately know which downstream services and users are impacted when an upstream component degrades.`;
+    explanationHi = `**Blast Radius** ka matlab hai ki agar koi ek service ya deploy fail hota hai, to uska asar kin-kin downstream services aur users par padega. ARCH service dependencies map karke dikhata hai ki ek failure ka total impact kitna fail sakta hai.`;
+  } else {
+    concept = 'Postmortem & Incident Lifecycle';
+    explanationEn = `A **Postmortem** (retrospective) is a blameless analysis conducted after an incident to understand root causes, document what went well, identify what failed, and establish prevention action items to prevent recurrence. ARCH learns directly from these postmortems to predict root causes and suggest verified fixes for future incidents.`;
+    explanationHi = `**Postmortem** incident ke baad ki blameless analysis hoti hai jisme root cause, timeline, fixes aur future prevention note kiye jaate hain. ARCH inhi postmortems se train hokar future incidents ke liye smart recommendations deta hai.`;
+  }
+
+  const text = lang === 'hinglish' ? explanationHi : explanationEn;
+  return {
+    text,
+    cites: [{ source: 'workspace', label: `Concept: ${concept}`, detail: 'SRE & DevOps operational standards' }],
+    suggestions: ['What is open right now?', 'What does our runbook say?', 'Show me recent incidents'],
+    confidence: 'high',
+  };
+}
+
+function answerHealthSummary(snapshot: ChatSnapshot, lang: ChatLang): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
+  const openCount = snapshot.counts.open;
+  const services = snapshot.services;
+  const degradedServices = services.filter((s) => s.status !== 'OPERATIONAL' || s.openIncidents > 0);
+
+  if (openCount === 0 && degradedServices.length === 0) {
+    const text = lang === 'hinglish'
+      ? `**System ekdum healthy hai!**\n\n• **Open Incidents**: 0\n• **Services Status**: Saari ${services.length} services operational hain\n• **Resolved (last 7 days)**: ${snapshot.counts.resolvedLast7Days} incidents\n\nKoi active problem nahi hai.`
+      : `**All systems are healthy!**\n\n• **Open Incidents**: 0\n• **Services Status**: All ${services.length} registered services are operational\n• **Resolved (last 7 days)**: ${snapshot.counts.resolvedLast7Days} incidents\n\nEverything is running normally right now.`;
+    return {
+      text,
+      cites: [{ source: 'workspace', label: 'System status: HEALTHY', detail: `${services.length} services operational · 0 open` }],
+      suggestions: ['Show me recent incidents', 'How are we doing this month?', 'What should I do in here?'],
+      confidence: 'high',
+    };
+  }
+
+  const text = lang === 'hinglish'
+    ? `**Dhyan dein — system mein issues hain:**\n\n• **Open Incidents**: ${openCount}\n• **Degraded Services**: ${degradedServices.map((s) => `${s.name} (${s.status})`).join(', ') || 'None'}\n\nSabse pehle open incidents resolve karne par dhyan dein.`
+    : `**Attention needed — system is currently degraded:**\n\n• **Open Incidents**: ${openCount}\n• **Degraded Services**: ${degradedServices.map((s) => `${s.name} (${s.status})`).join(', ') || 'None'}\n\nFocus on resolving open incidents first.`;
+
+  return {
+    text,
+    cites: [{ source: 'workspace', label: 'System status: DEGRADED', detail: `${openCount} open · ${degradedServices.length} degraded` }],
+    suggestions: ['What is open right now?', 'Which service fails most often?', 'Tell me about the open incident'],
+    confidence: 'high',
+  };
+}
+
 function answerUnknown(snapshot: ChatSnapshot, lang: ChatLang): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
   const open = snapshot.openIncidents.length;
   const state =
@@ -858,15 +1431,23 @@ export function answerChat(params: {
 }): ChatAnswer {
   const question = params.question.trim();
   const snapshot = params.snapshot;
-  const lang = detectChatLanguage(question);
+  const history = params.history;
+
+  const memory = extractMemory({
+    history,
+    question,
+    userProfile: snapshot.user,
+  });
+
+  const lang = detectChatLanguage(question, history);
 
   let intent = classifyChatIntent(question);
   let subject = question;
 
   // Follow-up resolution: an unrecognized turn inherits the subject of the previous question, so
   // "and the fix?" / "uska root cause?" work right after an answer.
-  if (intent === 'unknown' && params.history?.length) {
-    const previous = [...params.history].reverse().find((turn) => turn.role === 'user');
+  if (intent === 'unknown' && history?.length) {
+    const previous = [...history].reverse().find((turn) => turn.role === 'user');
     if (previous) {
       const merged = `${previous.content} ${question}`;
       const retry = classifyChatIntent(merged);
@@ -888,17 +1469,33 @@ export function answerChat(params: {
   const modelLabel = snapshot.model.name;
   switch (intent) {
     case 'greet':
-      return result(say('greeting', lang), intent, 'high', lang, [], ['What is open right now?', 'Show me recent incidents', 'What can you do?']);
+      return result(say('greeting', lang, memory.userName ?? undefined), intent, 'high', lang, [], ['What is open right now?', 'What should I do in here?', 'What is the date today?']);
     case 'thanks':
       return result(say('thanks', lang), intent, 'high', lang, [], ['Show me what is open', 'Have we seen this before?']);
     case 'smalltalk':
-      return result(say('smalltalk', lang), intent, 'high', lang, [], ['What is open right now?', 'What can you do?']);
+      return result(say('smalltalk', lang, memory.userName ?? undefined), intent, 'high', lang, [], ['What is open right now?', 'What can you do?']);
     case 'identity':
       return result(say('identity', lang, modelLabel), intent, 'high', lang, [{ source: 'workspace', label: `Model ${modelLabel} · v${snapshot.model.version}`, detail: `trained on ${snapshot.model.teamDocuments} of your incidents, ${snapshot.model.totalDocuments} documents total` }], ['How accurate are you?', 'How does training work?', 'What can you do?']);
     case 'help':
       return result(say('help', lang), intent, 'high', lang, [], ['What is open right now?', 'Which incidents keep repeating?', 'Redis misses are spiking — what should I check?']);
     case 'code_request':
       return result(say('codeRefusal', lang), intent, 'high', lang, [], ['Explain the stack trace I am looking at', 'What usually fixes a database timeout?', 'What did we do last time this broke?']);
+    case 'datetime':
+      return spread(answerDateTime(snapshot, lang), intent, lang);
+    case 'workflow_guide':
+      return spread(answerWorkflowGuide(snapshot, lang), intent, lang);
+    case 'tech_stack_advice':
+      return spread(answerTechStackAdvice(subject, snapshot, lang, memory), intent, lang);
+    case 'memory_store':
+      return spread(answerMemoryStore(subject, memory, lang), intent, lang);
+    case 'memory_recall':
+      return spread(answerMemoryRecall(subject, memory, lang), intent, lang);
+    case 'memory_clear':
+      return spread(answerMemoryClear(lang), intent, lang);
+    case 'concept_explain':
+      return spread(answerConceptExplain(subject, snapshot, lang), intent, lang);
+    case 'health_summary':
+      return spread(answerHealthSummary(snapshot, lang), intent, lang);
     case 'open_incidents':
       return spread(answerOpenIncidents(snapshot, lang), intent, lang);
     case 'recent_incidents':
@@ -973,7 +1570,7 @@ export const CHAT_LIMITS = {
   /** Longest stored answer (the engine never gets close; a guard for corrupted rows). */
   maxAnswerChars: 6_000,
   /** Turns of history handed to the engine for follow-up resolution. */
-  maxHistoryTurns: 8,
+  maxHistoryTurns: 12,
   /** Messages loaded when a session is opened. */
   maxLoadedMessages: 200,
 } as const;

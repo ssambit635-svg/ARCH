@@ -42,7 +42,16 @@ import { retrieveKnowledge } from './knowledge.service';
 export const CHAT_RATE_LIMIT_WINDOW_MS = 60_000;
 
 /** Intents where retrieval is worth the queries; small talk and status questions are answered from the snapshot alone. */
-const RETRIEVAL_INTENTS = new Set<ChatIntent>(['incident_search', 'lessons', 'explain_incident', 'runbook', 'advice', 'unknown']);
+const RETRIEVAL_INTENTS = new Set<ChatIntent>([
+  'incident_search',
+  'lessons',
+  'explain_incident',
+  'runbook',
+  'advice',
+  'concept_explain',
+  'tech_stack_advice',
+  'unknown',
+]);
 
 const OPEN_INCIDENT_LIMIT = 25;
 const RECENT_INCIDENT_LIMIT = 25;
@@ -142,6 +151,7 @@ function median(values: number[]): number | null {
 type SnapshotInputs = {
   organizationName: string;
   now: Date;
+  user?: { name: string | null; email: string | null };
   counts: ChatSnapshot['counts'];
   openIncidents: ChatIncident[];
   recentIncidents: ChatIncident[];
@@ -166,7 +176,20 @@ async function buildSnapshotInputs(params: Params, intent: ChatIntent, question:
   const since30 = new Date(now.getTime() - STATS_WINDOW_DAYS * 24 * 60 * 60 * 1_000);
   const wantsRetrieval = RETRIEVAL_INTENTS.has(intent);
 
-  const [organization, statusRows, openRows, recentRows, serviceRows, totals, members, openByAssignee, resolveDurations, modelRuntime, registry] = await Promise.all([
+  const [
+    organization,
+    statusRows,
+    openRows,
+    recentRows,
+    serviceRows,
+    totals,
+    members,
+    openByAssignee,
+    resolveDurations,
+    modelRuntime,
+    registry,
+    userRecord,
+  ] = await Promise.all([
     db.organization.findUnique({ where: { id: organizationId }, select: { id: true, name: true } }),
     incidentRepository.countByStatus(organizationId),
     incidentRepository.list(organizationId, { open: true }, { skip: 0, take: OPEN_INCIDENT_LIMIT }),
@@ -181,6 +204,7 @@ async function buildSnapshotInputs(params: Params, intent: ChatIntent, question:
     incidentRepository.resolveDurationsSince(organizationId, since30, 200),
     getOrganizationModel(organizationId).catch(() => null),
     db.archModel.findUnique({ where: { organizationId }, select: { version: true } }).catch(() => null),
+    db.user.findUnique({ where: { id: userId }, select: { name: true, email: true } }).catch(() => null),
   ]);
 
   if (!organization) throw AppError.notFound('Organization not found.');
@@ -322,6 +346,7 @@ async function buildSnapshotInputs(params: Params, intent: ChatIntent, question:
     generalMatches,
     knowledgeChunks,
     hasKnowledge,
+    user: { name: userRecord?.name ?? null, email: userRecord?.email ?? null },
   };
 }
 
@@ -329,6 +354,7 @@ function toSnapshot(inputs: SnapshotInputs): ChatSnapshot {
   return {
     organizationName: inputs.organizationName,
     now: inputs.now.toISOString(),
+    user: inputs.user,
     model: inputs.model,
     counts: inputs.counts,
     openIncidents: inputs.openIncidents,

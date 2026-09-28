@@ -339,6 +339,61 @@ describe('Chat with ARCH (service)', () => {
     expect(elapsed).toBeLessThan(5_000);
   });
 
+  it('supports conversational multi-turn flow with memory, date, and language continuity', async () => {
+    const { organization, owner } = await setup('convo');
+    const session = await createChatSession({ organizationId: organization.id, userId: owner.id });
+
+    // Turn 1: User introduces themselves and tech stack in Hinglish
+    const turn1 = await sendChatMessage({
+      organizationId: organization.id,
+      userId: owner.id,
+      sessionId: session.id,
+      content: 'mera naam Vikram hai aur hum python and redis use karte hain',
+    });
+    expect(turn1.archMessage.intent).toBe('memory_store');
+    expect(turn1.archMessage.content).toContain('Vikram');
+
+    // Turn 2: User asks date, ARCH maintains Hinglish continuity and reports date
+    const turn2 = await sendChatMessage({
+      organizationId: organization.id,
+      userId: owner.id,
+      sessionId: session.id,
+      content: 'what is date today ?',
+    });
+    expect(turn2.archMessage.intent).toBe('datetime');
+    expect(turn2.archMessage.content).toMatch(/2026/);
+
+    // Turn 3: User asks for their name from memory
+    const turn3 = await sendChatMessage({
+      organizationId: organization.id,
+      userId: owner.id,
+      sessionId: session.id,
+      content: 'mera naam kya hai?',
+    });
+    expect(turn3.archMessage.intent).toBe('memory_recall');
+    expect(turn3.archMessage.content).toContain('Vikram');
+
+    // Turn 4: User asks guidance on what to do
+    const turn4 = await sendChatMessage({
+      organizationId: organization.id,
+      userId: owner.id,
+      sessionId: session.id,
+      content: 'main yahan kya karu',
+    });
+    expect(turn4.archMessage.intent).toBe('workflow_guide');
+    expect(turn4.archMessage.content).toMatch(/ARCH workspace/);
+
+    // Turn 5: User asks tech stack advice
+    const turn5 = await sendChatMessage({
+      organizationId: organization.id,
+      userId: owner.id,
+      sessionId: session.id,
+      content: 'which language should i use for microservices?',
+    });
+    expect(turn5.archMessage.intent).toBe('tech_stack_advice');
+    expect(turn5.archMessage.content).toMatch(/Go|Rust/);
+  });
+
   it('does not train on chat text: turns are not feedback rows', async () => {
     const { organization, owner } = await setup('nolearn');
     await sendChatMessage({ organizationId: organization.id, userId: owner.id, content: 'what is open right now?' });
