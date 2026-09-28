@@ -31,11 +31,26 @@ const reset = process.argv.includes('--reset');
 const targetUrl = arg('--url') ?? process.env.DATABASE_URL ?? '';
 
 async function ensureDatabase(url) {
+  // Usual case — and the only one on managed Postgres (Neon, Supabase, Render, Railway, RDS…): the
+  // database already exists. Connect to it with the URL exactly as given, so query parameters such
+  // as ?sslmode=require are kept and no access to the `postgres` maintenance database is needed.
+  const probe = new pg.Client({ connectionString: url });
+  try {
+    await probe.connect();
+    await probe.end();
+    return;
+  } catch (error) {
+    await probe.end().catch(() => undefined);
+    // 3D000 = database does not exist. Anything else (auth, SSL, network) is a real failure.
+    if (error?.code !== '3D000') throw error;
+  }
+
+  // Local/test clusters only: create the missing database via the maintenance database, keeping
+  // the original query parameters (SSL settings) intact.
   const parsed = new URL(url);
   const database = parsed.pathname.replace(/^\//, '');
   const adminUrl = new URL(url);
   adminUrl.pathname = '/postgres';
-  adminUrl.search = '';
   const admin = new pg.Client({ connectionString: adminUrl.toString() });
   await admin.connect();
   const { rowCount } = await admin.query('SELECT 1 FROM pg_database WHERE datname = $1', [database]);

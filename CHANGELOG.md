@@ -24,6 +24,11 @@ Rules for this file:
   `/register` and `/login` now say the tables are missing or out of date and tell you to run
   `npm run db:migrate`. A database role without permission on the tables, and a busy connection
   pool, get their own messages too.
+- **`npm run db:migrate` works against managed PostgreSQL.** It used to connect to the `postgres`
+  maintenance database first, and it removed `?sslmode=require` from `DATABASE_URL` when doing so.
+  Hosts that require SSL or restrict that database (Neon, Supabase, Render, Railway…) failed before
+  any migration ran. It now connects straight to your database with the URL unchanged. It only uses
+  the maintenance database when it has to create a missing local database.
 - **Two sign-ups at the same moment no longer fail with the generic error.** Prisma 7 reports
   unique-index conflicts in a new format, and the duplicate-email check didn't recognise it. A second
   sign-up for the same email now gets "An account with that email already exists". Two sign-ups
