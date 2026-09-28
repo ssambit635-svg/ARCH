@@ -11,6 +11,9 @@ GitHub issue, chat, screenshot, ya repository mein paste mat karna.
 - [ ] OWNER/ADMIN dashboard Settings mein READ aur READ_WRITE tokens create/revoke karein;
       token ko ek hi baar copy karein. `curl -H "Authorization: Bearer ..." .../api/v1/incidents`
       se read/write, revoked token (401), VIEWER token write (403), aur dusri org ID (404) check karein.
+- [ ] `/dashboard/chat` par apne data se alpha round chalayein: open queue, ek purana incident,
+      follow-up, rename, delete, clear-all — aur code request par refusal. Poora playbook:
+      [`ALPHA-TESTING.md`](ALPHA-TESTING.md).
 - [ ] CLI ka fresh virtualenv test: `pip install ./clients/python`, `arch login`,
       `arch org use <slug>`, `arch incidents list/create/show/follow/update/triage`,
       `arch status show`, `arch --json incidents list`. CLI login **manual API token** leta hai;

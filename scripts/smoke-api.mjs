@@ -323,6 +323,69 @@ await check('POST /api/copilot/code-review reviews a snippet', 'POST', '/api/cop
 });
 await check('GET /api/copilot/model reports the model registry', 'GET', '/api/copilot/model', { assert: (r) => r.json.data });
 
+// ---------------------------------------------------------------- 4b. Chat with ARCH
+// Conversations: list, create, send, follow-up, rename, read back, delete, clear.
+
+let chatSessionId;
+await check('GET /api/copilot/chat/sessions starts empty', 'GET', '/api/copilot/chat/sessions', {
+  assert: (r) => Array.isArray(r.json.data),
+});
+await check('POST /api/copilot/chat/sessions opens a conversation', 'POST', '/api/copilot/chat/sessions', {
+  body: {},
+  expect: 201,
+  assert: (r) => r.json.data.title === 'New chat' && r.json.data.messageCount === 0,
+  save: (r) => {
+    chatSessionId = r.json.data.id;
+  },
+});
+await check('POST …/chat/sessions/:id/messages answers a question', 'POST', `/api/copilot/chat/sessions/${chatSessionId}/messages`, {
+  body: { content: 'what is open right now?' },
+  expect: 201,
+  assert: (r) => {
+    const data = r.json.data;
+    if (data.archMessage?.role !== 'ARCH') throw new Error('no ARCH reply');
+    if (!data.archMessage.content || data.archMessage.content.length < 20) throw new Error('empty answer');
+    if (!Array.isArray(data.archMessage.citations)) throw new Error('citations must be an array');
+    if (data.session.messageCount !== 2) throw new Error(`expected 2 messages, got ${data.session.messageCount}`);
+    if (data.session.titleSource !== 'AUTO') throw new Error('first message should auto-title the chat');
+    if (data.session.title === 'New chat') throw new Error('title was not derived from the message');
+  },
+});
+await check('POST …/chat/sessions/:id/messages keeps the thread (follow-up)', 'POST', `/api/copilot/chat/sessions/${chatSessionId}/messages`, {
+  body: { content: 'kaise ho?' },
+  expect: 201,
+  assert: (r) => r.json.data.session.messageCount === 4 && r.json.data.archMessage.intent === 'greet',
+});
+await check('PATCH …/chat/sessions/:id renames a conversation', 'PATCH', `/api/copilot/chat/sessions/${chatSessionId}`, {
+  body: { title: 'On-call handover' },
+  assert: (r) => r.json.data.title === 'On-call handover' && r.json.data.titleSource === 'USER',
+});
+await check('GET …/chat/sessions/:id returns the transcript in order', 'GET', `/api/copilot/chat/sessions/${chatSessionId}`, {
+  assert: (r) => {
+    const messages = r.json.data.messages;
+    if (!Array.isArray(messages) || messages.length !== 4) throw new Error(`expected 4 messages, got ${messages?.length}`);
+    if (messages[0].role !== 'USER' || messages[1].role !== 'ARCH') throw new Error('roles are out of order');
+    if (messages[0].content !== 'what is open right now?') throw new Error('first message text changed');
+  },
+});
+await check('GET /api/copilot/chat/sessions lists the conversation', 'GET', '/api/copilot/chat/sessions', {
+  assert: (r) => Array.isArray(r.json.data) && r.json.data.some((session) => session.id === chatSessionId && session.title === 'On-call handover'),
+});
+await check('POST …/chat/sessions/:id/messages rejects an empty message', 'POST', `/api/copilot/chat/sessions/${chatSessionId}/messages`, {
+  body: { content: ' ' },
+  expect: [400, 422],
+});
+await check('POST …/chat/sessions/:id/messages rejects an unknown session', 'POST', '/api/copilot/chat/sessions/does-not-exist/messages', {
+  body: { content: 'hello there' },
+  expect: 404,
+});
+await check('DELETE …/chat/sessions/:id deletes only that conversation', 'DELETE', `/api/copilot/chat/sessions/${chatSessionId}`, {
+  assert: (r) => r.json.data.id === chatSessionId,
+});
+await check('DELETE /api/copilot/chat/sessions clears the caller\'s chats', 'DELETE', '/api/copilot/chat/sessions', {
+  assert: (r) => typeof r.json.data.deleted === 'number',
+});
+
 // ---------------------------------------------------------------- 5. status pages
 
 let statusPageId;
@@ -622,7 +685,12 @@ await check('POST /api/incidents rejects a payload without a project', 'POST', '
   expect: 422,
 });
 
-// A second tenant must never see the first tenant's rows.
+// A second tenant must never see the first tenant's rows. The chat below is created while the
+// owner session is still active and stays alive across the swap, so the 404s below are real
+// (a deleted id would 404 for anyone).
+const ownerChat = await http('POST', '/api/copilot/chat/sessions', { body: {} });
+const ownerChatId = ownerChat.json?.data?.id ?? 'missing';
+
 const otherEmail = `smoke-other-${stamp}@example.com`;
 await requireAccount('POST /api/auth/register creates the second tenant', {
   email: otherEmail,
@@ -641,8 +709,14 @@ await check("another tenant cannot read the first tenant's incident", 'GET', `/a
 await check("another tenant cannot read the first tenant's project", 'GET', `/api/projects/${projectId}`, { expect: 404 });
 await check('another tenant cannot read a foreign status page', 'GET', `/api/status-pages/${statusPageId}`, { expect: 404 });
 await check('another tenant cannot revoke a foreign token', 'DELETE', `/api/v1/tokens/${apiTokenId}`, { expect: 404 });
+await check("another tenant cannot read the first tenant's chat", 'GET', `/api/copilot/chat/sessions/${ownerChatId}`, { expect: 404 });
+await check("another tenant cannot delete the first tenant's chat", 'DELETE', `/api/copilot/chat/sessions/${ownerChatId}`, { expect: 404 });
+await check("another tenant's chat list starts empty", 'GET', '/api/copilot/chat/sessions', {
+  assert: (r) => Array.isArray(r.json.data) && !r.json.data.some((session) => session.id === ownerChatId),
+});
 jar.clear();
 for (const [key, value] of ownerJar) jar.set(key, value);
+await http('DELETE', `/api/copilot/chat/sessions/${ownerChatId}`);
 
 // Clean up the read-write token now that the v1 checks are done.
 await check('DELETE /api/v1/tokens/:id revokes the token', 'DELETE', `/api/v1/tokens/${apiTokenId}`, { expect: [200, 204] });

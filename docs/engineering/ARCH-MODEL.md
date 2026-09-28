@@ -123,6 +123,32 @@ equivalent is `npm run model:train`, which trains synchronously (a CLI process, 
 | Postmortem | Timeline from real entries, impact from duration and signals. Root cause comes from causal sentences or, failing that, from the closest past incident (labelled as a hypothesis). Action items come from the pattern library and past approved postmortems. |
 | **Code fix** (new) | Diagnoses a pasted stack trace or snippet (29 error signatures across Node, Python, Go, Java, .NET, Postgres and Kubernetes), then gives the first frame in your code, fixes and a patch when a safe mechanical fix exists |
 
+### Chat with ARCH (`/dashboard/chat`)
+
+The conversational surface of the same model. `src/server/ai/arch-model/chat.ts` is the pure
+engine: it classifies the question (greeting, identity, open queue, recent history, incident
+search, explain, stats, services, roster, runbook, lessons, advice, code request, unknown), fills
+language-aware templates (English or Hinglish, matched to the question) and returns
+`{answer, intent, confidence, citations, suggestions, lang}`. It has no database and no network —
+the service hands it a snapshot.
+
+`src/server/services/archChat.service.ts` builds that snapshot per turn: status/severity counts
+(open-only severity mix), the open queue (25, severity-sorted), the 25 newest resolved incidents,
+services with open counts, the roster with assignment load, 30-day resolve durations and the
+trained model. For retrieval-shaped intents it adds the model's own dense similarity search
+(`similarDense`, team docs first at a 0.1 floor, pattern library and public postmortems behind) and
+`retrieveKnowledge` over the workspace knowledge base. Learned details (category, root cause,
+mitigation, prevention) come from the trained artifact's `team:` docs, so enriching an answer
+costs zero extra queries. The corpus read behind retrieval is cached per organization for 8 s and
+invalidated on ingest/reindex/delete.
+
+Persistence is `ArchChatSession` / `ArchChatMessage` (migration `20260928000000_v8_arch_chat`),
+always scoped to `(organizationId, userId)`; a session id that is not yours is a `404`. A turn
+stores the user message, the ARCH message (with intent, confidence, citations, suggestions,
+provider `arch`, model name and `latencyMs`) and bumps the session. Audit entries record shape
+only — never the content. Code generation is refused by the engine itself (intent
+`code_request`), not by a prompt, and the refusal points at Code Assist.
+
 ## 4. Code Assist (`/dashboard/code`, `POST /api/copilot/code-review`)
 
 Paste code or a stack trace and choose **Review**, **Fix** or **Explain**.
@@ -230,20 +256,25 @@ src/server/ai/
   arch-model/train.ts       Naive Bayes + TF-IDF training, holdout metrics, artifact format
   arch-model/runtime.ts     ArchModelRuntime: classify, similar; baseArchModel()
   arch-model/engine.ts      buildKnowledge + archDraft(task) for every Copilot task
+  arch-model/chat.ts        pure Chat with ARCH engine: intents, EN/Hinglish answers, citations
   code/analyzer.ts          language detection, stack-trace diagnosis, rules, safe fixes, scrubSecrets
   code/review.ts            Code Assist input/output
   arch-native.ts            AI_PROVIDER="arch" and the hybrid fallback wrapper
   local-llm.ts              Ollama / OpenAI-compatible local client, isLocalEndpoint, health check
 src/server/services/archModel.service.ts   corpora, train/eval/promote, jobs, registry, status
+src/server/services/archChat.service.ts    chat sessions + one grounded turn (snapshot + retrieval)
 src/server/services/codeAssist.service.ts  Code Assist (+ retrieval over the code corpora)
 src/server/repositories/archModel.repository.ts  active model + versions registry + job queue
+src/server/repositories/archChat.repository.ts   chat sessions/messages, (organizationId, userId)-scoped
 scripts/arch-model/  fetch-public-incidents.mjs · fetch-code-corpus.mjs · fetch-review-corpus.mjs
                      · lib/datasets.mjs · train.ts · eval.ts · export-finetune.ts
 tests/arch-model.test.ts (pure) · tests/arch-copilot.test.ts + tests/arch-model-registry.test.ts (real DB)
+tests/arch-chat-engine.test.ts (pure) · tests/arch-chat.test.ts (service, real DB)
 ```
 
 Database tables (V3): `arch_models` (active pointer), `arch_model_versions` (registry —
 migration `20260925180000_v3_model_registry`), `arch_model_jobs` (background training queue).
+V8 adds `arch_chat_sessions` / `arch_chat_messages` (migration `20260928000000_v8_arch_chat`).
 
 The rule from V2 still holds: **nothing in `src/server/ai/` touches the database or reads files.**
 Services load data through tenant-scoped repositories and pass it in.
@@ -251,8 +282,12 @@ Services load data through tenant-scoped repositories and pass it in.
 ## 10. Honest limitations
 
 - The native engine **does not write new prose**. It selects, classifies and fills templates. That
-  makes it predictable and hard to make hallucinate, but its drafts read like structured notes. Use
-  `arch-hybrid` for fluent writing and real code rewrites.
+  makes it predictable and hard to make hallucinate, but its drafts — and chat answers — read like
+  structured notes. Use `arch-hybrid` for fluent writing and real code rewrites. Chat deliberately
+  stays on the native engine: for this audience, a grounded answer beats a fluent guess.
+- Chat knows what its workspace has seen; it will not invent history. If your incidents are not
+  resolved (or the model has not trained yet), "have we seen this before?" falls back to the
+  pattern library and labels the difference.
 - Accuracy grows with data. Below about 10 resolved incidents, severity accuracy is not measured
   and the model leans on built-in examples.
 - Code Assist rules are heuristics. They catch common incident-causing patterns, not every bug, and

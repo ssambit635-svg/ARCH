@@ -56,6 +56,25 @@ export const IconCode = (p: P) => (
   </Base>
 );
 
+export const IconChat = (p: P) => (
+  <Base {...p}>
+    <path d="M3 5.5A2.5 2.5 0 0 1 5.5 3h9A2.5 2.5 0 0 1 17 5.5v5A2.5 2.5 0 0 1 14.5 13H9l-4 4v-4H5.5A2.5 2.5 0 0 1 3 10.5v-5z" />
+  </Base>
+);
+
+export const IconTrash = (p: P) => (
+  <Base {...p}>
+    <path d="M3.5 5.5h13M8 5.5V4h4v1.5M5.5 5.5l.7 11h7.6l.7-11" />
+  </Base>
+);
+
+export const IconPencil = (p: P) => (
+  <Base {...p}>
+    <path d="M13.5 3.5l3 3L7 16H4v-3z" />
+    <path d="M12 5l3 3" />
+  </Base>
+);
+
 export const IconBook = (p: P) => (
   <Base {...p}>
     <path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H16v12.5H5.5A1.5 1.5 0 0 0 4 17V4.5z" />
