@@ -260,7 +260,7 @@ export function Intelligence() {
       <div className="arch-grid-fine pointer-events-none absolute inset-0 opacity-30" aria-hidden />
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-[420px]"
-        style={{ background: 'radial-gradient(70% 100% at 78% 0%, rgb(255 182 39 / 0.045), transparent 68%)' }}
+        style={{ background: 'radial-gradient(70% 100% at 78% 0%, rgb(59 130 246 / 0.05), transparent 68%)' }}
         aria-hidden
       />
 

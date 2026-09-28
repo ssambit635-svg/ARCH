@@ -137,7 +137,7 @@ export function HeroVideo({ className = '' }: { className?: string }) {
        */}
       <div
         className="absolute inset-0 mix-blend-soft-light opacity-[0.55]"
-        style={{ background: 'radial-gradient(120% 90% at 50% 10%, #ffb627 0%, #6b4a12 45%, #050607 100%)' }}
+        style={{ background: 'radial-gradient(120% 90% at 50% 10%, #1e3a8a 0%, #0f172a 45%, #030712 100%)' }}
       />
       <div
         className="absolute inset-0"

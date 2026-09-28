@@ -82,7 +82,7 @@ export function Closing() {
       <div className="arch-grid-fine pointer-events-none absolute inset-0 opacity-30" aria-hidden />
       <div
         className="pointer-events-none absolute inset-0"
-        style={{ background: 'radial-gradient(60% 70% at 50% 100%, rgb(255 182 39 / 0.05), transparent 68%)' }}
+        style={{ background: 'radial-gradient(60% 70% at 50% 100%, rgb(59 130 246 / 0.06), transparent 68%)' }}
         aria-hidden
       />
 

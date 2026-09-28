@@ -51,7 +51,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         {/* Top light bar — one sodium hairline, the only warm thing in the panel. */}
         <div
           className="pointer-events-none absolute inset-x-0 top-0 h-px"
-          style={{ background: 'linear-gradient(90deg, transparent, rgb(255 182 39 / 0.55) 18%, rgb(255 255 255 / 0.1) 62%, transparent)' }}
+          style={{ background: 'linear-gradient(90deg, transparent, rgb(59 130 246 / 0.55) 18%, rgb(255 255 255 / 0.1) 62%, transparent)' }}
           aria-hidden
         />
         {/* Oversized watermark of the wordmark, cropped by the panel. */}

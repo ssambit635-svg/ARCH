@@ -120,7 +120,7 @@ export function Preloader({ onComplete }: { onComplete?: () => void }) {
       <div className="arch-grid-fine pointer-events-none absolute inset-0 opacity-[0.5]" aria-hidden />
       <div
         className="pointer-events-none absolute inset-0"
-        style={{ background: 'radial-gradient(120% 80% at 50% 100%, rgb(255 182 39 / 0.05), transparent 62%)' }}
+        style={{ background: 'radial-gradient(120% 80% at 50% 100%, rgb(59 130 246 / 0.06), transparent 62%)' }}
         aria-hidden
       />
 

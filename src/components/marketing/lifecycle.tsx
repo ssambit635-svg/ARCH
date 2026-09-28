@@ -473,7 +473,7 @@ export function Lifecycle() {
         <div className="arch-grid-fine pointer-events-none absolute inset-0 opacity-40" aria-hidden />
         <div
           className="pointer-events-none absolute inset-0"
-          style={{ background: 'radial-gradient(90% 60% at 12% 20%, rgb(255 182 39 / 0.035), transparent 62%)' }}
+          style={{ background: 'radial-gradient(90% 60% at 12% 20%, rgb(59 130 246 / 0.04), transparent 62%)' }}
           aria-hidden
         />
 

@@ -4,7 +4,7 @@ export function Sparkline({
   points,
   width = 96,
   height = 28,
-  stroke = '#ffc247',
+  stroke = '#3b82f6',
   strokeWidth = 1.6,
 }: {
   points: number[];

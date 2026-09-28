@@ -1,175 +1,153 @@
 @import 'tailwindcss';
 
 /*
- * ARCH — "Mission Control" design language.
+ * ARCH — Enterprise "Mission Control" Design System.
+ * Classic Blue & Black Engineering Aesthetic (Stripe / Linear / Datadog tier polish).
  *
- * The rule that governs every token below: colour is *information*, never decoration.
- *
- *   1. The base is graphite, not blue-black. Near-zero chroma, so nothing in the shell
- *      competes with a severity colour.
- *   2. There is exactly one decorative hue — sodium (`signal`). It marks ARCH itself:
- *      the logotype, focus, active navigation, and the V1.1 intelligence. Nothing else.
- *   3. Red / orange / amber / green / sky belong to incident and service state. A chart
- *      may use them. A headline, a button glow or a hero backdrop may not.
- *   4. No aurora blobs, no `blur-[130px]` orbs, no gradient-filled display type, no
- *      coloured drop-shadows. Depth comes from hairlines, grain, elevation and light
- *      that behaves like light (specular on 3D geometry) — not from CSS glow.
- *
- * Legacy note: `abyss-*`, `arch-*`, `indigo-*` and `violet-*` are kept as *aliases* onto
- * this palette. Roughly 250 existing utility classes across 38 components referenced the
- * old indigo→violet scheme; remapping the scales retires all of them at once instead of
- * leaving half the product glowing blue.
+ * Principles:
+ *   1. Midnight Black & Dark Slate Base: deep, near-zero chroma obsidian with subtle cool slate depth.
+ *   2. Classic Corporate Blue Accent: precision royal & sapphire blue (#2563eb / #3b82f6 / #1d4ed8) —
+ *      standard, serious, high-end enterprise feel. No cheap saturated neon cyan/purple AI glows.
+ *   3. Semantic Rigour: Rose/Red is ONLY for outage/critical incidents, Amber is ONLY for warnings/degradation,
+ *      Emerald is ONLY for operational status, Sky/Blue is for info & platform intelligence.
+ *   4. Machined Precision: crisp hairlines, dark glassmorphism, specular top-lighting, smooth 60fps physics.
  */
 
 @theme {
-  /* ---- Type -------------------------------------------------------------
-   * All three families are self-hosted (OFL-1.1). No network fetch at build
-   * or run time — an air-gapped install must still build. See layout.tsx.
-   */
+  /* ---- Type ------------------------------------------------------------- */
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 
-  /* ---- Graphite scale (the base; near-zero chroma) ---------------------- */
-  --color-ink-1000: #050607;
-  --color-ink-950: #08090b;
-  --color-ink-900: #0c0e10;
-  --color-ink-850: #111316;
-  --color-ink-800: #16191d;
-  --color-ink-750: #1c2025;
-  --color-ink-700: #24282e;
-  --color-ink-650: #2c3239;
-  --color-ink-600: #363d45;
-  --color-ink-500: #4a525c;
+  /* ---- Deep Obsidian & Graphite Scale ----------------------------------- */
+  --color-ink-1000: #030712;
+  --color-ink-950: #060a12;
+  --color-ink-900: #0a0e1a;
+  --color-ink-850: #0f1523;
+  --color-ink-800: #141c2e;
+  --color-ink-750: #1a233a;
+  --color-ink-700: #222e49;
+  --color-ink-650: #2b3957;
+  --color-ink-600: #374668;
+  --color-ink-500: #4a5c85;
 
-  /* Legacy alias — every `bg-abyss-*` in the product now resolves to graphite. */
-  --color-abyss-950: #08090b;
-  --color-abyss-900: #0c0e10;
-  --color-abyss-850: #111316;
-  --color-abyss-800: #16191d;
-  --color-abyss-700: #24282e;
+  /* Legacy alias — resolves to obsidian graphite */
+  --color-abyss-950: #060a12;
+  --color-abyss-900: #0a0e1a;
+  --color-abyss-850: #0f1523;
+  --color-abyss-800: #141c2e;
+  --color-abyss-700: #222e49;
 
-  /* ---- Text (bone, not pure white — pure white on graphite vibrates) ---- */
-  --color-bone: #f4f3f0;
-  --color-bone-dim: #dedbd4;
-  --color-ash-200: #c7cbd0;
-  --color-ash-300: #a5abb3;
-  --color-ash-400: #858c95;
-  --color-ash-500: #6a717a;
-  --color-ash-600: #525862;
-  --color-ash-700: #3d424a;
+  /* ---- Crisp Typography Scale ------------------------------------------- */
+  --color-bone: #f8fafc;
+  --color-bone-dim: #e2e8f0;
+  --color-ash-200: #cbd5e1;
+  --color-ash-300: #94a3b8;
+  --color-ash-400: #64748b;
+  --color-ash-500: #475569;
+  --color-ash-600: #334155;
+  --color-ash-700: #1e293b;
 
-  /* ---- Sodium signal (the single decorative hue) ------------------------ */
-  --color-signal-100: #fff4dd;
-  --color-signal-200: #ffe6b0;
-  --color-signal-300: #ffd47a;
-  --color-signal-400: #ffc247;
-  --color-signal-500: #ffb627;
-  --color-signal-600: #e79c11;
-  --color-signal-700: #b5760a;
-  --color-signal-800: #7d5106;
-  --color-signal-900: #4a3004;
+  /* ---- Classic Royal & Sapphire Blue (Primary Signal & Brand Accent) ----- */
+  --color-signal-50: #eff6ff;
+  --color-signal-100: #dbeafe;
+  --color-signal-200: #bfdbfe;
+  --color-signal-300: #93c5fd;
+  --color-signal-400: #60a5fa;
+  --color-signal-500: #3b82f6;
+  --color-signal-600: #2563eb;
+  --color-signal-700: #1d4ed8;
+  --color-signal-800: #1e40af;
+  --color-signal-900: #1e3a8a;
+  --color-signal-950: #0f172a;
 
-  /* Legacy alias — `arch-*` was indigo→violet; it is sodium now. */
-  --color-arch-50: #fff9ec;
-  --color-arch-100: #fff4dd;
-  --color-arch-200: #ffe6b0;
-  --color-arch-300: #ffd47a;
-  --color-arch-400: #ffc247;
-  --color-arch-500: #ffb627;
-  --color-arch-600: #e79c11;
-  --color-arch-700: #b5760a;
+  /* Brand Scale Aliases */
+  --color-arch-50: #eff6ff;
+  --color-arch-100: #dbeafe;
+  --color-arch-200: #bfdbfe;
+  --color-arch-300: #93c5fd;
+  --color-arch-400: #60a5fa;
+  --color-arch-500: #3b82f6;
+  --color-arch-600: #2563eb;
+  --color-arch-700: #1d4ed8;
 
-  /* ---- Retired: the indigo→violet "AI glow" -----------------------------
-   * These scales are deliberately reassigned rather than deleted. Components
-   * still referencing them inherit the new language, and any that fade an
-   * indigo→violet gradient now fade sodium→sodium, i.e. flat and calm.
-   */
-  --color-indigo-50: #fff9ec;
-  --color-indigo-100: #fff4dd;
-  --color-indigo-200: #ffe6b0;
-  --color-indigo-300: #ffd47a;
-  --color-indigo-400: #ffc247;
-  --color-indigo-500: #ffb627;
-  --color-indigo-600: #e79c11;
-  --color-indigo-700: #b5760a;
-  --color-indigo-800: #7d5106;
-  --color-indigo-900: #4a3004;
-  --color-indigo-950: #2b1c02;
+  --color-indigo-50: #eff6ff;
+  --color-indigo-100: #dbeafe;
+  --color-indigo-200: #bfdbfe;
+  --color-indigo-300: #93c5fd;
+  --color-indigo-400: #60a5fa;
+  --color-indigo-500: #3b82f6;
+  --color-indigo-600: #2563eb;
+  --color-indigo-700: #1d4ed8;
+  --color-indigo-800: #1e40af;
+  --color-indigo-900: #1e3a8a;
+  --color-indigo-950: #0f172a;
 
-  --color-violet-50: #fffaf0;
-  --color-violet-100: #fff2d6;
-  --color-violet-200: #ffe3a6;
-  --color-violet-300: #ffd070;
-  --color-violet-400: #ffbe3d;
-  --color-violet-500: #f0a81e;
-  --color-violet-600: #cf8b0c;
-  --color-violet-700: #a26a08;
-  --color-violet-800: #704805;
-  --color-violet-900: #432b03;
-  --color-violet-950: #271902;
+  --color-violet-50: #f8fafc;
+  --color-violet-100: #f1f5f9;
+  --color-violet-200: #e2e8f0;
+  --color-violet-300: #93c5fd;
+  --color-violet-400: #60a5fa;
+  --color-violet-500: #3b82f6;
+  --color-violet-600: #2563eb;
+  --color-violet-700: #1d4ed8;
+  --color-violet-800: #1e40af;
+  --color-violet-900: #172554;
+  --color-violet-950: #0a0f1d;
 
-  --color-blue-300: #9fb3c4;
-  --color-blue-400: #7d95a9;
-  --color-blue-500: #5f7a90;
-  --color-fuchsia-500: #f0a81e;
-  --color-purple-500: #f0a81e;
+  --color-blue-300: #93c5fd;
+  --color-blue-400: #60a5fa;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-blue-700: #1d4ed8;
+  --color-fuchsia-500: #3b82f6;
+  --color-purple-500: #3b82f6;
 
-/* ---- Retired: slate's blue cast ---------------------------------------
-   * 550 utility classes across the product take their text and border colour
-   * from `slate-*`, which is a blue-gray. Blue-gray body copy on a blue-black
-   * base is what makes a dark UI read as a default AI theme long before any
-   * gradient shows up. The ramp is remapped to a stone neutral with a breath of
-   * warmth, which sits correctly against the graphite surfaces and the sodium
-   * accent. Severity hues (rose, amber, emerald, sky) are untouched — those are
-   * data, and they are supposed to be saturated.
-   */
-  --color-slate-50: #fafaf9;
-  --color-slate-100: #f1f1ef;
-  --color-slate-200: #e3e3e0;
-  --color-slate-300: #d0d0cc;
-  --color-slate-400: #a6a6a1;
-  --color-slate-500: #7d7d78;
-  --color-slate-600: #5e5e59;
-  --color-slate-700: #474743;
-  --color-slate-800: #2f2f2c;
-  --color-slate-900: #1e1e1c;
-  --color-slate-950: #121211;
+  /* ---- Clean Neutral Slate Scale ---------------------------------------- */
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
 
-  --color-gray-400: #a6a6a1;
-  --color-gray-500: #7d7d78;
-  --color-zinc-400: #a6a6a1;
+  --color-gray-400: #94a3b8;
+  --color-gray-500: #64748b;
+  --color-zinc-400: #94a3b8;
 
-  /* ---- Severity & service state — SEMANTIC ONLY -------------------------
-   * Never use these for a background wash, a hero, or a headline.
-   */
-  --color-sev-critical: #ff4438;
-  --color-sev-high: #ff8a1f;
-  --color-sev-medium: #ffd60a;
-  --color-sev-low: #93a1b0;
-  --color-state-ok: #2fbf71;
+  /* ---- Semantic Incident & System State --------------------------------- */
+  --color-sev-critical: #ef4444;
+  --color-sev-high: #f59e0b;
+  --color-sev-medium: #fbbf24;
+  --color-sev-low: #94a3b8;
+  --color-state-ok: #10b981;
   --color-state-info: #38bdf8;
-  --color-state-warn: #ffb627;
-  --color-state-down: #ff4438;
+  --color-state-warn: #f59e0b;
+  --color-state-down: #ef4444;
 
-  /* ---- Hairlines & elevation ------------------------------------------- */
-  --color-hairline: rgb(255 255 255 / 0.075);
-  --color-hairline-strong: rgb(255 255 255 / 0.14);
+  /* ---- Hairlines & Elevation ------------------------------------------- */
+  --color-hairline: rgb(255 255 255 / 0.08);
+  --color-hairline-strong: rgb(255 255 255 / 0.15);
 
-  /* ---- Motion ---------------------------------------------------------- */
-  --animate-fade-in: fade-in 0.35s ease both;
-  --animate-rise: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-scale-in: scale-in 0.18s ease-out both;
-  --animate-slide-in-right: slide-in-right 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-pulse-dot: pulse-dot 2.4s ease-in-out infinite;
-  --animate-shimmer: shimmer 1.8s linear infinite;
-  --animate-spin-slow: spin 2.5s linear infinite;
-  --animate-marquee: marquee 42s linear infinite;
-  --animate-marquee-rev: marquee-rev 42s linear infinite;
-  --animate-scan: scan 7s linear infinite;
-  --animate-breathe: breathe 9s ease-in-out infinite;
-  --animate-ticker: ticker 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-sweep: sweep 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  /* ---- Animations ------------------------------------------------------ */
+  --animate-fade-in: fade-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-rise: rise 0.55s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-scale-in: scale-in 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-slide-in-right: slide-in-right 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-pulse-dot: pulse-dot 2.2s ease-in-out infinite;
+  --animate-shimmer: shimmer 2s linear infinite;
+  --animate-spin-slow: spin 4s linear infinite;
+  --animate-marquee: marquee 46s linear infinite;
+  --animate-marquee-rev: marquee-rev 46s linear infinite;
+  --animate-scan: scan 6s linear infinite;
+  --animate-breathe: breathe 8s ease-in-out infinite;
+  --animate-ticker: ticker 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-sweep: sweep 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   --animate-blink: blink 1.05s steps(2, start) infinite;
 
   @keyframes fade-in {
@@ -177,20 +155,20 @@
     to { opacity: 1; }
   }
   @keyframes rise {
-    from { opacity: 0; transform: translateY(14px); }
+    from { opacity: 0; transform: translateY(16px); }
     to { opacity: 1; transform: translateY(0); }
   }
   @keyframes scale-in {
-    from { opacity: 0; transform: scale(0.97) translateY(4px); }
+    from { opacity: 0; transform: scale(0.96) translateY(6px); }
     to { opacity: 1; transform: scale(1) translateY(0); }
   }
   @keyframes slide-in-right {
-    from { opacity: 0; transform: translateX(16px); }
+    from { opacity: 0; transform: translateX(20px); }
     to { opacity: 1; transform: translateX(0); }
   }
   @keyframes pulse-dot {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.45; transform: scale(0.92); }
   }
   @keyframes shimmer {
     from { background-position: -200% 0; }
@@ -206,13 +184,13 @@
   }
   @keyframes scan {
     0% { transform: translateY(-100%); opacity: 0; }
-    8% { opacity: 1; }
-    92% { opacity: 1; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
     100% { transform: translateY(100%); opacity: 0; }
   }
   @keyframes breathe {
-    0%, 100% { opacity: 0.45; }
-    50% { opacity: 0.9; }
+    0%, 100% { opacity: 0.5; }
+    50% { opacity: 0.95; }
   }
   @keyframes ticker {
     from { opacity: 0; transform: translateY(60%); }
@@ -230,13 +208,15 @@
 
 :root {
   color-scheme: dark;
-  --arch-accent: #ffb627;
-  --arch-accent-soft: rgb(255 182 39 / 0.14);
-  --arch-hairline: rgb(255 255 255 / 0.075);
-  --arch-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --arch-accent: #3b82f6;
+  --arch-accent-strong: #2563eb;
+  --arch-accent-soft: rgb(59 130 246 / 0.12);
+  --arch-accent-glow: rgb(59 130 246 / 0.25);
+  --arch-hairline: rgb(255 255 255 / 0.08);
+  --arch-hairline-blue: rgb(59 130 246 / 0.2);
+  --arch-ease: cubic-bezier(0.16, 1, 0.3, 1);
   --arch-ease-io: cubic-bezier(0.65, 0, 0.35, 1);
-  /* Grain opacity is a single knob for the whole product. */
-  --arch-grain: 0.032;
+  --arch-grain: 0.024;
 }
 
 html,
@@ -245,7 +225,6 @@ body {
 }
 
 html {
-  /* Lenis owns scrolling on the marketing surface; keep native behaviour sane elsewhere. */
   -webkit-text-size-adjust: 100%;
 }
 
@@ -256,7 +235,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Lenis: required so the smooth-scroll transform never fights the browser. */
+/* Lenis smooth scroll */
 html.lenis,
 html.lenis body {
   height: auto;
@@ -272,15 +251,15 @@ html.lenis body {
 }
 
 ::selection {
-  background: rgb(255 182 39 / 0.28);
-  color: #fff9ec;
+  background: rgb(37 99 235 / 0.35);
+  color: #ffffff;
 }
 
-/* Keyboard focus is a hard sodium ring — the only place the accent shouts. */
+/* Keyboard focus — sharp classic blue outline */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--arch-accent);
   outline-offset: 2px;
-  border-radius: 2px;
+  border-radius: 4px;
 }
 
 .arch-mono {
@@ -293,7 +272,6 @@ html.lenis body {
   letter-spacing: -0.03em;
 }
 
-/* Tabular figures for every number in a grid, so columns stop jittering. */
 .arch-tabular {
   font-variant-numeric: tabular-nums;
   font-feature-settings: 'tnum';
@@ -301,25 +279,29 @@ html.lenis body {
 
 /* ---- Surfaces ---------------------------------------------------------- */
 
-/* Engineering grid + vignette. No aurora, no coloured radial wash. */
 .arch-backdrop {
   background-image:
-    linear-gradient(rgb(255 255 255 / 0.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(255 255 255 / 0.022) 1px, transparent 1px);
-  background-size: 56px 56px, 56px 56px;
-  mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, black 0%, transparent 78%);
+    linear-gradient(rgb(255 255 255 / 0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.02) 1px, transparent 1px);
+  background-size: 48px 48px, 48px 48px;
+  mask-image: radial-gradient(ellipse 85% 65% at 50% 0%, black 0%, transparent 80%);
 }
 
-/* Hairline grid used behind dense data panels — reads as graph paper. */
 .arch-grid-fine {
   background-image:
-    linear-gradient(rgb(255 255 255 / 0.028) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(255 255 255 / 0.028) 1px, transparent 1px);
-  background-size: 22px 22px, 22px 22px;
+    linear-gradient(rgb(255 255 255 / 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / 0.025) 1px, transparent 1px);
+  background-size: 20px 20px, 20px 20px;
 }
 
-/* Film grain. A fixed SVG-noise layer is what separates "dark theme" from
- * "photographed surface"; it also kills banding on the video + 3D hero. */
+.arch-grid-blue {
+  background-image:
+    linear-gradient(rgb(59 130 246 / 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(59 130 246 / 0.06) 1px, transparent 1px);
+  background-size: 24px 24px, 24px 24px;
+}
+
+/* Clean film grain */
 .arch-grain::after {
   content: '';
   position: fixed;
@@ -338,22 +320,22 @@ html.lenis body {
   100% { transform: translate3d(0, 0, 0); }
 }
 
-/* Panels: one hairline, a whisper of top light, no coloured bloom. */
+/* Precision engineered panels */
 .arch-panel {
   position: relative;
   background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.028), rgb(255 255 255 / 0) 42%),
-    #0c0e10;
+    linear-gradient(180deg, rgb(255 255 255 / 0.03), rgb(255 255 255 / 0) 45%),
+    #0a0e1a;
   border: 1px solid var(--arch-hairline);
-  border-radius: 14px;
+  border-radius: 12px;
 }
 .arch-panel::before {
   content: '';
   position: absolute;
   inset: 0 0 auto;
   height: 1px;
-  border-radius: 14px 14px 0 0;
-  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.16) 22%, rgb(255 255 255 / 0.16) 78%, transparent);
+  border-radius: 12px 12px 0 0;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.18) 25%, rgb(59 130 246 / 0.35) 50%, rgb(255 255 255 / 0.18) 75%, transparent);
   pointer-events: none;
 }
 
@@ -361,46 +343,45 @@ html.lenis body {
   border-color: var(--arch-hairline);
 }
 
-/* Neutral glass — no tint, so it never reads as a coloured glow. */
 .glass {
-  background: rgb(8 9 11 / 0.72);
+  background: rgb(6 10 18 / 0.75);
   backdrop-filter: blur(16px) saturate(1.2);
   -webkit-backdrop-filter: blur(16px) saturate(1.2);
 }
 
-/* Lift is border + elevation only. The old version painted an indigo shadow. */
 .card-lift {
   transition:
-    transform 0.45s var(--arch-ease),
-    border-color 0.3s ease,
-    background-color 0.3s ease,
-    box-shadow 0.45s var(--arch-ease);
+    transform 0.35s var(--arch-ease),
+    border-color 0.25s ease,
+    background-color 0.25s ease,
+    box-shadow 0.35s var(--arch-ease);
 }
 .card-lift:hover {
   transform: translateY(-2px);
-  border-color: rgb(255 255 255 / 0.16);
+  border-color: rgb(59 130 246 / 0.3);
   box-shadow:
-    0 1px 0 0 rgb(255 255 255 / 0.05) inset,
-    0 18px 44px -22px rgb(0 0 0 / 0.95);
+    0 1px 0 0 rgb(255 255 255 / 0.08) inset,
+    0 18px 44px -20px rgb(0 0 0 / 0.95);
 }
 
 .link-row {
   transition: background-color 0.15s ease;
 }
 
-/* ---- Type treatments --------------------------------------------------- */
-
-/* Monochrome letterpress. Was a transparent indigo→violet clip; display type
- * is now solid bone, because gradient text is the single loudest "AI template"
- * tell there is. Kept as a class so existing markup still resolves. */
 .text-gradient {
-  background: linear-gradient(178deg, #fbfaf8 8%, #cfccc4 92%);
+  background: linear-gradient(178deg, #ffffff 10%, #cbd5e1 90%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
 }
 
-/* A hairline that draws itself in — used under eyebrows and section rules. */
+.text-gradient-blue {
+  background: linear-gradient(178deg, #ffffff 20%, #93c5fd 60%, #3b82f6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 .rule-draw {
   position: relative;
   overflow: hidden;
@@ -414,13 +395,12 @@ html.lenis body {
   background: linear-gradient(90deg, var(--arch-accent), rgb(255 255 255 / 0.05));
   transform: scaleX(0);
   transform-origin: left;
-  transition: transform 0.9s var(--arch-ease);
+  transition: transform 0.8s var(--arch-ease);
 }
 .rule-draw[data-shown='true']::after {
   transform: scaleX(1);
 }
 
-/* Line-mask reveal: each line sits in an overflow clip and translates up. */
 .line-mask {
   display: block;
   overflow: hidden;
@@ -428,14 +408,12 @@ html.lenis body {
 .line-mask > span {
   display: block;
   transform: translateY(105%);
-  transition: transform 1s var(--arch-ease);
+  transition: transform 0.9s var(--arch-ease);
 }
 [data-shown='true'] .line-mask > span,
 .line-mask[data-shown='true'] > span {
   transform: translateY(0);
 }
-
-/* ---- Data / console ---------------------------------------------------- */
 
 .skeleton-shimmer {
   background: linear-gradient(100deg, rgb(255 255 255 / 0.035) 40%, rgb(255 255 255 / 0.085) 50%, rgb(255 255 255 / 0.035) 60%);
@@ -446,11 +424,9 @@ html.lenis body {
 .layer-shadow {
   box-shadow:
     0 32px 90px -24px rgb(0 0 0 / 0.85),
-    0 0 0 1px rgb(255 255 255 / 0.07);
+    0 0 0 1px rgb(255 255 255 / 0.08);
 }
 
-/* Severity chip — a 2px state bar plus tinted text. Reads at a glance in a
- * dense grid the way Cloudflare and Grafana chips do, without a glow. */
 .arch-chip {
   display: inline-flex;
   align-items: center;
@@ -466,27 +442,24 @@ html.lenis body {
   background: color-mix(in oklab, currentColor 10%, transparent);
 }
 
-/* Uptime bar segment (status page / 90-day history). */
 .arch-uptime-seg {
   border-radius: 1px;
   transition: transform 0.25s var(--arch-ease), filter 0.25s ease;
 }
 .arch-uptime-seg:hover {
-  transform: scaleY(1.28);
-  filter: brightness(1.25);
+  transform: scaleY(1.3);
+  filter: brightness(1.3);
 }
 
-/* Scanline that travels down a panel — the "live system" cue. */
 .arch-scanline {
   position: absolute;
   inset-inline: 0;
   height: 22%;
-  background: linear-gradient(180deg, transparent, rgb(255 255 255 / 0.045) 55%, transparent);
+  background: linear-gradient(180deg, transparent, rgb(59 130 246 / 0.06) 55%, transparent);
   animation: var(--animate-scan);
   pointer-events: none;
 }
 
-/* Specular sheen that sweeps across a surface on hover (physical, not glow). */
 .arch-sheen {
   position: relative;
   overflow: hidden;
@@ -495,7 +468,7 @@ html.lenis body {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(105deg, transparent 38%, rgb(255 255 255 / 0.09) 50%, transparent 62%);
+  background: linear-gradient(105deg, transparent 38%, rgb(255 255 255 / 0.12) 50%, transparent 62%);
   transform: translateX(-110%);
   pointer-events: none;
 }
@@ -503,30 +476,25 @@ html.lenis body {
   animation: var(--animate-sweep);
 }
 
-/* ---- Scrollbars -------------------------------------------------------- */
-
 .scroll-thin {
   scrollbar-width: thin;
   scrollbar-color: rgb(255 255 255 / 0.14) transparent;
 }
 .scroll-thin::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 .scroll-thin::-webkit-scrollbar-thumb {
-  background: rgb(255 255 255 / 0.13);
-  border-radius: 8px;
+  background: rgb(255 255 255 / 0.15);
+  border-radius: 6px;
 }
 .scroll-thin::-webkit-scrollbar-thumb:hover {
-  background: rgb(255 255 255 / 0.22);
+  background: rgb(59 130 246 / 0.4);
 }
 .scroll-thin::-webkit-scrollbar-track {
   background: transparent;
 }
 
-/* ---- Marketing-only utilities ------------------------------------------ */
-
-/* Vertical eyebrow text, used on pinned scroll sections. */
 .arch-vertical {
   writing-mode: vertical-rl;
   text-orientation: mixed;
@@ -536,14 +504,11 @@ html.lenis body {
   mask-image: linear-gradient(90deg, transparent, black 9%, black 91%, transparent);
 }
 
-/* Blend-mode difference cursor — inverts whatever it passes over. */
 .arch-cursor {
   mix-blend-mode: difference;
   pointer-events: none;
 }
 
-/* Hide the native cursor only where the custom one is active, and only for
- * pointer devices — a touch user must never lose their affordance. */
 @media (pointer: fine) {
   .arch-cursor-on,
   .arch-cursor-on a,
@@ -552,13 +517,6 @@ html.lenis body {
   }
 }
 
-/* ---- Hero footage ------------------------------------------------------ */
-
-/*
- * Ken Burns drift. Slow enough to read as camera movement rather than as a zoom, and it doubles as
- * a parallax cue against the fixed 3D layer above it. Disabled under prefers-reduced-motion by the
- * global rule at the foot of this file.
- */
 .arch-hero-kenburns {
   animation: hero-kenburns 34s var(--arch-ease-io) infinite alternate;
   transform-origin: 58% 42%;
@@ -566,13 +524,11 @@ html.lenis body {
 
 @keyframes hero-kenburns {
   from { transform: scale(1.02) translate3d(0, 0, 0); }
-  to { transform: scale(1.14) translate3d(-1.4%, -1.1%, 0); }
+  to { transform: scale(1.12) translate3d(-1.2%, -1%, 0); }
 }
 
-/* Boot curtain: the preloader lifts as one slab rather than fading, so the hero is *uncovered*
-   instead of cross-dissolved. Slightly slower than it feels, with the house ease. */
 .arch-boot-curtain {
-  animation: boot-curtain 980ms cubic-bezier(0.76, 0, 0.24, 1) forwards;
+  animation: boot-curtain 850ms cubic-bezier(0.76, 0, 0.24, 1) forwards;
 }
 
 @keyframes boot-curtain {
@@ -580,7 +536,6 @@ html.lenis body {
   to { transform: translate3d(0, -101%, 0); }
 }
 
-/* The scroll cue's travelling segment, looping down a hairline track. */
 .arch-scroll-cue {
   animation: scroll-cue 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
@@ -592,8 +547,6 @@ html.lenis body {
   100% { transform: translateY(420%); opacity: 0; }
 }
 
-/* The pulse that walks the agent-loop spine. One element, transform-only, so it stays on the
-   compositor for the whole section. */
 .arch-loop-pulse {
   animation: loop-pulse 3.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
 }
@@ -605,10 +558,8 @@ html.lenis body {
   100% { transform: translateY(15.5rem); opacity: 0; }
 }
 
-/* Deploy terminal: lines deal out top-to-bottom when the tab changes. Re-keyed on switch so the
-   stagger replays rather than cross-fading into mush. */
 .arch-deploy-line {
-  animation: deploy-line 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: deploy-line 550ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 @keyframes deploy-line {
@@ -625,7 +576,6 @@ html.lenis body {
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-  /* Reveals must not strand content off-screen when motion is disabled. */
   .line-mask > span {
     transform: none !important;
   }
