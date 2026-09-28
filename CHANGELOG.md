@@ -15,6 +15,51 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Added — V10.3 · the pack grows to 161 topics, and answers comparisons
+
+The honest limit from V10 has not changed — a curated pack is not a pretrained model. What changed is
+the size of the canon, and what the pack does with a question that names *two* topics instead of one:
+**161 hand-written topics across 16 families**, still offline, still cited, still ₹0 per answer.
+
+- **+72 topics.** New coverage that engineers actually ask for: **languages** (JVM and bytecode, Rust
+  ownership and borrow checking, memory-managed mobile targets, SQL as a language, compiled vs
+  interpreted vs JIT, functional vs object-oriented), **web** (CORS, cookies and storage, cache
+  headers, CDNs, pagination, API versioning, API gateways, the event loop, browser performance,
+  accessibility, i18n, SEO, feature flags), **databases** (isolation levels and dirty reads,
+  normalisation, NoSQL families, search engines and inverted indexes, time-series data, partitioning,
+  backups/PITR, locks and deadlocks), **infra** (Dockerfiles and image size, Kubernetes networking,
+  autoscaling, triage on a Linux box, SSH and bastions, cron and schedulers, immutable artefacts),
+  **distributed systems** (consensus and quorums, distributed locks, sagas, message ordering,
+  consistent hashing, CRDTs), **security** (zero trust, JWT vs sessions, injection and XSS/CSRF,
+  password hashing, RBAC/ABAC, audit logging, threat modelling), **engineering** (TDD, code review,
+  technical debt, debugging, documentation), **data** (ETL/ELT, warehouse/lake/lakehouse, stream
+  processing, data quality, governance and PII), **AI** (transformers, embeddings and vector search,
+  fine-tuning vs RAG, MLOps, agents and tool use, cost and guardrails), **performance** (profiling and
+  flame graphs, slow-query tuning), **computer-science fundamentals** (data structures and Big-O,
+  compilers and ASTs) and **emerging tech** (quantum computing, blockchains, IoT/embedded, game
+  development).
+- **Comparison questions are composed from both entries.** "Redis vs Postgres — which should I use?"
+  now answers with *both* topics, each in its own words, with **both** citations, and one line that
+  says plainly that the two pack entries are being quoted rather than a verdict generated. When a
+  single entry already covers both sides (Docker vs Kubernetes, REST vs GraphQL) that entry is the
+  answer — no stitched-together pair.
+- **A near miss is no longer a dead end.** When a question is genuinely outside the pack, the honest
+  fallback now names the **closest topics** it does cover and offers them as follow-ups — as a hint,
+  not as an answer: no citation is invented, confidence stays `low`, and a question with no shared
+  vocabulary ("what is good for lunch") still gets no invented suggestion at all.
+- **Definition questions win against a workspace intent that only matched a word.** "what is a service
+  mesh" used to be answered as a *services* question, "how do you do a postmortem" as *lessons*,
+  "what is a document database" as a *runbook* one and "explain the twelve-factor app" with a recent
+  incident. Definition wording now goes to the pack; wording about *this* workspace ("our runbook",
+  "what services are degraded right now?") stays with the workspace.
+- **Data hygiene, enforced by a test.** One alias now belongs to exactly one topic — leaked aliases
+  ("what is a cdn" living inside the caching entry, duplicate `cors`/`jwt`/`xss`/`bcrypt`/`zero trust`
+  phrases) were fixed, and the data-shape test fails if a leak comes back.
+- **Measured, not asserted:** 497 tests green (41 in the chat engine), `npm run smoke:api` 124/124, and
+  a fresh **89-question battery** (one question per topic family, written *after* the pack was built)
+  answered **89/89** from the pack; the original 79-question canon and the 10-question precision set
+  still pass.
+
 ### Added — V10 · a built-in tech knowledge pack (and an honest limit)
 
 "Can it answer any tech question in the world?" — a curated pack cannot equal a pretrained model's

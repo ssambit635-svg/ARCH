@@ -26,13 +26,13 @@ npm run dev         # http://localhost:3000
 Doosre terminal mein, jab dev server chal raha ho:
 
 ```bash
-npm run smoke:api   # 122 checks; exit 0 = sab pass
+npm run smoke:api   # 124 checks; exit 0 = sab pass
 ```
 
 Agar koi test fail ho: pehle `npm run db:generate` dobara chalayein, phir `npm test`. Fresh
 machine par 90% failures missing Prisma client ya dead database ki wajah se hote hain.
 
-**Pass criteria:** typecheck clean, test suite green, smoke 122/122.
+**Pass criteria:** typecheck clean, test suite green, smoke 124/124.
 
 ---
 
@@ -91,8 +91,17 @@ Ye checklist har command ke saath hai (`/dashboard/chat`):
 - [ ] Status code wala definition sawaal: `what does http 503 mean?` — 5xx ka matlab batao; par
       `we keep seeing 503s after the deploy, what should we do?` — yeh incident advisor ke paas hi
       rahe (koi Tech pack citation na aaye).
+- [ ] Comparison sawaal: `redis vs postgres — which should I use?` — **dono** topics ka apna summary
+      aaye, dono citations dikhein, aur ek line bole ki yeh dono pack entries quote kar raha hai
+      (verdict invent nahi kiya). `docker vs kubernetes?` par sirf ek entry aaye (wo entry dono cover
+      karti hai).
+- [ ] Definition sawaal jinhe workspace intent pehle pakadta tha: `what is a service mesh`,
+      `how do you do a postmortem`, `what is a document database`, `explain the twelve-factor app` —
+      inme Tech pack citation aaye; par `what services are degraded right now?` aur
+      `what did we learn from the postmortem?` workspace jawab hi rahein.
 - [ ] Pack se bahar ka sawaal: `what is quantum tunnelling in GPUs?` — ARCH saaf bole ki yeh uske
-      built-in topics mein nahi hai, kitne topics built-in hain bataye, aur Knowledge page ka raasta
+      built-in topics mein nahi hai, kitne topics built-in hain bataye, **sabse kareeb topics** naam
+      se bataye (jaise `Quantum computing`) aur unhe follow-up chips mein de, aur Knowledge page ka raasta
       suggest kare. Koi banaya hua fact na aaye.
 - [ ] Workspace sawaal abhi bhi theek: `what is open right now?` — open queue aaye, Tech pack nahi.
 - [ ] Ek incident sawaal ke baad (`we keep seeing 503s after the deploy, what should we do?`) ek naya

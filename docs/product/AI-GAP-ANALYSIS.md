@@ -105,7 +105,7 @@ Legend — **Closeable at ₹0?**
 
 | Capability | ChatGPT | ARCH today | ₹0? | How we close it | Phase |
 |---|---|---|---|---|---|
-| Answers about the world | ✅ | 🟡 **V10** — a built-in tech pack of 89 topics (languages, web, databases, infra, cloud, ops, security, testing, systems, engineering practice, AI), offline, cited, EN + Hinglish; outside it we say so | 🔶 | Coverage is a data file, not a model: grow `tech-knowledge.ts` (data-only change), ground the rest in the workspace's own Knowledge sources, and keep `AI_PROVIDER=arch-hybrid` (local weights, free, slower, needs RAM) as the opt-in path for the long tail. A pretrained model's breadth is not reachable at ₹0 — and a hallucinated fact in an incident tool is worse than "not in the pack" | **shipped (V10) · P5 for the long tail** |
+| Answers about the world | ✅ | 🟡 **V10 · V10.3** — a built-in tech pack of 161 topics across 16 families (languages, web, databases, infra, distributed, cloud, ops, security, testing, systems, performance, data, engineering practice, AI, CS fundamentals, emerging tech), offline, cited, EN + Hinglish; comparison questions are composed from both entries; outside the pack we say so *and* name the closest topics | 🔶 | Coverage is a data file, not a model: grow `tech-knowledge.ts` (data-only change), ground the rest in the workspace's own Knowledge sources, and keep `AI_PROVIDER=arch-hybrid` (local weights, free, slower, needs RAM) as the opt-in path for the long tail. A pretrained model's breadth is not reachable at ₹0 — and a hallucinated fact in an incident tool is worse than "not in the pack" | **shipped (V10) · P5 for the long tail** |
 | Answers about *your* incidents, runbooks, services, roster | 🟡 only if you paste them | ✅ **this is the product** | — | Keep widening the corpus (SLOs, changes, dependencies, postmortems) rather than widening the model | ongoing |
 | Citations you can click | ✅ (web + memory sources) | ✅ incident / runbook / pattern / postmortem | — | Add citations for SLO, change and dependency rows as they enter answers | P3 |
 | Web browsing / deep research | ✅ | ❌ deliberately (SSRF-bounded fetch is a human action, not inference) | 🔶 | A **"research this incident" action** that fetches a URL the human names, shows what it read, then answers — human-in-the-loop version of the same outcome | P4 |
@@ -140,9 +140,10 @@ Say these out loud in every internal review, so nobody promises them by accident
 
 1. **Pretrained world knowledge.** ChatGPT can explain a Kubernetes error it has never seen in your
    workspace. ARCH knows only what it was handed — retrieval and templates cannot manufacture
-   knowledge that was never written down. V10 narrows this honestly: a hand-written pack covers the
-   89 questions engineers actually ask (offline, cited, EN + Hinglish), and the reply says plainly
-   when a topic is outside it. That is coverage by authorship, not by training — the long tail stays
+   knowledge that was never written down. V10 narrowed this honestly; **V10.3 widened it to 161
+   hand-written topics across 16 families** (offline, cited, EN + Hinglish) and made the pack compose
+   comparisons from two entries, while the reply still says plainly when a topic is outside it and now
+   names the closest topics it does cover. That is coverage by authorship, not by training — the long tail stays
    with the opt-in local model, and the pack grows one data entry at a time.
 2. **Frontier reasoning.** Novel debugging, maths, multi-hop inference, writing a new algorithm.
    A quantised 7B local model narrows this gap on *familiar* tasks and does not close it on new

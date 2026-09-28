@@ -334,12 +334,14 @@ this workspace (open incidents, history, runbooks, the trained model) and cites 
 - **Honest when it does not know.** An empty workspace gets "I have nothing to ground this on"
   plus how to fix that — never an invented incident. Chat answers from a 30-day resolve-time
   window and the open queue only.
-- **General tech questions, answered offline (V10).** A built-in tech pack of 89 topics — the oldest
-  language, 502 vs 503 vs 504, CAP, indexes and N+1, Docker vs Kubernetes, queues, SLO burn rate,
-  OAuth vs OIDC, load testing, processes vs threads, code review, how LLMs work — answers in English
-  or Hinglish with a "Tech pack" citation, from a file in your own repository, with no vendor call.
-  Outside the pack it says so and points at your Knowledge sources; for the long tail,
-  `AI_PROVIDER=arch-hybrid` can route to a local model you run yourself.
+- **General tech questions, answered offline (V10 · V10.3).** A built-in tech pack of 161 topics —
+  the oldest language, 502 vs 503 vs 504, CAP, indexes and N+1, Docker vs Kubernetes, queues, SLO burn
+  rate, OAuth vs OIDC, load testing, processes vs threads, code review, how LLMs work, and (V10.3)
+  Rust ownership, CORS, sagas, zero trust, ETL, transformers, quantum computing and more — answers in
+  English or Hinglish with a "Tech pack" citation, from a file in your own repository, with no vendor
+  call. Ask for a comparison ("redis vs postgres") and it quotes both entries, with both citations.
+  Outside the pack it says so, names the closest topics it *does* cover, and points at your Knowledge
+  sources; for the long tail, `AI_PROVIDER=arch-hybrid` can route to a local model you run yourself.
 - **Fast and free.** Warm answers land in tens of milliseconds (the engine is deterministic
   retrieval + templates, not an LLM call), it is rate-limited per organization like the rest of the
   Copilot surface, and it works with `ARCH_OFFLINE_ONLY="true"`.

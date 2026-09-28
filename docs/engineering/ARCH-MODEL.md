@@ -268,10 +268,12 @@ src/server/ai/
   arch-model/engine.ts      buildKnowledge + archDraft(task) for every Copilot task
   arch-model/chat.ts        pure Chat with ARCH engine: intents, EN/Hinglish answers, citations,
                             conversational memory merge (typed > stored > account name)
-  arch-model/tech-knowledge.ts  V10 built-in tech knowledge pack: 89 general topics (aliases +
-                            keywords + cues, EN/Hinglish, related) and the scored matcher
-                            (alias phrase > cue > keyword, confidence floor so workspace
-                            questions are never shadowed)
+  arch-model/tech-knowledge.ts  V10/V10.3 built-in tech knowledge pack: 161 general topics across 16
+                            families (aliases + keywords + cues, EN/Hinglish, related) and the scored
+                            matcher (alias phrase > cue > keyword, confidence floor so workspace
+                            questions are never shadowed), plus the comparison composer
+                            (matchTechComparison + techComparisonDigest) and the nearest-topic
+                            suggester used by the "not in the pack" fallback
   code/analyzer.ts          language detection, stack-trace diagnosis, rules, safe fixes, scrubSecrets
   code/review.ts            Code Assist input/output
   arch-native.ts            AI_PROVIDER="arch" and the hybrid fallback wrapper

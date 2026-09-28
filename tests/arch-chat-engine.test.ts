@@ -457,6 +457,12 @@ describe('built-in tech knowledge pack', () => {
       ['how does https actually work', 'web-tls'],
       ['what is the CAP theorem', 'db-cap'],
       ['what is a connection pool', 'db-connection-pool'],
+      ['what is a cdn', 'web-cdn'],
+      ['how do i store passwords', 'security-password-hashing'],
+      ['what is zero trust', 'security-zero-trust'],
+      ['what is a saga pattern', 'dist-sagas'],
+      ['how do transformers work', 'ai-transformers'],
+      ['redis kaise kaam karta hai?', 'db-redis'],
     ];
     for (const [question, expected] of recall) {
       expect(matchTechFact(question)?.fact.id, question).toBe(expected);
@@ -502,8 +508,67 @@ describe('built-in tech knowledge pack', () => {
     expect(ours.citations.some((citation) => citation.source === 'reference')).toBe(false);
   });
 
+  it('answers definition questions that a workspace intent claims first', () => {
+    // "how do you do a postmortem" classifies as *lessons*, "what is a service mesh" as *services* —
+    // both are general knowledge when the wording is a definition.
+    const postmortem = answerChat({ question: 'how do you do a postmortem', snapshot: snapshot() });
+    expect(postmortem.intent).toBe('tech_fact');
+    expect(postmortem.answer).toMatch(/postmortem/i);
+
+    const mesh = answerChat({ question: 'what is a service mesh', snapshot: snapshot() });
+    expect(mesh.intent).toBe('tech_fact');
+    expect(mesh.answer).toMatch(/mesh/i);
+
+    // The same shapes about *this* workspace stay on the workspace.
+    expect(answerChat({ question: 'what services are degraded right now?', snapshot: snapshot() }).intent).toBe('services');
+    expect(answerChat({ question: 'what did we learn from the postmortem?', snapshot: snapshot() }).intent).toBe('lessons');
+  });
+
+  it('composes a comparison question from both pack entries', () => {
+    const answer = answerChat({ question: 'redis vs postgres — which should I use?', snapshot: snapshot() });
+    expect(answer.intent).toBe('tech_fact');
+    expect(answer.confidence).toBe('high');
+    const labels = answer.citations.map((citation) => citation.label);
+    expect(labels).toContain('Redis');
+    expect(labels).toContain('PostgreSQL vs MySQL');
+    expect(answer.answer).toMatch(/in-memory/i); // the Redis half
+    expect(answer.answer).toMatch(/MySQL/i); // the Postgres half
+    // Honest labelling: two quoted entries, not a generated verdict.
+    expect(answer.answer).toMatch(/inventing a verdict/i);
+
+    // One entry that already covers both topics is answered as itself — no stitched pair.
+    const single = answerChat({ question: 'docker vs kubernetes?', snapshot: snapshot() });
+    expect(single.intent).toBe('tech_fact');
+    expect(single.citations).toHaveLength(1);
+    expect(single.citations[0]?.label).toContain('Docker');
+  });
+
+  it('points at the closest topics when the pack does not cover a question', () => {
+    const answer = answerChat({ question: 'what is quantum tunnelling in GPUs?', snapshot: snapshot() });
+    expect(answer.intent).toBe('unknown');
+    expect(answer.answer).toMatch(/Closest topics/);
+    expect(answer.answer).toMatch(/Quantum computing/);
+    expect(answer.suggestions.some((suggestion) => /quantum computing/i.test(suggestion))).toBe(true);
+    // The nearest topics are hints, not answers: nothing is cited as if the pack had answered.
+    expect(answer.citations).toHaveLength(0);
+
+    // A question with no shared vocabulary gets no invented suggestions at all.
+    const unrelated = answerChat({ question: 'what is good for lunch', snapshot: snapshot() });
+    expect(unrelated.answer).not.toMatch(/Closest topics/);
+  });
+
   it('keeps the pack data well formed', () => {
     const ids = new Set<string>();
+    // Every alias belongs to exactly one topic: a leaked alias ("what is a cdn" inside the caching
+    // entry) makes the matcher refuse the very question that should have been easiest to answer.
+    const aliasOwners = new Map<string, string>();
+    for (const fact of TECH_FACTS) {
+      for (const alias of fact.aliases) {
+        const owner = aliasOwners.get(alias);
+        if (owner) expect(owner, `alias "${alias}" in ${fact.id}`).toBe(fact.id);
+        else aliasOwners.set(alias, fact.id);
+      }
+    }
     for (const fact of TECH_FACTS) {
       expect(ids.has(fact.id), `duplicate id ${fact.id}`).toBe(false);
       ids.add(fact.id);
@@ -517,7 +582,7 @@ describe('built-in tech knowledge pack', () => {
       expect(fact.en).not.toMatch(/chatgpt|openai|anthropic/i);
     }
     expect(TECH_PACK_STATS.topics).toBe(TECH_FACTS.length);
-    expect(TECH_PACK_STATS.topics).toBeGreaterThanOrEqual(80);
+    expect(TECH_PACK_STATS.topics).toBeGreaterThanOrEqual(150);
   });
 });
 

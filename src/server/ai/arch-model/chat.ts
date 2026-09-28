@@ -21,7 +21,7 @@
 import type { IncidentSeverity, IncidentStatus } from '@/generated/prisma/client';
 import { AI_NAME } from '@/lib/brand';
 import { matchAdvisoryTopic, wantsAdvice } from './advisory';
-import { matchTechFact, techFactSuggestions, TECH_CATEGORY_LABELS, TECH_PACK_STATS, type TechFact } from './tech-knowledge';
+import { matchTechFact, matchTechComparison, suggestTechTopics, techComparisonDigest, techFactSuggestions, TECH_CATEGORY_LABELS, TECH_PACK_STATS, type TechFact } from './tech-knowledge';
 import { clip, formatDuration } from './text';
 
 // ---------------------------------------------------------------------------------------------
@@ -651,7 +651,7 @@ const INTENT_RULES: IntentRule[] = [
 const DEFINITION_QUESTION = /^(what(?:'s| is| are| does| do)\b|explain\b|define\b|meaning of\b|difference between\b|which\b|how (?:does|do|are|is|to|can|should)\b)/i;
 /** The same shape in Hinglish: "slo burn rate kya hota hai" is a definition, not an outage. */
 const HINGLISH_DEFINITION = /\b(kya hai|kya hain|kya hota hai|kya hoti hai|kya hota|kya matlab|matlab kya|samjha?o|samjha do|bata ?o|bata do|kaise kaam karta hai|kaise kaam karti hai)\b/i;
-const WORKSPACE_SUBJECT = /\b(we|us|our|ours|my|team|this|these|those|here|today|yesterday|tonight|currently|now|incident|incidents|on ?call|page[ds]?|hamara|hamare|humara|humare|hum|apna|apne|aaj|kal|abhi|yahan|iske|iski|ink[ae])\b/i;
+const WORKSPACE_SUBJECT = /\b(we|us|our|ours|my|team|this|these|those|here|today|yesterday|tonight|currently|now|incident|incidents|on ?call|page[ds]?|runbook|runbooks|playbook|playbooks|hamara|hamare|humara|humare|hum|apna|apne|aaj|kal|abhi|yahan|iske|iski|ink[ae])\b/i;
 
 /** True when the member is asking for a definition — in either language — rather than for triage. */
 function isDefinitionQuestion(question: string): boolean {
@@ -1506,7 +1506,11 @@ function answerHealthSummary(snapshot: ChatSnapshot, lang: ChatLang): { text: st
   };
 }
 
-function answerUnknown(snapshot: ChatSnapshot, lang: ChatLang): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
+function answerUnknown(
+  snapshot: ChatSnapshot,
+  lang: ChatLang,
+  closest: TechFact[] = [],
+): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
   const open = snapshot.openIncidents.length;
   const state =
     open > 0
@@ -1520,10 +1524,21 @@ function answerUnknown(snapshot: ChatSnapshot, lang: ChatLang): { text: string; 
     lang === 'hinglish'
       ? `Main general tech ke ${TECH_PACK_STATS.topics} topics built-in jaanta hoon (languages, databases, networking, k8s, queues, security, SRE, AI basics) — unme se kuch bhi poochho. Aapke apne docs ke liye Knowledge page par source add karo, phir main unse cite karunga.`
       : `I know ${TECH_PACK_STATS.topics} general engineering topics built in (languages, databases, networking, Kubernetes, queues, security, SRE, AI basics) — ask me any of those. For answers about your own docs, add them as a Knowledge source and I will cite them.`;
+  // A dead end is not a helpful answer: when the question shares vocabulary with topics we *do*
+  // cover, point at the nearest ones. They are offered as follow-ups, never presented as an answer.
+  const nearest =
+    closest.length === 0
+      ? ''
+      : lang === 'hinglish'
+        ? `Sabse kareeb jo mere paas hai: ${closest.map((fact) => `**${fact.title}**`).join(', ')}.`
+        : `Closest topics I do cover: ${closest.map((fact) => `**${fact.title}**`).join(', ')}.`;
+  const suggestions = closest.length
+    ? [...closest.map((fact) => `What is ${fact.title.toLowerCase()}?`), 'What is open right now?'].slice(0, 4)
+    : ['Which language is the oldest?', 'What is the difference between 502 and 503?', 'What is open right now?'];
   return {
-    text: `${say('unknown', lang)}\n\n${state}\n\n${pack}`,
+    text: [say('unknown', lang), state, pack, nearest].filter(Boolean).join('\n\n'),
     cites: [],
-    suggestions: ['Which language is the oldest?', 'What is the difference between 502 and 503?', 'What is open right now?'],
+    suggestions,
     confidence: 'low',
   };
 }
@@ -1547,6 +1562,35 @@ function answerTechFact(fact: TechFact, lang: ChatLang): { text: string; cites: 
       },
     ],
     suggestions: techFactSuggestions(fact),
+    confidence: 'high',
+  };
+}
+
+/**
+ * A question that names two topics gets both, side by side, with both citations.
+ *
+ * The two entries are quoted, not merged into a generated verdict — see `techComparisonDigest`.
+ */
+function answerTechComparison(
+  left: TechFact,
+  right: TechFact,
+  lang: ChatLang,
+): { text: string; cites: ChatCitation[]; suggestions: string[]; confidence: ChatAnswer['confidence'] } {
+  const cite = (fact: TechFact): ChatCitation => ({
+    source: 'reference',
+    label: fact.title,
+    detail: `ARCH built-in tech pack · ${TECH_CATEGORY_LABELS[fact.category]} · offline, no vendor`,
+  });
+  const suggestions = [
+    ...techFactSuggestions(left, 2),
+    ...techFactSuggestions(right, 2),
+    `What is ${left.title.toLowerCase()}?`,
+    `What is ${right.title.toLowerCase()}?`,
+  ];
+  return {
+    text: techComparisonDigest(left, right, lang === 'hinglish' ? 'hi' : 'en'),
+    cites: [cite(left), cite(right)],
+    suggestions: dedupe(suggestions, 4),
     confidence: 'high',
   };
 }
@@ -1614,6 +1658,24 @@ export function answerChat(params: {
     subject = question;
   }
 
+  // The pack answer for the current subject: a two-topic comparison when the question names two
+  // *different* topics ("redis vs postgres"), otherwise the single best entry, otherwise nothing.
+  const packAnswer = (): ReturnType<typeof answerTechFact> | null => {
+    const comparison = matchTechComparison(subject);
+    if (comparison) return answerTechComparison(comparison.left, comparison.right, lang);
+    const match = matchTechFact(subject);
+    return match ? answerTechFact(match.fact, lang) : null;
+  };
+
+  /**
+   * Definition questions belong to the pack even when a workspace intent claims them first: "what
+   * is a service mesh" classifies as a *services* question, "how do you do a postmortem" as
+   * *lessons*, "what is a document database" as a *runbook* one. Wording about this workspace
+   * ("we", "our", "tonight", "runbook") keeps the question on the workspace instead.
+   */
+  const packForDefinitionQuestion = (): ReturnType<typeof answerTechFact> | null =>
+    isDefinitionQuestion(question) && !isWorkspaceQuestion(question) ? packAnswer() : null;
+
   const modelLabel = snapshot.model.name;
   switch (intent) {
     case 'greet':
@@ -1640,8 +1702,8 @@ export function answerChat(params: {
       // The ops concepts above are answered with workspace context (your median resolve time, your
       // knowledge base). Anything else goes to the built-in tech pack before the generic fallback.
       if (!OPS_CONCEPTS.test(subject)) {
-        const match = matchTechFact(subject);
-        if (match) return spread(answerTechFact(match.fact, lang), 'tech_fact', lang);
+        const packed = packAnswer();
+        if (packed) return spread(packed, 'tech_fact', lang);
       }
       return spread(answerConceptExplain(subject, snapshot, lang), intent, lang);
     }
@@ -1653,27 +1715,42 @@ export function answerChat(params: {
       return spread(answerRecentIncidents(snapshot, lang), intent, lang);
     case 'stats':
       return spread(answerStats(snapshot, lang), intent, lang);
-    case 'services':
+    case 'services': {
+      const defined = packForDefinitionQuestion();
+      if (defined) return spread(defined, 'tech_fact', lang);
       return spread(answerServices(snapshot, lang), intent, lang);
+    }
     case 'team':
       return spread(answerTeam(snapshot, lang), intent, lang);
     case 'incident_search':
       return spread(answerSearch(snapshot, lang), intent, lang);
-    case 'lessons':
+    case 'lessons': {
+      const defined = packForDefinitionQuestion();
+      if (defined) return spread(defined, 'tech_fact', lang);
       return spread(answerLessons(subject, snapshot, lang), intent, lang);
+    }
     case 'explain_incident': {
-      // "explain the CAP theorem" classifies as "explain an incident" because of the verb, but when
-      // no incident in this workspace matches the subject, the general pack is the honest reading —
-      // listing recent incidents instead would be answering a question nobody asked.
+      // "explain the CAP theorem" classifies as "explain an incident" because of the verb. Two
+      // things separate it from a real incident question: the wording ("explain X", not "explain
+      // what happened") and the subject (no runbook, no "our", no named incident).
+      const defined = packForDefinitionQuestion();
+      if (defined) return spread(defined, 'tech_fact', lang);
+      // When the subject is a general topic but the workspace has similar incidents, still prefer
+      // the pack — listing recent incidents would be answering a question nobody asked.
       const hasWorkspaceIncident = findNamedIncident(subject, snapshot) !== null || snapshot.matches.length > 0;
       if (!hasWorkspaceIncident) {
-        const match = matchTechFact(subject);
-        if (match) return spread(answerTechFact(match.fact, lang), 'tech_fact', lang);
+        const packed = packAnswer();
+        if (packed) return spread(packed, 'tech_fact', lang);
       }
       return spread(answerExplainIncident(subject, snapshot, lang), intent, lang);
     }
-    case 'runbook':
+    case 'runbook': {
+      // "what is a document database" can classify as a runbook question because of the word
+      // "document"; a definition question that names a pack topic is general knowledge instead.
+      const defined = packForDefinitionQuestion();
+      if (defined) return spread(defined, 'tech_fact', lang);
       return spread(answerRunbook(snapshot, lang), intent, lang);
+    }
     case 'advice':
     case 'help':
     case 'workflow_guide': {
@@ -1683,10 +1760,8 @@ export function answerChat(params: {
       // "our", "tonight", "hamara"). So "what does HTTP 503 mean?" gets the status code back,
       // "redis kaise kaam karta hai?" gets Redis, and "we keep seeing 503s after the deploy — what
       // do we do?" stays with the incident advisor.
-      if (isDefinitionQuestion(question) && !isWorkspaceQuestion(question)) {
-        const match = matchTechFact(subject);
-        if (match) return spread(answerTechFact(match.fact, lang), 'tech_fact', lang);
-      }
+      const defined = packForDefinitionQuestion();
+      if (defined) return spread(defined, 'tech_fact', lang);
       if (intent === 'help') return result(say('help', lang), intent, 'high', lang, [], ['What is open right now?', 'Which incidents keep repeating?', 'Redis misses are spiking — what should I check?']);
       if (intent === 'workflow_guide') return spread(answerWorkflowGuide(snapshot, lang), intent, lang);
       return spread(answerAdvice(subject, snapshot, lang), intent, lang);
@@ -1698,9 +1773,9 @@ export function answerChat(params: {
       if (OPS_CONCEPTS.test(subject)) return spread(answerConceptExplain(subject, snapshot, lang), 'concept_explain', lang);
       // A general engineering question ("which language is the oldest?") is not an incident
       // question — but it is still a question we can answer honestly, from the built-in pack.
-      const match = matchTechFact(subject);
-      if (match) return spread(answerTechFact(match.fact, lang), 'tech_fact', lang);
-      return spread(answerUnknown(snapshot, lang), intent, lang);
+      const packed = packAnswer();
+      if (packed) return spread(packed, 'tech_fact', lang);
+      return spread(answerUnknown(snapshot, lang, suggestTechTopics(subject)), intent, lang);
     }
   }
 }
