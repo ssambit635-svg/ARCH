@@ -8,6 +8,7 @@ import {
   deleteChatSession,
   getChatSession,
   listChatSessions,
+  regenerateChatAnswer,
   renameChatSession,
   sendChatMessage,
   titleFromMessage,
@@ -393,6 +394,65 @@ describe('Chat with ARCH (service)', () => {
     expect(turn5.archMessage.intent).toBe('tech_stack_advice');
     expect(turn5.archMessage.content).toMatch(/Go|Rust/);
   });
+
+  it('regenerates the last answer in place — same row, no second answer, count unchanged', async () => {
+    const { organization, owner, project, service } = await setup('regen');
+    await createTestIncident({ organizationId: organization.id, projectId: project.id, serviceId: service.id, title: 'Queue backlog' });
+    const session = await createChatSession({ organizationId: organization.id, userId: owner.id });
+    const turn = await sendChatMessage({ organizationId: organization.id, userId: owner.id, sessionId: session.id, content: 'what is open right now?' });
+    expect(turn.session.messageCount).toBe(2);
+
+    const regenerated = await regenerateChatAnswer({ organizationId: organization.id, userId: owner.id, sessionId: session.id });
+
+    // The transcript keeps its shape: the same ARCH row is rewritten, nothing is appended.
+    expect(regenerated.archMessage.id).toBe(turn.archMessage.id);
+    expect(regenerated.archMessage.content.length).toBeGreaterThan(0);
+    expect(regenerated.archMessage.content).toContain('Queue backlog');
+    expect(regenerated.session.messageCount).toBe(2);
+    const stored = await db.archChatMessage.findMany({ where: { sessionId: session.id }, orderBy: { createdAt: 'asc' } });
+    expect(stored).toHaveLength(2);
+    expect(stored[0]!.role).toBe('USER');
+    expect(stored[1]!.role).toBe('ARCH');
+    expect(stored[1]!.content).toBe(regenerated.archMessage.content);
+    // …and the conversation still works as a thread afterwards.
+    const followUp = await sendChatMessage({ organizationId: organization.id, userId: owner.id, sessionId: session.id, content: 'what should I do about it?' });
+    expect(followUp.session.messageCount).toBe(4);
+  }, 60_000);
+
+  it('regenerates against the workspace as it is now, and audits the retry without any text', async () => {
+    const { organization, owner, project, service } = await setup('regen-fresh');
+    const session = await createChatSession({ organizationId: organization.id, userId: owner.id });
+    const before = await sendChatMessage({ organizationId: organization.id, userId: owner.id, sessionId: session.id, content: 'what is open right now?' });
+    expect(before.archMessage.content).not.toContain('Fresh outage after deploy');
+
+    // The workspace changed between the question and the retry — that is the point of "Try again".
+    await createTestIncident({ organizationId: organization.id, projectId: project.id, serviceId: service.id, title: 'Fresh outage after deploy', severity: 'CRITICAL' });
+    await regenerateChatAnswer({ organizationId: organization.id, userId: owner.id, sessionId: session.id });
+
+    const stored = await db.archChatMessage.findFirstOrThrow({ where: { sessionId: session.id, role: 'ARCH' } });
+    expect(stored.content).toContain('Fresh outage after deploy');
+
+    const audit = await db.auditLog.findFirstOrThrow({ where: { organizationId: organization.id, action: 'chat.message.regenerate' } });
+    const metadata = JSON.stringify(audit.metadata);
+    expect(metadata).not.toContain('Fresh outage after deploy');
+    expect(metadata).not.toContain('what is open right now');
+    expect((audit.metadata as { intent?: string }).intent).toBe('open_incidents');
+  }, 60_000);
+
+  it('refuses regenerating someone else’s chat, a chat with no answer, and a VIEWER', async () => {
+    const { organization, owner, viewer } = await setup('regen-scope');
+    const stranger = await createTestUser('stranger-regen@regen-scope.test', 'Regen Stranger');
+    await addMember(organization.id, stranger.id, 'RESPONDER');
+    const session = await createChatSession({ organizationId: organization.id, userId: owner.id });
+    await sendChatMessage({ organizationId: organization.id, userId: owner.id, sessionId: session.id, content: 'what is open right now?' });
+
+    // Another member of the same workspace gets the same 404 as an id that never existed.
+    await expect(regenerateChatAnswer({ organizationId: organization.id, userId: stranger.id, sessionId: session.id })).rejects.toMatchObject({ status: 404 });
+    await expect(regenerateChatAnswer({ organizationId: organization.id, userId: viewer.id, sessionId: session.id })).rejects.toMatchObject({ status: 403 });
+
+    const empty = await createChatSession({ organizationId: organization.id, userId: owner.id });
+    await expect(regenerateChatAnswer({ organizationId: organization.id, userId: owner.id, sessionId: empty.id })).rejects.toMatchObject({ status: 400 });
+  }, 60_000);
 
   it('does not train on chat text: turns are not feedback rows', async () => {
     const { organization, owner } = await setup('nolearn');

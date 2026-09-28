@@ -221,7 +221,7 @@ Everything is JSON under `/api`. Success is `{ "data": ... }`; failures are
 | Audit | `GET /api/audit` (OWNER/ADMIN, paginated, `?summary=true`) |
 | Copilot (V2) | `POST /api/incidents/{id}/copilot/{summary,triage,status-draft,postmortem}`, `GET /api/incidents/{id}/copilot/suggestions?status=`, `POST /api/copilot/suggestions/{id}/{approve,dismiss}` |
 | ARCH Model + Code Assist (V3) | `POST /api/incidents/{id}/copilot/code-fix` (`{attachment?}`), `POST /api/copilot/code-review` (`{code, mode?, language?}`), `GET /api/copilot/model`, `POST /api/copilot/model/train` (OWNER/ADMIN) |
-| Chat with ARCH (V8) | `GET/POST/DELETE /api/copilot/chat/sessions`, `GET/PATCH/DELETE /api/copilot/chat/sessions/{id}`, `POST /api/copilot/chat/sessions/{id}/messages` — page `/dashboard/chat` |
+| Chat with ARCH (V8) | `GET/POST/DELETE /api/copilot/chat/sessions`, `GET/PATCH/DELETE /api/copilot/chat/sessions/{id}`, `POST /api/copilot/chat/sessions/{id}/messages`, `POST /api/copilot/chat/sessions/{id}/regenerate` — page `/dashboard/chat` |
 
 Webhook senders sign `"{timestamp}.{rawBody}"` with the endpoint secret and send
 `X-Arch-Signature: t=<unix>,v1=<hex>`; GitHub-style `X-Hub-Signature-256` is also accepted.
@@ -337,6 +337,13 @@ this workspace (open incidents, history, runbooks, the trained model) and cites 
 - **Fast and free.** Warm answers land in tens of milliseconds (the engine is deterministic
   retrieval + templates, not an LLM call), it is rate-limited per organization like the rest of the
   Copilot surface, and it works with `ARCH_OFFLINE_ONLY="true"`.
+- **The mechanics every chat has.** Copy one answer, copy the conversation, or export it as
+  Markdown; **Try again** re-asks the last question against the workspace as it is now and rewrites
+  the stored answer in place (`POST /api/copilot/chat/sessions/{id}/regenerate`, audited with shape
+  only); the newest answer reveals itself like a reply rather than appearing fully formed; and
+  `⌘/Ctrl+Shift+O` / `⌘/Ctrl+K` / `Esc` do what they do everywhere else. The full plan for closing
+  the rest of the ChatGPT-shaped surface — and what ₹0 can never buy — is
+  [`docs/product/AI-GAP-ANALYSIS.md`](docs/product/AI-GAP-ANALYSIS.md).
 
 Permission: reading your own chats needs `copilot.read`; sending messages, renaming and deleting
 need `copilot.generate` (RESPONDER or above). Every session write is audited with metadata only —

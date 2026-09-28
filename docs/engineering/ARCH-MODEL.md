@@ -262,7 +262,7 @@ src/server/ai/
   arch-native.ts            AI_PROVIDER="arch" and the hybrid fallback wrapper
   local-llm.ts              Ollama / OpenAI-compatible local client, isLocalEndpoint, health check
 src/server/services/archModel.service.ts   corpora, train/eval/promote, jobs, registry, status
-src/server/services/archChat.service.ts    chat sessions + one grounded turn (snapshot + retrieval)
+src/server/services/archChat.service.ts    chat sessions + grounded turns (send, regenerate)
 src/server/services/codeAssist.service.ts  Code Assist (+ retrieval over the code corpora)
 src/server/repositories/archModel.repository.ts  active model + versions registry + job queue
 src/server/repositories/archChat.repository.ts   chat sessions/messages, (organizationId, userId)-scoped

@@ -148,3 +148,25 @@ export const IconExternal = (p: P) => (
     <path d="M12 3h5v5M17 3l-7 7" />
   </Base>
 );
+
+export const IconCopy = (p: P) => (
+  <Base {...p}>
+    <rect x="7" y="7" width="10" height="10" rx="2" />
+    <path d="M13 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2" />
+  </Base>
+);
+
+export const IconRetry = (p: P) => (
+  <Base {...p}>
+    <path d="M17 10a7 7 0 1 1-2.1-5" />
+    <path d="M17 3v4h-4" />
+  </Base>
+);
+
+export const IconDownload = (p: P) => (
+  <Base {...p}>
+    <path d="M10 3v9" />
+    <path d="M6.5 8.5L10 12l3.5-3.5" />
+    <path d="M4 15.5h12" />
+  </Base>
+);

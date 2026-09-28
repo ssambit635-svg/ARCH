@@ -68,6 +68,12 @@ Ye checklist har command ke saath hai (`/dashboard/chat`):
 - [ ] Purana chat khol kar follow-up poochein ("usme kya fix hua?") — thread yaad rahe.
 - [ ] Ek chat delete karein, phir **Clear all** karein — list khaali ho jani chahiye (aur sirf
       aapki, kisi doosre member ki nahi).
+- [ ] Kisi answer ke neeche **Copy** dabayein; upar **Copy** (poori chat) aur **Export** se `.md`
+      file download karein — teenon kaam karein.
+- [ ] Aakhri answer par **Try again** dabayein: usi jagah naya jawab aaye, transcript mein do
+      answer na banein, aur message count na badhe. Beech mein ek naya incident declare karke
+      dobara **Try again** karein — naya incident jawab mein aana chahiye.
+- [ ] `⌘/Ctrl+Shift+O` = naya chat, `⌘/Ctrl+K` = chat search focus, `Esc` = list/dialog band.
 
 Har jawab ke neeche latency header mein `latencyMs` chhupa hota hai (API response mein bhi aata
 hai). Alpha ka target: **warm answer < 300 ms**, pehla answer < 1.5 s.

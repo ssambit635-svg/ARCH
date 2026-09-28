@@ -15,6 +15,28 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Added — Chat P1 · the mechanics every chat has: copy, export, and "Try again"
+
+The V8 chat answered well but you could not *handle* an answer: no copy button, no way to retry a
+weak answer without retyping the question, nothing to paste into a postmortem. Chat P1 closes that
+opening minute of use — code only, still ₹0 per turn, still nothing leaving the server.
+
+- **"Try again" on the last answer.** One click re-asks the same question against the workspace *as
+  it is now* — declare an incident after asking "what is open?", hit Try again, and the answer
+  includes it. The stored answer is rewritten in place (`POST /api/copilot/chat/sessions/{id}/regenerate`):
+  the transcript keeps one answer per question, the message count does not drift, and the retry is
+  audited with shape only — intent, confidence, latency — never the text.
+- **Copy an answer, copy the whole chat, export it.** Each answer has a Copy button; the header
+  copies the conversation or downloads it as a Markdown file (title, turns, and the sources each
+  answer cited) — ready to paste into a postmortem or a handover doc. Entirely client-side.
+- **It reads like a chat.** The newest answer reveals itself over a few hundred milliseconds instead
+  of appearing fully formed (respecting `prefers-reduced-motion`), and the shortcuts are the
+  familiar ones: `⌘/Ctrl+Shift+O` new chat, `⌘/Ctrl+K` search, `Esc` to close.
+- **The wider plan is written down.** [`docs/product/AI-GAP-ANALYSIS.md`](docs/product/AI-GAP-ANALYSIS.md)
+  is the honest diff between ARCH's own AI and ChatGPT — what is already better (grounding,
+  privacy, cost, audit), what is closeable for ₹0 (this release is phase P1 of five), and what ₹0
+  can never buy. The smoke suite covers `regenerate` too.
+
 ### Added — V8 · Chat with ARCH: your own model, in a real chat
 
 Until now ARCH's own model was visible mostly through the incident panel and the model page — a
