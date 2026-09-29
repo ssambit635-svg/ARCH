@@ -193,7 +193,7 @@ export function Hero() {
             <div className="hero-corner-item lg:col-span-4">
               <div className="max-w-[290px]">
                 <p className="text-sm sm:text-[15px] leading-relaxed text-zinc-200 font-normal">
-                  The incident software that keeps your flow with AI tools and built-in status pages
+                  Self-hosted incident response, built for your team’s flow.
                 </p>
                 <div
                   aria-hidden
@@ -262,7 +262,7 @@ export function Hero() {
                 <span className="text-zinc-400">Backed by</span>
                 <span className="inline-flex items-center gap-1 font-semibold text-white">
                   <span className="text-[9px] leading-none text-[#FEF62A]">▲</span>
-                  <span>ARCH V1.1 Native Engine</span>
+                  <span>ARCH Native Engine</span>
                 </span>
               </a>
 
@@ -271,7 +271,7 @@ export function Hero() {
               </GsapTextReveal>
 
               <p className="font-mono text-xs sm:text-sm text-zinc-400 leading-relaxed text-left max-w-xl">
-                Alert deduplication, neural blast-radius topology, live war rooms, and 90-day public status pages in one self-hosted stack.
+                Dedupe alerts, trace impact, and resolve incidents — all self-hosted.
               </p>
 
               <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -311,7 +311,7 @@ export function Hero() {
                 Tech Stack
               </Heading>
               <p className="mt-2 font-mono text-xs text-[#8e929f]">
-                Zero external SaaS dependencies. Built on Next.js, React, TypeScript, Prisma, and PostgreSQL.
+                Next.js, TypeScript, and PostgreSQL. No external SaaS.
               </p>
             </div>
             <TechStackTiles />

@@ -244,7 +244,7 @@ function FeatureCard1() {
           Deterministic 5-State Incident Machine
         </Heading>
         <SubHeading className="text-xs md:text-sm text-neutral-400 text-left">
-          Investigating → Identified → Monitoring → Resolved → Postmortem, with automatic MTTA/MTTR timestamps on every transition.
+          Track five clear states, with response and resolution times recorded automatically.
         </SubHeading>
       </div>
     </div>
@@ -291,7 +291,7 @@ function FeatureCard2() {
           Built for Modern Self-Hosted Stacks
         </Heading>
         <SubHeading className="text-xs md:text-sm text-neutral-400 text-left">
-          Powered by Next.js 16, PostgreSQL 16, Prisma, Tailwind CSS, TypeScript, and GSAP — zero external SaaS runtime dependencies.
+          Next.js, PostgreSQL, and TypeScript. No external SaaS runtime.
         </SubHeading>
       </div>
     </div>
@@ -395,9 +395,9 @@ function FeatureCard3() {
           <div className="relative z-10">
             <div className="relative size-16 sm:size-20 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col items-center justify-center shadow-lg group-hover:border-blue-500/40 transition-colors">
               <img
-                src="/dragon-mark.png"
+                src="/dragon-mark-yellow.png"
                 alt="ARCH Dragon"
-                className="size-6 object-contain drop-shadow-[0_0_8px_rgba(59,130,246,0.4)]"
+                className="size-6 object-contain drop-shadow-[0_0_8px_rgba(254,246,42,0.32)]"
               />
               <span className="font-orbitron text-xs sm:text-sm font-extrabold text-white mt-0.5">
                 ARCH<span className="text-[#FEF62A]">.</span>
@@ -435,7 +435,7 @@ function FeatureCard3() {
           Append-Only Audit &amp; RBAC Governance
         </Heading>
         <SubHeading className="text-xs md:text-sm text-neutral-400 text-left">
-          Every responder action, role change, and status advisory is hashed into an immutable SHA-256 ledger across Owner, Admin, Engineer, and Viewer roles.
+          Actions and role changes are recorded in a signed audit log with role-based access.
         </SubHeading>
       </div>
     </div>
@@ -699,10 +699,10 @@ export function Platform() {
           {/* Section Header */}
           <div className="flex flex-col items-center justify-center gap-3 px-4 py-12 text-center">
             <GsapTextReveal as="h2" className="font-orbitron font-extrabold text-2xl sm:text-3xl lg:text-4xl text-center text-white tracking-tight">
-              Why ARCH? Operations Engineered for Production
+              Incident Response, Built for Production
             </GsapTextReveal>
             <p className="max-w-xl font-mono text-xs sm:text-sm text-zinc-400 text-center">
-              Built for high-severity incidents — every primitive is interactive, deterministic, and self-hosted.
+              Interactive, dependable tools for high-severity incidents.
             </p>
           </div>
 

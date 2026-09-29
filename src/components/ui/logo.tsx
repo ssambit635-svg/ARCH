@@ -2,7 +2,7 @@ import React from 'react';
 
 /**
  * ARCH Brand Logo & Mark.
- * Features the official Flow AI-designed ARCH dragon emblem with Orbitron typography.
+ * ARCH dragon emblem with Orbitron typography.
  */
 export function LogoMark({
   className = '',
@@ -17,12 +17,12 @@ export function LogoMark({
       aria-label="ARCH Logo Mark"
     >
       <img
-        src="/dragon-mark.png"
+        src="/dragon-mark-yellow.png"
         alt="ARCH Dragon Mark"
         width={size}
         height={size}
         style={{ width: `${size}px`, height: `${size}px` }}
-        className="object-contain drop-shadow-[0_0_10px_rgba(59,130,246,0.35)] shrink-0"
+        className="object-contain drop-shadow-[0_0_10px_rgba(254,246,42,0.28)] shrink-0"
       />
     </span>
   );
@@ -42,12 +42,12 @@ export function Logo({
   return (
     <span className={`inline-flex items-center gap-2.5 select-none ${className}`}>
       <img
-        src="/dragon-mark.png"
+        src="/dragon-mark-yellow.png"
         alt="ARCH Logo"
         width={iconSize}
         height={iconSize}
         style={{ width: `${iconSize}px`, height: `${iconSize}px` }}
-        className="object-contain drop-shadow-[0_0_12px_rgba(59,130,246,0.35)] shrink-0 transition-transform duration-300 hover:scale-105"
+        className="object-contain drop-shadow-[0_0_12px_rgba(254,246,42,0.28)] shrink-0 transition-transform duration-300 hover:scale-105"
       />
       <span className="flex flex-col leading-none">
         <span className="inline-flex items-baseline gap-2">
@@ -78,7 +78,7 @@ export function AiBadge({ className = '' }: { className?: string }) {
       className={`inline-flex items-center gap-1.5 rounded-full border border-[#222] bg-[#0c0d11] px-2.5 py-0.5 font-mono text-[11px] font-medium text-zinc-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${className}`}
     >
       <img
-        src="/dragon-mark.png"
+        src="/dragon-mark-yellow.png"
         alt=""
         className="h-3.5 w-3.5 object-contain"
       />
