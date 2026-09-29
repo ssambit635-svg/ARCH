@@ -1,27 +1,11 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import {
-  BorderBeam,
-  Container,
-  Heading,
-  IsometricHeroBox,
-  IsometricStack,
-  MotionIcon,
-  NextIcon,
-  SubHeading,
-  TailwindIcon,
-  TypeScriptIcon,
-} from './vui-primitives';
-
-const HeroBlob = dynamic(
-  () => import('./hero-blob').then((m) => m.HeroBlob),
-  { ssr: false }
-);
+import { BorderBeam, Container, Heading, IsometricHeroBox, SubHeading } from './vui-primitives';
+import { TechStackTiles } from './tech-stack';
 
 const FACETS = [
   { index: '/01', label: 'Self-hosted' },
@@ -29,44 +13,9 @@ const FACETS = [
   { index: '/03', label: 'Real-time' },
 ];
 
-const INTEGRATIONS = [
-  {
-    name: 'Mintlify',
-    category: 'Runbook Docs',
-    logo: '/sponsors/mintlify-dark.svg',
-    logoClass: 'h-6 w-auto max-w-[140px]',
-  },
-  {
-    name: 'Sentry',
-    category: 'Error Stream',
-    logo: '/sponsors/sentry.svg',
-    logoClass: 'h-6 w-auto max-w-[132px]',
-  },
-  {
-    name: 'BrowserStack',
-    category: 'Synthetic Checks',
-    logo: '/sponsors/browserstack-mark.svg',
-    logoClass: 'h-7 w-7',
-    showWordmark: true,
-  },
-  {
-    name: 'Sarvam AI',
-    category: 'Neural Inference',
-    logo: '/sponsors/sarvam-dark.svg',
-    logoClass: 'h-6 w-auto max-w-[132px]',
-  },
-  {
-    name: 'Vercel OSS',
-    category: 'Edge & Deploy',
-    logo: '/sponsors/vercel-dark.svg',
-    logoClass: 'h-5 w-auto max-w-[122px]',
-  },
-];
-
 export function Hero() {
   const stageRef = useRef<HTMLDivElement>(null);
   const wordmarkRef = useRef<HTMLHeadingElement>(null);
-  const orbWrapRef = useRef<HTMLDivElement>(null);
   const splitRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -98,32 +47,14 @@ export function Hero() {
           '-=0.45'
         )
         .fromTo(
-          orbWrapRef.current,
-          { scale: 0.84, opacity: 0 },
-          { scale: 1, opacity: 1, duration: 1.05, ease: 'expo.out' },
-          '-=0.65'
-        )
-        .fromTo(
           '.hero-corner-item',
           { y: 20, opacity: 0 },
           { y: 0, opacity: 1, duration: 0.7, stagger: 0.08 },
-          '-=0.65'
+          '-=0.25'
         );
 
-      // Scroll-driven subtle parallax on the 3D sphere and giant wordmark
-      if (stageRef.current && orbWrapRef.current && wordmarkRef.current) {
-        gsap.to(orbWrapRef.current, {
-          yPercent: 10,
-          scale: 1.04,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: stageRef.current,
-            start: 'top top',
-            end: 'bottom top',
-            scrub: 0.6,
-          },
-        });
-
+      // Scroll-driven subtle parallax on the giant wordmark
+      if (stageRef.current && wordmarkRef.current) {
         gsap.to(wordmarkRef.current, {
           yPercent: -8,
           ease: 'none',
@@ -255,40 +186,10 @@ export function Hero() {
             </h1>
           </div>
 
-          {/* 3D Chrome-Cage & Acid-Lime Sphere Stage + 4-Corner Architectural Layout (Exact match to reference) */}
-          <div className="relative z-20 -mt-10 sm:-mt-16 lg:-mt-24 grid grid-cols-1 lg:grid-cols-12 items-end gap-8 pt-4 pb-2">
-            {/* Bottom-Left Column: 2M+ Avatars + Tagline + Dotted Line */}
-            <div className="hero-corner-item lg:col-span-4 flex flex-col justify-between gap-8 order-2 lg:order-1">
-              {/* 2M+ Avatar Cluster */}
-              <div className="flex flex-col gap-2.5">
-                <div className="flex items-center gap-3.5">
-                  <div className="flex -space-x-2.5">
-                    <img
-                      src="/avatars/aizen.jpg"
-                      alt="On-call engineer"
-                      className="size-9 rounded-full border-2 border-[#08090d] object-cover"
-                    />
-                    <img
-                      src="/avatars/pinky-aizen.jpg"
-                      alt="SRE commander"
-                      className="size-9 rounded-full border-2 border-[#08090d] object-cover"
-                    />
-                    <img
-                      src="/avatars/shinji.jpg"
-                      alt="Platform lead"
-                      className="size-9 rounded-full border-2 border-[#08090d] object-cover"
-                    />
-                  </div>
-                  <span className="font-orbitron text-2xl sm:text-3xl font-extrabold tracking-tight text-white tnum">
-                    2M+
-                  </span>
-                </div>
-                <span className="font-mono text-xs text-zinc-400">
-                  World active alerts routed
-                </span>
-              </div>
-
-              {/* Copy + Dotted Horizontal Rule */}
+          {/* Corner layout under the wordmark: tagline bottom-left, facets + CTA disc bottom-right, centre left open */}
+          <div className="relative z-20 mt-8 sm:mt-10 lg:mt-12 grid grid-cols-1 lg:grid-cols-12 items-end gap-8 pt-4 pb-2">
+            {/* Bottom-Left Column: Tagline + Dotted Line */}
+            <div className="hero-corner-item lg:col-span-4">
               <div className="max-w-[290px]">
                 <p className="text-sm sm:text-[15px] leading-relaxed text-zinc-200 font-normal">
                   The incident software that keeps your flow with AI tools and built-in status pages
@@ -306,18 +207,8 @@ export function Hero() {
               </div>
             </div>
 
-            {/* Center Column: 3D Chrome-Cage & Acid-Lime Sphere with Orbital Rings */}
-            <div className="lg:col-span-4 flex items-center justify-center order-1 lg:order-2">
-              <div
-                ref={orbWrapRef}
-                className="relative w-[300px] h-[300px] sm:w-[390px] sm:h-[390px] lg:w-[440px] lg:h-[440px] flex items-center justify-center"
-              >
-                <HeroBlob />
-              </div>
-            </div>
-
             {/* Bottom-Right Column: /01 /02 /03 Facets + Acid-Lime Circular "▶ How it works?" Button */}
-            <div className="hero-corner-item lg:col-span-4 flex flex-col items-start lg:items-end justify-between gap-8 order-3">
+            <div className="hero-corner-item lg:col-span-4 lg:col-start-9 flex flex-col items-start lg:items-end justify-between gap-8">
               {/* /01 /02 /03 Facet Stack */}
               <ul className="w-full max-w-[220px] space-y-3 lg:text-right">
                 {FACETS.map((f) => (
@@ -415,77 +306,17 @@ export function Hero() {
             </div>
           </div>
 
-          {/* Vengeance UI TechStack Row */}
-          <div className="vui-reveal-block flex flex-col lg:flex-row items-center justify-between md:border-x border-b border-[#222]">
+          {/* Vengeance UI TechStack Row — tiles come from tech-stack-data.ts (every entry has proof in the repo) */}
+          <div className="vui-reveal-block flex flex-col lg:flex-row items-center justify-between md:border-x border-[#222]">
             <div className="w-full lg:w-1/3 p-6 md:p-8 lg:p-10 text-center lg:text-left">
               <Heading as="h2" className="text-center lg:text-left">
                 Tech Stack
               </Heading>
               <p className="mt-2 font-mono text-xs text-[#8e929f]">
-                Zero external SaaS dependencies. Runs on Next.js 16, PostgreSQL 16, TypeScript 5, and GSAP.
+                Zero external SaaS dependencies. Built on Next.js, React, TypeScript, Prisma, and PostgreSQL.
               </p>
             </div>
-            <div className="w-full lg:w-2/3 grid grid-cols-2 sm:grid-cols-4 divide-y sm:divide-y-0 divide-x divide-[#222] border-t lg:border-t-0 lg:border-l border-[#222]">
-              <div className="flex flex-col items-center justify-center gap-2 p-6">
-                <IsometricStack>
-                  <NextIcon className="size-8" />
-                </IsometricStack>
-                <span className="font-mono text-xs text-zinc-400">Next.js 16</span>
-              </div>
-              <div className="flex flex-col items-center justify-center gap-2 p-6">
-                <IsometricStack>
-                  <TailwindIcon className="size-8 text-[#00BCFF]" />
-                </IsometricStack>
-                <span className="font-mono text-xs text-zinc-400">Tailwind CSS</span>
-              </div>
-              <div className="flex flex-col items-center justify-center gap-2 p-6">
-                <IsometricStack>
-                  <TypeScriptIcon className="size-8" />
-                </IsometricStack>
-                <span className="font-mono text-xs text-zinc-400">TypeScript 5</span>
-              </div>
-              <div className="flex flex-col items-center justify-center gap-2 p-6">
-                <IsometricStack>
-                  <MotionIcon className="size-8" />
-                </IsometricStack>
-                <span className="font-mono text-xs text-zinc-400">GSAP + Motion</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Vengeance UI Sponsors / Telemetry Ecosystem Strip */}
-          <div className="vui-reveal-block md:border-x border-[#222] bg-[#06070a]">
-            <div className="flex flex-col gap-1 border-b border-[#222] px-5 py-4 sm:flex-row sm:items-center sm:justify-between md:px-8">
-              <p className="font-mono text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
-                Native Webhook &amp; Telemetry Ingestion
-              </p>
-              <p className="font-mono text-xs text-zinc-500">
-                HMAC-SHA256 verified alert pipelines · Zero vendor lock-in
-              </p>
-            </div>
-            <div className="grid grid-cols-1 gap-px bg-[#222] sm:grid-cols-2 lg:grid-cols-5">
-              {INTEGRATIONS.map((item) => (
-                <div
-                  key={item.name}
-                  className="group relative flex min-h-20 items-center justify-center bg-[#06070a] px-4 py-4 transition-colors duration-200 hover:bg-zinc-900/60"
-                >
-                  {item.showWordmark ? (
-                    <span className="inline-flex items-center gap-2.5 opacity-90 transition-opacity duration-200 group-hover:opacity-100">
-                      <img src={item.logo} alt={item.name} className={item.logoClass} />
-                      <span className="text-sm font-semibold tracking-tight text-zinc-100">
-                        {item.name}
-                      </span>
-                    </span>
-                  ) : (
-                    <img
-                      src={item.logo}
-                      alt={item.name}
-                      className={`${item.logoClass} opacity-85 transition-opacity duration-200 group-hover:opacity-100`}
-                    />
-                  )}
-                </div>
-              ))}
-            </div>
+            <TechStackTiles />
           </div>
         </div>
       </Container>

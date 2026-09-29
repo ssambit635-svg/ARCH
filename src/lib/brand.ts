@@ -8,3 +8,10 @@
 export const PRODUCT_NAME = 'ARCH';
 export const AI_NAME = 'ARCH V1.1';
 export const AI_SHORT = 'V1.1';
+
+/**
+ * The product's public GitHub repository (`owner/name`). The landing page links to it and reads its
+ * live star count from it, so there is exactly one place to change if the repository ever moves.
+ */
+export const GITHUB_REPO = 'ssambit635-svg/ARCH';
+export const GITHUB_REPO_URL = `https://github.com/${GITHUB_REPO}`;

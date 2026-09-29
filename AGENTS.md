@@ -437,6 +437,7 @@ model Notification {
 | Method | Route | Auth | Required role | Notes |
 |---|---|---|---|---|
 | GET | `/api/health` | none | — | liveness probe |
+| GET | `/api/github-stars` | none | — | landing-page star badge; this repo's count from GitHub, cached 5 min; `stars` is `null` when GitHub can't be read |
 | POST | `/api/auth/register` | none | — | creates User |
 | GET/POST | `/api/organizations` | session | — / creator becomes OWNER | |
 | GET | `/api/organizations/:id/members` | session | VIEWER+ | org-scoped |
