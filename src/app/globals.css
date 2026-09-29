@@ -5,10 +5,12 @@
  *
  * The rule that governs every token below: colour is *information*, never decoration.
  *
- *   1. The base is graphite, not blue-black. Near-zero chroma, so nothing in the shell
- *      competes with a severity colour.
- *   2. There is exactly one decorative hue — sodium (`signal`). It marks ARCH itself:
- *      the logotype, focus, active navigation, and the V1.1 intelligence. Nothing else.
+ *   1. The base is blue-black, not blue-black-with-a-vibe. Near-zero chroma, so nothing in
+ *      the shell competes with a severity colour.
+ *   2. There is exactly one decorative hue — signal blue. It marks ARCH itself: the
+ *      logotype, focus, active navigation, and the V1.1 intelligence. Nothing else.
+ *      It is a *flat* product blue (the Stripe/GitHub end of the spectrum), not the neon
+ *      cyan→violet "AI" gradient: no glow, no bloom, no gradient-filled display type.
  *   3. Red / orange / amber / green / sky belong to incident and service state. A chart
  *      may use them. A headline, a button glow or a hero backdrop may not.
  *   4. No aurora blobs, no `blur-[130px]` orbs, no gradient-filled display type, no
@@ -30,26 +32,26 @@
   --font-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
 
-  /* ---- Graphite scale (the base; near-zero chroma) ---------------------- */
-  --color-ink-1000: #050607;
-  --color-ink-950: #08090b;
-  --color-ink-900: #0c0e10;
-  --color-ink-850: #111316;
-  --color-ink-800: #16191d;
-  --color-ink-750: #1c2025;
-  --color-ink-700: #24282e;
-  --color-ink-650: #2c3239;
-  --color-ink-600: #363d45;
-  --color-ink-500: #4a525c;
+  /* ---- Blue-black scale (the base; a breath of blue, near-zero chroma) -- */
+  --color-ink-1000: #04060b;
+  --color-ink-950: #070a11;
+  --color-ink-900: #0b0f18;
+  --color-ink-850: #10151f;
+  --color-ink-800: #151b26;
+  --color-ink-750: #1b222e;
+  --color-ink-700: #222a37;
+  --color-ink-650: #2a3441;
+  --color-ink-600: #35404f;
+  --color-ink-500: #48566a;
 
-  /* Legacy alias — every `bg-abyss-*` in the product now resolves to graphite. */
-  --color-abyss-950: #08090b;
-  --color-abyss-900: #0c0e10;
-  --color-abyss-850: #111316;
-  --color-abyss-800: #16191d;
-  --color-abyss-700: #24282e;
+  /* Legacy alias — every `bg-abyss-*` in the product now resolves to blue-black. */
+  --color-abyss-950: #070a11;
+  --color-abyss-900: #0b0f18;
+  --color-abyss-850: #10151f;
+  --color-abyss-800: #151b26;
+  --color-abyss-700: #222a37;
 
-  /* ---- Text (bone, not pure white — pure white on graphite vibrates) ---- */
+  /* ---- Text (bone, not pure white — pure white on blue-black vibrates) ---- */
   --color-bone: #f4f3f0;
   --color-bone-dim: #dedbd4;
   --color-ash-200: #c7cbd0;
@@ -59,69 +61,70 @@
   --color-ash-600: #525862;
   --color-ash-700: #3d424a;
 
-  /* ---- Sodium signal (the single decorative hue) ------------------------ */
-  --color-signal-100: #fff4dd;
-  --color-signal-200: #ffe6b0;
-  --color-signal-300: #ffd47a;
-  --color-signal-400: #ffc247;
-  --color-signal-500: #ffb627;
-  --color-signal-600: #e79c11;
-  --color-signal-700: #b5760a;
-  --color-signal-800: #7d5106;
-  --color-signal-900: #4a3004;
+  /* ---- Signal blue (the single decorative hue) -------------------------- */
+  --color-signal-100: #e6f0fd;
+  --color-signal-200: #c9e0fb;
+  --color-signal-300: #9cc8f7;
+  --color-signal-400: #63a6f0;
+  --color-signal-500: #2f7ee0;
+  --color-signal-600: #2263bd;
+  --color-signal-700: #1b4d93;
+  --color-signal-800: #153a6d;
+  --color-signal-900: #0f2849;
 
-  /* Legacy alias — `arch-*` was indigo→violet; it is sodium now. */
-  --color-arch-50: #fff9ec;
-  --color-arch-100: #fff4dd;
-  --color-arch-200: #ffe6b0;
-  --color-arch-300: #ffd47a;
-  --color-arch-400: #ffc247;
-  --color-arch-500: #ffb627;
-  --color-arch-600: #e79c11;
-  --color-arch-700: #b5760a;
+  /* Legacy alias — `arch-*` was the brand hue; it is signal blue now. */
+  --color-arch-50: #f2f7fe;
+  --color-arch-100: #e6f0fd;
+  --color-arch-200: #c9e0fb;
+  --color-arch-300: #9cc8f7;
+  --color-arch-400: #63a6f0;
+  --color-arch-500: #2f7ee0;
+  --color-arch-600: #2263bd;
+  --color-arch-700: #1b4d93;
 
   /* ---- Retired: the indigo→violet "AI glow" -----------------------------
    * These scales are deliberately reassigned rather than deleted. Components
    * still referencing them inherit the new language, and any that fade an
-   * indigo→violet gradient now fade sodium→sodium, i.e. flat and calm.
+   * indigo→violet gradient now fade blue→blue, i.e. flat and calm.
    */
-  --color-indigo-50: #fff9ec;
-  --color-indigo-100: #fff4dd;
-  --color-indigo-200: #ffe6b0;
-  --color-indigo-300: #ffd47a;
-  --color-indigo-400: #ffc247;
-  --color-indigo-500: #ffb627;
-  --color-indigo-600: #e79c11;
-  --color-indigo-700: #b5760a;
-  --color-indigo-800: #7d5106;
-  --color-indigo-900: #4a3004;
-  --color-indigo-950: #2b1c02;
+  --color-indigo-50: #f2f7fe;
+  --color-indigo-100: #e6f0fd;
+  --color-indigo-200: #c9e0fb;
+  --color-indigo-300: #9cc8f7;
+  --color-indigo-400: #63a6f0;
+  --color-indigo-500: #2f7ee0;
+  --color-indigo-600: #2263bd;
+  --color-indigo-700: #1b4d93;
+  --color-indigo-800: #153a6d;
+  --color-indigo-900: #0f2849;
+  --color-indigo-950: #0a1a30;
 
-  --color-violet-50: #fffaf0;
-  --color-violet-100: #fff2d6;
-  --color-violet-200: #ffe3a6;
-  --color-violet-300: #ffd070;
-  --color-violet-400: #ffbe3d;
-  --color-violet-500: #f0a81e;
-  --color-violet-600: #cf8b0c;
-  --color-violet-700: #a26a08;
-  --color-violet-800: #704805;
-  --color-violet-900: #432b03;
-  --color-violet-950: #271902;
+  --color-violet-50: #f2f7fe;
+  --color-violet-100: #e6f0fd;
+  --color-violet-200: #c9e0fb;
+  --color-violet-300: #9cc8f7;
+  --color-violet-400: #63a6f0;
+  --color-violet-500: #2f7ee0;
+  --color-violet-600: #2263bd;
+  --color-violet-700: #1b4d93;
+  --color-violet-800: #153a6d;
+  --color-violet-900: #0f2849;
+  --color-violet-950: #0a1a30;
 
-  --color-blue-300: #9fb3c4;
-  --color-blue-400: #7d95a9;
-  --color-blue-500: #5f7a90;
-  --color-fuchsia-500: #f0a81e;
-  --color-purple-500: #f0a81e;
+  /* A blue that reads as steel, not as a link. Used for neutral data lines. */
+  --color-blue-300: #9cc8f7;
+  --color-blue-400: #63a6f0;
+  --color-blue-500: #2f7ee0;
+  --color-fuchsia-500: #2f7ee0;
+  --color-purple-500: #2f7ee0;
 
 /* ---- Retired: slate's blue cast ---------------------------------------
    * 550 utility classes across the product take their text and border colour
    * from `slate-*`, which is a blue-gray. Blue-gray body copy on a blue-black
    * base is what makes a dark UI read as a default AI theme long before any
    * gradient shows up. The ramp is remapped to a stone neutral with a breath of
-   * warmth, which sits correctly against the graphite surfaces and the sodium
-   * accent. Severity hues (rose, amber, emerald, sky) are untouched — those are
+   * warmth, which sits correctly against the blue-black surfaces and the
+   * signal-blue accent. Severity hues (rose, amber, emerald, sky) are untouched — those are
    * data, and they are supposed to be saturated.
    */
   --color-slate-50: #fafaf9;
@@ -230,8 +233,8 @@
 
 :root {
   color-scheme: dark;
-  --arch-accent: #ffb627;
-  --arch-accent-soft: rgb(255 182 39 / 0.14);
+  --arch-accent: #5b9fea;
+  --arch-accent-soft: rgb(91 159 234 / 0.14);
   --arch-hairline: rgb(255 255 255 / 0.075);
   --arch-ease: cubic-bezier(0.22, 1, 0.36, 1);
 }
@@ -269,11 +272,11 @@ html.lenis body {
 }
 
 ::selection {
-  background: rgb(255 182 39 / 0.28);
-  color: #fff9ec;
+  background: rgb(47 126 224 / 0.32);
+  color: #f2f7fe;
 }
 
-/* Keyboard focus is a hard sodium ring — the only place the accent shouts. */
+/* Keyboard focus is a hard signal-blue ring — the only place the accent shouts. */
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {
   outline: 2px solid var(--arch-accent);
   outline-offset: 2px;

@@ -7,10 +7,10 @@ import { LogoMark } from '@/components/ui/logo';
 import { scrollToHash } from './use-lenis';
 
 const LINKS: { label: string; href: string }[] = [
+  { label: 'Platform', href: '#platform' },
   { label: 'Workflow', href: '#lifecycle' },
   { label: 'Intelligence', href: '#intelligence' },
   { label: 'Service map', href: '#topology' },
-  { label: 'Platform', href: '#platform' },
   { label: 'Self-hosted', href: '#deploy' },
 ];
 
@@ -81,10 +81,10 @@ export function Nav() {
   return (
     <>
       <header
-        className={`fixed inset-x-0 top-0 z-50 border-b transition-[background-color,border-color] duration-300 ${
+        className={`fixed inset-x-0 top-0 z-50 border-b transition-[background-color,border-color,backdrop-filter] duration-300 ${
           scrolled
-            ? 'border-white/[0.08] bg-[#080c11]/90 backdrop-blur-xl'
-            : 'border-white/[0.055] bg-[#080c11]/72 backdrop-blur-lg'
+            ? 'border-white/[0.08] bg-ink-950/88 backdrop-blur-xl'
+            : 'border-transparent bg-transparent'
         }`}
       >
         <div className="absolute inset-x-0 top-0 h-px bg-white/[0.025]" aria-hidden="true">
@@ -117,11 +117,11 @@ export function Nav() {
 
           <div className="flex items-center gap-2">
             <Link href="/login" className="hidden rounded-md px-3 py-2 text-[13px] font-medium text-ash-300 transition-colors hover:text-bone sm:inline-flex">
-              Sign in
+              Login
             </Link>
             <Link
               href="/register"
-              className="inline-flex min-h-9 items-center gap-2 rounded-md border border-white/[0.12] bg-[#e7edf2] px-3.5 py-2 text-[12px] font-semibold text-[#10171d] transition-colors hover:bg-white"
+              className="inline-flex min-h-9 items-center gap-2 rounded-md bg-signal-500 px-3.5 py-2 text-[12px] font-semibold text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.18)] transition-colors duration-200 hover:bg-signal-400"
             >
               Get started <span aria-hidden="true">→</span>
             </Link>
@@ -181,8 +181,8 @@ export function Nav() {
             ))}
           </nav>
           <div className="mt-5 flex gap-2">
-            <Link href="/login" onClick={() => setOpen(false)} tabIndex={open ? 0 : -1} className="flex-1 rounded-md border border-white/[0.1] px-4 py-2.5 text-center text-[13px] font-medium text-ash-200">Sign in</Link>
-            <Link href="/register" onClick={() => setOpen(false)} tabIndex={open ? 0 : -1} className="flex-1 rounded-md bg-[#e7edf2] px-4 py-2.5 text-center text-[13px] font-semibold text-[#10171d]">Get started</Link>
+            <Link href="/login" onClick={() => setOpen(false)} tabIndex={open ? 0 : -1} className="flex-1 rounded-md border border-white/[0.1] px-4 py-2.5 text-center text-[13px] font-medium text-ash-200">Login</Link>
+            <Link href="/register" onClick={() => setOpen(false)} tabIndex={open ? 0 : -1} className="flex-1 rounded-md bg-signal-500 px-4 py-2.5 text-center text-[13px] font-semibold text-white transition-colors hover:bg-signal-400">Get started</Link>
           </div>
         </div>
       </div>
