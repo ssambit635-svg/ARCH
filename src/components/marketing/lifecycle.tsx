@@ -473,7 +473,7 @@ export function Lifecycle() {
         <div className="arch-grid-fine pointer-events-none absolute inset-0 opacity-40" aria-hidden />
         <div
           className="pointer-events-none absolute inset-0"
-          style={{ background: 'radial-gradient(90% 60% at 12% 20%, rgb(255 182 39 / 0.035), transparent 62%)' }}
+          style={{ background: 'radial-gradient(90% 60% at 12% 20%, rgb(var(--arch-accent-rgb) / 0.035), transparent 62%)' }}
           aria-hidden
         />
 
@@ -497,7 +497,7 @@ export function Lifecycle() {
                   data-active={index === 0 ? 'true' : 'false'}
                   className="group relative flex items-baseline gap-3.5 border-b border-white/[0.06] py-3 transition-colors duration-500 first:border-t first:border-white/[0.06] data-[active=true]:border-signal-500/25"
                 >
-                  {/* Active step gets a sodium rule drawn in from the left. */}
+                  {/* Active step gets a cool-blue rule drawn in from the left. */}
                   <span
                     className="absolute inset-y-0 -left-4 w-px origin-top scale-y-0 bg-signal-500 transition-transform duration-700 ease-out group-data-[active=true]:scale-y-100"
                     aria-hidden

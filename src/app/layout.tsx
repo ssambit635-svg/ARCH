@@ -45,11 +45,11 @@ const jetbrainsMono = localFont({
 
 export const metadata: Metadata = {
   title: {
-    default: 'ARCH — incident response for developer teams',
+    default: 'ARCH — self-hosted incident response',
     template: '%s · ARCH',
   },
   description:
-    'ARCH is where your team goes when your application breaks: ingest alerts, run the response, publish a status page, keep the audit trail — with ARCH V1.1, a native on-call engine compiled into the repository that runs on your own server.',
+    'ARCH brings alert intake, on-call coordination, status updates and the audit trail into one self-hosted workspace for engineering teams.',
   applicationName: 'ARCH',
   keywords: [
     'incident response',
@@ -63,16 +63,16 @@ export const metadata: Metadata = {
     'native AI',
   ],
   openGraph: {
-    title: 'ARCH — incident response for developer teams',
+    title: 'ARCH — self-hosted incident response',
     description:
-      'Alert in, audit trail out. Self-hosted incident management with native on-call intelligence that never sends your incident data to a third party.',
+      'Alert intake, on-call coordination, status updates and audit history in one self-hosted workspace.',
     type: 'website',
     siteName: 'ARCH',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ARCH — incident response for developer teams',
-    description: 'Alert in, audit trail out. Self-hosted, with native on-call intelligence.',
+    title: 'ARCH — self-hosted incident response',
+    description: 'A single workspace for alert intake, on-call coordination, status updates and audit history.',
   },
 };
 

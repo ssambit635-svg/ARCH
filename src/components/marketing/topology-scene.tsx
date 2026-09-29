@@ -89,7 +89,7 @@ const SEV = {
   critical: '#ff4438',
   high: '#ff8a1f',
   ok: '#2fbf71',
-  signal: '#ffb627',
+  signal: '#79a9ca',
   idle: '#8b939c',
 };
 
@@ -361,7 +361,7 @@ function Studio() {
     <Environment resolution={256} frames={1}>
       <Lightformer form="rect" intensity={2.6} color="#ffffff" position={[0, 6, 2]} scale={[9, 4, 1]} target={[0, 0, 0]} />
       <Lightformer form="rect" intensity={1.1} color="#cfe0ff" position={[-7, 1, -5]} scale={[6, 6, 1]} rotation-y={Math.PI / 3} />
-      <Lightformer form="rect" intensity={1.5} color="#ffb627" position={[6, -1.5, 4]} scale={[5, 3, 1]} rotation-y={-Math.PI / 4} />
+      <Lightformer form="rect" intensity={1.5} color="#79a9ca" position={[6, -1.5, 4]} scale={[5, 3, 1]} rotation-y={-Math.PI / 4} />
       <Lightformer form="ring" intensity={0.8} color="#ffffff" position={[0, -6, 0]} scale={[8, 8, 1]} rotation-x={Math.PI / 2} />
     </Environment>
   );
