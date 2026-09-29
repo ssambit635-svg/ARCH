@@ -89,7 +89,7 @@ export function Deploy() {
       <div className="arch-grid-fine pointer-events-none absolute inset-0 opacity-25" aria-hidden />
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 h-[420px]"
-        style={{ background: 'radial-gradient(70% 100% at 26% 100%, rgb(255 182 39 / 0.04), transparent 66%)' }}
+        style={{ background: 'radial-gradient(70% 100% at 26% 100%, rgb(var(--arch-accent-rgb) / 0.04), transparent 66%)' }}
         aria-hidden
       />
 

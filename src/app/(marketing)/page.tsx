@@ -10,9 +10,9 @@ import { Deploy } from '@/components/marketing/deploy';
 import { Integrations, Closing, Footer } from '@/components/marketing/closing';
 
 export const metadata: Metadata = {
-  title: 'ARCH — incident response for developer teams',
+  title: 'Self-hosted incident response',
   description:
-    'One alert lands and ARCH carries it the whole distance: incident opened, responder assigned, timeline running, status page published, audit trail sealed. Self-hosted, with a native on-call engine compiled into the repository that never sends your incident data to a third party.',
+    'ARCH brings alert intake, on-call coordination, status updates and the audit trail into one self-hosted workspace for engineering teams.',
 };
 
 /**
@@ -23,7 +23,7 @@ export const metadata: Metadata = {
  * browser only pays for the motion it is actually going to use.
  *
  * Narrative order follows the product rather than a template:
- *   hero         — a live system mid-incident, the graph already showing the blast radius
+ *   hero         — one concise promise and an interactive sample incident workspace
  *   lifecycle    — the four moves ARCH makes, pinned and scrubbed
  *   intelligence — ARCH V1.1: one native engine, no vendor, human approval on everything
  *   topology     — the interactive dependency map, plus a real CC-BY Sketchfab model stage

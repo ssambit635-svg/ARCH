@@ -2,29 +2,26 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Logo } from '@/components/ui/logo';
-import { AI_NAME } from '@/lib/brand';
+import type { MouseEvent } from 'react';
+import { LogoMark } from '@/components/ui/logo';
 import { scrollToHash } from './use-lenis';
 
-/**
- * Primary navigation.
- *
- * Three behaviours earn their keep:
- *   - A 2px scroll-progress rule along the top edge. On a page this long it is the only honest way
- *     to answer "how much is left", and it doubles as the section scrubber.
- *   - The bar condenses on scroll — padding tightens, glass comes up, a hairline appears. It should
- *     feel like an instrument powering down to essentials, not like a navbar toggling a class.
- *   - Anchor links route through Lenis, so clicking a section eases exactly like a wheel scroll
- *     instead of snapping.
- */
-
 const LINKS: { label: string; href: string }[] = [
-  { label: 'Lifecycle', href: '#lifecycle' },
-  { label: AI_NAME, href: '#intelligence' },
-  { label: 'Topology', href: '#topology' },
+  { label: 'Workflow', href: '#lifecycle' },
+  { label: 'Intelligence', href: '#intelligence' },
+  { label: 'Service map', href: '#topology' },
   { label: 'Platform', href: '#platform' },
-  { label: 'Deploy', href: '#deploy' },
+  { label: 'Self-hosted', href: '#deploy' },
 ];
+
+function Brand() {
+  return (
+    <Link href="/" className="inline-flex shrink-0 items-center gap-2.5 text-bone" aria-label="ARCH home">
+      <LogoMark size={28} className="text-bone" />
+      <span className="arch-display text-[15px] font-semibold tracking-[0.2em]">ARCH</span>
+    </Link>
+  );
+}
 
 export function Nav() {
   const [scrolled, setScrolled] = useState(false);
@@ -34,29 +31,23 @@ export function Nav() {
 
   useEffect(() => {
     let raf = 0;
-
     const read = () => {
       raf = 0;
       const y = window.scrollY;
-      setScrolled(y > 28);
-
+      setScrolled(y > 24);
       const max = document.documentElement.scrollHeight - window.innerHeight;
       setProgress(max > 0 ? Math.min(1, Math.max(0, y / max)) : 0);
 
-      // Highlight the section currently owning the viewport, offset for the fixed bar.
       let current: string | null = null;
       for (const link of LINKS) {
-        const node = document.querySelector(link.href);
-        if (!node) continue;
-        if (node.getBoundingClientRect().top <= 140) current = link.href;
+        const section = document.querySelector(link.href);
+        if (section && section.getBoundingClientRect().top <= 130) current = link.href;
       }
       setActive(current);
     };
-
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(read);
     };
-
     read();
     window.addEventListener('scroll', onScroll, { passive: true });
     window.addEventListener('resize', onScroll);
@@ -67,174 +58,131 @@ export function Nav() {
     };
   }, []);
 
-  // Escape closes the sheet; the body must not keep scrolling behind it.
   useEffect(() => {
     if (!open) return;
-    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setOpen(false);
-    window.addEventListener('keydown', onKey);
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
     document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
     return () => {
-      window.removeEventListener('keydown', onKey);
       document.body.style.overflow = '';
+      window.removeEventListener('keydown', onKeyDown);
     };
   }, [open]);
 
-  const go = (href: string) => (event: React.MouseEvent) => {
+  const go = (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
+    event.stopPropagation();
     setOpen(false);
-    // Let the sheet finish closing before the scroll starts, or the two animations fight.
-    window.setTimeout(() => scrollToHash(href), open ? 220 : 0);
+    window.setTimeout(() => scrollToHash(href), open ? 180 : 0);
   };
 
   return (
     <>
       <header
-        className={`fixed inset-x-0 top-0 z-50 transition-[padding,background-color,border-color,backdrop-filter] duration-500 ease-out ${
-          scrolled ? 'border-b border-white/[0.07] bg-ink-1000/72 py-2.5 backdrop-blur-xl' : 'border-b border-transparent py-4'
+        className={`fixed inset-x-0 top-0 z-50 border-b transition-[background-color,border-color] duration-300 ${
+          scrolled
+            ? 'border-white/[0.08] bg-[#080c11]/90 backdrop-blur-xl'
+            : 'border-white/[0.055] bg-[#080c11]/72 backdrop-blur-lg'
         }`}
       >
-        {/* Scroll progress — sodium, because it is ARCH's own chrome and not incident data. */}
-        <div className="absolute inset-x-0 top-0 h-[2px] bg-transparent" aria-hidden>
-          <div
-            className="h-full origin-left bg-signal-500"
-            style={{ width: `${progress * 100}%`, transition: 'width 90ms linear' }}
-          />
+        <div className="absolute inset-x-0 top-0 h-px bg-white/[0.025]" aria-hidden="true">
+          <div className="h-full origin-left bg-signal-400/80" style={{ width: `${progress * 100}%`, transition: 'width 100ms linear' }} />
         </div>
+        <div className="mx-auto flex h-[68px] max-w-[1440px] items-center justify-between gap-6 px-5 sm:px-8">
+          <Brand />
 
-        <div className="mx-auto flex max-w-[1400px] items-center justify-between gap-6 px-5 sm:px-8">
-          <Link href="/" className="shrink-0" aria-label="ARCH home" data-cursor>
-            <Logo />
-          </Link>
-
-          <nav className="hidden items-center gap-0.5 lg:flex" aria-label="Sections">
+          <nav className="hidden items-center gap-1 xl:flex" aria-label="Main navigation">
             {LINKS.map((link) => (
               <a
                 key={link.href}
                 href={link.href}
                 onClick={go(link.href)}
-                className={`arch-mono relative rounded-md px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.13em] transition-colors duration-250 ${
-                  active === link.href ? 'text-bone' : 'text-ash-500 hover:text-ash-200'
+                aria-current={active === link.href ? 'location' : undefined}
+                className={`group relative rounded-md px-3 py-2 text-[12px] font-medium transition-colors duration-200 ${
+                  active === link.href ? 'text-bone' : 'text-ash-400 hover:text-bone'
                 }`}
-                data-cursor
               >
                 {link.label}
-                {/* Active marker: a rule that draws in from the left, not a pill that pops. */}
                 <span
-                  className={`absolute inset-x-2.5 -bottom-px h-px origin-left bg-signal-500 transition-transform duration-500 ease-out ${
-                    active === link.href ? 'scale-x-100' : 'scale-x-0'
+                  className={`absolute inset-x-3 -bottom-px h-px origin-left bg-signal-400 transition-transform duration-300 ${
+                    active === link.href ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
                   }`}
-                  aria-hidden
+                  aria-hidden="true"
                 />
               </a>
             ))}
           </nav>
 
           <div className="flex items-center gap-2">
-            <Link
-              href="/status/demo"
-              prefetch={false}
-              className="arch-mono hidden rounded-md px-3 py-1.5 text-[11px] font-medium uppercase tracking-[0.13em] text-ash-400 transition hover:text-bone md:inline-flex"
-              data-cursor
-            >
-              Live status
-            </Link>
-            <Link
-              href="/login"
-              className="hidden rounded-lg px-3.5 py-2 text-sm font-medium text-ash-300 transition hover:bg-white/[0.05] hover:text-bone sm:inline-flex"
-              data-cursor
-            >
+            <Link href="/login" className="hidden rounded-md px-3 py-2 text-[13px] font-medium text-ash-300 transition-colors hover:text-bone sm:inline-flex">
               Sign in
             </Link>
             <Link
               href="/register"
-              className="arch-sheen inline-flex items-center gap-2 rounded-lg bg-bone px-4 py-2 text-sm font-semibold text-ink-1000 shadow-[0_1px_0_0_rgb(255_255_255/0.5)_inset,0_10px_24px_-14px_rgb(0_0_0/0.9)] transition hover:bg-white active:scale-[0.985]"
-              data-cursor
+              className="inline-flex min-h-9 items-center gap-2 rounded-md border border-white/[0.12] bg-[#e7edf2] px-3.5 py-2 text-[12px] font-semibold text-[#10171d] transition-colors hover:bg-white"
             >
-              Start free
+              Get started <span aria-hidden="true">→</span>
             </Link>
-
             <button
               type="button"
               onClick={() => setOpen(true)}
-              className="grid size-9 place-items-center rounded-lg border border-white/[0.09] text-ash-300 transition hover:border-white/20 hover:text-bone lg:hidden"
+              className="grid size-9 place-items-center rounded-md border border-white/[0.1] text-ash-200 transition-colors hover:border-white/20 hover:text-white xl:hidden"
               aria-label="Open menu"
               aria-expanded={open}
-              data-cursor
+              aria-controls="arch-mobile-menu"
             >
-              <span className="flex flex-col gap-[3px]" aria-hidden>
-                <span className="block h-px w-4 bg-current" />
-                <span className="block h-px w-4 bg-current" />
-                <span className="block h-px w-2.5 bg-current" />
+              <span className="flex flex-col gap-[4px]" aria-hidden="true">
+                <span className="h-px w-4 bg-current" />
+                <span className="h-px w-3 bg-current" />
               </span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* Mobile sheet — full-bleed, and it staggers its own links in. */}
       <div
-        className={`fixed inset-0 z-[70] lg:hidden ${open ? 'pointer-events-auto' : 'pointer-events-none'}`}
+        id="arch-mobile-menu"
+        className={`fixed inset-0 z-[70] xl:hidden ${open ? 'pointer-events-auto' : 'pointer-events-none'}`}
         aria-hidden={!open}
       >
-        <div
-          className={`absolute inset-0 bg-ink-1000/92 backdrop-blur-xl transition-opacity duration-400 ${
-            open ? 'opacity-100' : 'opacity-0'
-          }`}
+        <button
+          type="button"
+          className={`absolute inset-0 bg-[#05080c]/80 backdrop-blur-sm transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0'}`}
           onClick={() => setOpen(false)}
+          aria-label="Close menu"
+          tabIndex={open ? 0 : -1}
         />
-        <div
-          className={`absolute inset-x-0 top-0 border-b border-white/[0.08] bg-ink-950 px-5 pb-8 pt-5 transition-transform duration-500 ease-out ${
-            open ? 'translate-y-0' : '-translate-y-full'
-          }`}
-        >
-          <div className="mb-7 flex items-center justify-between">
-            <Logo />
+        <div inert={!open} className={`absolute inset-x-0 top-0 border-b border-white/[0.09] bg-[#0a1016] px-5 pb-6 pt-4 shadow-2xl transition-transform duration-300 ease-out sm:px-8 ${open ? 'translate-y-0' : '-translate-y-full'}`}>
+          <div className="flex h-11 items-center justify-between">
+            <Brand />
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="grid size-9 place-items-center rounded-lg border border-white/[0.09] text-ash-300"
+              className="grid size-9 place-items-center rounded-md border border-white/[0.1] text-ash-300"
               aria-label="Close menu"
+              tabIndex={open ? 0 : -1}
             >
-              <svg viewBox="0 0 16 16" className="size-3.5" stroke="currentColor" strokeWidth="1.6" aria-hidden>
-                <path d="M2 2l12 12M14 2L2 14" />
-              </svg>
+              <svg viewBox="0 0 16 16" className="size-4" fill="none" aria-hidden="true"><path d="m3 3 10 10M13 3 3 13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
             </button>
           </div>
-
-          <nav className="flex flex-col" aria-label="Sections">
+          <nav className="mt-5 flex flex-col" aria-label="Mobile navigation">
             {LINKS.map((link, index) => (
               <a
                 key={link.href}
                 href={link.href}
                 onClick={go(link.href)}
-                className="arch-display flex items-baseline justify-between border-b border-white/[0.06] py-3.5 text-[26px] font-medium tracking-[-0.02em] text-bone transition-all duration-500"
-                style={{
-                  transitionDelay: `${open ? 120 + index * 55 : 0}ms`,
-                  opacity: open ? 1 : 0,
-                  transform: open ? 'translateY(0)' : 'translateY(10px)',
-                }}
+                tabIndex={open ? 0 : -1}
+                className="flex items-center justify-between border-t border-white/[0.07] py-3.5 text-[16px] font-medium text-bone transition-colors hover:text-signal-300"
               >
-                {link.label}
-                <span className="arch-mono text-[10px] tracking-[0.16em] text-ash-600">0{index + 1}</span>
+                {link.label}<span className="arch-mono text-[9px] tracking-[0.14em] text-ash-600">0{index + 1}</span>
               </a>
             ))}
           </nav>
-
-          <div className="mt-7 flex gap-2.5">
-            <Link
-              href="/login"
-              onClick={() => setOpen(false)}
-              className="flex-1 rounded-lg border border-white/[0.1] bg-white/[0.03] px-4 py-2.5 text-center text-sm font-medium text-ash-200"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/register"
-              onClick={() => setOpen(false)}
-              className="flex-1 rounded-lg bg-bone px-4 py-2.5 text-center text-sm font-semibold text-ink-1000"
-            >
-              Start free
-            </Link>
+          <div className="mt-5 flex gap-2">
+            <Link href="/login" onClick={() => setOpen(false)} tabIndex={open ? 0 : -1} className="flex-1 rounded-md border border-white/[0.1] px-4 py-2.5 text-center text-[13px] font-medium text-ash-200">Sign in</Link>
+            <Link href="/register" onClick={() => setOpen(false)} tabIndex={open ? 0 : -1} className="flex-1 rounded-md bg-[#e7edf2] px-4 py-2.5 text-center text-[13px] font-semibold text-[#10171d]">Get started</Link>
           </div>
         </div>
       </div>

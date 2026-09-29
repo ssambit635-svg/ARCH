@@ -234,9 +234,6 @@
   --arch-accent-soft: rgb(255 182 39 / 0.14);
   --arch-hairline: rgb(255 255 255 / 0.075);
   --arch-ease: cubic-bezier(0.22, 1, 0.36, 1);
-  --arch-ease-io: cubic-bezier(0.65, 0, 0.35, 1);
-  /* Grain opacity is a single knob for the whole product. */
-  --arch-grain: 0.032;
 }
 
 html,
@@ -316,26 +313,6 @@ html.lenis body {
     linear-gradient(rgb(255 255 255 / 0.028) 1px, transparent 1px),
     linear-gradient(90deg, rgb(255 255 255 / 0.028) 1px, transparent 1px);
   background-size: 22px 22px, 22px 22px;
-}
-
-/* Film grain. A fixed SVG-noise layer is what separates "dark theme" from
- * "photographed surface"; it also kills banding on the video + 3D hero. */
-.arch-grain::after {
-  content: '';
-  position: fixed;
-  inset: -50%;
-  z-index: 60;
-  pointer-events: none;
-  opacity: var(--arch-grain);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='220' height='220' filter='url(%23n)'/%3E%3C/svg%3E");
-  animation: grain-shift 0.9s steps(3) infinite;
-}
-
-@keyframes grain-shift {
-  0% { transform: translate3d(0, 0, 0); }
-  33% { transform: translate3d(-2%, 1.5%, 0); }
-  66% { transform: translate3d(1.5%, -1%, 0); }
-  100% { transform: translate3d(0, 0, 0); }
 }
 
 /* Panels: one hairline, a whisper of top light, no coloured bloom. */
@@ -536,62 +513,6 @@ html.lenis body {
   mask-image: linear-gradient(90deg, transparent, black 9%, black 91%, transparent);
 }
 
-/* Blend-mode difference cursor — inverts whatever it passes over. */
-.arch-cursor {
-  mix-blend-mode: difference;
-  pointer-events: none;
-}
-
-/* Hide the native cursor only where the custom one is active, and only for
- * pointer devices — a touch user must never lose their affordance. */
-@media (pointer: fine) {
-  .arch-cursor-on,
-  .arch-cursor-on a,
-  .arch-cursor-on button {
-    cursor: none;
-  }
-}
-
-/* ---- Hero footage ------------------------------------------------------ */
-
-/*
- * Ken Burns drift. Slow enough to read as camera movement rather than as a zoom, and it doubles as
- * a parallax cue against the fixed 3D layer above it. Disabled under prefers-reduced-motion by the
- * global rule at the foot of this file.
- */
-.arch-hero-kenburns {
-  animation: hero-kenburns 34s var(--arch-ease-io) infinite alternate;
-  transform-origin: 58% 42%;
-}
-
-@keyframes hero-kenburns {
-  from { transform: scale(1.02) translate3d(0, 0, 0); }
-  to { transform: scale(1.14) translate3d(-1.4%, -1.1%, 0); }
-}
-
-/* Boot curtain: the preloader lifts as one slab rather than fading, so the hero is *uncovered*
-   instead of cross-dissolved. Slightly slower than it feels, with the house ease. */
-.arch-boot-curtain {
-  animation: boot-curtain 980ms cubic-bezier(0.76, 0, 0.24, 1) forwards;
-}
-
-@keyframes boot-curtain {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(0, -101%, 0); }
-}
-
-/* The scroll cue's travelling segment, looping down a hairline track. */
-.arch-scroll-cue {
-  animation: scroll-cue 2.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
-}
-
-@keyframes scroll-cue {
-  0% { transform: translateY(-120%); opacity: 0; }
-  22% { opacity: 1; }
-  70% { opacity: 1; }
-  100% { transform: translateY(420%); opacity: 0; }
-}
-
 /* The pulse that walks the agent-loop spine. One element, transform-only, so it stays on the
    compositor for the whole section. */
 .arch-loop-pulse {
@@ -628,8 +549,5 @@ html.lenis body {
   /* Reveals must not strand content off-screen when motion is disabled. */
   .line-mask > span {
     transform: none !important;
-  }
-  .arch-grain::after {
-    animation: none !important;
   }
 }

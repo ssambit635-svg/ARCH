@@ -1,12 +1,13 @@
 import type { ReactNode } from 'react';
+import '@/components/marketing/landing.css';
 import { SiteChrome } from '@/components/marketing/site-chrome';
 
 /**
  * Marketing surface.
  *
- * A separate layout from the dashboard on purpose: Lenis, the cursor and the boot curtain belong to
- * the public story, and none of them should run inside an authenticated console where a scroll
- * transform would fight with dialogs, tables and focus traps.
+ * Keep marketing-only styling and Lenis in this layout so they never leak into the authenticated
+ * console, where smooth-scroll transforms would fight with dialogs, tables and focus traps. The
+ * marketing page intentionally has no boot curtain or replacement cursor.
  */
 export default function MarketingLayout({ children }: { children: ReactNode }) {
   return <SiteChrome>{children}</SiteChrome>;
