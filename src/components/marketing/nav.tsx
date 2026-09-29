@@ -59,9 +59,9 @@ export function MarketingNav() {
               aria-label="ARCH home"
             >
               <img
-                src="/dragon-mark.png"
+                src="/dragon-mark-yellow.png"
                 alt="ARCH"
-                className="h-7 w-auto object-contain drop-shadow-[0_0_12px_rgba(59,130,246,0.35)]"
+                className="h-7 w-auto object-contain drop-shadow-[0_0_12px_rgba(254,246,42,0.28)]"
               />
               <span>
                 ARCH<span className="text-[#FEF62A]">.</span>

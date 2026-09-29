@@ -312,13 +312,13 @@ export function Topology() {
             <div>
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3 py-1 font-mono text-[11px] font-medium text-zinc-300">
                 <span className="size-1.5 rounded-full bg-[#FEF62A]" />
-                <span>NEURAL CORTEX · SYNAPTIC BLAST-RADIUS ENGINE</span>
+                <span>SERVICE DEPENDENCY MAP</span>
               </div>
               <GsapTextReveal as="h2" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight text-left">
-                Interactive Neural Brain Topology
+                Explore Service Dependencies
               </GsapTextReveal>
               <p className="mt-2 max-w-2xl text-left font-mono text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                Click any cortical node or hover across the plexus to trace upstream callers, downstream dependencies, and real-time blast radius.
+                Select a service to trace dependencies and incident impact.
               </p>
             </div>
 
@@ -337,7 +337,7 @@ export function Topology() {
                         : 'text-zinc-400 hover:text-white'
                     )}
                   >
-                    {tier === 'ALL' ? 'All Lobes (12)' : tier}
+                    {tier === 'ALL' ? 'All (12)' : tier}
                   </button>
                 ))}
               </div>
@@ -349,7 +349,7 @@ export function Topology() {
                 className="inline-flex items-center gap-2 rounded-xl border border-[#FEF62A]/60 bg-[#FEF62A] px-3.5 py-2 font-mono text-xs font-semibold text-black shadow-[0_10px_28px_rgba(254,246,42,0.2)] transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 cursor-pointer"
               >
                 <span>⚡</span>
-                <span>{isCascading ? 'Cascading Synapse...' : 'Pulse Neural Cortex'}</span>
+                <span>{isCascading ? 'Cascading Synapse...' : 'Pulse Map'}</span>
               </button>
             </div>
           </div>
@@ -465,7 +465,7 @@ export function Topology() {
                 {/* Upstream Callers */}
                 <div className="mt-5">
                   <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-400">
-                    Upstream Afferent Callers ({upstream.size})
+                    Upstream Services ({upstream.size})
                   </div>
                   {upstream.size === 0 ? (
                     <div className="mt-2 rounded-lg border border-[#222] bg-[#0b0c10] px-3 py-2 font-mono text-xs text-zinc-500">
@@ -491,7 +491,7 @@ export function Topology() {
                 {/* Downstream Dependencies */}
                 <div className="mt-4">
                   <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-400">
-                    Downstream Efferent Synapses ({downstream.size})
+                    Downstream Services ({downstream.size})
                   </div>
                   {downstream.size === 0 ? (
                     <div className="mt-2 rounded-lg border border-[#222] bg-[#0b0c10] px-3 py-2 font-mono text-xs text-zinc-500">

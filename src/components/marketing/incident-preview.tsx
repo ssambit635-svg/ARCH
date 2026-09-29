@@ -233,13 +233,13 @@ export function IncidentPreview() {
             <div>
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3 py-1 font-mono text-[11px] font-medium text-zinc-300">
                 <span className="size-1.5 rounded-full bg-[#FEF62A]" />
-                <span>LIVE WAR ROOM · INTERACTIVE CONSOLE PREVIEW</span>
+                <span>LIVE INCIDENT CONSOLE</span>
               </div>
               <GsapTextReveal as="h2" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight text-left">
-                One Workspace for Every Severity
+                One Console for Every Incident
               </GsapTextReveal>
               <p className="mt-2 max-w-2xl text-left font-mono text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                Select an incident in the queue, transition its state machine, or inspect the root-cause hypothesis and postmortem draft below.
+                Select an incident to review its status, likely cause, and next steps.
               </p>
             </div>
 
@@ -248,7 +248,7 @@ export function IncidentPreview() {
                 href="/login"
                 className="inline-flex h-9 items-center gap-2 rounded-lg bg-white px-4 text-xs font-semibold text-black transition-colors hover:bg-zinc-200"
               >
-                <span>Open Full Console</span>
+                <span>Open Console</span>
                 <span aria-hidden>→</span>
               </Link>
               <Link

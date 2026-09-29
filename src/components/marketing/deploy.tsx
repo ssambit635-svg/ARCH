@@ -61,13 +61,13 @@ export function Deploy() {
           <div className="flex flex-col gap-4 border-b border-[#222] px-5 py-10 md:px-8 lg:px-10">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3 py-1 font-mono text-[11px] font-medium text-zinc-300">
               <span className="size-1.5 rounded-full bg-[#FEF62A]" />
-              <span>SELF-HOSTED DEPLOYMENT · DOCKER + POSTGRES 16 + PYTHON SDK</span>
+              <span>SELF-HOSTED · DOCKER + POSTGRES</span>
             </div>
             <GsapTextReveal as="h2" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight text-left">
-              Up in Four Commands. Yours Forever.
+              Deploy in Four Commands
             </GsapTextReveal>
             <p className="max-w-2xl font-mono text-xs sm:text-sm text-zinc-400 text-left leading-relaxed">
-              Deploy on a single VM, Kubernetes cluster, or private VPC with PostgreSQL 16. Pipe alerts in via the typed Python SDK or standard HMAC-SHA256 webhooks.
+              Run on your VM or Kubernetes. Send alerts with the Python SDK or signed webhooks.
             </p>
           </div>
 

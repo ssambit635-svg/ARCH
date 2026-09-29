@@ -21,8 +21,8 @@ const STAGES: Stage[] = [
     step: '01',
     tag: 'INGEST',
     time: '03:12:04 UTC',
-    title: 'Alert storms collapse into a single fingerprinted incident.',
-    body: 'Prometheus Alertmanager, Datadog, Sentry, or any HTTP source posts to /api/webhooks/alerts with an HMAC-SHA256 signature. Duplicate payloads within the deduplication window attach to the existing incident instead of paging the rotation 14 times.',
+    title: 'Duplicate alerts merge into one incident.',
+    body: 'Prometheus, Datadog, Sentry, or any HTTP source can send signed alerts. Duplicates join the same incident.',
     caption: 'POST /api/webhooks/alerts · X-Arch-Signature: sha256=…',
     lines: [
       { label: 'SOURCE', value: 'prometheus / eu-central-1' },
@@ -35,8 +35,8 @@ const STAGES: Stage[] = [
     step: '02',
     tag: 'ROUTE',
     time: '03:12:06 UTC',
-    title: 'On-call rotations and escalation policies page the right engineer.',
-    body: 'ARCH resolves the owning service from the alert payload, looks up the active on-call schedule, and assigns the incident commander automatically — recording MTTA the instant the page is acknowledged.',
+    title: 'Page the right on-call engineer.',
+    body: 'ARCH checks service ownership, assigns the on-call, and records acknowledgement time.',
     caption: 'Service ownership → primary on-call → escalation policy',
     lines: [
       { label: 'SERVICE', value: 'checkout-api (tier-1 · commerce)' },
@@ -49,8 +49,8 @@ const STAGES: Stage[] = [
     step: '03',
     tag: 'TRIAGE',
     time: '03:12:19 UTC',
-    title: 'ARCH V1.1 correlates recent deploys, SQL locks, and blast radius.',
-    body: 'While the commander joins the war room, ARCH V1.1 inspects recent deployments, upstream/downstream topology, and historical incidents to surface ranked root-cause hypotheses with explicit evidence.',
+    title: 'Find likely causes and affected services.',
+    body: 'ARCH compares deployments, dependencies, and past incidents to surface evidence-backed causes.',
     caption: 'ARCH V1.1 · native root-cause correlation',
     lines: [
       { label: 'HYPOTHESIS #1', value: 'pg-primary-02 pool saturation (87%)', tone: 'accent' },
@@ -63,8 +63,8 @@ const STAGES: Stage[] = [
     step: '04',
     tag: 'RESOLVE & REVIEW',
     time: '03:18:19 UTC',
-    title: 'Status page advisories and postmortem drafts stay in lockstep.',
-    body: 'Public advisories publish directly to /status/arch without leaving the incident timeline. Once resolved, ARCH compiles the full chronological timeline, MTTA/MTTR metrics, and action items into a structured postmortem.',
+    title: 'Publish status and prepare a review.',
+    body: 'Publish updates from the timeline, then create a postmortem with key events and action items.',
     caption: 'Status advisory + postmortem generated from the same timeline',
     lines: [
       { label: 'STATE TRANSITION', value: 'MONITORING → RESOLVED', tone: 'ok' },
@@ -128,13 +128,13 @@ export function Lifecycle() {
             <div>
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3 py-1 font-mono text-[11px] font-medium text-zinc-300">
                 <span className="size-1.5 rounded-full bg-[#FEF62A]" />
-                <span>INCIDENT LIFECYCLE · 03:12:04 → 03:18:19 UTC</span>
+                <span>INCIDENT LIFECYCLE · 4 STAGES</span>
               </div>
               <GsapTextReveal as="h2" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight text-left">
-                From First Webhook to Signed Postmortem
+                From Alert to Postmortem
               </GsapTextReveal>
               <p className="mt-2 max-w-2xl text-left font-mono text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                Four deterministic stages — scrub through how an alert storm becomes an audited, resolved incident.
+                Follow an alert through response, resolution, and review.
               </p>
             </div>
 

@@ -300,7 +300,7 @@ export function Intelligence() {
                 </GsapTextReveal>
 
                 <p className="mt-2 max-w-2xl text-left font-mono text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                  Alert ingestion forge, deterministic root-cause engine, and audit-grade incident composer in one unified workspace.
+                  Alert intake, root-cause insights, and audited incident response — in one workspace.
                 </p>
 
                 <CopyCliField />
