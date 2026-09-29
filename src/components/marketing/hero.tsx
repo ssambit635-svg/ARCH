@@ -15,7 +15,7 @@ export function Hero() {
       <div className="relative mx-auto flex min-h-[calc(100svh-72px)] max-w-[1440px] flex-col px-5 pb-10 pt-24 sm:px-8 sm:pt-28 lg:pb-12">
         <div className="arch-hero-layout grid flex-1 items-center gap-10 lg:grid-cols-[0.82fr_1.18fr] lg:gap-14">
           <div className="w-full max-w-[560px]">
-          <p className="arch-hero-eyebrow inline-flex items-center gap-2.5 rounded-full border border-black/[0.12] bg-black/[0.025] px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-ash-300 sm:text-[11px]">
+          <p className="arch-hero-eyebrow inline-flex items-center gap-2.5 rounded-full border border-white/[0.12] bg-white/[0.025] px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-ash-300 sm:text-[11px]">
             <span className="arch-hero-status-dot" aria-hidden="true" />
             Incident response for engineering teams
           </p>

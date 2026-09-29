@@ -792,59 +792,39 @@
   .arch-preview-stage { transform: none !important; }
 }
 
-/* ---- Vengeance-inspired public surface ---------------------------------
-   ARCH keeps its own product language and content while borrowing the reference's
-   light canvas, technical typography, hairline grid, split hero, and tactile controls.
-*/
+/* Vengeance/Sleek dark token layer for the public ARCH surface. */
 .arch-marketing-surface {
-  --color-ink-1000: #f7f7f5;
-  --color-ink-950: #ffffff;
-  --color-ink-900: #fbfbfa;
-  --color-ink-850: #f1f1ee;
-  --color-ink-800: #e8e8e4;
-  --color-ink-750: #deded9;
-  --color-ink-700: #cfcfca;
-  --color-bone: #101010;
-  --color-bone-dim: #2d2d2b;
-  --color-ash-200: #3f3f3b;
-  --color-ash-300: #5d5d58;
-  --color-ash-400: #777772;
-  --color-ash-500: #969690;
-  --color-ash-600: #aaa9a2;
-  --color-ash-700: #c1c1ba;
-  --color-hairline: rgb(0 0 0 / 0.11);
-  --color-hairline-strong: rgb(0 0 0 / 0.18);
-  --arch-accent: #ffb627;
-  --arch-accent-rgb: 255 182 39;
-  background: #f7f7f5;
-  color: #101010;
+  --arch-accent: #ffffff;
+  --arch-accent-soft: rgb(255 255 255 / 0.08);
+  --arch-accent-rgb: 255 255 255;
+  --color-signal-100: #ffffff;
+  --color-signal-200: #ffffff;
+  --color-signal-300: #ffffff;
+  --color-signal-400: #ffffff;
+  --color-signal-500: #ffffff;
+  --color-signal-600: #d9d9d9;
+  --color-signal-700: #ababab;
+  --color-signal-800: #777777;
+  --color-signal-900: #4a4a4a;
+  background: #050608;
 }
-
-.arch-marketing-surface .arch-landing-hero { background: #f7f7f5; }
+.arch-marketing-surface .arch-landing-hero { background: #050608; }
 .arch-marketing-surface .arch-hero-grid {
-  background-image: linear-gradient(rgb(16 16 16 / 0.055) 1px, transparent 1px), linear-gradient(90deg, rgb(16 16 16 / 0.055) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: linear-gradient(180deg, black 0%, rgb(0 0 0 / 0.35) 70%, transparent 100%);
+  background-image: linear-gradient(rgb(255 255 255 / 0.035) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+  background-size: 64px 64px;
 }
-.arch-marketing-surface .arch-hero-toplight { background: radial-gradient(58% 88% at 76% 0%, rgb(255 182 39 / 0.16), transparent 72%); }
-.arch-marketing-surface .arch-hero-layout { border-bottom: 1px solid rgb(0 0 0 / 0.12); padding-bottom: 2.5rem; }
-.arch-marketing-surface .arch-hero-eyebrow { color: #494943; box-shadow: 0 1px 0 rgb(255 255 255 / 0.8) inset; }
-.arch-marketing-surface .arch-landing-heading { font-family: var(--font-display), ui-sans-serif, sans-serif; font-size: clamp(3.1rem, 6.2vw, 6.2rem); font-weight: 560; letter-spacing: -0.075em; }
-.arch-marketing-surface .arch-hero-primary { color: #f8f8f6; background: #111; box-shadow: 0 1px 0 rgb(255 255 255 / 0.2) inset, 0 10px 24px -18px rgb(0 0 0 / 0.5); }
-.arch-marketing-surface .arch-hero-primary:hover { background: #2d2d29; box-shadow: 0 8px 24px -14px rgb(0 0 0 / 0.55); }
-.arch-marketing-surface .arch-hero-secondary { color: #1a1a18; border-color: rgb(0 0 0 / 0.18); background: rgb(255 255 255 / 0.42); }
-.arch-marketing-surface .arch-hero-secondary:hover { color: #000; border-color: rgb(0 0 0 / 0.35); background: rgb(255 255 255 / 0.82); }
-.arch-marketing-surface .arch-preview-window { background: #0b1015; }
-.arch-marketing-surface .arch-preview-depth { background: linear-gradient(180deg, #0b1117, #080c11 70%); }
-.arch-marketing-surface .arch-preview-window, .arch-marketing-surface .arch-preview-depth { border-color: rgb(0 0 0 / 0.17); box-shadow: 0 1px 0 rgb(255 255 255 / 0.95) inset, 0 28px 70px -44px rgb(0 0 0 / 0.35); }
-.arch-marketing-surface .arch-hero-stage { transition: transform 420ms cubic-bezier(0.22, 1, 0.36, 1); }
-.arch-marketing-surface .arch-hero-stage:hover { transform: translateY(-4px); }
-.arch-marketing-surface :is(a, button) { transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1); }
-.arch-marketing-surface :is(a, button):hover { transform: translateY(-1px); }
-.arch-marketing-surface .arch-hero-stage :is(button, a):hover { transform: none; }
-.arch-marketing-surface header { background-color: rgb(247 247 245 / 0.84) !important; border-color: rgb(0 0 0 / 0.1) !important; }
-.arch-marketing-surface header a, .arch-marketing-surface header button { color: #393934; }
-.arch-marketing-surface header a:hover, .arch-marketing-surface header button:hover { color: #000; }
+.arch-marketing-surface .arch-hero-toplight { background: radial-gradient(68% 88% at 50% 0%, rgb(255 255 255 / 0.055), transparent 78%); }
+.arch-marketing-surface .arch-hero-layout { border-bottom-color: rgb(255 255 255 / 0.1); }
+.arch-marketing-surface .arch-hero-eyebrow { border-color: rgb(255 255 255 / 0.12); background: rgb(255 255 255 / 0.025); color: rgb(255 255 255 / 0.62); }
+.arch-marketing-surface .arch-hero-heading-accent { color: #ffffff; }
+.arch-marketing-surface .arch-hero-status-dot { background: #ffffff; box-shadow: 0 0 0 3px rgb(255 255 255 / 0.1); }
+.arch-marketing-surface .arch-hero-primary { color: #050608; background: #ffffff; }
+.arch-marketing-surface .arch-hero-primary:hover { background: #d9d9d9; }
+.arch-marketing-surface .arch-hero-secondary { color: rgb(255 255 255 / 0.82); border-color: rgb(255 255 255 / 0.16); background: rgb(255 255 255 / 0.025); }
+.arch-marketing-surface .arch-hero-secondary:hover { color: #ffffff; border-color: rgb(255 255 255 / 0.35); background: rgb(255 255 255 / 0.07); }
+.arch-marketing-surface .arch-hero-secondary-arrow { color: #ffffff; }
+.arch-marketing-surface .arch-hero-footnote-rule { background: rgb(255 255 255 / 0.45); }
+.arch-marketing-surface :is(a, button):focus-visible { outline: 2px solid #ffffff; outline-offset: 3px; }
 
 @media (max-width: 1023px) {
   .arch-marketing-surface .arch-hero-layout { grid-template-columns: 1fr; }
@@ -852,7 +832,3 @@
   .arch-marketing-surface .arch-hero-layout > div:first-child .arch-hero-eyebrow { margin-inline: auto; }
   .arch-marketing-surface .arch-hero-layout > div:first-child .mt-7 { justify-content: center; }
 }
-
-.arch-marketing-surface .arch-hero-heading-accent { color: #8b9298; }
-.arch-marketing-surface header .bg-signal-500 { background-color: #111 !important; color: #f8f8f6 !important; }
-.arch-marketing-surface header .bg-signal-500:hover { background-color: #2d2d29 !important; }
