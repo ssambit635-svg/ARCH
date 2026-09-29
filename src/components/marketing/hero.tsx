@@ -13,27 +13,28 @@ export function Hero() {
       <div className="arch-hero-toplight pointer-events-none absolute inset-x-0 top-0" aria-hidden="true" />
 
       <div className="relative mx-auto flex min-h-[calc(100svh-72px)] max-w-[1440px] flex-col px-5 pb-10 pt-24 sm:px-8 sm:pt-28 lg:pb-12">
-        <div className="mx-auto w-full max-w-[900px] text-center">
-          <p className="arch-hero-eyebrow mx-auto inline-flex items-center gap-2.5 rounded-full border border-white/[0.09] bg-white/[0.025] px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-ash-300 sm:text-[11px]">
+        <div className="arch-hero-layout grid flex-1 items-center gap-10 lg:grid-cols-[0.82fr_1.18fr] lg:gap-14">
+          <div className="w-full max-w-[560px]">
+          <p className="arch-hero-eyebrow inline-flex items-center gap-2.5 rounded-full border border-black/[0.12] bg-black/[0.025] px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-ash-300 sm:text-[11px]">
             <span className="arch-hero-status-dot" aria-hidden="true" />
             Incident response for engineering teams
           </p>
 
           <h1
             id="hero-title"
-            className="arch-landing-heading mx-auto mt-7 max-w-[22ch] text-bone"
+            className="arch-landing-heading mt-7 max-w-[12ch] text-bone"
           >
             Every incident.
             <br className="hidden sm:block" /> One clear{' '}
             <span className="arch-hero-heading-accent">response.</span>
           </h1>
 
-          <p className="mx-auto mt-5 max-w-[650px] text-pretty text-[14px] leading-[1.75] text-ash-300 sm:mt-6 sm:text-[16px]">
+          <p className="mt-5 max-w-[500px] text-pretty text-[14px] leading-[1.75] text-ash-300 sm:mt-6 sm:text-[16px]">
             ARCH brings alerts, responders, status updates and the audit trail into one self-hosted
             workspace — so your team can focus on resolving the issue, not coordinating around it.
           </p>
 
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-3 sm:mt-8">
+          <div className="mt-7 flex flex-wrap items-center gap-3 sm:mt-8">
             <Link
               href="/register"
               className="arch-hero-primary group inline-flex min-h-12 items-center justify-center gap-2.5 rounded-lg px-5 py-3 text-[14px] font-semibold transition-[background,transform,border-color] duration-200 active:scale-[0.985]"
@@ -56,10 +57,11 @@ export function Hero() {
           <p className="arch-mono mt-4 text-[9px] uppercase tracking-[0.15em] text-ash-600 sm:text-[10px]">
             Self-hosted <span className="mx-2 text-ash-700">·</span> No vendor lock-in <span className="mx-2 text-ash-700">·</span> Audit-ready
           </p>
-        </div>
+          </div>
 
-        <div className="arch-hero-stage mx-auto mt-8 w-full max-w-[1140px] sm:mt-10 lg:mt-11">
+        <div className="arch-hero-stage w-full max-w-[1140px] lg:mt-0">
           <IncidentPreview />
+        </div>
         </div>
 
         <div className="arch-hero-footnote mx-auto mt-5 flex max-w-[1140px] flex-wrap items-center justify-between gap-x-6 gap-y-2 px-1">
