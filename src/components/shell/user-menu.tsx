@@ -33,7 +33,7 @@ export function UserMenu({ user, role, statusSlug }: { user: { email: string; na
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Account menu"
-        className="rounded-full ring-2 ring-transparent transition hover:ring-signal-500/50"
+        className="rounded-full ring-2 ring-transparent transition hover:ring-indigo-500/50"
       >
         <Avatar name={user.name} email={user.email} />
       </button>

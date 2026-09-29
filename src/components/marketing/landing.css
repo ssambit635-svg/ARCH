@@ -1,55 +1,54 @@
-/* ---- Marketing refresh: graphite + measured blue ----------------------
-   The marketing surface gets a cool, low-chroma blue accent without changing
-   the dashboard's semantic palette. Blue is used as a label/state cue, never
-   as a halo or background glow.
+/* ---- Marketing refresh: graphite + sodium signal -----------------------
+   The public surface uses the same sodium signal as the product shell. It is
+   reserved for action, focus and ARCH-owned intelligence — never as a wash.
 */
 .arch-marketing-surface {
-  --arch-accent: #79a9ca;
-  --arch-accent-soft: rgb(121 169 202 / 0.12);
-  --arch-accent-rgb: 105 153 186;
+  --arch-accent: #ffb627;
+  --arch-accent-soft: rgb(255 182 39 / 0.12);
+  --arch-accent-rgb: 255 182 39;
 
-  --color-signal-100: #eaf2f7;
-  --color-signal-200: #d1e2ee;
-  --color-signal-300: #b0cde0;
-  --color-signal-400: #8fb8d2;
-  --color-signal-500: #79a9ca;
-  --color-signal-600: #5c88a8;
-  --color-signal-700: #426780;
-  --color-signal-800: #2e4c62;
-  --color-signal-900: #203747;
+  --color-signal-100: #fff4dd;
+  --color-signal-200: #ffe6b0;
+  --color-signal-300: #ffd47a;
+  --color-signal-400: #ffc247;
+  --color-signal-500: #ffb627;
+  --color-signal-600: #e79c11;
+  --color-signal-700: #b5760a;
+  --color-signal-800: #7d5106;
+  --color-signal-900: #4a3004;
 
-  --color-arch-50: #f5f9fc;
-  --color-arch-100: #eaf2f7;
-  --color-arch-200: #d1e2ee;
-  --color-arch-300: #b0cde0;
-  --color-arch-400: #8fb8d2;
-  --color-arch-500: #79a9ca;
-  --color-arch-600: #5c88a8;
-  --color-arch-700: #426780;
+  --color-arch-50: #fff9ec;
+  --color-arch-100: #fff4dd;
+  --color-arch-200: #ffe6b0;
+  --color-arch-300: #ffd47a;
+  --color-arch-400: #ffc247;
+  --color-arch-500: #ffb627;
+  --color-arch-600: #e79c11;
+  --color-arch-700: #b5760a;
 
-  --color-indigo-50: #f5f9fc;
-  --color-indigo-100: #eaf2f7;
-  --color-indigo-200: #d1e2ee;
-  --color-indigo-300: #b0cde0;
-  --color-indigo-400: #8fb8d2;
-  --color-indigo-500: #79a9ca;
-  --color-indigo-600: #5c88a8;
-  --color-indigo-700: #426780;
-  --color-indigo-800: #2e4c62;
-  --color-indigo-900: #203747;
-  --color-indigo-950: #142634;
+  --color-indigo-50: #fff9ec;
+  --color-indigo-100: #fff4dd;
+  --color-indigo-200: #ffe6b0;
+  --color-indigo-300: #ffd47a;
+  --color-indigo-400: #ffc247;
+  --color-indigo-500: #ffb627;
+  --color-indigo-600: #e79c11;
+  --color-indigo-700: #b5760a;
+  --color-indigo-800: #7d5106;
+  --color-indigo-900: #4a3004;
+  --color-indigo-950: #2b1c02;
 
-  --color-violet-50: #f5f9fc;
-  --color-violet-100: #eaf2f7;
-  --color-violet-200: #d1e2ee;
-  --color-violet-300: #b0cde0;
-  --color-violet-400: #8fb8d2;
-  --color-violet-500: #79a9ca;
-  --color-violet-600: #5c88a8;
-  --color-violet-700: #426780;
-  --color-violet-800: #2e4c62;
-  --color-violet-900: #203747;
-  --color-violet-950: #142634;
+  --color-violet-50: #fffaf0;
+  --color-violet-100: #fff2d6;
+  --color-violet-200: #ffe3a6;
+  --color-violet-300: #ffd070;
+  --color-violet-400: #ffbe3d;
+  --color-violet-500: #f0a81e;
+  --color-violet-600: #cf8b0c;
+  --color-violet-700: #a26a08;
+  --color-violet-800: #704805;
+  --color-violet-900: #432b03;
+  --color-violet-950: #271902;
 }
 
 .arch-landing-hero {
@@ -80,7 +79,7 @@
 }
 
 .arch-hero-heading-accent {
-  color: #8eb4d0;
+  color: #ffc247;
 }
 
 .arch-hero-eyebrow {
@@ -94,8 +93,8 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #87abc3;
-  box-shadow: 0 0 0 3px rgb(121 169 202 / 0.11);
+  background: #ffb627;
+  box-shadow: 0 0 0 3px rgb(255 182 39 / 0.12);
 }
 
 .arch-hero-primary {
@@ -118,7 +117,7 @@
   background: rgb(255 255 255 / 0.045);
 }
 .arch-hero-secondary-arrow {
-  color: #8eb4d0;
+  color: #ffc247;
   font-size: 13px;
   transform: translateY(-1px);
 }
@@ -126,7 +125,7 @@
   display: inline-block;
   width: 22px;
   height: 1px;
-  background: #6688a1;
+  background: #b5760a;
 }
 
 /* Product preview: a deliberately restrained physical frame, with a tiny pointer tilt on desktop.

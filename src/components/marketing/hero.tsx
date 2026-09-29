@@ -54,7 +54,7 @@ export function Hero() {
           </div>
 
           <p className="arch-mono mt-4 text-[9px] uppercase tracking-[0.15em] text-ash-600 sm:text-[10px]">
-            Self-hosted <span className="mx-2 text-ash-700">·</span> On-call coordination <span className="mx-2 text-ash-700">·</span> Audit-ready
+            Self-hosted <span className="mx-2 text-ash-700">·</span> No vendor lock-in <span className="mx-2 text-ash-700">·</span> Audit-ready
           </p>
         </div>
 
@@ -65,7 +65,7 @@ export function Hero() {
         <div className="arch-hero-footnote mx-auto mt-5 flex max-w-[1140px] flex-wrap items-center justify-between gap-x-6 gap-y-2 px-1">
           <span className="arch-mono inline-flex items-center gap-2 text-[9px] uppercase tracking-[0.13em] text-ash-600 sm:text-[10px]">
             <span className="arch-hero-footnote-rule" aria-hidden="true" />
-            A clearer view, from first alert to resolution
+            One workspace, from first alert to resolution
           </span>
           <a href="#lifecycle" className="arch-hero-scroll-link arch-mono inline-flex items-center gap-2 text-[9px] uppercase tracking-[0.13em] text-ash-500 transition-colors hover:text-bone sm:text-[10px]">
             See how ARCH works <span aria-hidden="true">↓</span>
