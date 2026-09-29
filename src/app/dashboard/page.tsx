@@ -74,10 +74,11 @@ export default async function DashboardOverview() {
 
       {/* Hero status banner */}
       <div
+        role="status"
         className={`relative mb-6 overflow-hidden rounded-2xl border p-5 sm:p-6 ${
           allClear
-            ? 'border-emerald-500/25 bg-gradient-to-r from-emerald-500/[0.1] via-abyss-850 to-abyss-850'
-            : 'border-rose-500/25 bg-gradient-to-r from-rose-500/[0.12] via-abyss-850 to-abyss-850'
+            ? 'border-state-ok/30 bg-state-ok/[0.06]'
+            : 'border-state-down/30 bg-state-down/[0.06]'
         }`}
       >
         <div className="flex flex-wrap items-center gap-4">
@@ -134,7 +135,7 @@ export default async function DashboardOverview() {
               title={openList.length > 0 ? 'Needs attention' : 'Recent incidents'}
               description={openList.length > 0 ? 'Open incidents, newest first.' : 'Newest first — click through for the full timeline.'}
               action={
-                <Link className="text-[13px] font-medium text-indigo-400 transition hover:text-indigo-300" href="/dashboard/incidents">
+                <Link className="text-[13px] font-medium text-signal-400 transition hover:text-signal-300" href="/dashboard/incidents">
                   All incidents →
                 </Link>
               }
@@ -162,7 +163,7 @@ export default async function DashboardOverview() {
               title="Recent activity"
               description="Audit trail — ADMIN and above see the full log."
               action={
-                <Link className="text-[13px] font-medium text-indigo-400 transition hover:text-indigo-300" href="/dashboard/audit">
+                <Link className="text-[13px] font-medium text-signal-400 transition hover:text-signal-300" href="/dashboard/audit">
                   Audit log →
                 </Link>
               }
@@ -195,7 +196,7 @@ export default async function DashboardOverview() {
               title="Service health"
               description="Live — derived from open incidents unless pinned."
               action={
-                <Link className="text-[13px] font-medium text-indigo-400 transition hover:text-indigo-300" href="/dashboard/projects">
+                <Link className="text-[13px] font-medium text-signal-400 transition hover:text-signal-300" href="/dashboard/projects">
                   All →
                 </Link>
               }
@@ -204,7 +205,7 @@ export default async function DashboardOverview() {
               {services.length === 0 ? (
                 <p className="py-2 text-sm text-slate-400">
                   No services yet.{' '}
-                  <Link className="text-indigo-400 hover:text-indigo-300" href="/dashboard/projects">
+                  <Link className="text-signal-400 hover:text-signal-300" href="/dashboard/projects">
                     Add one
                   </Link>
                   .
@@ -228,10 +229,10 @@ export default async function DashboardOverview() {
           </Card>
 
           {/* ARCH V1.1 */}
-          <div className="relative overflow-hidden rounded-2xl border border-violet-500/25 bg-gradient-to-br from-indigo-500/[0.12] via-abyss-850 to-violet-500/[0.08] p-5">
+          <div className="relative overflow-hidden rounded-2xl border border-signal-500/25 bg-signal-500/[0.045] p-5">
             <div className="flex items-center justify-between">
               <AiBadge />
-              <SparkIcon className="size-5 text-violet-400/60" />
+              <SparkIcon className="size-5 text-signal-400/70" />
             </div>
             <p className="mt-3 text-[15px] font-semibold tracking-tight text-white">Your on-call intelligence</p>
             <p className="mt-1 text-[13px] leading-relaxed text-slate-400">
@@ -261,7 +262,7 @@ export default async function DashboardOverview() {
                 <Link
                   key={action.label}
                   href={action.href}
-                  className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2.5 text-[13px] font-medium text-slate-300 transition hover:border-indigo-500/40 hover:bg-indigo-500/[0.08] hover:text-white"
+                  className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2.5 text-[13px] font-medium text-slate-300 transition hover:border-signal-500/40 hover:bg-signal-500/[0.08] hover:text-white"
                 >
                   {action.label}
                 </Link>

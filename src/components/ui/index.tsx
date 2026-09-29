@@ -7,7 +7,7 @@ import type { IncidentSeverity, IncidentStatus, ServiceStatus } from '@/generate
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
     <div
-      className={`rounded-2xl border border-white/[0.07] bg-gradient-to-b from-abyss-800/90 to-abyss-850/90 shadow-[0_8px_32px_-16px_rgb(0_0_0/0.8)] ${className}`}
+      className={`arch-panel shadow-[0_8px_32px_-16px_rgb(0_0_0/0.8)] ${className}`}
     >
       {children}
     </div>
@@ -44,7 +44,7 @@ export function PageHeader({
   return (
     <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
       <div className="min-w-0">
-        {eyebrow ? <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-indigo-400">{eyebrow}</p> : null}
+        {eyebrow ? <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-signal-400">{eyebrow}</p> : null}
         <h1 className="text-balance text-2xl font-semibold tracking-tight text-white sm:text-[28px] sm:leading-tight">{title}</h1>
         {description ? <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-slate-400">{description}</p> : null}
       </div>
@@ -85,11 +85,11 @@ export function Badge({
 }) {
   const tones = {
     neutral: 'bg-white/[0.06] text-slate-300 ring-white/10',
-    accent: 'bg-indigo-500/15 text-indigo-300 ring-indigo-500/30',
+    accent: 'bg-signal-500/12 text-signal-300 ring-signal-500/30',
     danger: 'bg-rose-500/15 text-rose-300 ring-rose-500/30',
     success: 'bg-emerald-500/15 text-emerald-300 ring-emerald-500/30',
     warning: 'bg-amber-500/15 text-amber-200 ring-amber-500/30',
-    ai: 'bg-gradient-to-r from-indigo-500/20 to-violet-500/20 text-violet-200 ring-violet-500/40',
+    ai: 'bg-signal-500/12 text-signal-200 ring-signal-500/35',
   } as const;
   return (
     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset ${tones[tone]} ${className}`}>
