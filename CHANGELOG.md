@@ -15,6 +15,21 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Changed — the landing page shows real data only
+
+- **Live GitHub star count.** The header's ★ pill no longer shows a typed-in number (`2.4k`). It reads
+  this repository's real stargazer count from GitHub through `GET /api/github-stars`, keeps it fresh
+  while the page is open (every 2 minutes; the server asks GitHub at most every 5), and shows a plain
+  "Star" — never an invented figure — when GitHub cannot be asked. A private repository needs
+  `GITHUB_TOKEN` on the server for the count to be readable (see `.env.example`).
+- **Removed the claims nothing backed:** the "2M+ active alerts routed" counter and the logo strip
+  (Mintlify, Sentry, BrowserStack, Sarvam AI, Vercel) — none of them is a partner or sponsor of ARCH.
+  ARCH's own Sentry webhook support is unchanged; only the logo is gone.
+- **Removed the 3D hero ball** (and with it `hero-blob.tsx`). Three.js is no longer used by any page.
+- **Tech Stack row now lists what ARCH is really built on** — 15 tiles, same isometric-stack look, each
+  one tied to a dependency or file in this repository and checked by `tests/marketing-tech-stack.test.ts`,
+  so it cannot drift into marketing.
+
 ### Changed — the entire visual language ("Mission Control")
 
 - **The indigo→violet gradient scheme is gone.** ARCH shipped with two accent colours, decorative
