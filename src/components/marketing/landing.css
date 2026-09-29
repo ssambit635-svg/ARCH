@@ -99,12 +99,20 @@
   mask-image: radial-gradient(125% 95% at 50% 0%, black 0%, transparent 78%);
 }
 
+/* The top padding is the nav's height plus a breath: the frame runs to the top of the page and
+   the fixed nav sits inside it, transparent until the page moves. */
 .arch-hero-content {
   position: relative;
   display: flex;
-  min-height: clamp(540px, 72svh, 780px);
+  min-height: clamp(560px, 74svh, 800px);
   flex-direction: column;
-  padding: clamp(18px, 2.6vw, 34px);
+  padding: 88px clamp(18px, 2.6vw, 34px) clamp(18px, 2.6vw, 34px);
+}
+
+@media (max-width: 1023px) {
+  .arch-hero-content {
+    padding-top: 84px;
+  }
 }
 
 /* ---- Top strip: the product in one line, plus the deployment facts ---------------- */
@@ -150,7 +158,7 @@
   position: relative;
   display: flex;
   flex: 1;
-  min-height: clamp(210px, 34vw, 430px);
+  min-height: min(36vw, 440px);
   align-items: center;
   padding: clamp(10px, 2vw, 26px) 0;
 }
@@ -192,8 +200,8 @@
   z-index: 2;
   top: 50%;
   right: 0;
-  width: min(36vw, 45%, 430px);
-  height: min(36vw, 45%, 430px);
+  width: min(36vw, 45%, 440px);
+  height: min(36vw, 45%, 440px);
   transform: translateY(-50%);
 }
 

@@ -60,7 +60,7 @@ export function Hero() {
     <section className="arch-hero relative isolate overflow-hidden" aria-labelledby="hero-title">
       <div className="arch-hero-grid" aria-hidden="true" />
 
-      <div className="relative mx-auto w-full max-w-[1440px] px-4 pb-10 pt-[92px] sm:px-6 sm:pb-14 sm:pt-[104px] lg:px-8 lg:pb-16">
+      <div className="relative mx-auto w-full max-w-[1440px] px-4 pb-10 sm:px-6 sm:pb-14 lg:px-8 lg:pb-16">
         <div className="arch-hero-card">
           <div className="arch-hero-card-light" aria-hidden="true" />
           <div className="arch-hero-card-grid" aria-hidden="true" />
