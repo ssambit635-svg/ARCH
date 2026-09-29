@@ -5,6 +5,7 @@ import Link from 'next/link';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Container, Heading, SubHeading, cn } from './vui-primitives';
+import { GsapTextReveal } from './gsap-reveal';
 
 const INSTALL_COMMAND = 'docker compose up -d && npm run db:migrate && npm run db:seed';
 
@@ -294,13 +295,13 @@ export function Intelligence() {
                   <span className="font-mono">Architecture Map · ARCH V1.1</span>
                 </div>
 
-                <Heading as="h2" variant="big" className="max-w-3xl text-left">
+                <GsapTextReveal as="h2" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight text-left">
                   Build with ARCH Intelligence
-                </Heading>
+                </GsapTextReveal>
 
-                <SubHeading className="mt-2 max-w-2xl text-left">
-                  Explore the alert ingestion forge, deterministic root-cause motion kernel, and audit-grade incident composer — then jump into any workflow in one click.
-                </SubHeading>
+                <p className="mt-2 max-w-2xl text-left font-mono text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                  Alert ingestion forge, deterministic root-cause engine, and audit-grade incident composer in one unified workspace.
+                </p>
 
                 <CopyCliField />
               </div>

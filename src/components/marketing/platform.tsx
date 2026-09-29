@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { GsapTextReveal } from './gsap-reveal';
 import {
   ConnectorLine,
   Container,
@@ -298,15 +299,17 @@ function FeatureCard2() {
 }
 
 /* ============================================================================
-   Vengeance UI FeatureCard3: Connected Avatar Network with Animated Connectors
+   FeatureCard3: Connected Security & Responder Network with Animated Connectors
    ============================================================================ */
-function AvatarCard({
-  src,
-  alt,
+function ResponderNode({
+  role,
+  tag,
+  icon,
   delay = 0,
 }: {
-  src: string;
-  alt: string;
+  role: string;
+  tag: string;
+  icon: React.ReactNode;
   delay?: number;
 }) {
   return (
@@ -316,14 +319,13 @@ function AvatarCard({
       transition={{ duration: 0.4, delay }}
       className="relative group"
     >
-      <div className="relative size-12 sm:size-16 rounded-xl bg-zinc-900 border border-neutral-800 p-1 sm:p-1.5 flex items-center justify-center shadow-sm group-hover:border-neutral-600 transition-colors duration-300">
-        <div className="w-full h-full rounded-lg overflow-hidden bg-neutral-950 relative">
-          <img
-            src={src}
-            alt={alt}
-            className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-300 group-hover:scale-105"
-          />
+      <div className="relative size-12 sm:size-16 rounded-xl bg-zinc-900 border border-neutral-800 p-1.5 flex flex-col items-center justify-center shadow-md group-hover:border-blue-500/50 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.25)] transition-all duration-300">
+        <div className="text-zinc-400 group-hover:text-[#FEF62A] transition-colors">
+          {icon}
         </div>
+        <span className="font-mono text-[8px] sm:text-[9px] font-semibold text-zinc-300 tracking-wider mt-1 uppercase text-center leading-tight">
+          {tag}
+        </span>
       </div>
     </motion.div>
   );
@@ -333,29 +335,74 @@ function FeatureCard3() {
   return (
     <div className="relative flex flex-col justify-between p-5 md:p-8 w-full md:h-full overflow-hidden">
       <div className="flex-1 flex flex-col items-center justify-center gap-6 sm:gap-10 py-6 w-full max-w-lg mx-auto">
-        {/* Top Row: 3 On-Call Responder Avatars */}
+        {/* Top Row: 3 On-Call Responder Nodes */}
         <div className="relative flex items-center justify-between w-full px-2 sm:px-4">
-          <AvatarCard src="/avatars/aizen.jpg" alt="Incident Commander" delay={0.1} />
+          <ResponderNode
+            role="Incident Commander"
+            tag="CMD"
+            icon={
+              <svg className="size-4 sm:size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+              </svg>
+            }
+            delay={0.1}
+          />
           <ConnectorLine className="flex-1" delay={0.2} />
-          <AvatarCard src="/avatars/pinky-aizen.jpg" alt="Database Lead" delay={0.2} />
+          <ResponderNode
+            role="Database Lead"
+            tag="DB"
+            icon={
+              <svg className="size-4 sm:size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <ellipse cx="12" cy="5" rx="9" ry="3" />
+                <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+              </svg>
+            }
+            delay={0.2}
+          />
           <ConnectorLine className="flex-1" delay={0.4} reverse />
-          <AvatarCard src="/avatars/shinji.jpg" alt="Comms Lead" delay={0.3} />
+          <ResponderNode
+            role="Comms Lead"
+            tag="COMMS"
+            icon={
+              <svg className="size-4 sm:size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5" />
+                <circle cx="12" cy="12" r="2" />
+                <path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5M19.1 4.9C23 8.8 23 15.2 19.1 19.1" />
+              </svg>
+            }
+            delay={0.3}
+          />
         </div>
 
-        {/* Bottom Row: 2 Avatars + Center ARCH Hub */}
+        {/* Bottom Row: 2 Nodes + Center ARCH Dragon Hub */}
         <div className="relative flex items-center justify-center w-full px-2 sm:px-6">
           <div className="relative -top-8 sm:-top-12">
-            <AvatarCard src="/avatars/johan.jpg" alt="Security Auditor" delay={0.4} />
+            <ResponderNode
+              role="Security Auditor"
+              tag="SEC"
+              icon={
+                <svg className="size-4 sm:size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+              }
+              delay={0.4}
+            />
           </div>
           <div className="flex-1 h-8 sm:h-12 flex items-center">
             <CornerConnector corner="bottom-left" className="w-full h-full" delay={0.5} radius={20} />
           </div>
           <div className="relative z-10">
-            <div className="relative size-16 sm:size-20 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col items-center justify-center shadow-lg">
-              <span className="font-orbitron text-sm sm:text-base font-extrabold text-white">
+            <div className="relative size-16 sm:size-20 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col items-center justify-center shadow-lg group-hover:border-blue-500/40 transition-colors">
+              <img
+                src="/dragon-mark.png"
+                alt="ARCH Dragon"
+                className="size-6 object-contain drop-shadow-[0_0_8px_rgba(59,130,246,0.4)]"
+              />
+              <span className="font-orbitron text-xs sm:text-sm font-extrabold text-white mt-0.5">
                 ARCH<span className="text-[#FEF62A]">.</span>
               </span>
-              <span className="font-mono text-[8px] uppercase tracking-widest text-zinc-500 mt-0.5">
+              <span className="font-mono text-[7px] uppercase tracking-widest text-zinc-500">
                 SHA-256
               </span>
             </div>
@@ -369,7 +416,16 @@ function FeatureCard3() {
             />
           </div>
           <div className="relative -top-8 sm:-top-12">
-            <AvatarCard src="/avatars/batmaaanji.jpg" alt="SRE On-Call" delay={0.5} />
+            <ResponderNode
+              role="SRE On-Call"
+              tag="SRE"
+              icon={
+                <svg className="size-4 sm:size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                </svg>
+              }
+              delay={0.5}
+            />
           </div>
         </div>
       </div>
@@ -640,17 +696,14 @@ export function Platform() {
     >
       <Container>
         <div className="flex flex-col items-center justify-center md:border-x border-[#222]">
-          {/* Section Header (Exact Vengeance UI Features Header) */}
+          {/* Section Header */}
           <div className="flex flex-col items-center justify-center gap-3 px-4 py-12 text-center">
-            <Heading as="h2" variant="big">
-              Why ARCH? <br />
-              <span className="bg-gradient-to-b from-zinc-500 via-zinc-400 to-white bg-clip-text text-transparent">
-                Operations You Won&apos;t Find Anywhere
-              </span>
-            </Heading>
-            <SubHeading variant="big">
-              Crafted for high-severity production incidents — every primitive is interactive, deterministic, and self-hosted.
-            </SubHeading>
+            <GsapTextReveal as="h2" className="font-orbitron font-extrabold text-2xl sm:text-3xl lg:text-4xl text-center text-white tracking-tight">
+              Why ARCH? Operations Engineered for Production
+            </GsapTextReveal>
+            <p className="max-w-xl font-mono text-xs sm:text-sm text-zinc-400 text-center">
+              Built for high-severity incidents — every primitive is interactive, deterministic, and self-hosted.
+            </p>
           </div>
 
           {/* Row 1: FeatureCard1 + FeatureCard2 */}

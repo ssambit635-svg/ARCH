@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Container, Heading, SubHeading, cn } from './vui-primitives';
+import { GsapTextReveal } from './gsap-reveal';
 
 interface Stage {
   step: string;
@@ -39,7 +40,7 @@ const STAGES: Stage[] = [
     caption: 'Service ownership → primary on-call → escalation policy',
     lines: [
       { label: 'SERVICE', value: 'checkout-api (tier-1 · commerce)' },
-      { label: 'PRIMARY ON-CALL', value: 'elena.vance@arch.internal', tone: 'accent' },
+      { label: 'PRIMARY ON-CALL', value: 'lead-sre@arch.internal', tone: 'accent' },
       { label: 'ACKNOWLEDGED', value: '03:13:18 UTC · MTTA 01m 14s', tone: 'ok' },
       { label: 'AUDIT HASH', value: 'a94f1c…83d2 (signed)', tone: 'muted' },
     ],
@@ -129,15 +130,12 @@ export function Lifecycle() {
                 <span className="size-1.5 rounded-full bg-[#FEF62A]" />
                 <span>INCIDENT LIFECYCLE · 03:12:04 → 03:18:19 UTC</span>
               </div>
-              <Heading as="h2" variant="big" className="text-left">
-                From First Webhook to{' '}
-                <span className="bg-gradient-to-b from-zinc-400 via-zinc-200 to-white bg-clip-text text-transparent">
-                  Signed Postmortem
-                </span>
-              </Heading>
-              <SubHeading className="mt-2 max-w-2xl text-left">
-                Four deterministic stages — scroll or click any stage to scrub through how an alert storm becomes a resolved incident.
-              </SubHeading>
+              <GsapTextReveal as="h2" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight text-left">
+                From First Webhook to Signed Postmortem
+              </GsapTextReveal>
+              <p className="mt-2 max-w-2xl text-left font-mono text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                Four deterministic stages — scrub through how an alert storm becomes an audited, resolved incident.
+              </p>
             </div>
 
             {/* Progress Bar */}

@@ -6,6 +6,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { TopologyScene, type BrainNode, type ServiceStatus } from './topology-scene';
 import { Container, Heading, SubHeading, cn } from './vui-primitives';
+import { GsapTextReveal } from './gsap-reveal';
 
 const BRAIN_NODES: BrainNode[] = [
   {
@@ -313,15 +314,12 @@ export function Topology() {
                 <span className="size-1.5 rounded-full bg-[#FEF62A]" />
                 <span>NEURAL CORTEX · SYNAPTIC BLAST-RADIUS ENGINE</span>
               </div>
-              <Heading as="h2" variant="big" className="text-left">
-                Interactive Neural{' '}
-                <span className="bg-gradient-to-b from-zinc-400 via-zinc-200 to-white bg-clip-text text-transparent">
-                  Brain Topology
-                </span>
-              </Heading>
-              <SubHeading className="mt-2 max-w-2xl text-left">
-                Click any cortical node on the neural brain or hover your cursor across the plexus to trace upstream callers, downstream dependencies, and real-time blast radius.
-              </SubHeading>
+              <GsapTextReveal as="h2" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight text-left">
+                Interactive Neural Brain Topology
+              </GsapTextReveal>
+              <p className="mt-2 max-w-2xl text-left font-mono text-xs sm:text-sm text-zinc-400 leading-relaxed">
+                Click any cortical node or hover across the plexus to trace upstream callers, downstream dependencies, and real-time blast radius.
+              </p>
             </div>
 
             {/* Interactive Controls: Lobe Filters + Synaptic Cascade Trigger */}

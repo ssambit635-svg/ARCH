@@ -6,6 +6,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { BorderBeam, Container, Heading, IsometricHeroBox, SubHeading } from './vui-primitives';
 import { TechStackTiles } from './tech-stack';
+import { GsapTextReveal } from './gsap-reveal';
 
 const FACETS = [
   { index: '/01', label: 'Self-hosted' },
@@ -265,16 +266,13 @@ export function Hero() {
                 </span>
               </a>
 
-              <Heading as="h2" variant="big" className="text-left">
-                Next-Gen Incident <br />
-                <span className="bg-gradient-to-b from-zinc-500 via-zinc-400 to-white bg-clip-text text-transparent">
-                  Operations
-                </span>
-              </Heading>
+              <GsapTextReveal as="h2" className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight text-left">
+                Next-Gen Incident Operations
+              </GsapTextReveal>
 
-              <SubHeading as="p" variant="big" className="text-left">
-                Production-ready alert deduplication, neural blast-radius topology, live responder war rooms, and 90-day public status pages in one self-hosted stack.
-              </SubHeading>
+              <p className="font-mono text-xs sm:text-sm text-zinc-400 leading-relaxed text-left max-w-xl">
+                Alert deduplication, neural blast-radius topology, live war rooms, and 90-day public status pages in one self-hosted stack.
+              </p>
 
               <div className="mt-2 flex flex-wrap items-center gap-3">
                 <Link

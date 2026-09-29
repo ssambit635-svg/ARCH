@@ -276,25 +276,6 @@ body {
   animation: border-beam calc(var(--duration, 12) * 1s) infinite linear;
 }
 
-@keyframes testimonial-scroll {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    transform: translate3d(0, -50%, 0);
-  }
-}
-
-.testimonial-marquee-track {
-  display: flex;
-  flex-direction: column;
-  will-change: transform;
-  transform: translate3d(0, 0, 0);
-  backface-visibility: hidden;
-  animation-name: testimonial-scroll;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-}
 
 @keyframes hero-face-preview-in {
   from {
