@@ -1,191 +1,183 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import type { MouseEvent } from 'react';
-import { LogoMark } from '@/components/ui/logo';
-import { scrollToHash } from './use-lenis';
+import Link from 'next/link';
 
-const LINKS: { label: string; href: string }[] = [
-  { label: 'Platform', href: '#platform' },
-  { label: 'Workflow', href: '#lifecycle' },
-  { label: 'Intelligence', href: '#intelligence' },
-  { label: 'Service map', href: '#topology' },
-  { label: 'Self-hosted', href: '#deploy' },
+const NAV_ITEMS = [
+  { href: '#workspace', label: 'Workspace' },
+  { href: '#library-map', label: 'Library Map' },
+  { href: '#topology', label: 'Neural Brain' },
+  { href: '#lifecycle', label: 'Lifecycle' },
+  { href: '#capabilities', label: 'Why ARCH' },
+  { href: '#deploy', label: 'Deploy' },
 ];
 
-function Brand() {
-  return (
-    <Link href="/" className="inline-flex shrink-0 items-center gap-2.5 text-bone" aria-label="ARCH home">
-      <LogoMark size={28} className="text-bone" />
-      <span className="arch-display text-[15px] font-semibold tracking-[0.2em]">ARCH</span>
-    </Link>
-  );
-}
+const QUICK_COMMANDS = [
+  { title: 'Interactive Neural Brain', subtitle: '3D synaptic cortex & blast-radius inspector', href: '#topology', tag: 'NEURAL' },
+  { title: 'Live Incident Workspace', subtitle: 'Interactive SEV-1 console with ARCH V1.1 triage', href: '#workspace', tag: 'CONSOLE' },
+  { title: 'Architecture Library Map', subtitle: '01/03 Alert Forge · 02/03 Motion Kernel · 03/03 Composer', href: '#library-map', tag: 'BENTO' },
+  { title: '4-Stage Incident Lifecycle', subtitle: 'Pinned GSAP scroll-scrub timeline (03:12:04 -> 03:18:19)', href: '#lifecycle', tag: 'GSAP' },
+  { title: 'Public Status Page (/status/arch)', subtitle: 'Live 90-day uptime ledger & active advisories', href: '/status/arch', tag: 'LIVE' },
+  { title: 'Sign in to ARCH Dashboard', subtitle: 'Open full multi-tenant incident operations console', href: '/login', tag: 'AUTH' },
+];
 
-export function Nav() {
-  const [scrolled, setScrolled] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [open, setOpen] = useState(false);
-  const [active, setActive] = useState<string | null>(null);
+export function MarketingNav() {
+  const [cmdOpen, setCmdOpen] = useState(false);
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
-    let raf = 0;
-    const read = () => {
-      raf = 0;
-      const y = window.scrollY;
-      setScrolled(y > 24);
-      const max = document.documentElement.scrollHeight - window.innerHeight;
-      setProgress(max > 0 ? Math.min(1, Math.max(0, y / max)) : 0);
-
-      let current: string | null = null;
-      for (const link of LINKS) {
-        const section = document.querySelector(link.href);
-        if (section && section.getBoundingClientRect().top <= 130) current = link.href;
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setCmdOpen((prev) => !prev);
+      } else if (e.key === 'Escape') {
+        setCmdOpen(false);
       }
-      setActive(current);
     };
-    const onScroll = () => {
-      if (!raf) raf = requestAnimationFrame(read);
-    };
-    read();
-    window.addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('resize', onScroll);
-    return () => {
-      window.removeEventListener('scroll', onScroll);
-      window.removeEventListener('resize', onScroll);
-      if (raf) cancelAnimationFrame(raf);
-    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', onKeyDown);
-    return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', onKeyDown);
-    };
-  }, [open]);
-
-  const go = (href: string) => (event: MouseEvent<HTMLAnchorElement>) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setOpen(false);
-    window.setTimeout(() => scrollToHash(href), open ? 180 : 0);
-  };
+  const filtered = QUICK_COMMANDS.filter(
+    (c) =>
+      c.title.toLowerCase().includes(query.toLowerCase()) ||
+      c.subtitle.toLowerCase().includes(query.toLowerCase()) ||
+      c.tag.toLowerCase().includes(query.toLowerCase())
+  );
 
   return (
     <>
-      <header
-        className={`fixed inset-x-0 top-0 z-50 border-b transition-[background-color,border-color,backdrop-filter] duration-300 ${
-          scrolled
-            ? 'border-white/[0.08] bg-ink-950/88 backdrop-blur-xl'
-            : 'border-transparent bg-transparent'
-        }`}
-      >
-        <div className="absolute inset-x-0 top-0 h-px bg-white/[0.025]" aria-hidden="true">
-          <div className="h-full origin-left bg-signal-400/80" style={{ width: `${progress * 100}%`, transition: 'width 100ms linear' }} />
-        </div>
-        <div className="mx-auto flex h-[68px] max-w-[1440px] items-center justify-between gap-6 px-5 sm:px-8">
-          <Brand />
-
-          <nav className="hidden items-center gap-1 xl:flex" aria-label="Main navigation">
-            {LINKS.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                onClick={go(link.href)}
-                aria-current={active === link.href ? 'location' : undefined}
-                className={`group relative rounded-md px-3 py-2 text-[12px] font-medium transition-colors duration-200 ${
-                  active === link.href ? 'text-bone' : 'text-ash-400 hover:text-bone'
-                }`}
-              >
-                {link.label}
-                <span
-                  className={`absolute inset-x-3 -bottom-px h-px origin-left bg-signal-400 transition-transform duration-300 ${
-                    active === link.href ? 'scale-x-100' : 'scale-x-0 group-hover:scale-x-100'
-                  }`}
-                  aria-hidden="true"
-                />
-              </a>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <Link href="/login" className="hidden rounded-md px-3 py-2 text-[13px] font-medium text-ash-300 transition-colors hover:text-bone sm:inline-flex">
-              Login
-            </Link>
+      <header className="sticky top-0 isolate z-[200] border-b border-[#222] bg-[#050608]/95 backdrop-blur-md">
+        <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between gap-4 px-4 md:px-8 xl:px-20">
+          {/* Left: Pure Orbitron Wordmark (no custom invented logo icon) + Pill Nav */}
+          <div className="flex items-center gap-5">
             <Link
-              href="/register"
-              className="inline-flex min-h-9 items-center gap-2 rounded-md bg-signal-500 px-3.5 py-2 text-[12px] font-semibold text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.18)] transition-colors duration-200 hover:bg-signal-400"
+              href="/"
+              className="font-orbitron text-xl font-extrabold tracking-tight text-white hover:opacity-90 transition-opacity"
+              aria-label="ARCH home"
             >
-              Get started <span aria-hidden="true">→</span>
+              ARCH<span className="text-[#FEF62A]">.</span>
             </Link>
+
+            <nav
+              aria-label="Primary"
+              className="hidden lg:flex items-center gap-1 rounded-lg border border-[#222] bg-[#0b0c10] px-2 py-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+            >
+              {NAV_ITEMS.map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-md px-3 py-1.5 text-xs font-medium text-zinc-400 transition-colors hover:bg-white/[0.05] hover:text-white"
+                >
+                  {item.label}
+                </a>
+              ))}
+            </nav>
+          </div>
+
+          {/* Right: Command Search + GitHub Star Pill + Login / Get Started */}
+          <div className="flex items-center gap-2.5">
             <button
               type="button"
-              onClick={() => setOpen(true)}
-              className="grid size-9 place-items-center rounded-md border border-white/[0.1] text-ash-200 transition-colors hover:border-white/20 hover:text-white xl:hidden"
-              aria-label="Open menu"
-              aria-expanded={open}
-              aria-controls="arch-mobile-menu"
+              onClick={() => setCmdOpen(true)}
+              className="hidden sm:inline-flex items-center justify-between gap-6 rounded-xl border border-[#222] bg-[#0b0c10] px-3 py-1.5 text-xs text-zinc-400 transition-colors hover:border-zinc-700 hover:text-zinc-200 cursor-pointer shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]"
             >
-              <span className="flex flex-col gap-[4px]" aria-hidden="true">
-                <span className="h-px w-4 bg-current" />
-                <span className="h-px w-3 bg-current" />
+              <span className="flex items-center gap-2 font-mono text-[11px]">
+                <svg className="size-3.5 text-zinc-500" viewBox="0 0 16 16" fill="none" aria-hidden>
+                  <circle cx="7" cy="7" r="4.8" stroke="currentColor" strokeWidth="1.4" />
+                  <path d="M10.6 10.6 14 14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+                </svg>
+                Search ARCH...
               </span>
+              <kbd className="rounded border border-zinc-800 bg-zinc-900 px-1.5 py-0.5 font-mono text-[10px] text-zinc-400">
+                ⌘K
+              </kbd>
             </button>
+
+            <a
+              href="https://github.com/ssambit635-svg/ARCH"
+              target="_blank"
+              rel="noreferrer"
+              className="github-star-cta group relative hidden md:inline-flex h-9 items-center gap-2 overflow-hidden rounded-xl border border-zinc-700/80 bg-zinc-950/90 px-3 text-xs font-semibold text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] transition-all duration-300 hover:-translate-y-0.5 hover:border-zinc-500"
+            >
+              <span className="inline-flex size-5 items-center justify-center rounded-md border border-zinc-700/80 bg-zinc-900/90 text-zinc-200">
+                <svg viewBox="0 0 16 16" fill="currentColor" className="size-3.5" aria-hidden>
+                  <path d="M8 0C3.58 0 0 3.58 0 8a8.01 8.01 0 0 0 5.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
+                </svg>
+              </span>
+              <span className="inline-flex items-center gap-1 rounded-md border border-zinc-700/90 bg-zinc-900/95 px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-zinc-100">
+                <span className="text-[#FEF62A]">★</span>
+                <span>2.4k</span>
+              </span>
+            </a>
+
+            <Link
+              href="/login"
+              className="rounded-lg px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:text-white"
+            >
+              Login
+            </Link>
+
+            <Link
+              href="/register"
+              className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/[0.08] px-3.5 py-2 text-xs font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition-all hover:border-[#FEF62A]/60 hover:bg-[#FEF62A] hover:text-black"
+            >
+              <span>Get Started</span>
+              <span aria-hidden>→</span>
+            </Link>
           </div>
         </div>
       </header>
 
-      <div
-        id="arch-mobile-menu"
-        className={`fixed inset-0 z-[70] xl:hidden ${open ? 'pointer-events-auto' : 'pointer-events-none'}`}
-        aria-hidden={!open}
-      >
-        <button
-          type="button"
-          className={`absolute inset-0 bg-[#05080c]/80 backdrop-blur-sm transition-opacity duration-200 ${open ? 'opacity-100' : 'opacity-0'}`}
-          onClick={() => setOpen(false)}
-          aria-label="Close menu"
-          tabIndex={open ? 0 : -1}
-        />
-        <div inert={!open} className={`absolute inset-x-0 top-0 border-b border-white/[0.09] bg-[#0a1016] px-5 pb-6 pt-4 shadow-2xl transition-transform duration-300 ease-out sm:px-8 ${open ? 'translate-y-0' : '-translate-y-full'}`}>
-          <div className="flex h-11 items-center justify-between">
-            <Brand />
-            <button
-              type="button"
-              onClick={() => setOpen(false)}
-              className="grid size-9 place-items-center rounded-md border border-white/[0.1] text-ash-300"
-              aria-label="Close menu"
-              tabIndex={open ? 0 : -1}
-            >
-              <svg viewBox="0 0 16 16" className="size-4" fill="none" aria-hidden="true"><path d="m3 3 10 10M13 3 3 13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
-            </button>
-          </div>
-          <nav className="mt-5 flex flex-col" aria-label="Mobile navigation">
-            {LINKS.map((link, index) => (
-              <a
-                key={link.href}
-                href={link.href}
-                onClick={go(link.href)}
-                tabIndex={open ? 0 : -1}
-                className="flex items-center justify-between border-t border-white/[0.07] py-3.5 text-[16px] font-medium text-bone transition-colors hover:text-signal-300"
+      {/* Command K Modal */}
+      {cmdOpen && (
+        <div
+          className="fixed inset-0 z-[300] flex items-start justify-center bg-black/80 px-4 pt-24 backdrop-blur-sm"
+          onClick={() => setCmdOpen(false)}
+        >
+          <div
+            className="w-full max-w-lg overflow-hidden rounded-2xl border border-[#222] bg-[#08090c] shadow-[0_24px_72px_-24px_rgba(0,0,0,0.95),inset_0_1px_0_rgba(255,255,255,0.08)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 border-b border-[#222] px-4 py-3">
+              <span className="font-mono text-xs text-[#FEF62A]">⌘</span>
+              <input
+                type="text"
+                autoFocus
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Jump to section, neural brain, or workspace..."
+                className="w-full bg-transparent font-mono text-xs text-white placeholder:text-zinc-500 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => setCmdOpen(false)}
+                className="rounded border border-zinc-800 px-1.5 py-0.5 font-mono text-[10px] text-zinc-400 hover:text-white"
               >
-                {link.label}<span className="arch-mono text-[9px] tracking-[0.14em] text-ash-600">0{index + 1}</span>
-              </a>
-            ))}
-          </nav>
-          <div className="mt-5 flex gap-2">
-            <Link href="/login" onClick={() => setOpen(false)} tabIndex={open ? 0 : -1} className="flex-1 rounded-md border border-white/[0.1] px-4 py-2.5 text-center text-[13px] font-medium text-ash-200">Login</Link>
-            <Link href="/register" onClick={() => setOpen(false)} tabIndex={open ? 0 : -1} className="flex-1 rounded-md bg-signal-500 px-4 py-2.5 text-center text-[13px] font-semibold text-white transition-colors hover:bg-signal-400">Get started</Link>
+                ESC
+              </button>
+            </div>
+            <div className="divide-y divide-[#18191e] p-2">
+              {filtered.map((item) => (
+                <a
+                  key={item.title}
+                  href={item.href}
+                  onClick={() => setCmdOpen(false)}
+                  className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-white/[0.04]"
+                >
+                  <div>
+                    <div className="text-xs font-medium text-white">{item.title}</div>
+                    <div className="mt-0.5 font-mono text-[11px] text-zinc-500">{item.subtitle}</div>
+                  </div>
+                  <span className="rounded border border-[#222] bg-[#111216] px-2 py-0.5 font-mono text-[10px] text-[#FEF62A]">
+                    {item.tag}
+                  </span>
+                </a>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </>
   );
 }

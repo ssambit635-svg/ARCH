@@ -1,340 +1,679 @@
 'use client';
 
-import { Reveal } from './reveal';
+import { useEffect, useRef, useState } from 'react';
+import { motion } from 'motion/react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import {
+  ConnectorLine,
+  Container,
+  CornerConnector,
+  GSAPIcon,
+  Heading,
+  IsometricBox,
+  MotionIcon,
+  NextIcon,
+  ReactIcon,
+  SubHeading,
+  TailwindIcon,
+  TypeScriptIcon,
+} from './vui-primitives';
 
-/**
- * Platform — the capability grid.
- *
- * Every card carries a miniature of the real artefact rather than an icon: the state rail, uptime
- * bars, a verified signature, the permission matrix, a burning error budget, a failing-then-passing
- * test. That is the Cloudflare/Grafana instinct — a dense grid that is scannable because each cell
- * shows you the shape of the thing, not a glyph that stands for it.
- *
- * Bento spans are deliberate: the three cards that decide whether someone trusts ARCH (state
- * machine, audit, RBAC) get the most room.
- */
+/* ============================================================================
+   Vengeance UI FeatureCard1: Spring-Animated Stacked Cards with Floating Badges
+   ============================================================================ */
+function FeatureCard1() {
+  const [isHovered, setIsHovered] = useState(false);
 
-const MACHINE = ['INVESTIGATING', 'IDENTIFIED', 'MONITORING', 'RESOLVED'] as const;
-
-function StateRail() {
   return (
-    <div className="mt-5 flex flex-wrap items-center gap-1" aria-hidden>
-      {MACHINE.map((state, index) => (
-        <span key={state} className="flex items-center gap-1">
-          <span
-            className={`arch-mono rounded-[3px] border px-1.5 py-[2px] text-[8.5px] font-bold tracking-[0.08em] transition-colors duration-500 ${
-              index === 3
-                ? 'border-state-ok/35 bg-state-ok/10 text-state-ok'
-                : 'border-white/[0.09] bg-white/[0.02] text-ash-600'
+    <div
+      className="relative flex flex-col justify-between p-5 md:p-8 w-full h-[380px] md:h-full overflow-hidden group select-none"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div className="relative flex-1 w-full flex items-center justify-center perspective-[1000px]">
+        {/* Background Glow on Hover */}
+        <motion.div
+          animate={{
+            opacity: isHovered ? 0.5 : 0.15,
+            scale: isHovered ? 1.15 : 0.9,
+          }}
+          transition={{ duration: 0.5 }}
+          className="w-40 h-40 bg-gradient-to-tr from-[#FEF62A]/15 via-white/10 to-transparent rounded-full blur-3xl absolute pointer-events-none"
+        />
+
+        <div className="relative flex items-center justify-center">
+          {/* Card 3 (Back - Right) */}
+          <motion.div
+            animate={{
+              x: isHovered ? 75 : 20,
+              y: isHovered ? -10 : -8,
+              rotate: isHovered ? 12 : 5,
+              scale: isHovered ? 0.95 : 0.9,
+            }}
+            transition={{ type: 'spring', stiffness: 220, damping: 20 }}
+            className="w-36 h-44 rounded-2xl bg-neutral-900 border border-neutral-800 p-3.5 flex flex-col justify-between shadow-xl absolute z-10"
+          >
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] font-medium text-neutral-400">Preferences</span>
+              <span className="font-mono text-[10px] text-neutral-500">⚙</span>
+            </div>
+            <div className="space-y-2.5 my-auto">
+              {[1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between bg-neutral-950/60 p-1.5 rounded-lg border border-neutral-800/50"
+                >
+                  <div className="w-10 h-1.5 rounded-full bg-neutral-700" />
+                  <motion.div
+                    animate={{
+                      backgroundColor:
+                        isHovered && i !== 2
+                          ? 'rgba(254, 246, 42, 0.25)'
+                          : 'rgba(38, 38, 38, 1)',
+                    }}
+                    className="w-5 h-3 rounded-full p-0.5 flex items-center border border-neutral-700"
+                  >
+                    <motion.div
+                      animate={{ x: isHovered && i !== 2 ? 8 : 0 }}
+                      className={`w-2 h-2 rounded-full ${
+                        isHovered && i !== 2 ? 'bg-[#FEF62A]' : 'bg-neutral-400'
+                      }`}
+                    />
+                  </motion.div>
+                </div>
+              ))}
+            </div>
+            <div className="w-full h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+              <motion.div
+                animate={{ width: isHovered ? '78%' : '32%' }}
+                className="h-full bg-[#FEF62A]"
+              />
+            </div>
+          </motion.div>
+
+          {/* Card 2 (Middle - Left) */}
+          <motion.div
+            animate={{
+              x: isHovered ? -75 : -20,
+              y: isHovered ? -5 : -4,
+              rotate: isHovered ? -12 : -5,
+              scale: isHovered ? 0.95 : 0.92,
+            }}
+            transition={{ type: 'spring', stiffness: 220, damping: 20 }}
+            className="w-36 h-44 rounded-2xl bg-neutral-900 border border-neutral-800 p-3 flex flex-col justify-between shadow-xl absolute z-20"
+          >
+            <div className="flex items-center gap-1.5 bg-neutral-950 px-2 py-1.5 rounded-lg border border-neutral-800">
+              <span className="font-mono text-[10px] text-neutral-400">⌘</span>
+              <div className="w-12 h-1.5 bg-neutral-700 rounded-full" />
+            </div>
+
+            <div className="space-y-1.5 my-auto">
+              {[
+                { label: 'Deduplicate', active: true },
+                { label: 'Page On-Call', active: false },
+                { label: 'Audit SHA', active: false },
+              ].map((item, idx) => (
+                <motion.div
+                  key={idx}
+                  animate={{
+                    backgroundColor:
+                      isHovered && item.active
+                        ? 'rgba(255, 255, 255, 0.08)'
+                        : 'rgba(0, 0, 0, 0)',
+                    x: isHovered && item.active ? 4 : 0,
+                  }}
+                  className="flex items-center gap-2 p-1.5 rounded-lg"
+                >
+                  <span
+                    className={`size-1.5 rounded-full ${
+                      item.active ? 'bg-[#FEF62A]' : 'bg-neutral-600'
+                    }`}
+                  />
+                  <span
+                    className={`font-mono text-[9px] ${
+                      item.active ? 'text-white font-medium' : 'text-neutral-500'
+                    }`}
+                  >
+                    {item.label}
+                  </span>
+                </motion.div>
+              ))}
+            </div>
+
+            <div className="flex justify-between items-center px-1">
+              <div className="w-8 h-1 bg-neutral-800 rounded-full" />
+              <span className="font-mono text-[8px] text-neutral-600">ESC</span>
+            </div>
+          </motion.div>
+
+          {/* Card 1 (Front - Center) */}
+          <motion.div
+            animate={{
+              y: isHovered ? 8 : 0,
+              scale: isHovered ? 1.04 : 1,
+            }}
+            transition={{ type: 'spring', stiffness: 250, damping: 22 }}
+            className="w-40 h-48 rounded-2xl bg-gradient-to-b from-neutral-800 to-neutral-950 border border-neutral-700 p-4 flex flex-col justify-between shadow-2xl relative z-30 overflow-hidden"
+          >
+            <motion.div
+              animate={{
+                opacity: isHovered ? 0.2 : 0,
+                x: isHovered ? '100%' : '-100%',
+              }}
+              transition={{ duration: 0.7, ease: 'easeInOut' }}
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent -skew-x-12 pointer-events-none"
+            />
+
+            <div className="flex justify-between items-start">
+              <div className="size-8 rounded-xl bg-white/10 border border-white/20 flex items-center justify-center backdrop-blur-md">
+                <motion.div
+                  animate={{ rotate: isHovered ? 360 : 0 }}
+                  transition={{ duration: 0.6, ease: 'easeInOut' }}
+                  className="font-mono text-xs text-[#FEF62A]"
+                >
+                  ✦
+                </motion.div>
+              </div>
+              <span className="px-2 py-0.5 rounded-full bg-white/10 border border-white/10 font-mono text-[9px] text-white font-medium">
+                V1.1
+              </span>
+            </div>
+
+            <div className="my-auto space-y-1">
+              <div className="text-xs font-semibold text-white">Interactive Core</div>
+              <div className="font-mono text-[9px] text-neutral-400">Hover to expand</div>
+            </div>
+
+            <div className="space-y-1.5 bg-neutral-950/80 p-2 rounded-xl border border-neutral-800/80">
+              <div className="flex justify-between font-mono text-[8px] text-neutral-400">
+                <span>Confidence</span>
+                <motion.span className="text-[#FEF62A] font-medium">
+                  {isHovered ? '87%' : '45%'}
+                </motion.span>
+              </div>
+              <div className="w-full h-1 bg-neutral-800 rounded-full overflow-hidden">
+                <motion.div
+                  animate={{ width: isHovered ? '87%' : '45%' }}
+                  transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+                  className="h-full bg-gradient-to-r from-neutral-400 to-[#FEF62A] rounded-full"
+                />
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Floating Badge 1 (Top Left) */}
+          <motion.div
+            animate={{
+              x: isHovered ? -110 : -35,
+              y: isHovered ? -75 : -25,
+              scale: isHovered ? 1 : 0.8,
+              opacity: isHovered ? 1 : 0,
+              rotate: isHovered ? -8 : 0,
+            }}
+            transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.05 }}
+            className="absolute z-40 bg-neutral-900 border border-neutral-700 px-2.5 py-1 rounded-full shadow-lg flex items-center gap-1.5 pointer-events-none"
+          >
+            <span className="text-[10px] text-[#FEF62A]">✦</span>
+            <span className="font-mono text-[10px] text-white font-medium whitespace-nowrap">
+              5-State Machine
+            </span>
+          </motion.div>
+
+          {/* Floating Badge 2 (Bottom Right) */}
+          <motion.div
+            animate={{
+              x: isHovered ? 105 : 35,
+              y: isHovered ? 75 : 25,
+              scale: isHovered ? 1 : 0.8,
+              opacity: isHovered ? 1 : 0,
+              rotate: isHovered ? 6 : 0,
+            }}
+            transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.1 }}
+            className="absolute z-40 bg-white text-black px-2.5 py-1 rounded-full shadow-[0_0_15px_rgba(255,255,255,0.3)] flex items-center gap-1 pointer-events-none"
+          >
+            <span className="font-mono text-[10px] font-semibold">Interactive</span>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Text Content */}
+      <div className="relative z-10 text-left mt-4">
+        <Heading as="h2" className="text-xl md:text-2xl lg:text-2xl mb-1 text-left">
+          Deterministic 5-State Incident Machine
+        </Heading>
+        <SubHeading className="text-xs md:text-sm text-neutral-400 text-left">
+          Investigating → Identified → Monitoring → Resolved → Postmortem, with automatic MTTA/MTTR timestamps on every transition.
+        </SubHeading>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================================
+   Vengeance UI FeatureCard2: Interactive IsometricBox Pyramid
+   ============================================================================ */
+function FeatureCard2() {
+  return (
+    <div className="relative flex flex-col justify-between p-5 md:p-8 w-full md:h-full overflow-hidden group">
+      <div className="flex-1 w-full relative flex flex-col justify-center items-center -space-y-4 sm:space-y-1 py-4">
+        <div className="flex items-center gap-4 scale-[0.65] sm:scale-[0.8] lg:scale-[0.95]">
+          <IsometricBox>
+            <NextIcon className="w-10 h-10" />
+          </IsometricBox>
+          <IsometricBox>
+            <MotionIcon className="w-9 h-9" />
+          </IsometricBox>
+          <IsometricBox>
+            <GSAPIcon className="w-10 h-10 text-[#FEF62A]" />
+          </IsometricBox>
+        </div>
+
+        <div className="flex items-center gap-4 scale-[0.65] sm:scale-[0.75] lg:scale-[0.9]">
+          <IsometricBox>
+            <ReactIcon className="w-10 h-10" />
+          </IsometricBox>
+          <IsometricBox>
+            <TailwindIcon className="w-10 h-10 text-sky-400" />
+          </IsometricBox>
+        </div>
+
+        <div className="flex items-center gap-4 scale-[0.65] sm:scale-[0.7] lg:scale-[0.85]">
+          <IsometricBox>
+            <TypeScriptIcon className="w-9 h-9" />
+          </IsometricBox>
+        </div>
+      </div>
+
+      <div className="text-left">
+        <Heading as="h2" className="text-xl md:text-2xl lg:text-2xl mb-1 text-left">
+          Built for Modern Self-Hosted Stacks
+        </Heading>
+        <SubHeading className="text-xs md:text-sm text-neutral-400 text-left">
+          Powered by Next.js 16, PostgreSQL 16, Prisma, Tailwind CSS, TypeScript, and GSAP — zero external SaaS runtime dependencies.
+        </SubHeading>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================================
+   Vengeance UI FeatureCard3: Connected Avatar Network with Animated Connectors
+   ============================================================================ */
+function AvatarCard({
+  src,
+  alt,
+  delay = 0,
+}: {
+  src: string;
+  alt: string;
+  delay?: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.4, delay }}
+      className="relative group"
+    >
+      <div className="relative size-12 sm:size-16 rounded-xl bg-zinc-900 border border-neutral-800 p-1 sm:p-1.5 flex items-center justify-center shadow-sm group-hover:border-neutral-600 transition-colors duration-300">
+        <div className="w-full h-full rounded-lg overflow-hidden bg-neutral-950 relative">
+          <img
+            src={src}
+            alt={alt}
+            className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-all duration-300 group-hover:scale-105"
+          />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function FeatureCard3() {
+  return (
+    <div className="relative flex flex-col justify-between p-5 md:p-8 w-full md:h-full overflow-hidden">
+      <div className="flex-1 flex flex-col items-center justify-center gap-6 sm:gap-10 py-6 w-full max-w-lg mx-auto">
+        {/* Top Row: 3 On-Call Responder Avatars */}
+        <div className="relative flex items-center justify-between w-full px-2 sm:px-4">
+          <AvatarCard src="/avatars/aizen.jpg" alt="Incident Commander" delay={0.1} />
+          <ConnectorLine className="flex-1" delay={0.2} />
+          <AvatarCard src="/avatars/pinky-aizen.jpg" alt="Database Lead" delay={0.2} />
+          <ConnectorLine className="flex-1" delay={0.4} reverse />
+          <AvatarCard src="/avatars/shinji.jpg" alt="Comms Lead" delay={0.3} />
+        </div>
+
+        {/* Bottom Row: 2 Avatars + Center ARCH Hub */}
+        <div className="relative flex items-center justify-center w-full px-2 sm:px-6">
+          <div className="relative -top-8 sm:-top-12">
+            <AvatarCard src="/avatars/johan.jpg" alt="Security Auditor" delay={0.4} />
+          </div>
+          <div className="flex-1 h-8 sm:h-12 flex items-center">
+            <CornerConnector corner="bottom-left" className="w-full h-full" delay={0.5} radius={20} />
+          </div>
+          <div className="relative z-10">
+            <div className="relative size-16 sm:size-20 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col items-center justify-center shadow-lg">
+              <span className="font-orbitron text-sm sm:text-base font-extrabold text-white">
+                ARCH<span className="text-[#FEF62A]">.</span>
+              </span>
+              <span className="font-mono text-[8px] uppercase tracking-widest text-zinc-500 mt-0.5">
+                SHA-256
+              </span>
+            </div>
+          </div>
+          <div className="flex-1 h-8 sm:h-12 flex items-center">
+            <CornerConnector
+              corner="bottom-right"
+              className="w-full h-full"
+              delay={0.6}
+              radius={20}
+            />
+          </div>
+          <div className="relative -top-8 sm:-top-12">
+            <AvatarCard src="/avatars/batmaaanji.jpg" alt="SRE On-Call" delay={0.5} />
+          </div>
+        </div>
+      </div>
+
+      <div className="relative z-10 text-left">
+        <Heading as="h2" className="text-xl md:text-2xl lg:text-2xl mb-1 text-left">
+          Append-Only Audit &amp; RBAC Governance
+        </Heading>
+        <SubHeading className="text-xs md:text-sm text-neutral-400 text-left">
+          Every responder action, role change, and status advisory is hashed into an immutable SHA-256 ledger across Owner, Admin, Engineer, and Viewer roles.
+        </SubHeading>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================================
+   Vengeance UI FeatureCard4: Interactive Wireframe-to-Live Status Scanner
+   ============================================================================ */
+function MiniStatusPage({ mode }: { mode: 'wireframe' | 'live' }) {
+  const isLive = mode === 'live';
+
+  return (
+    <div
+      className={`w-full h-full p-3 flex flex-col justify-between select-none ${
+        isLive ? 'bg-neutral-950' : 'bg-neutral-900/90'
+      }`}
+    >
+      {isLive && (
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 bg-[#FEF62A]/10 rounded-full blur-xl pointer-events-none" />
+      )}
+
+      {/* Mini Navbar */}
+      <div
+        className={`flex items-center justify-between border-b pb-2 z-10 ${
+          isLive ? 'border-neutral-800/80' : 'border-neutral-800 border-dashed'
+        }`}
+      >
+        <div className="flex items-center gap-1.5">
+          {isLive ? (
+            <div className="size-3.5 rounded bg-[#FEF62A] flex items-center justify-center">
+              <span className="text-[7px] font-bold text-black">✓</span>
+            </div>
+          ) : (
+            <div className="size-3.5 rounded border border-neutral-700 border-dashed bg-neutral-800/50" />
+          )}
+          <div
+            className={`w-10 h-1.5 rounded-full ${
+              isLive ? 'bg-neutral-200' : 'bg-neutral-700'
+            }`}
+          />
+        </div>
+        <div
+          className={`w-8 h-3 rounded-full ${
+            isLive
+              ? 'bg-ok-400/20 border border-ok-400/50'
+              : 'border border-neutral-700 border-dashed'
+          }`}
+        />
+      </div>
+
+      {/* Mini Hero Content */}
+      <div className="my-auto flex flex-col items-center text-center space-y-2 z-10 py-1">
+        <div
+          className={`px-2 py-0.5 rounded-full flex items-center gap-1 ${
+            isLive
+              ? 'bg-neutral-900 border border-neutral-700'
+              : 'border border-neutral-700 border-dashed bg-neutral-800/30'
+          }`}
+        >
+          {isLive && <span className="size-1.5 rounded-full bg-ok-400" />}
+          <div
+            className={`w-12 h-1 rounded-full ${
+              isLive ? 'bg-neutral-300' : 'bg-neutral-700'
+            }`}
+          />
+        </div>
+
+        <div className="space-y-1 flex flex-col items-center w-full">
+          <div
+            className={`w-3/4 h-2.5 rounded-full ${
+              isLive
+                ? 'bg-gradient-to-r from-white via-neutral-200 to-neutral-400'
+                : 'border border-neutral-700 border-dashed bg-neutral-800/50'
+            }`}
+          />
+          <div
+            className={`w-1/2 h-2.5 rounded-full ${
+              isLive
+                ? 'bg-gradient-to-r from-neutral-200 to-neutral-500'
+                : 'border border-neutral-700 border-dashed bg-neutral-800/50'
+            }`}
+          />
+        </div>
+
+        {/* 90-Day Uptime Bars */}
+        <div className="flex gap-0.5 pt-1">
+          {Array.from({ length: 18 }).map((_, idx) => (
+            <div
+              key={idx}
+              className={`w-1.5 h-4 rounded-[1px] ${
+                isLive
+                  ? idx === 12
+                    ? 'bg-[#FEF62A]'
+                    : 'bg-ok-400'
+                  : 'bg-neutral-800 border border-neutral-700/50'
+              }`}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Mini Feature Grid */}
+      <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-neutral-800/50 z-10">
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className={`h-9 rounded-lg p-1.5 flex flex-col justify-between ${
+              isLive
+                ? 'bg-neutral-900 border border-neutral-800'
+                : 'border border-neutral-700/70 border-dashed bg-neutral-800/20'
             }`}
           >
-            {state.slice(0, 4)}
-          </span>
-          {index < MACHINE.length - 1 && <span className="text-[9px] text-ash-700">→</span>}
-        </span>
-      ))}
+            <div
+              className={`size-2 rounded-sm ${
+                isLive ? 'bg-[#FEF62A]/80' : 'bg-neutral-700'
+              }`}
+            />
+            <div
+              className={`w-full h-1 rounded-full ${
+                isLive ? 'bg-neutral-400' : 'bg-neutral-700'
+              }`}
+            />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-function UptimeMini() {
-  // Deterministic: a clean run, one three-day incident, clean again.
-  const cells = Array.from({ length: 46 }, (_, day) => {
-    if (day >= 28 && day <= 30) return day === 29 ? 1 : 2;
-    return day % 17 === 0 ? 3 : 0;
-  });
-  const colour = ['#2fbf71', '#ff4438', '#ff8a1f', '#38bdf8'];
+function FeatureCard4() {
+  const [isHovered, setIsHovered] = useState(false);
+
   return (
-    <div className="mt-5 flex items-end gap-[2px]" aria-hidden>
-      {cells.map((state, index) => (
-        <span
-          key={index}
-          className="arch-uptime-seg block h-7 w-full flex-1 rounded-[1px]"
-          style={{ background: colour[state], opacity: state === 0 ? 0.55 : 1 }}
+    <div
+      className="relative flex flex-col justify-between p-5 md:p-8 w-full h-[380px] md:h-full overflow-hidden group select-none"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <div className="relative flex-1 w-full flex items-center justify-center">
+        <motion.div
+          animate={{
+            opacity: isHovered ? 0.45 : 0.1,
+            scale: isHovered ? 1.05 : 0.9,
+          }}
+          transition={{ duration: 0.5 }}
+          className="w-48 h-36 bg-gradient-to-tr from-[#FEF62A]/15 via-neutral-500/10 to-transparent rounded-full blur-2xl absolute pointer-events-none"
         />
-      ))}
-    </div>
-  );
-}
 
-function SignatureRow() {
-  return (
-    <div className="arch-mono mt-5 space-y-1.5 text-[10px]" aria-hidden>
-      {[
-        ['x-arch-signature', 'sha256=7c1f…e9a2', 'verified', 'text-state-ok'],
-        ['x-arch-timestamp', 'drift 2.4s', 'within ±300s', 'text-state-ok'],
-        ['idempotency-key', 'grafana-8842117', 'new', 'text-ash-400'],
-        ['x-arch-signature', 'sha256=0000…0000', 'rejected', 'text-sev-critical'],
-      ].map(([header, value, verdict, tone]) => (
-        <p key={`${header}-${verdict}`} className="flex items-baseline justify-between gap-2 border-b border-white/[0.05] pb-1.5 last:border-0">
-          <span className="truncate text-ash-600">{header}</span>
-          <span className="truncate text-ash-400">{value}</span>
-          <span className={`shrink-0 font-bold uppercase tracking-[0.08em] ${tone}`}>{verdict}</span>
-        </p>
-      ))}
-    </div>
-  );
-}
+        <div className="relative w-64 h-48 rounded-xl bg-neutral-900 border border-neutral-800 shadow-2xl overflow-hidden flex flex-col">
+          {/* Browser Top Bar */}
+          <div className="h-6 bg-neutral-950 border-b border-neutral-800 flex items-center px-2.5 gap-1.5 z-30">
+            <div className="size-2 rounded-full bg-neutral-700 group-hover:bg-red-500/80 transition-colors" />
+            <div className="size-2 rounded-full bg-neutral-700 group-hover:bg-yellow-500/80 transition-colors" />
+            <div className="size-2 rounded-full bg-neutral-700 group-hover:bg-green-500/80 transition-colors" />
+            <div className="ml-2 flex-1 h-3 bg-neutral-900 rounded-sm border border-neutral-800 flex items-center justify-center">
+              <span className="font-mono text-[7px] text-neutral-500">
+                status.arch.internal/arch
+              </span>
+            </div>
+          </div>
 
-const ROLES = ['OWNER', 'ADMIN', 'RESPONDER', 'VIEWER'] as const;
-/** 1 = permitted, 0 = refused. Mirrors the matrix in README.md. */
-const MATRIX: Record<string, number[]> = {
-  'read incidents': [1, 1, 1, 1],
-  'change · comment · assign': [1, 1, 1, 0],
-  'publish status page': [1, 1, 0, 0],
-  'read audit log': [1, 1, 0, 0],
-  'retrain model': [1, 1, 0, 0],
-  'delete organization': [1, 0, 0, 0],
-};
+          <div className="relative flex-1 w-full overflow-hidden">
+            {/* Layer 1: Wireframe */}
+            <div className="absolute inset-0">
+              <MiniStatusPage mode="wireframe" />
+            </div>
 
-function RoleMatrix() {
-  return (
-    <div className="mt-5 overflow-hidden rounded-md border border-white/[0.07]" aria-hidden>
-      <table className="arch-mono w-full border-collapse text-[9.5px]">
-        <thead>
-          <tr className="border-b border-white/[0.07] bg-white/[0.02] text-ash-600">
-            <th className="px-2 py-1.5 text-left font-semibold uppercase tracking-[0.1em]">action</th>
-            {ROLES.map((role) => (
-              <th key={role} className="px-1 py-1.5 text-center font-semibold uppercase tracking-[0.08em]">
-                {role.slice(0, 4)}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-white/[0.05]">
-          {Object.entries(MATRIX).map(([action, allowed]) => (
-            <tr key={action} className="transition-colors hover:bg-white/[0.025]">
-              <td className="max-w-0 truncate px-2 py-1.5 text-ash-400">{action}</td>
-              {allowed.map((yes, index) => (
-                <td key={index} className="px-1 py-1.5 text-center">
-                  <span className={yes ? 'text-state-ok' : 'text-ash-700'}>{yes ? '✓' : '·'}</span>
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
+            {/* Layer 2: Live Status Page Revealed by Scanner */}
+            <motion.div
+              initial={{ clipPath: 'inset(0 0 100% 0)' }}
+              animate={{
+                clipPath: isHovered ? 'inset(0 0 0% 0)' : 'inset(0 0 100% 0)',
+              }}
+              transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute inset-0 z-10"
+            >
+              <MiniStatusPage mode="live" />
+            </motion.div>
 
-function BudgetBar() {
-  return (
-    <div className="mt-5" aria-hidden>
-      <div className="mb-2 flex items-baseline justify-between">
-        <span className="arch-mono text-[9.5px] uppercase tracking-[0.12em] text-ash-600">error budget · 30d</span>
-        <span className="arch-mono arch-tabular text-[11px] font-bold text-sev-high">28.6% burned</span>
+            {/* Layer 3: Glowing #FEF62A Scanner Line */}
+            <motion.div
+              initial={{ top: '0%', opacity: 0 }}
+              animate={{
+                top: isHovered ? '100%' : '0%',
+                opacity: isHovered ? [0, 1, 1, 0] : 0,
+              }}
+              transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
+              className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#FEF62A] to-transparent shadow-[0_0_12px_2px_rgba(254,246,42,0.7)] z-20 pointer-events-none"
+            />
+          </div>
+        </div>
+
+        {/* Floating Speed Badge */}
+        <motion.div
+          animate={{
+            y: isHovered ? -85 : -70,
+            x: isHovered ? 100 : 80,
+            scale: isHovered ? 1 : 0.8,
+            opacity: isHovered ? 1 : 0,
+            rotate: isHovered ? 8 : 0,
+          }}
+          transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.1 }}
+          className="absolute z-30 bg-[#FEF62A] text-black px-2.5 py-1 rounded-full shadow-[0_0_20px_rgba(254,246,42,0.3)] flex items-center gap-1 pointer-events-none"
+        >
+          <span className="text-[10px]">⚡</span>
+          <span className="font-mono text-[10px] font-bold">90d Ledger</span>
+        </motion.div>
       </div>
-      <div className="flex h-2 overflow-hidden rounded-[3px] bg-white/[0.05]">
-        <span className="block h-full bg-sev-high" style={{ width: '28.6%' }} />
-        <span className="block h-full flex-1 bg-state-ok/45" />
-      </div>
-      <div className="arch-mono mt-2 flex justify-between text-[9.5px] text-ash-600">
-        <span>slo 99.9%</span>
-        <span className="arch-tabular">21m 22s remaining</span>
+
+      <div className="relative z-10 text-left mt-4">
+        <Heading as="h2" className="text-xl md:text-2xl lg:text-2xl mb-1 text-left">
+          Built-In Public Status Pages
+        </Heading>
+        <SubHeading className="text-xs md:text-sm text-neutral-400 text-left">
+          Publish 90-day uptime bars and incident advisories to /status/[slug] directly from the war room — no third-party status SaaS needed.
+        </SubHeading>
       </div>
     </div>
   );
 }
-
-function TestDiff() {
-  return (
-    <div className="arch-mono mt-5 space-y-1 text-[10.5px]" aria-hidden>
-      <p className="flex items-center gap-2 rounded-[3px] border border-sev-critical/20 bg-sev-critical/[0.07] px-2 py-1.5 text-sev-critical">
-        <span className="font-bold">✗</span>
-        <span className="truncate">before · expected 200, got 503</span>
-      </p>
-      <p className="flex items-center gap-2 rounded-[3px] border border-state-ok/20 bg-state-ok/[0.07] px-2 py-1.5 text-state-ok">
-        <span className="font-bold">✓</span>
-        <span className="truncate">after · 200 in 84 ms · queue 0</span>
-      </p>
-      <p className="pt-1 text-[9.5px] tracking-[0.06em] text-ash-600">verified = fails before, passes after</p>
-    </div>
-  );
-}
-
-function LedgerMini() {
-  return (
-    <div className="arch-mono mt-5 space-y-1 text-[10px]" aria-hidden>
-      {[
-        ['4186', 'fix.approve', '51af', 'e902'],
-        ['4187', 'status.publish', 'e902', '2cd7'],
-        ['4188', 'incident.resolve', '2cd7', 'a44f'],
-      ].map(([seq, action, prev, hash]) => (
-        <p key={seq} className="flex items-baseline gap-2 border-b border-white/[0.05] pb-1.5 last:border-0">
-          <span className="arch-tabular w-8 shrink-0 text-ash-700">{seq}</span>
-          <span className="min-w-0 flex-1 truncate text-signal-300">{action}</span>
-          <span className="arch-tabular shrink-0 text-ash-600">{prev}</span>
-          <span className="shrink-0 text-ash-700">→</span>
-          <span className="arch-tabular shrink-0 text-state-ok">{hash}</span>
-        </p>
-      ))}
-    </div>
-  );
-}
-
-type Card = {
-  eyebrow: string;
-  title: string;
-  body: string;
-  span: string;
-  viz: () => React.ReactNode;
-};
-
-const CARDS: Card[] = [
-  {
-    eyebrow: 'core',
-    title: 'Incident state machine',
-    body: 'Legal transitions only, validated on the server. Two responders in two tabs cannot put an incident into a state that never existed — a stale tab gets a 409 with a human sentence attached.',
-    span: 'lg:col-span-3',
-    viz: StateRail,
-  },
-  {
-    eyebrow: 'core',
-    title: 'Audit that cannot lie',
-    body: 'Every write is recorded in the same database transaction as the change. No window where the two diverge, and each row carries the hash of the row before it.',
-    span: 'lg:col-span-3',
-    viz: LedgerMini,
-  },
-  {
-    eyebrow: 'public',
-    title: 'Status pages',
-    body: 'Per-service components, 90-day uptime history, active and past incidents. Statically rendered and revalidated on every write, so anonymous reads never touch auth. Drafts 404 for everyone outside the org.',
-    span: 'lg:col-span-3',
-    viz: UptimeMini,
-  },
-  {
-    eyebrow: 'access',
-    title: 'RBAC that holds up',
-    body: 'OWNER / ADMIN / RESPONDER / VIEWER, one permission matrix checked on every request. The UI only hides what the API would refuse anyway. A cross-tenant id answers 404, never 403.',
-    span: 'lg:col-span-3',
-    viz: RoleMatrix,
-  },
-  {
-    eyebrow: 'ingest',
-    title: 'Webhook ingestion',
-    body: 'HMAC-SHA256 verified, timestamp-tolerant, idempotent. One flapping alert becomes one incident — not forty — and every delivery is logged whether it was accepted or rejected.',
-    span: 'lg:col-span-2',
-    viz: SignatureRow,
-  },
-  {
-    eyebrow: 'slo',
-    title: 'Error budgets',
-    body: 'Budgets that warn before they burn, so a deploy is a decision made with a number attached rather than a feeling.',
-    span: 'lg:col-span-2',
-    viz: BudgetBar,
-  },
-  {
-    eyebrow: 'fix',
-    title: 'Verified Fix Loop',
-    body: 'Patches proposed against your pinned commit, executed only in a throwaway sandbox with no credentials, and opened as a draft PR after a human approves.',
-    span: 'lg:col-span-2',
-    viz: TestDiff,
-  },
-];
-
-/** Smaller capabilities that do not need a miniature — listed tight, the way a spec sheet reads. */
-const ALSO = [
-  { title: 'Tenant isolation', body: 'Every repository takes organizationId as a required first parameter. A row from another org is not readable.' },
-  { title: 'Knowledge base', body: 'Copilot cites your own runbooks, tenant-scoped, with the citation attached to the draft.' },
-  { title: 'Chat with ARCH', body: 'A private conversational workspace assistant with bounded memory and selected tenant-scoped evidence.' },
-  { title: 'Notification outbox', body: 'Postgres-backed with retries and a delivery state per message. No Redis, no second service to operate.' },
-  { title: 'Code Assist', body: 'Review and scaffold modes. Emits one snippet, the file path, and what will break if you paste it blindly.' },
-  { title: 'Blast radius', body: 'Dependency graph walked in both directions, so a change shows what it can touch before it ships.' },
-];
 
 export function Platform() {
+  const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) return;
+
+    gsap.registerPlugin(ScrollTrigger);
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        '.vui-feature-cell',
+        { y: 28, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.75,
+          stagger: 0.12,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: 'top 80%',
+          },
+        }
+      );
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
     <section
-      id="platform"
-      className="relative scroll-mt-20 border-t border-white/[0.07] bg-ink-950"
-      aria-label="Platform capabilities"
+      id="capabilities"
+      ref={sectionRef}
+      className="relative border-b border-[#222] bg-[#050608] overflow-hidden"
     >
-      <div className="arch-grid-fine pointer-events-none absolute inset-0 opacity-25" aria-hidden />
-
-      <div className="relative mx-auto max-w-[1400px] px-5 py-24 sm:px-8 lg:py-32">
-        <div className="mb-14 flex flex-wrap items-end justify-between gap-8">
-          <div className="max-w-[40rem]">
-            <Reveal variant="fade">
-              <p className="arch-mono mb-5 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.24em] text-ash-500">
-                <span className="block h-px w-8 bg-signal-500" aria-hidden />
-                platform
-              </p>
-            </Reveal>
-            <Reveal variant="mask" duration={1000}>
-              <h2 className="arch-display text-[clamp(2.1rem,4.6vw,3.6rem)] font-semibold leading-[0.98] tracking-[-0.04em] text-bone">
-                The whole lifecycle,
-                <br />
-                with nothing left over.
-              </h2>
-            </Reveal>
+      <Container>
+        <div className="flex flex-col items-center justify-center md:border-x border-[#222]">
+          {/* Section Header (Exact Vengeance UI Features Header) */}
+          <div className="flex flex-col items-center justify-center gap-3 px-4 py-12 text-center">
+            <Heading as="h2" variant="big">
+              Why ARCH? <br />
+              <span className="bg-gradient-to-b from-zinc-500 via-zinc-400 to-white bg-clip-text text-transparent">
+                Operations You Won&apos;t Find Anywhere
+              </span>
+            </Heading>
+            <SubHeading variant="big">
+              Crafted for high-severity production incidents — every primitive is interactive, deterministic, and self-hosted.
+            </SubHeading>
           </div>
-          <Reveal variant="rise" delay={140}>
-            <p className="max-w-[26rem] text-[14.5px] leading-[1.75] text-ash-400">
-              No seat-tiered feature gates, no module you have to email sales about. What is on this
-              page is what ships, and it is enforced on the server rather than hidden in the client.
-            </p>
-          </Reveal>
-        </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
-          {CARDS.map((card, index) => {
-            const Viz = card.viz;
-            return (
-              <Reveal
-                key={card.title}
-                variant="rise"
-                delay={index * 55}
-                duration={900}
-                className={card.span}
-              >
-                <article className="arch-panel card-lift group relative h-full overflow-hidden">
-                  <div className="flex h-full flex-col p-5 sm:p-6">
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="arch-mono text-[9.5px] font-bold uppercase tracking-[0.18em] text-signal-500/85">
-                        {card.eyebrow}
-                      </span>
-                      <span className="arch-mono arch-tabular text-[9.5px] text-ash-700">
-                        {String(index + 1).padStart(2, '0')}
-                      </span>
-                    </div>
-
-                    <h3 className="arch-display mt-3 text-[19px] font-semibold leading-tight tracking-[-0.02em] text-bone sm:text-[21px]">
-                      {card.title}
-                    </h3>
-                    <p className="mt-2.5 text-[13.5px] leading-[1.7] text-ash-400">{card.body}</p>
-
-                    <div className="mt-auto pt-1">
-                      <Viz />
-                    </div>
-                  </div>
-
-                  {/* Hover: a hairline that draws across the top edge. No bloom, no lift of colour. */}
-                  <span
-                    className="pointer-events-none absolute inset-x-0 top-0 h-px origin-left scale-x-0 bg-signal-500/70 transition-transform duration-700 ease-out group-hover:scale-x-100"
-                    aria-hidden
-                  />
-                </article>
-              </Reveal>
-            );
-          })}
-        </div>
-
-        {/* The tail of the capability list — dense two-column, no miniatures. */}
-        <Reveal variant="rise" delay={80} duration={900}>
-          <div className="mt-4 grid grid-cols-1 gap-px overflow-hidden rounded-xl border border-white/[0.07] bg-white/[0.07] sm:grid-cols-2 lg:grid-cols-3">
-            {ALSO.map((item) => (
-              <div key={item.title} className="group bg-ink-950 px-5 py-5 transition-colors duration-300 hover:bg-ink-900">
-                <p className="flex items-center gap-2 text-[13.5px] font-semibold text-bone">
-                  <span className="size-1 shrink-0 rounded-full bg-ash-700 transition-colors duration-300 group-hover:bg-signal-500" aria-hidden />
-                  {item.title}
-                </p>
-                <p className="mt-1.5 pl-3 text-[12.5px] leading-relaxed text-ash-500">{item.body}</p>
-              </div>
-            ))}
+          {/* Row 1: FeatureCard1 + FeatureCard2 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#222] border-t border-[#222] w-full md:h-[30rem]">
+            <div className="vui-feature-cell h-full">
+              <FeatureCard1 />
+            </div>
+            <div className="vui-feature-cell h-full">
+              <FeatureCard2 />
+            </div>
           </div>
-        </Reveal>
-      </div>
+
+          {/* Row 2: FeatureCard3 + FeatureCard4 */}
+          <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#222] border-t border-[#222] w-full md:h-[30rem]">
+            <div className="vui-feature-cell h-full">
+              <FeatureCard3 />
+            </div>
+            <div className="vui-feature-cell h-full">
+              <FeatureCard4 />
+            </div>
+          </div>
+        </div>
+      </Container>
     </section>
   );
 }
