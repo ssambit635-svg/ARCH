@@ -62,7 +62,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           ARCH
         </p>
 
-        <Link href="/" className="relative w-fit" aria-label="ARCH home" data-cursor>
+        <Link href="/" className="relative w-fit" aria-label="ARCH home">
           <Logo />
         </Link>
 

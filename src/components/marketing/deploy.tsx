@@ -143,7 +143,6 @@ export function Deploy() {
                       role="tab"
                       aria-selected={tab === entry.key}
                       onClick={() => setTab(entry.key)}
-                      data-cursor
                       className={`arch-mono relative shrink-0 px-4 py-3 text-[11px] font-semibold uppercase tracking-[0.12em] transition-colors duration-300 ${
                         tab === entry.key ? 'text-bone' : 'text-ash-600 hover:text-ash-300'
                       }`}
@@ -162,7 +161,6 @@ export function Deploy() {
                 <button
                   type="button"
                   onClick={copy}
-                  data-cursor={copied ? 'copied' : 'copy'}
                   className="arch-mono my-2 flex shrink-0 items-center gap-2 self-center rounded-md border border-white/[0.09] px-2.5 py-1.5 text-[10px] uppercase tracking-[0.12em] text-ash-400 transition-colors duration-300 hover:border-white/20 hover:text-bone"
                   aria-label="Copy commands"
                 >
@@ -210,7 +208,6 @@ export function Deploy() {
                   href="https://github.com/ssambit635-svg/ARCH"
                   target="_blank"
                   rel="noreferrer noopener"
-                  data-cursor="repo"
                   className="arch-mono inline-flex items-center gap-2 rounded-md border border-white/[0.1] px-3 py-1.5 text-[10.5px] uppercase tracking-[0.12em] text-ash-300 transition-colors duration-300 hover:border-signal-500/40 hover:text-signal-300"
                 >
                   read the docs →

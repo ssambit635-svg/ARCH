@@ -4,7 +4,7 @@ import { AI_NAME, PRODUCT_NAME } from '@/lib/brand';
  * ARCH mark — a load-bearing arch whose keystone is a live signal.
  *
  * The arch is the oldest structure that holds weight by redirecting it; the pulse inside it is
- * the system still beating. The keystone is drawn in sodium and *separated* from the arch by a
+ * the system still beating. The keystone is drawn in signal blue and *separated* from the arch by a
  * hairline gap, because the keystone is the one stone you never remove — the same way the audit
  * trail is the one record ARCH never lets you lose.
  *

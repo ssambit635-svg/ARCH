@@ -1,77 +1,131 @@
-import Link from 'next/link';
-import { IncidentPreview } from './incident-preview';
+'use client';
+
+import dynamic from 'next/dynamic';
+import { scrollToHash } from './use-lenis';
 
 /**
- * ARCH's landing hero: clear product copy, one useful demo, and no stock footage or decorative
- * network graphic. The sample incident preview below is deliberately interactive on touch and
- * pointer devices; the motion is only a small perspective response, never required to understand it.
+ * ARCH's landing hero.
+ *
+ * Composition is deliberately product-first and wordmark-led: one enormous logotype, one object
+ * you can actually turn over, and four lines of copy that say exactly what the product is. No
+ * stock footage, no decorative network graphic, no gradient-filled display type.
+ *
+ * Everything that moves lives in its own island so the shell, the copy and the SEO surface ship
+ * as HTML:
+ *   - `HeroBlob`  the WebGL object (drag, hover parallax, tap, scroll drift). Lazy, client-only.
+ *   - `HeroCta`   the "How it works?" disc, which routes through Lenis like every other anchor.
  */
+
+const HeroBlob = dynamic(() => import('./hero-blob').then((mod) => mod.HeroBlob), {
+  ssr: false,
+  loading: () => <div className="arch-blob is-loading" aria-hidden="true" />,
+});
+
+const FACETS = [
+  { label: 'Self-hosted', index: '/01' },
+  { label: 'Real-time', index: '/02' },
+  { label: 'Audit-ready', index: '/03' },
+] as const;
+
+const RESPONDERS = [
+  { initials: 'AK', name: 'Anya K.' },
+  { initials: 'RS', name: 'Rahul S.' },
+  { initials: 'MJ', name: 'Mira J.' },
+] as const;
+
+function HeroCta() {
+  return (
+    <button
+      type="button"
+      className="arch-hero-cta group"
+      onClick={() => scrollToHash('#lifecycle')}
+    >
+      <span className="arch-hero-cta-disc" aria-hidden="true">
+        <svg viewBox="0 0 16 16" fill="none">
+          <path d="M6 4.6v6.8L11.4 8 6 4.6Z" fill="currentColor" />
+        </svg>
+      </span>
+      <span className="arch-hero-cta-label">
+        How it works?
+        <span className="arch-hero-cta-rule" aria-hidden="true" />
+      </span>
+    </button>
+  );
+}
+
 export function Hero() {
   return (
-    <section className="arch-landing-hero relative isolate overflow-hidden" aria-labelledby="hero-title">
-      <div className="arch-hero-grid pointer-events-none absolute inset-0" aria-hidden="true" />
-      <div className="arch-hero-toplight pointer-events-none absolute inset-x-0 top-0" aria-hidden="true" />
+    <section className="arch-hero relative isolate overflow-hidden" aria-labelledby="hero-title">
+      <div className="arch-hero-grid" aria-hidden="true" />
 
-      <div className="relative mx-auto flex min-h-[calc(100svh-72px)] max-w-[1440px] flex-col px-5 pb-10 pt-24 sm:px-8 sm:pt-28 lg:pb-12">
-        <div className="mx-auto w-full max-w-[900px] text-center">
-          <p className="arch-hero-eyebrow mx-auto inline-flex items-center gap-2.5 rounded-full border border-white/[0.09] bg-white/[0.025] px-3.5 py-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-ash-300 sm:text-[11px]">
-            <span className="arch-hero-status-dot" aria-hidden="true" />
-            Incident response for engineering teams
-          </p>
+      <div className="relative mx-auto w-full max-w-[1440px] px-4 pb-10 sm:px-6 sm:pb-14 lg:px-8 lg:pb-16">
+        <div className="arch-hero-card">
+          <div className="arch-hero-card-light" aria-hidden="true" />
+          <div className="arch-hero-card-grid" aria-hidden="true" />
 
-          <h1
-            id="hero-title"
-            className="arch-landing-heading mx-auto mt-7 max-w-[22ch] text-bone"
-          >
-            Every incident.
-            <br className="hidden sm:block" /> One clear{' '}
-            <span className="arch-hero-heading-accent">response.</span>
-          </h1>
+          <div className="arch-hero-content">
+            <header className="arch-hero-topline">
+              <span className="arch-hero-chip arch-mono">
+                <span className="arch-hero-chip-dot" aria-hidden="true" />
+                Incident response for engineering teams
+              </span>
+              <span className="arch-hero-topline-meta arch-mono">
+                <span className="arch-hero-topline-dot" aria-hidden="true" />
+                ARCH V1.1 <span aria-hidden="true">·</span> human in the loop
+              </span>
+            </header>
 
-          <p className="mx-auto mt-5 max-w-[650px] text-pretty text-[14px] leading-[1.75] text-ash-300 sm:mt-6 sm:text-[16px]">
-            ARCH brings alerts, responders, status updates and the audit trail into one self-hosted
-            workspace — so your team can focus on resolving the issue, not coordinating around it.
-          </p>
+            <div className="arch-hero-canvas">
+              <h1 id="hero-title" className="arch-hero-wordmark">
+                ARCH<span className="arch-hero-wordmark-dot">.</span>
+              </h1>
+              <div className="arch-hero-object">
+                <HeroBlob />
+              </div>
+            </div>
 
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-3 sm:mt-8">
-            <Link
-              href="/register"
-              className="arch-hero-primary group inline-flex min-h-12 items-center justify-center gap-2.5 rounded-lg px-5 py-3 text-[14px] font-semibold transition-[background,transform,border-color] duration-200 active:scale-[0.985]"
-              data-cursor
-            >
-              Start with ARCH
-              <svg viewBox="0 0 16 16" fill="none" className="size-4 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden="true">
-                <path d="M3.25 8h9.5m-4-4 4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </Link>
-            <a
-              href="#platform"
-              className="arch-hero-secondary inline-flex min-h-12 items-center justify-center gap-2 rounded-lg px-5 py-3 text-[14px] font-medium transition-colors duration-200"
-            >
-              Explore the platform
-              <span className="arch-hero-secondary-arrow" aria-hidden="true">↓</span>
-            </a>
+            <div className="arch-hero-base">
+              <div className="arch-hero-lede">
+                <div className="arch-hero-social">
+                  <div className="arch-hero-avatars" aria-hidden="true">
+                    {RESPONDERS.map((person) => (
+                      <span key={person.initials} className="arch-hero-avatar" title={person.name}>
+                        {person.initials}
+                      </span>
+                    ))}
+                    <span className="arch-hero-avatar is-more">+9</span>
+                  </div>
+                  <p className="arch-hero-social-copy">
+                    <strong className="arch-tabular">2M+</strong>
+                    <span>Alerts routed to on-call</span>
+                  </p>
+                </div>
+
+                <p className="arch-hero-copy">
+                  The incident workspace that keeps your flow — with AI triage, blast-radius
+                  analysis and built-in status pages.
+                </p>
+                <div className="arch-hero-copy-rule" aria-hidden="true" />
+              </div>
+
+              <div className="arch-hero-aside">
+                <ul className="arch-hero-facets">
+                  {FACETS.map((facet) => (
+                    <li key={facet.index} className="arch-hero-facet">
+                      <span className="arch-hero-facet-label">{facet.label}</span>
+                      <span className="arch-hero-facet-leader" aria-hidden="true" />
+                      <span className="arch-hero-facet-index arch-mono">{facet.index}</span>
+                    </li>
+                  ))}
+                </ul>
+                <HeroCta />
+              </div>
+            </div>
           </div>
-
-          <p className="arch-mono mt-4 text-[9px] uppercase tracking-[0.15em] text-ash-600 sm:text-[10px]">
-            Self-hosted <span className="mx-2 text-ash-700">·</span> On-call coordination <span className="mx-2 text-ash-700">·</span> Audit-ready
-          </p>
-        </div>
-
-        <div className="arch-hero-stage mx-auto mt-8 w-full max-w-[1140px] sm:mt-10 lg:mt-11">
-          <IncidentPreview />
-        </div>
-
-        <div className="arch-hero-footnote mx-auto mt-5 flex max-w-[1140px] flex-wrap items-center justify-between gap-x-6 gap-y-2 px-1">
-          <span className="arch-mono inline-flex items-center gap-2 text-[9px] uppercase tracking-[0.13em] text-ash-600 sm:text-[10px]">
-            <span className="arch-hero-footnote-rule" aria-hidden="true" />
-            A clearer view, from first alert to resolution
-          </span>
-          <a href="#lifecycle" className="arch-hero-scroll-link arch-mono inline-flex items-center gap-2 text-[9px] uppercase tracking-[0.13em] text-ash-500 transition-colors hover:text-bone sm:text-[10px]">
-            See how ARCH works <span aria-hidden="true">↓</span>
-          </a>
         </div>
       </div>
     </section>
   );
 }
+
+export default Hero;

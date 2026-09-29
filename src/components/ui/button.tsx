@@ -7,7 +7,7 @@ import type { ReactNode } from 'react';
  *
  * Hierarchy is carried by *contrast and edge*, never by colour or glow:
  *   primary   bone on graphite — the highest-contrast thing on the surface
- *   signal    sodium wash — for ARCH-intelligence actions, the one warm accent
+ *   signal    signal-blue wash — for ARCH-intelligence actions, the one accent
  *   secondary hairline panel — the default, quiet
  *   danger    severity red — reserved for destructive acts
  *   ghost     no surface at all
@@ -32,7 +32,7 @@ const variants: Record<Variant, string> = {
   danger:
     'arch-sheen bg-sev-critical text-white shadow-[0_1px_0_0_rgb(255_255_255/0.22)_inset,0_10px_24px_-14px_rgb(0_0_0/0.9)] hover:brightness-110',
   ghost: 'text-ash-400 hover:bg-white/[0.055] hover:text-bone',
-  // The intelligence action: a sodium wash behind a hairline, text stays readable.
+  // The intelligence action: a signal-blue wash behind a hairline, text stays readable.
   ai: 'border border-signal-500/28 bg-signal-500/[0.09] text-signal-200 hover:border-signal-500/45 hover:bg-signal-500/[0.14] hover:text-signal-100',
 };
 

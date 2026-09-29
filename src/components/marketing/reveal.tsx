@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { ComponentType, CSSProperties, ElementType, ReactNode, Ref } from 'react';
-import { useBooted } from './boot-gate';
 
 /**
  * What the polymorphic wrapper is allowed to forward.
@@ -75,7 +74,6 @@ export function Reveal({
 }) {
   const ref = useRef<HTMLElement | null>(null);
   const [isShown, setIsShown] = useState(false);
-  const booted = useBooted();
 
   useEffect(() => {
     const node = ref.current;
@@ -87,9 +85,6 @@ export function Reveal({
       onShown?.();
       return;
     }
-
-    // Otherwise hold until the boot curtain lifts, so the hero's reveal is actually witnessed.
-    if (!booted) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
@@ -111,7 +106,7 @@ export function Reveal({
     // `onShown` is intentionally not a dependency: callers pass inline closures, and re-subscribing
     // the observer on every render would restart reveals mid-transition.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [booted, once, threshold, rootMargin]);
+  }, [once, threshold, rootMargin]);
 
   const Rendered = Tag as unknown as ComponentType<RevealTagProps>;
 

@@ -172,7 +172,6 @@ export function Topology() {
                   role="tab"
                   aria-selected={view === key}
                   onClick={() => setView(key)}
-                  data-cursor
                   className={`relative rounded-md px-3.5 py-2 text-left transition-colors duration-300 ${
                     view === key ? 'bg-bone text-ink-1000' : 'text-ash-400 hover:text-bone'
                   }`}
@@ -247,7 +246,6 @@ export function Topology() {
                           <button
                             type="button"
                             onClick={() => setInspected(hop.id)}
-                            data-cursor
                             className="arch-mono flex items-center gap-1.5 rounded-[4px] border border-white/[0.08] bg-white/[0.02] px-1.5 py-1 text-[10px] text-ash-300 transition hover:border-white/20 hover:text-bone"
                             title={`hop ${hop.depth} from ${inspected}`}
                           >
@@ -279,7 +277,6 @@ export function Topology() {
                       <button
                         type="button"
                         onClick={() => setRackIndex(index)}
-                        data-cursor
                         className={`flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors duration-250 ${
                           rackIndex === index ? 'bg-white/[0.045]' : 'hover:bg-white/[0.025]'
                         }`}
@@ -356,7 +353,6 @@ export function Topology() {
                         onMouseEnter={() => setInspected(node.id)}
                         onFocus={() => setInspected(node.id)}
                         onClick={() => setInspected(node.id)}
-                        data-cursor
                         className={`group relative flex w-full items-center gap-4 px-4 py-2.5 text-left transition-colors duration-200 ${
                           isActive ? 'bg-white/[0.045]' : 'hover:bg-white/[0.025]'
                         }`}
