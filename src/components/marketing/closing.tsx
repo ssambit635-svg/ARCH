@@ -112,7 +112,6 @@ export function Closing() {
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
             <Link
               href="/register"
-              data-cursor="start"
               className="arch-sheen group inline-flex items-center gap-2.5 rounded-lg bg-bone px-7 py-4 text-[15px] font-semibold text-ink-1000 shadow-[0_1px_0_0_rgb(255_255_255/0.55)_inset,0_20px_44px_-22px_rgb(0_0_0/0.95)] transition-all duration-300 hover:bg-white active:scale-[0.985]"
             >
               Create your organization
@@ -123,7 +122,6 @@ export function Closing() {
             <Link
               href="/status/demo"
               prefetch={false}
-              data-cursor="demo"
               className="inline-flex items-center gap-2.5 rounded-lg border border-white/[0.12] bg-white/[0.03] px-6 py-4 text-[15px] font-medium text-bone transition-all duration-300 hover:border-white/25 hover:bg-white/[0.07]"
             >
               <span className="size-1.5 rounded-full bg-state-ok" aria-hidden />
@@ -227,7 +225,6 @@ export function Footer() {
                           href={link.href}
                           target="_blank"
                           rel="noreferrer noopener"
-                          data-cursor
                           className="group inline-flex items-center gap-1.5 text-[13px] text-ash-400 transition-colors duration-250 hover:text-bone"
                         >
                           {link.label}
@@ -239,7 +236,6 @@ export function Footer() {
                         <Link
                           href={link.href}
                           prefetch={link.href.startsWith('#') ? undefined : false}
-                          data-cursor
                           className="text-[13px] text-ash-400 transition-colors duration-250 hover:text-bone"
                         >
                           {link.label}

@@ -147,10 +147,21 @@
 }
 
 .arch-hero-topline-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   color: #5d6b7c;
   font-size: 10px;
   letter-spacing: 0.15em;
   text-transform: uppercase;
+}
+
+.arch-hero-topline-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--arch-accent);
+  animation: pulse-dot 2.4s ease-in-out infinite;
 }
 
 /* ---- The canvas: wordmark at display scale, object at the right ------------------ */
@@ -559,6 +570,15 @@
 @media (max-width: 639px) {
   .arch-hero-content {
     min-height: 0;
+  }
+
+  /* The eyebrow is mono and set in caps: at 360px it only fits if it shrinks first. */
+  .arch-hero-chip {
+    max-width: 100%;
+    padding: 6px 11px 6px 9px;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    white-space: normal;
   }
 
   .arch-hero-topline-meta {
@@ -1168,7 +1188,6 @@
 }
 
 @media (max-width: 650px) {
-  .arch-landing-heading { font-size: clamp(2.3rem, 10vw, 3.5rem); letter-spacing: -0.065em; }
   .arch-hero-grid { background-size: 44px 44px; }
   .arch-hero-stage { margin-top: 32px; perspective: none; }
   .arch-preview-stage { transform: none !important; transition: none; will-change: auto; }
@@ -1215,8 +1234,6 @@
   .arch-preview-services-foot { align-items: flex-start; margin-top: 9px; font-size: 7px; }
   .arch-preview-statusbar { min-height: 32px; gap: 7px; font-size: 6px; }
   .arch-preview-status-right { display: none; }
-  .arch-hero-footnote { margin-top: 14px; }
-  .arch-hero-footnote > span, .arch-hero-footnote > a { font-size: 8px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

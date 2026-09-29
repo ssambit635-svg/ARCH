@@ -31,7 +31,6 @@ const RESPONDERS = [
   { initials: 'AK', name: 'Anya K.' },
   { initials: 'RS', name: 'Rahul S.' },
   { initials: 'MJ', name: 'Mira J.' },
-  { initials: 'DL', name: 'Dan L.' },
 ] as const;
 
 function HeroCta() {
@@ -40,7 +39,6 @@ function HeroCta() {
       type="button"
       className="arch-hero-cta group"
       onClick={() => scrollToHash('#lifecycle')}
-      data-cursor
     >
       <span className="arch-hero-cta-disc" aria-hidden="true">
         <svg viewBox="0 0 16 16" fill="none">
@@ -72,7 +70,8 @@ export function Hero() {
                 Incident response for engineering teams
               </span>
               <span className="arch-hero-topline-meta arch-mono">
-                Self-hosted <span aria-hidden="true">·</span> On-call <span aria-hidden="true">·</span> Audit-ready
+                <span className="arch-hero-topline-dot" aria-hidden="true" />
+                ARCH V1.1 <span aria-hidden="true">·</span> human in the loop
               </span>
             </header>
 

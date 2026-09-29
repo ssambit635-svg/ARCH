@@ -288,7 +288,7 @@ export function Platform() {
                 duration={900}
                 className={card.span}
               >
-                <article className="arch-panel card-lift group relative h-full overflow-hidden" data-cursor>
+                <article className="arch-panel card-lift group relative h-full overflow-hidden">
                   <div className="flex h-full flex-col p-5 sm:p-6">
                     <div className="flex items-center justify-between gap-3">
                       <span className="arch-mono text-[9.5px] font-bold uppercase tracking-[0.18em] text-signal-500/85">

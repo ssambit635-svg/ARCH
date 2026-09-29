@@ -155,7 +155,6 @@ export function SketchfabStage({
           target="_blank"
           rel="noreferrer noopener"
           className="arch-mono pointer-events-auto text-[10px] tracking-[0.08em] text-ash-500 underline decoration-white/20 underline-offset-4 transition hover:text-signal-300 hover:decoration-signal-500/50"
-          data-cursor
         >
           {model.licence} · {model.author} / Sketchfab
         </a>
