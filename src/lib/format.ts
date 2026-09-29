@@ -69,3 +69,28 @@ export function slugify(value: string): string {
 export function pluralize(count: number, singular: string, plural = `${singular}s`): string {
   return `${count} ${count === 1 ? singular : plural}`;
 }
+
+/**
+ * Compact count for badges: 999 → "999", 1_234 → "1.2k", 12_000 → "12k", 3_400_000 → "3.4m".
+ * Truncates instead of rounding, so a badge can never claim more than the real number
+ * (1_999 is "1.9k", not "2k"). Integer arithmetic only, so 4_100 is never "4k" because of a float.
+ */
+export function formatCompactCount(value: number): string {
+  if (!Number.isFinite(value)) return '0';
+  const count = Math.max(0, Math.floor(value));
+  if (count < 1_000) return String(count);
+  const units: ReadonlyArray<readonly [number, string]> = [
+    [1_000_000_000, 'b'],
+    [1_000_000, 'm'],
+    [1_000, 'k'],
+  ];
+  for (const [size, suffix] of units) {
+    if (count >= size) {
+      const tenths = Math.floor((count * 10) / size);
+      const whole = Math.floor(tenths / 10);
+      const fraction = tenths % 10;
+      return fraction === 0 ? `${whole}${suffix}` : `${whole}.${fraction}${suffix}`;
+    }
+  }
+  return String(count);
+}

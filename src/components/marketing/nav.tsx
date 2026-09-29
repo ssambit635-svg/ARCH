@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { GITHUB_REPO_URL } from '@/lib/brand';
+import { GithubStarCount } from './github-star-count';
 
 const NAV_ITEMS = [
   { href: '#workspace', label: 'Workspace' },
@@ -95,7 +97,7 @@ export function MarketingNav() {
             </button>
 
             <a
-              href="https://github.com/ssambit635-svg/ARCH"
+              href={GITHUB_REPO_URL}
               target="_blank"
               rel="noreferrer"
               className="github-star-cta group relative hidden md:inline-flex h-9 items-center gap-2 overflow-hidden rounded-xl border border-zinc-700/80 bg-zinc-950/90 px-3 text-xs font-semibold text-zinc-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] transition-all duration-300 hover:-translate-y-0.5 hover:border-zinc-500"
@@ -106,8 +108,8 @@ export function MarketingNav() {
                 </svg>
               </span>
               <span className="inline-flex items-center gap-1 rounded-md border border-zinc-700/90 bg-zinc-900/95 px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-zinc-100">
-                <span className="text-[#FEF62A]">★</span>
-                <span>2.4k</span>
+                <span aria-hidden className="text-[#FEF62A]">★</span>
+                <GithubStarCount />
               </span>
             </a>
 
