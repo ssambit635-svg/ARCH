@@ -1,416 +1,606 @@
 'use client';
 
-import dynamic from 'next/dynamic';
-import { useMemo, useState } from 'react';
-import { Reveal } from './reveal';
-import { SketchfabStage, RACK_MODELS } from './sketchfab-stage';
-import { EDGES, NODES } from './topology-scene';
-import { usePrefersReducedMotion, useViewportWidth } from '@/lib/motion';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { TopologyScene, type BrainNode, type ServiceStatus } from './topology-scene';
+import { Container, Heading, SubHeading, cn } from './vui-primitives';
 
-/**
- * Topology — blast radius, made interactive.
- *
- * ARCH computes what a change or a failure can touch by walking the service dependency graph. This
- * section hands the visitor that same graph to play with: hover a node in WebGL or a row in the
- * list and one inspector updates from both, which is exactly how the product's own inspector behaves.
- *
- * Two stages, switchable:
- *   graph — the procedural dependency topology, rendered locally, shaped by the incident data
- *   rack  — a real CC-BY Sketchfab model in Sketchfab's own viewer, for material truth
- *
- * The switcher is honest about the trade-off: the graph needs no network and is data-shaped; the
- * rack is a scanned asset and is lazy-mounted only while it is the selected stage.
- */
+const BRAIN_NODES: BrainNode[] = [
+  {
+    id: 'edge-proxy',
+    name: 'edge-proxy',
+    lobe: 'Prefrontal Edge Gate',
+    tier: 'Edge',
+    status: 'OPERATIONAL',
+    uptime: '99.99%',
+    latency: '14ms',
+    owner: 'team-edge',
+    x: 20,
+    y: 44,
+    color: '#22d3ee',
+    deps: ['api-gateway', 'status-page'],
+    summary: 'Anycast TLS termination and DDoS rate-limiting across 34 edge POPs.',
+  },
+  {
+    id: 'api-gateway',
+    name: 'api-gateway',
+    lobe: 'Frontal Router Cortex',
+    tier: 'Edge',
+    status: 'OPERATIONAL',
+    uptime: '99.98%',
+    latency: '32ms',
+    owner: 'team-edge',
+    x: 27,
+    y: 31,
+    color: '#22d3ee',
+    deps: ['auth-svc', 'checkout-api', 'payments-svc', 'search-index'],
+    summary: 'Request routing, JWT verification, and tenant rate-budget enforcement.',
+  },
+  {
+    id: 'auth-svc',
+    name: 'auth-svc',
+    lobe: 'Broca Identity Enclave',
+    tier: 'Core',
+    status: 'OPERATIONAL',
+    uptime: '99.99%',
+    latency: '19ms',
+    owner: 'team-identity',
+    x: 32,
+    y: 53,
+    color: '#FEF62A',
+    deps: ['postgres-primary', 'redis-cache'],
+    summary: 'Session issuance, PBKDF2-SHA256 verification, and RBAC policy evaluation.',
+  },
+  {
+    id: 'checkout-api',
+    name: 'checkout-api',
+    lobe: 'Motor Checkout Cortex',
+    tier: 'Core',
+    status: 'DEGRADED',
+    uptime: '99.82%',
+    latency: '4,210ms',
+    owner: 'team-commerce',
+    x: 43,
+    y: 23,
+    color: '#FEF62A',
+    deps: ['payments-svc', 'postgres-primary', 'redis-cache', 'arch-v1.1'],
+    summary: 'Order orchestration experiencing p99 latency spike due to upstream DB lock contention.',
+  },
+  {
+    id: 'arch-v1.1',
+    name: 'arch-v1.1',
+    lobe: 'Thalamocortical AI Core',
+    tier: 'Platform',
+    status: 'OPERATIONAL',
+    uptime: '99.99%',
+    latency: '140ms',
+    owner: 'team-sre',
+    x: 54,
+    y: 35,
+    color: '#FEF62A',
+    deps: ['postgres-primary', 'audit-ledger', 'status-page'],
+    summary: 'Native incident intelligence engine correlating deploy diffs, SQL locks, and blast radius.',
+  },
+  {
+    id: 'payments-svc',
+    name: 'payments-svc',
+    lobe: 'Parietal Settlement Bus',
+    tier: 'Core',
+    status: 'DEGRADED',
+    uptime: '99.87%',
+    latency: '1,480ms',
+    owner: 'team-payments',
+    x: 62,
+    y: 24,
+    color: '#fbbf24',
+    deps: ['postgres-primary', 'audit-ledger'],
+    summary: 'Idempotent ledger settlement awaiting connection pool release on postgres-primary.',
+  },
+  {
+    id: 'postgres-primary',
+    name: 'postgres-primary',
+    lobe: 'Hippocampal Primary DB',
+    tier: 'Data',
+    status: 'MAJOR_OUTAGE',
+    uptime: '99.41%',
+    latency: '1,840ms',
+    owner: 'team-storage',
+    x: 48,
+    y: 51,
+    color: '#f43f5e',
+    deps: ['audit-ledger'],
+    summary: 'Primary PostgreSQL 16 cluster at 200/200 active connections following migration #418.',
+  },
+  {
+    id: 'redis-cache',
+    name: 'redis-cache',
+    lobe: 'Temporal Memory Ring',
+    tier: 'Data',
+    status: 'OPERATIONAL',
+    uptime: '99.99%',
+    latency: '2.1ms',
+    owner: 'team-storage',
+    x: 38,
+    y: 65,
+    color: '#22d3ee',
+    deps: [],
+    summary: 'Sub-millisecond read-through session cache and deduplication fingerprint window.',
+  },
+  {
+    id: 'search-index',
+    name: 'search-index',
+    lobe: 'Associative Vector Index',
+    tier: 'Data',
+    status: 'OPERATIONAL',
+    uptime: '99.96%',
+    latency: '28ms',
+    owner: 'team-search',
+    x: 65,
+    y: 46,
+    color: '#c084fc',
+    deps: ['postgres-primary'],
+    summary: 'Full-text incident timeline index and historical postmortem similarity search.',
+  },
+  {
+    id: 'status-page',
+    name: 'status-page',
+    lobe: 'Occipital Status Lobe',
+    tier: 'Platform',
+    status: 'OPERATIONAL',
+    uptime: '100.0%',
+    latency: '18ms',
+    owner: 'team-sre',
+    x: 78,
+    y: 38,
+    color: '#34d399',
+    deps: ['audit-ledger'],
+    summary: 'Public 90-day uptime ledger and subscriber advisory broadcaster (/status/arch).',
+  },
+  {
+    id: 'audit-ledger',
+    name: 'audit-ledger',
+    lobe: 'Cerebellar SHA-256 Ledger',
+    tier: 'Platform',
+    status: 'OPERATIONAL',
+    uptime: '100.0%',
+    latency: '9ms',
+    owner: 'team-security',
+    x: 74,
+    y: 58,
+    color: '#FEF62A',
+    deps: [],
+    summary: 'Append-only cryptographic audit log recording every state transition and actor signature.',
+  },
+  {
+    id: 'webhook-ingest',
+    name: 'webhook-ingest',
+    lobe: 'Brainstem Telemetry Ingest',
+    tier: 'Platform',
+    status: 'OPERATIONAL',
+    uptime: '99.99%',
+    latency: '11ms',
+    owner: 'team-sre',
+    x: 54,
+    y: 76,
+    color: '#22d3ee',
+    deps: ['arch-v1.1', 'postgres-primary', 'audit-ledger'],
+    summary: 'HMAC-SHA256 verified alert intake from Prometheus Alertmanager, Datadog, and Sentry.',
+  },
+];
 
-const TopologyScene = dynamic(() => import('./topology-scene').then((mod) => mod.TopologyScene), {
-  ssr: false,
-  loading: () => (
-    <div className="arch-grid-fine grid size-full place-items-center bg-ink-950">
-      <span className="arch-mono text-[10.5px] uppercase tracking-[0.16em] text-ash-600">compiling graph…</span>
-    </div>
-  ),
-});
-
-/** Operational detail per node. In the product this is a real query; here it is a fixed snapshot so
- *  the inspector is never showing a number the graph disagrees with. */
-const INFO: Record<string, { region: string; status: 'ok' | 'degraded' | 'down' | 'maint'; p99: string; owner: string }> = {
-  cdn: { region: 'global · 42 PoP', status: 'ok', p99: '11 ms', owner: 'platform' },
-  lb: { region: 'eu-west-1', status: 'ok', p99: '3 ms', owner: 'platform' },
-  gateway: { region: 'eu-west · us-east', status: 'ok', p99: '38 ms', owner: 'edge-team' },
-  checkout: { region: 'eu-west-1', status: 'down', p99: '4.21 s', owner: 'payments-squad' },
-  payments: { region: 'eu-west-1 · PCI', status: 'degraded', p99: '612 ms', owner: 'payments-squad' },
-  auth: { region: 'multi', status: 'ok', p99: '44 ms', owner: 'identity' },
-  webhooks: { region: 'eu-west-1', status: 'ok', p99: '19 ms', owner: 'platform' },
-  notify: { region: 'eu-west-1', status: 'ok', p99: '—', owner: 'platform' },
-  pg: { region: 'eu-west-1 · primary', status: 'degraded', p99: '218 ms', owner: 'data-team' },
-  replica: { region: 'eu-west-1', status: 'ok', p99: '96 ms', owner: 'data-team' },
-  redis: { region: 'eu-west-1', status: 'ok', p99: '2 ms', owner: 'data-team' },
-  queue: { region: 'eu-west-1', status: 'ok', p99: '7 ms', owner: 'platform' },
-  arch: { region: 'in-process', status: 'ok', p99: '78 ms', owner: 'arch-v1.1' },
-  audit: { region: 'same tx', status: 'ok', p99: '1 ms', owner: 'arch-v1.1' },
+const STATUS_META: Record<
+  ServiceStatus,
+  { label: string; badge: string; dot: string }
+> = {
+  OPERATIONAL: {
+    label: 'Operational',
+    badge: 'border-ok-500/30 bg-ok-500/10 text-ok-400',
+    dot: 'bg-ok-400',
+  },
+  DEGRADED: {
+    label: 'Degraded',
+    badge: 'border-warn-500/35 bg-warn-500/15 text-warn-400',
+    dot: 'bg-warn-400',
+  },
+  PARTIAL_OUTAGE: {
+    label: 'Partial outage',
+    badge: 'border-warn-500/35 bg-warn-500/15 text-warn-400',
+    dot: 'bg-warn-400',
+  },
+  MAJOR_OUTAGE: {
+    label: 'Major outage',
+    badge: 'border-crit-500/40 bg-crit-500/15 text-crit-400',
+    dot: 'bg-crit-400',
+  },
 };
-
-const STATUS_STYLE: Record<string, { text: string; dot: string; label: string }> = {
-  ok: { text: 'text-state-ok', dot: 'bg-state-ok', label: 'operational' },
-  degraded: { text: 'text-sev-high', dot: 'bg-sev-high', label: 'degraded' },
-  down: { text: 'text-sev-critical', dot: 'bg-sev-critical', label: 'outage' },
-  maint: { text: 'text-state-info', dot: 'bg-state-info', label: 'maintenance' },
-};
-
-const nodeById = new Map(NODES.map((node) => [node.id, node]));
-
-type View = 'graph' | 'rack';
 
 export function Topology() {
-  const reduced = usePrefersReducedMotion();
-  const width = useViewportWidth();
-  const [view, setView] = useState<View>('graph');
-  const [rackIndex, setRackIndex] = useState(0);
-  const [inspected, setInspected] = useState<string | null>('checkout');
+  const sectionRef = useRef<HTMLElement>(null);
+  const [selectedId, setSelectedId] = useState<string>('postgres-primary');
+  const [tierFilter, setTierFilter] = useState<'ALL' | BrainNode['tier']>('ALL');
+  const [cascadeCount, setCascadeCount] = useState(0);
+  const [isCascading, setIsCascading] = useState(false);
 
-  const degrees = useMemo(() => {
-    const upstream = new Map<string, number>();
-    const downstream = new Map<string, number>();
-    for (const edge of EDGES) {
-      downstream.set(edge.from, (downstream.get(edge.from) ?? 0) + 1);
-      upstream.set(edge.to, (upstream.get(edge.to) ?? 0) + 1);
-    }
-    return { upstream, downstream };
-  }, []);
+  const selected = useMemo(
+    () => BRAIN_NODES.find((s) => s.id === selectedId) ?? BRAIN_NODES[0]!,
+    [selectedId]
+  );
 
-  /**
-   * Blast radius: everything reachable from the inspected node, counting dependencies as
-   * bidirectional the way a real saturation event travels — a saturated database takes its callers
-   * down, and a dead caller stops feeding its dependents.
-   */
-  const blast = useMemo(() => {
-    if (!inspected) return [];
-    const adjacency = new Map<string, string[]>();
-    for (const edge of EDGES) {
-      const forward = adjacency.get(edge.from) ?? [];
-      forward.push(edge.to);
-      adjacency.set(edge.from, forward);
-      const backward = adjacency.get(edge.to) ?? [];
-      backward.push(edge.from);
-      adjacency.set(edge.to, backward);
+  // Compute upstream + downstream synaptic blast radius for the selected cortical node
+  const { upstream, downstream, activeSet } = useMemo(() => {
+    const down = new Set<string>(selected.deps);
+    const up = new Set<string>();
+    for (const s of BRAIN_NODES) {
+      if (s.deps.includes(selected.id)) up.add(s.id);
     }
-    const seen = new Set<string>([inspected]);
-    let frontier = [inspected];
-    let depth = 0;
-    const rings: { id: string; depth: number }[] = [];
-    while (frontier.length && depth < 6) {
-      depth += 1;
-      const next: string[] = [];
-      for (const id of frontier) {
-        for (const neighbour of adjacency.get(id) ?? []) {
-          if (seen.has(neighbour)) continue;
-          seen.add(neighbour);
-          next.push(neighbour);
-          rings.push({ id: neighbour, depth });
+    const all = new Set<string>([selected.id, ...down, ...up]);
+    return { upstream: up, downstream: down, activeSet: all };
+  }, [selected]);
+
+  const filteredNodes = useMemo(
+    () =>
+      tierFilter === 'ALL'
+        ? BRAIN_NODES
+        : BRAIN_NODES.filter((n) => n.tier === tierFilter),
+    [tierFilter]
+  );
+
+  const triggerSynapticCascade = () => {
+    if (isCascading) return;
+    setIsCascading(true);
+    const sequence = [
+      'webhook-ingest',
+      'postgres-primary',
+      'checkout-api',
+      'payments-svc',
+      'arch-v1.1',
+      'status-page',
+      'audit-ledger',
+      'postgres-primary',
+    ];
+    sequence.forEach((nodeId, idx) => {
+      window.setTimeout(() => {
+        setSelectedId(nodeId);
+        setCascadeCount((c) => c + 1);
+        if (idx === sequence.length - 1) {
+          setIsCascading(false);
         }
-      }
-      frontier = next;
-    }
-    return rings;
-  }, [inspected]);
+      }, idx * 420);
+    });
+  };
 
-  const activeNode = NODES.find((node) => node.id === inspected);
-  const activeInfo = inspected ? INFO[inspected] : undefined;
-  const activeStatus = activeInfo ? STATUS_STYLE[activeInfo.status] : undefined;
-  const rack = RACK_MODELS[rackIndex];
-  const render3D = !reduced && width >= 720;
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) return;
+
+    gsap.registerPlugin(ScrollTrigger);
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        '.neural-reveal',
+        { y: 26, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.8,
+          stagger: 0.1,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: 'top 80%',
+          },
+        }
+      );
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
 
   return (
     <section
       id="topology"
-      className="relative scroll-mt-20 overflow-hidden border-t border-white/[0.07] bg-ink-1000"
-      aria-label="Service topology and blast radius"
+      ref={sectionRef}
+      className="relative border-b border-[#222] bg-[#050608] overflow-hidden"
     >
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{ background: 'radial-gradient(78% 52% at 22% 8%, rgb(255 68 56 / 0.045), transparent 66%)' }}
-        aria-hidden
-      />
+      <Container>
+        <div className="md:border-x border-[#222]">
+          {/* Section Header */}
+          <div className="neural-reveal flex flex-col gap-5 border-b border-[#222] px-5 py-10 md:px-8 lg:flex-row lg:items-end lg:justify-between lg:px-10">
+            <div>
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3 py-1 font-mono text-[11px] font-medium text-zinc-300">
+                <span className="size-1.5 rounded-full bg-[#FEF62A]" />
+                <span>NEURAL CORTEX · SYNAPTIC BLAST-RADIUS ENGINE</span>
+              </div>
+              <Heading as="h2" variant="big" className="text-left">
+                Interactive Neural{' '}
+                <span className="bg-gradient-to-b from-zinc-400 via-zinc-200 to-white bg-clip-text text-transparent">
+                  Brain Topology
+                </span>
+              </Heading>
+              <SubHeading className="mt-2 max-w-2xl text-left">
+                Click any cortical node on the neural brain or hover your cursor across the plexus to trace upstream callers, downstream dependencies, and real-time blast radius.
+              </SubHeading>
+            </div>
 
-      <div className="relative mx-auto max-w-[1400px] px-5 py-24 sm:px-8 lg:py-32">
-        <div className="mb-12 flex flex-wrap items-end justify-between gap-8 lg:mb-16">
-          <div className="max-w-[38rem]">
-            <Reveal variant="fade">
-              <p className="arch-mono mb-5 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.24em] text-ash-500">
-                <span className="block h-px w-8 bg-signal-500" aria-hidden />
-                topology
-              </p>
-            </Reveal>
-            <Reveal variant="mask" duration={1000}>
-              <h2 className="arch-display text-[clamp(2.1rem,4.6vw,3.6rem)] font-semibold leading-[0.98] tracking-[-0.04em] text-bone">
-                Know what breaks
-                <br />
-                before you ship it.
-              </h2>
-            </Reveal>
-            <Reveal variant="rise" delay={120}>
-              <p className="mt-6 text-[15px] leading-[1.75] text-ash-400">
-                Every service declares what it depends on. ARCH walks that graph in both directions
-                the moment an alert or a deploy lands, and tells you the blast radius before you find
-                out from a customer. Hover anything — the inspector follows.
-              </p>
-            </Reveal>
-          </div>
-
-          {/* Stage switcher */}
-          <Reveal variant="rise" delay={200}>
-            <div className="inline-flex rounded-lg border border-white/[0.09] bg-white/[0.02] p-1" role="tablist" aria-label="3D stage">
-              {(
-                [
-                  ['graph', 'Dependency graph', 'local · WebGL'],
-                  ['rack', 'Rack', 'Sketchfab · CC BY'],
-                ] as [View, string, string][]
-              ).map(([key, label, hint]) => (
-                <button
-                  key={key}
-                  type="button"
-                  role="tab"
-                  aria-selected={view === key}
-                  onClick={() => setView(key)}
-                  className={`relative rounded-md px-3.5 py-2 text-left transition-colors duration-300 ${
-                    view === key ? 'bg-bone text-ink-1000' : 'text-ash-400 hover:text-bone'
-                  }`}
-                >
-                  <span className="block text-[12.5px] font-semibold leading-tight">{label}</span>
-                  <span
-                    className={`arch-mono block text-[9px] uppercase tracking-[0.1em] leading-tight ${
-                      view === key ? 'text-ink-1000/55' : 'text-ash-600'
-                    }`}
+            {/* Interactive Controls: Lobe Filters + Synaptic Cascade Trigger */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex rounded-xl border border-[#222] bg-[#0b0c10] p-1 font-mono text-[11px]">
+                {(['ALL', 'Edge', 'Core', 'Data', 'Platform'] as const).map((tier) => (
+                  <button
+                    key={tier}
+                    type="button"
+                    onClick={() => setTierFilter(tier)}
+                    className={cn(
+                      'rounded-lg px-2.5 py-1 transition-colors cursor-pointer',
+                      tierFilter === tier
+                        ? 'bg-white text-black font-semibold'
+                        : 'text-zinc-400 hover:text-white'
+                    )}
                   >
-                    {hint}
-                  </span>
-                </button>
-              ))}
+                    {tier === 'ALL' ? 'All Lobes (12)' : tier}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={triggerSynapticCascade}
+                disabled={isCascading}
+                className="inline-flex items-center gap-2 rounded-xl border border-[#FEF62A]/60 bg-[#FEF62A] px-3.5 py-2 font-mono text-xs font-semibold text-black shadow-[0_10px_28px_rgba(254,246,42,0.2)] transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+              >
+                <span>⚡</span>
+                <span>{isCascading ? 'Cascading Synapse...' : 'Pulse Neural Cortex'}</span>
+              </button>
             </div>
-          </Reveal>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,20rem)_minmax(0,1fr)] lg:gap-8">
-          {/* ---- Inspector ---- */}
-          <div className="order-2 space-y-4 lg:order-1">
-            <div className="arch-panel overflow-hidden">
-              <div className="flex items-center justify-between border-b border-white/[0.07] bg-white/[0.02] px-4 py-2.5">
-                <span className="arch-mono text-[9.5px] uppercase tracking-[0.16em] text-ash-500">inspector</span>
-                <span className="arch-mono text-[9.5px] tracking-[0.08em] text-ash-600">
-                  {activeNode?.tier ?? '—'}
-                </span>
-              </div>
-
-              <div className="px-4 py-4">
-                <div className="flex items-start justify-between gap-3">
-                  <p className="arch-mono truncate text-[14px] font-semibold text-bone">{activeNode?.label ?? inspected ?? '—'}</p>
-                  {activeStatus && (
-                    <span className={`arch-mono flex shrink-0 items-center gap-1.5 text-[9.5px] font-bold uppercase tracking-[0.1em] ${activeStatus.text}`}>
-                      <span className={`size-1.5 rounded-full ${activeStatus.dot}`} />
-                      {activeStatus.label}
-                    </span>
-                  )}
-                </div>
-
-                <dl className="arch-mono mt-4 space-y-2 text-[11px]">
-                  {[
-                    ['region', activeInfo?.region ?? '—'],
-                    ['p99', activeInfo?.p99 ?? '—'],
-                    ['owner', activeInfo?.owner ?? '—'],
-                    ['depends on', String(degrees.upstream.get(inspected ?? '') ?? 0)],
-                    ['depended on by', String(degrees.downstream.get(inspected ?? '') ?? 0)],
-                  ].map(([key, value]) => (
-                    <div key={key} className="flex items-baseline justify-between gap-3 border-b border-white/[0.05] pb-1.5 last:border-0">
-                      <dt className="text-[10px] uppercase tracking-[0.12em] text-ash-600">{key}</dt>
-                      <dd className="arch-tabular truncate text-right text-ash-200">{value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-
-              <div className="border-t border-white/[0.07] bg-white/[0.015] px-4 py-3.5">
-                <p className="arch-mono mb-2.5 flex items-baseline justify-between text-[9.5px] uppercase tracking-[0.14em] text-ash-500">
-                  blast radius
-                  <span className="arch-tabular text-[13px] font-bold normal-case tracking-[-0.01em] text-sev-critical">
-                    {blast.length}
-                  </span>
-                </p>
-                {blast.length === 0 ? (
-                  <p className="text-[11.5px] leading-relaxed text-ash-600">Isolated — nothing depends on this service.</p>
-                ) : (
-                  <ul className="flex flex-wrap gap-1.5">
-                    {blast.slice(0, 12).map((hop) => {
-                      const status = INFO[hop.id]?.status ?? 'ok';
-                      return (
-                        <li key={`${hop.id}-${hop.depth}`}>
-                          <button
-                            type="button"
-                            onClick={() => setInspected(hop.id)}
-                            className="arch-mono flex items-center gap-1.5 rounded-[4px] border border-white/[0.08] bg-white/[0.02] px-1.5 py-1 text-[10px] text-ash-300 transition hover:border-white/20 hover:text-bone"
-                            title={`hop ${hop.depth} from ${inspected}`}
-                          >
-                            <span className={`size-1 rounded-full ${STATUS_STYLE[status]?.dot ?? 'bg-ash-500'}`} />
-                            {nodeById.get(hop.id)?.label ?? hop.id}
-                            <span className="arch-tabular text-ash-700">{hop.depth}</span>
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-                <p className="mt-2.5 text-[10.5px] leading-relaxed text-ash-600">
-                  Numbers are hop distance. A dependency graph fails in both directions, so ARCH walks
-                  it both ways.
-                </p>
-              </div>
-            </div>
-
-            {/* Rack model picker, only relevant to the Sketchfab stage. */}
-            {view === 'rack' && (
-              <div className="arch-panel overflow-hidden">
-                <p className="arch-mono border-b border-white/[0.07] bg-white/[0.02] px-4 py-2.5 text-[9.5px] uppercase tracking-[0.16em] text-ash-500">
-                  models · CC BY
-                </p>
-                <ul className="divide-y divide-white/[0.06]">
-                  {RACK_MODELS.map((model, index) => (
-                    <li key={model.uid}>
-                      <button
-                        type="button"
-                        onClick={() => setRackIndex(index)}
-                        className={`flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors duration-250 ${
-                          rackIndex === index ? 'bg-white/[0.045]' : 'hover:bg-white/[0.025]'
-                        }`}
-                      >
-                        <span className="min-w-0">
-                          <span className={`block truncate text-[12.5px] font-medium ${rackIndex === index ? 'text-bone' : 'text-ash-300'}`}>
-                            {model.title}
-                          </span>
-                          <span className="arch-mono block truncate text-[9.5px] tracking-[0.06em] text-ash-600">
-                            {model.author} · {model.detail}
-                          </span>
-                        </span>
-                        <span
-                          className={`size-1.5 shrink-0 rounded-full transition-colors ${
-                            rackIndex === index ? 'bg-signal-500' : 'bg-white/[0.14]'
-                          }`}
-                          aria-hidden
-                        />
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
           </div>
 
-          {/* ---- Stage ---- */}
-          <div className="order-1 lg:order-2">
-            <div className="arch-panel relative overflow-hidden">
-              <div className="flex items-center justify-between border-b border-white/[0.07] bg-white/[0.02] px-4 py-2.5">
-                <span className="arch-mono flex items-center gap-2 text-[9.5px] uppercase tracking-[0.16em] text-ash-500">
-                  <span className="size-1.5 animate-pulse-dot rounded-full bg-sev-critical" />
-                  {view === 'graph' ? 'dependency graph · live' : 'sketchfab viewer'}
-                </span>
-                <span className="arch-mono text-[9.5px] tracking-[0.08em] text-ash-600">
-                  {view === 'graph' ? `${NODES.length} nodes · ${EDGES.length} edges` : rack?.licence}
-                </span>
+          {/* ================================================================
+              Interactive Neural Brain Stage + Right-Hand Cortical Inspector
+             ================================================================ */}
+          <div className="neural-reveal grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-[#222] border-b border-[#222]">
+            {/* Left 8 Columns: Pure #000000 Neural Brain Interactive Stage */}
+            <div className="lg:col-span-8 relative bg-black">
+              {/* Top Overlay Telemetry Bar */}
+              <div className="relative z-30 flex flex-wrap items-center justify-between gap-2 border-b border-[#222] bg-[#050608]/90 px-4 py-2.5 font-mono text-[11px]">
+                <div className="flex items-center gap-2 text-zinc-300">
+                  <span className="size-2 rounded-full bg-[#FEF62A] animate-pulse-dot" />
+                  <span>CORTEX LOCK:</span>
+                  <span className="font-semibold text-white">{selected.name}</span>
+                  <span className="text-zinc-500">({selected.lobe})</span>
+                </div>
+                <div className="flex items-center gap-3 text-[10px] text-zinc-400">
+                  <span className="inline-flex items-center gap-1">
+                    <span className="size-2 rounded-full bg-[#22d3ee]" /> Operational
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="size-2 rounded-full bg-[#fbbf24]" /> Degraded
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="size-2 rounded-full bg-[#f43f5e]" /> Major Outage
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="size-2 rounded-full bg-[#FEF62A]" /> Selected Focus
+                  </span>
+                </div>
               </div>
 
-              <div className="relative h-[26rem] sm:h-[32rem] lg:h-[38rem]">
-                {/* Both stages stay mounted-then-hidden rather than unmounted, so switching back to
-                    the graph does not recompile the WebGL context and stutter. */}
-                <div className={`absolute inset-0 ${view === 'graph' ? '' : 'pointer-events-none invisible'}`}>
-                  {render3D ? (
-                    <TopologyScene interactive className="size-full" onHover={(label) => setInspected(label)} cameraZ={12} />
-                  ) : (
-                    <GraphFallback onSelect={setInspected} />
-                  )}
-                </div>
-                {rack && (
-                  <div className={`absolute inset-0 ${view === 'rack' ? '' : 'pointer-events-none invisible'}`}>
-                    <SketchfabStage model={rack} className="size-full" active={view === 'rack'} />
-                  </div>
-                )}
+              {/* Neural Brain Interactive Canvas + Image */}
+              <TopologyScene
+                nodes={BRAIN_NODES}
+                selectedId={selectedId}
+                activeSet={activeSet}
+                onSelect={setSelectedId}
+                cascadeCount={cascadeCount}
+              />
+
+              {/* Bottom Stage Caption */}
+              <div className="relative z-30 flex flex-wrap items-center justify-between gap-2 border-t border-[#222] bg-[#050608]/95 px-4 py-2.5 font-mono text-[11px] text-zinc-400">
+                <span>
+                  Move pointer across the brain to excite local cortical filaments · Click any node to isolate blast radius
+                </span>
+                <span className="text-zinc-300 tnum">
+                  Active synaptic path: <strong className="text-[#FEF62A]">{activeSet.size}</strong> / {BRAIN_NODES.length} nodes
+                </span>
               </div>
             </div>
 
-            {/* Service list — the same data as a dense table, which is how an operator would really
-                scan it. Hover syncs with the inspector above. */}
-            <div className="arch-panel mt-6 overflow-hidden">
-              <div className="flex items-center justify-between border-b border-white/[0.07] bg-white/[0.02] px-4 py-2.5">
-                <span className="arch-mono text-[9.5px] uppercase tracking-[0.16em] text-ash-500">services</span>
-                <span className="arch-mono text-[9.5px] tracking-[0.08em] text-ash-600">{NODES.length} registered</span>
+            {/* Right 4 Columns: Vengeance UI Cortical Node Inspector */}
+            <aside
+              aria-label="Selected neural node details"
+              className="lg:col-span-4 flex flex-col justify-between bg-[#08090c] p-5 md:p-6"
+            >
+              <div>
+                <div className="flex items-start justify-between gap-3 border-b border-[#222] pb-4">
+                  <div>
+                    <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#FEF62A]">
+                      {selected.tier} Tier · {selected.lobe}
+                    </div>
+                    <h3 className="mt-1 font-orbitron text-xl font-bold text-white">
+                      {selected.name}
+                    </h3>
+                    <div className="mt-0.5 font-mono text-xs text-zinc-500">
+                      owner: {selected.owner}
+                    </div>
+                  </div>
+                  <span
+                    className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 font-mono text-[10px] font-semibold uppercase tracking-wider ${STATUS_META[selected.status].badge}`}
+                  >
+                    <span className={`size-1.5 rounded-full ${STATUS_META[selected.status].dot}`} />
+                    {STATUS_META[selected.status].label}
+                  </span>
+                </div>
+
+                <p className="mt-4 text-xs leading-relaxed text-zinc-300">
+                  {selected.summary}
+                </p>
+
+                {/* Metrics Grid */}
+                <div className="mt-4 grid grid-cols-2 gap-2.5">
+                  <div className="rounded-xl border border-[#222] bg-[#0d0e13] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                    <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+                      90-Day Uptime
+                    </div>
+                    <div className="mt-1 font-orbitron text-lg font-bold text-white tnum">
+                      {selected.uptime}
+                    </div>
+                  </div>
+                  <div className="rounded-xl border border-[#222] bg-[#0d0e13] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                    <div className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+                      p99 Latency
+                    </div>
+                    <div
+                      className={`mt-1 font-orbitron text-lg font-bold tnum ${
+                        selected.status === 'MAJOR_OUTAGE'
+                          ? 'text-crit-400'
+                          : selected.status === 'DEGRADED'
+                          ? 'text-[#FEF62A]'
+                          : 'text-white'
+                      }`}
+                    >
+                      {selected.latency}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Upstream Callers */}
+                <div className="mt-5">
+                  <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-400">
+                    Upstream Afferent Callers ({upstream.size})
+                  </div>
+                  {upstream.size === 0 ? (
+                    <div className="mt-2 rounded-lg border border-[#222] bg-[#0b0c10] px-3 py-2 font-mono text-xs text-zinc-500">
+                      Entry-point receptor — no upstream callers
+                    </div>
+                  ) : (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {[...upstream].map((id) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setSelectedId(id)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-1 font-mono text-xs text-zinc-200 transition-colors hover:border-[#FEF62A] hover:text-[#FEF62A] cursor-pointer"
+                        >
+                          <span>←</span>
+                          <span>{id}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Downstream Dependencies */}
+                <div className="mt-4">
+                  <div className="font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-400">
+                    Downstream Efferent Synapses ({downstream.size})
+                  </div>
+                  {downstream.size === 0 ? (
+                    <div className="mt-2 rounded-lg border border-[#222] bg-[#0b0c10] px-3 py-2 font-mono text-xs text-zinc-500">
+                      Terminal datastore — zero downstream dependencies
+                    </div>
+                  ) : (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {[...downstream].map((id) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => setSelectedId(id)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-1 font-mono text-xs text-zinc-200 transition-colors hover:border-[#FEF62A] hover:text-[#FEF62A] cursor-pointer"
+                        >
+                          <span>→</span>
+                          <span>{id}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
-              <ul className="divide-y divide-white/[0.055]">
-                {NODES.map((node) => {
-                  const info = INFO[node.id];
-                  const status = info ? STATUS_STYLE[info.status] : STATUS_STYLE.ok!;
-                  const isActive = inspected === node.id;
+
+              {/* Bottom Inspector Action */}
+              <div className="mt-6 border-t border-[#222] pt-4 flex items-center justify-between gap-2">
+                <Link
+                  href="/status/arch"
+                  className="font-mono text-xs text-zinc-300 hover:text-[#FEF62A] transition-colors"
+                >
+                  Open public status ledger →
+                </Link>
+                <span className="rounded border border-zinc-800 bg-zinc-900 px-2 py-0.5 font-mono text-[10px] text-zinc-400">
+                  SYNCED
+                </span>
+              </div>
+            </aside>
+          </div>
+
+          {/* ================================================================
+              Synchronized Cortical Service Matrix Table
+             ================================================================ */}
+          <div className="neural-reveal overflow-x-auto bg-[#06070a]">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-[#222] font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500">
+                  <th className="py-3 px-5">Service Node</th>
+                  <th className="py-3 px-4">Cortical Region</th>
+                  <th className="py-3 px-4">Tier</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">90d Uptime</th>
+                  <th className="py-3 px-5 text-right">p99 Latency</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#18191e] text-xs">
+                {filteredNodes.map((s) => {
+                  const isSel = s.id === selectedId;
+                  const inBlast = activeSet.has(s.id);
+                  const meta = STATUS_META[s.status];
                   return (
-                    <li key={node.id}>
-                      <button
-                        type="button"
-                        onMouseEnter={() => setInspected(node.id)}
-                        onFocus={() => setInspected(node.id)}
-                        onClick={() => setInspected(node.id)}
-                        className={`group relative flex w-full items-center gap-4 px-4 py-2.5 text-left transition-colors duration-200 ${
-                          isActive ? 'bg-white/[0.045]' : 'hover:bg-white/[0.025]'
-                        }`}
-                      >
+                    <tr
+                      key={s.id}
+                      onClick={() => setSelectedId(s.id)}
+                      className={cn(
+                        'cursor-pointer transition-colors',
+                        isSel
+                          ? 'bg-[#FEF62A]/[0.07]'
+                          : inBlast
+                          ? 'bg-white/[0.02] hover:bg-white/[0.04]'
+                          : 'opacity-60 hover:opacity-100 hover:bg-white/[0.03]'
+                      )}
+                    >
+                      <td className="py-2.5 px-5 font-mono font-medium text-white flex items-center gap-2">
                         <span
-                          className={`absolute inset-y-0 left-0 w-px origin-top bg-signal-500 transition-transform duration-500 ease-out ${
-                            isActive ? 'scale-y-100' : 'scale-y-0'
-                          }`}
-                          aria-hidden
+                          className="size-2 rounded-full"
+                          style={{ backgroundColor: isSel ? '#FEF62A' : s.color }}
                         />
-                        <span className={`size-1.5 shrink-0 rounded-full ${status?.dot ?? 'bg-ash-500'}`} aria-hidden />
-                        <span className={`arch-mono min-w-0 flex-1 truncate text-[12px] ${isActive ? 'text-bone' : 'text-ash-300'}`}>
-                          {node.label}
+                        <span>{s.name}</span>
+                        {isSel && (
+                          <span className="rounded bg-[#FEF62A] px-1.5 py-0.2 font-mono text-[9px] font-bold text-black">
+                            ACTIVE
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2.5 px-4 font-mono text-zinc-400">{s.lobe}</td>
+                      <td className="py-2.5 px-4 font-mono text-zinc-500">{s.tier}</td>
+                      <td className="py-2.5 px-4">
+                        <span
+                          className={`inline-flex items-center gap-1.5 rounded border px-2 py-0.5 font-mono text-[10px] ${meta.badge}`}
+                        >
+                          <span className={`size-1.5 rounded-full ${meta.dot}`} />
+                          {meta.label}
                         </span>
-                        <span className="arch-mono hidden w-24 shrink-0 truncate text-[10px] tracking-[0.06em] text-ash-600 sm:block">
-                          {node.tier}
-                        </span>
-                        <span className="arch-mono hidden w-40 shrink-0 truncate text-[10px] tracking-[0.04em] text-ash-600 md:block">
-                          {info?.region}
-                        </span>
-                        <span className="arch-mono arch-tabular w-16 shrink-0 text-right text-[11px] text-ash-400">{info?.p99}</span>
-                        <span className={`arch-mono w-[74px] shrink-0 text-right text-[9.5px] font-bold uppercase tracking-[0.08em] ${status?.text}`}>
-                          {status?.label}
-                        </span>
-                      </button>
-                    </li>
+                      </td>
+                      <td className="py-2.5 px-4 text-right font-mono text-zinc-300 tnum">
+                        {s.uptime}
+                      </td>
+                      <td className="py-2.5 px-5 text-right font-mono text-zinc-200 tnum">
+                        {s.latency}
+                      </td>
+                    </tr>
                   );
                 })}
-              </ul>
-            </div>
+              </tbody>
+            </table>
           </div>
         </div>
-      </div>
+      </Container>
     </section>
-  );
-}
-
-/**
- * Below 720px — and for reduced motion — the WebGL graph is replaced by a flat, tappable
- * dependency list. Same information, same inspector, no context to compile.
- */
-function GraphFallback({ onSelect }: { onSelect: (id: string) => void }) {
-  return (
-    <div className="arch-grid-fine size-full overflow-y-auto p-4 scroll-thin">
-      <p className="arch-mono mb-3 text-[9.5px] uppercase tracking-[0.16em] text-ash-600">dependency graph · flat view</p>
-      <ul className="space-y-1.5">
-        {EDGES.map((edge) => (
-          <li key={`${edge.from}-${edge.to}`} className="arch-mono flex items-center gap-2 text-[11px] text-ash-500">
-            <button type="button" onClick={() => onSelect(edge.from)} className="rounded px-1.5 py-0.5 text-ash-300 transition hover:bg-white/[0.06] hover:text-bone">
-              {edge.from}
-            </button>
-            <span className="text-ash-700" aria-hidden>→</span>
-            <button type="button" onClick={() => onSelect(edge.to)} className="rounded px-1.5 py-0.5 text-ash-300 transition hover:bg-white/[0.06] hover:text-bone">
-              {edge.to}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
   );
 }

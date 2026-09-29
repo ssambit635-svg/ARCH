@@ -1,375 +1,619 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Reveal } from './reveal';
-import { usePrefersReducedMotion } from '@/lib/motion';
-import { AI_NAME } from '@/lib/brand';
+import Link from 'next/link';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { Container, Heading, SubHeading, cn } from './vui-primitives';
 
-/**
- * ARCH V1.1 — the intelligence section.
- *
- * Every number and mechanism here is lifted from the repository, not from a pitch:
- * `docs/engineering/ARCH-MODEL.md` (one engine, 5–100 ms, 22 categories, 44 patterns) and
- * `docs/engineering/AI-GUARDRAILS.md` (drafts are drafts, context limits, sandbox-only execution,
- * a fix is "verified" only when a generated test fails before the patch and passes after it).
- *
- * This matters because the honest story is the stronger one. ARCH has *no* vendor adapter — the
- * Ollama/hybrid path was deliberately deleted (ARCHITECTURE.md, decision D16) so there is one
- * engine to reason about and no mode where two models disagree. A page that claimed otherwise would
- * be describing software that fails at boot.
- *
- * Layout is a sticky two-column: the claim stays pinned while the evidence scrolls past it.
- */
+const INSTALL_COMMAND = 'docker compose up -d && npm run db:migrate && npm run db:seed';
 
-const SPEC: { key: string; value: string; note: string }[] = [
-  { key: 'provider', value: 'arch', note: 'the only one compiled in' },
-  { key: 'latency', value: '5–100 ms', note: 'no round trip to anyone' },
-  { key: 'network', value: 'none', note: 'it cannot call out' },
-  { key: 'hardware', value: 'cpu only', note: 'a few MB per org model' },
-  { key: 'api key', value: '—', note: 'there is nothing to buy' },
-  { key: 'applies itself', value: 'never', note: 'every draft waits for a human' },
+const QUICK_PICKS = [
+  { name: 'SEV-1 War Room', href: '#workspace' },
+  { name: 'Neural Brain', href: '#topology' },
+  { name: '4-Stage Lifecycle', href: '#lifecycle' },
+  { name: 'Status Ledger', href: '/status/arch' },
+  { name: 'Capabilities', href: '#capabilities' },
+  { name: 'Deploy Stack', href: '#deploy' },
 ];
 
-const LOOP = [
-  { stage: 'plan', detail: 'chain-of-thought planner picks the next tool', ms: '4 ms' },
-  { stage: 'retrieve', detail: 'tenant-scoped search over your resolved incidents', ms: '11 ms' },
-  { stage: 'classify', detail: 'naive bayes over 22 categories · 44 patterns', ms: '2 ms' },
-  { stage: 'verify', detail: 'sandboxed python, no credentials, throwaway', ms: '61 ms' },
-];
-
-/** Context ceilings from `src/server/ai/guardrails.ts` — real constants, not rounding. */
-const LIMITS = [
-  { key: 'maxTimelineEntries', value: '60' },
-  { key: 'maxSimilarIncidents', value: '4' },
-  { key: 'maxContextChars', value: '16,000' },
-];
-
-const TRANSCRIPT: { who: 'human' | 'arch'; text: string; delay: number }[] = [
-  { who: 'human', text: 'database slow hai, kya karu?', delay: 0 },
+const HYPOTHESES = [
   {
-    who: 'arch',
-    text: 'pg-primary ka connection pool saturate ho raha hai — 10/10 connections busy, 42 queries queued.',
-    delay: 700,
+    id: 'hyp-1',
+    rank: '01',
+    confidence: 87,
+    node: 'pg-primary',
+    title: 'Pool saturation on postgres-primary after deploy v2.18.4',
+    evidence: 'pg_stat_activity = 200/200 · migration #418 holds ACCESS EXCLUSIVE lock',
+    remediation: 'Rollback checkout-api to v2.18.3 and drain idle transactions.',
   },
   {
-    who: 'arch',
-    text: 'Evidence: INC-418 timeline 09:21 · INC-311 (0.87 similar, resolved by pool 10→40) · pg_stat_activity snapshot',
-    delay: 1500,
+    id: 'hyp-2',
+    rank: '02',
+    confidence: 61,
+    node: 'webhooks',
+    title: 'Retry storm from payment gateway webhook workers',
+    evidence: '3.4× inbound spike on /api/webhooks/alerts over 120s window',
+    remediation: 'Enable token-bucket shedder on edge-proxy for non-idempotent retries.',
   },
   {
-    who: 'arch',
-    text: 'Draft #214 ready — pool_size 10→40, statement_timeout 30s. Generated test fails before, passes after. Awaiting your approve.',
-    delay: 2400,
+    id: 'hyp-3',
+    rank: '03',
+    confidence: 24,
+    node: 'auth-svc',
+    title: 'Cross-AZ network jitter in eu-central-1b',
+    evidence: 'inter-AZ RTT normal (0.8ms p95); packet loss < 0.01%',
+    remediation: 'Ruled out — keep traffic balanced across all 3 availability zones.',
   },
 ];
 
-/** Types the transcript out when it scrolls into view. Reduced motion gets the full text at once. */
-function Transcript() {
-  const reduced = usePrefersReducedMotion();
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [visible, setVisible] = useState(reduced);
+function CopyCliField() {
+  const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    if (reduced) {
-      setVisible(true);
-      return;
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(INSTALL_COMMAND);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setCopied(false);
     }
-    const node = ref.current;
-    if (!node) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) {
-            setVisible(true);
-            observer.disconnect();
-          }
-        }
-      },
-      { threshold: 0.35 },
-    );
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [reduced]);
+  };
 
   return (
-    <div
-      ref={ref}
-      className="arch-mono overflow-hidden rounded-xl border border-white/[0.08] bg-ink-950 text-[12px] leading-[1.75] sm:text-[12.5px]"
+    <div className="mt-5 flex w-full max-w-xl items-center justify-between gap-2 rounded-xl border border-zinc-800 bg-zinc-900/85 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+      <div className="flex min-w-0 items-center gap-2 font-mono text-xs text-zinc-300">
+        <span className="size-3.5 shrink-0 text-zinc-500">&gt;_</span>
+        <span className="truncate">{INSTALL_COMMAND}</span>
+      </div>
+
+      <button
+        type="button"
+        onClick={handleCopy}
+        className="inline-flex shrink-0 items-center gap-1 rounded-md border border-zinc-700 bg-zinc-800/90 px-2.5 py-1 text-[11px] font-medium text-zinc-200 transition-colors hover:border-zinc-600 hover:bg-zinc-800 cursor-pointer"
+      >
+        <span>{copied ? '✓ Copied' : 'Copy CLI'}</span>
+      </button>
+    </div>
+  );
+}
+
+function FlipTextWord({ text }: { text: string }) {
+  const chars = text.split('');
+  return (
+    <span
+      className="inline-flex items-center justify-center font-mono text-sm font-bold tracking-[0.18em] text-zinc-100"
+      style={{
+        ['--flip-duration' as string]: '2.2s',
+        ['--flip-delay' as string]: '0.06s',
+      }}
     >
-      <div className="flex items-center justify-between border-b border-white/[0.07] bg-white/[0.02] px-4 py-2">
-        <span className="flex items-center gap-2 text-[10px] uppercase tracking-[0.14em] text-ash-500">
-          <span className="size-1.5 rounded-full bg-signal-500" /> ask {AI_NAME.toLowerCase()}
+      {chars.map((char, i) => (
+        <span
+          key={`${char}-${i}`}
+          className="flip-char"
+          style={{ ['--index' as string]: i }}
+        >
+          {char === ' ' ? '\u00A0' : char}
         </span>
-        <span className="text-[10px] tracking-[0.08em] text-ash-600">inc-418 · war-room</span>
-      </div>
+      ))}
+    </span>
+  );
+}
 
-      <div className="space-y-3 px-4 py-4">
-        {TRANSCRIPT.map((line, index) => (
-          <div
-            key={index}
-            className={`flex gap-2.5 transition-all duration-700 ease-out ${
-              visible ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
-            }`}
-            style={{ transitionDelay: `${reduced ? 0 : line.delay}ms` }}
-          >
-            <span
-              className={`shrink-0 pt-px text-[10px] font-bold uppercase tracking-[0.1em] ${
-                line.who === 'human' ? 'text-ash-500' : 'text-signal-400'
-              }`}
-            >
-              {line.who === 'human' ? 'you' : 'v1.1'}
-            </span>
-            <span className={line.who === 'human' ? 'text-ash-200' : 'text-ash-300'}>
-              {line.text}
-              {/* Caret sits on the last revealed line only. */}
-              {visible && index === TRANSCRIPT.length - 1 && !reduced && (
-                <span className="ml-1 inline-block h-[1.05em] w-[6px] translate-y-[2px] animate-blink bg-signal-500" aria-hidden />
-              )}
-            </span>
-          </div>
-        ))}
+function CreepyAckButton({ onTrigger }: { onTrigger: () => void }) {
+  const eyesRef = useRef<HTMLSpanElement>(null);
+  const [eyeCoords, setEyeCoords] = useState({ x: 0, y: 0 });
 
-        {visible && (
-          <div className="flex flex-wrap gap-1.5 border-t border-white/[0.07] pt-3 transition-opacity delay-1000 duration-700">
-            {['approve draft #214', 'dismiss', 'open war-room', 'draft postmortem'].map((action, index) => (
-              <span
-                key={action}
-                className={`rounded-[5px] border px-2 py-1 text-[10px] tracking-[0.04em] ${
-                  index === 0
-                    ? 'border-signal-500/35 bg-signal-500/[0.09] text-signal-200'
-                    : 'border-white/[0.09] bg-white/[0.02] text-ash-400'
-                }`}
-              >
-                {action}
-              </span>
-            ))}
-          </div>
+  const updateEyes = (e: React.MouseEvent | React.TouchEvent) => {
+    const userEvent = 'touches' in e ? e.touches[0] : e;
+    if (!userEvent || !eyesRef.current) return;
+    const eyesRect = eyesRef.current.getBoundingClientRect();
+    const eyesCenter = {
+      x: eyesRect.left + eyesRect.width / 2,
+      y: eyesRect.top + eyesRect.height / 2,
+    };
+    const cursor = { x: userEvent.clientX, y: userEvent.clientY };
+    const dx = cursor.x - eyesCenter.x;
+    const dy = cursor.y - eyesCenter.y;
+    const angle = Math.atan2(-dy, dx) + Math.PI / 2;
+    const distance = Math.hypot(dx, dy);
+    const x = (Math.sin(angle) * Math.min(distance, 180)) / 180;
+    const y = (Math.cos(angle) * Math.min(distance, 75)) / 75;
+    setEyeCoords({ x, y });
+  };
+
+  const translateX = `${-50 + eyeCoords.x * 50}%`;
+  const translateY = `${-50 + eyeCoords.y * 50}%`;
+
+  return (
+    <button
+      type="button"
+      onClick={onTrigger}
+      onMouseMove={updateEyes}
+      onTouchMove={updateEyes}
+      onFocus={() => setEyeCoords({ x: -0.25, y: -0.25 })}
+      onBlur={() => setEyeCoords({ x: 0, y: 0 })}
+      className="group relative min-w-[9em] cursor-pointer rounded-xl bg-black outline-none select-none"
+    >
+      <span
+        ref={eyesRef}
+        className="pointer-events-none absolute right-[1em] bottom-[0.5em] z-0 flex h-[0.75em] items-center gap-[0.375em]"
+      >
+        <span className="relative h-[0.75em] w-[0.75em] overflow-hidden rounded-full bg-white">
+          <span
+            className="absolute top-1/2 left-1/2 h-[0.375em] w-[0.375em] rounded-full bg-black"
+            style={{ transform: `translate(${translateX}, ${translateY})` }}
+          />
+        </span>
+        <span className="relative h-[0.75em] w-[0.75em] overflow-hidden rounded-full bg-white">
+          <span
+            className="absolute top-1/2 left-1/2 h-[0.375em] w-[0.375em] rounded-full bg-black"
+            style={{ transform: `translate(${translateX}, ${translateY})` }}
+          />
+        </span>
+      </span>
+
+      <span
+        className={cn(
+          'relative inset-0 block origin-[1.25em_50%] rounded-xl bg-zinc-100 px-4 py-2.5 text-center text-xs font-bold tracking-[0.08em] uppercase text-zinc-950',
+          'shadow-[inset_0_0_0_2px_rgba(0,0,0,1)] transition-transform duration-300 ease-in-out',
+          'group-hover:rotate-[-12deg] group-active:rotate-[-8deg]'
         )}
-      </div>
+      >
+        Acknowledge
+      </span>
+    </button>
+  );
+}
+
+function FlowLayer() {
+  return (
+    <svg
+      viewBox="0 0 1200 540"
+      className="pointer-events-none absolute inset-0 hidden h-full w-full lg:block opacity-75"
+      fill="none"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id="arch-flow-line" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="rgba(255,255,255,0.08)" />
+          <stop offset="50%" stopColor="rgba(254,246,42,0.45)" />
+          <stop offset="100%" stopColor="rgba(255,255,255,0.08)" />
+        </linearGradient>
+      </defs>
+
+      <path
+        id="arch-flow-a"
+        d="M 165 268 C 292 268, 308 166, 430 166 C 544 166, 650 166, 770 166 C 895 166, 912 268, 1035 268"
+        stroke="url(#arch-flow-line)"
+        strokeWidth="1.4"
+        strokeDasharray="6 8"
+      />
+
+      <path
+        id="arch-flow-b"
+        d="M 165 338 C 300 338, 318 370, 430 370 C 544 370, 650 370, 770 370 C 885 370, 902 338, 1035 338"
+        stroke="rgba(255,255,255,0.18)"
+        strokeWidth="1.2"
+        strokeDasharray="5 8"
+      />
+
+      <circle r="3.4" fill="rgba(254,246,42,0.95)">
+        <animateMotion
+          dur="6.5s"
+          repeatCount="indefinite"
+          path="M 165 268 C 292 268, 308 166, 430 166 C 544 166, 650 166, 770 166 C 895 166, 912 268, 1035 268"
+        />
+      </circle>
+
+      <circle r="3" fill="rgba(255,255,255,0.8)">
+        <animateMotion
+          dur="7.2s"
+          begin="1.2s"
+          repeatCount="indefinite"
+          path="M 165 338 C 300 338, 318 370, 430 370 C 544 370, 650 370, 770 370 C 885 370, 902 338, 1035 338"
+        />
+      </circle>
+    </svg>
+  );
+}
+
+function CardTopline({ index, tag }: { index: string; tag: string }) {
+  return (
+    <div className="mb-4 flex items-center justify-between text-[11px] font-mono">
+      <span className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-zinc-400">
+        {index}
+      </span>
+      <span className="uppercase tracking-[0.14em] text-zinc-500">{tag}</span>
     </div>
   );
 }
 
-/** The agent loop, drawn as a pipeline with a pulse travelling the stages. */
-function AgentLoop() {
-  const reduced = usePrefersReducedMotion();
-
+function SystemActionPill({ label }: { label: string }) {
   return (
-    <div className="arch-panel overflow-hidden p-5 sm:p-6">
-      <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="arch-display text-[17px] font-semibold tracking-[-0.02em] text-bone">One turn of the agent loop</h3>
-        <span className="arch-mono arch-tabular text-[10px] uppercase tracking-[0.12em] text-ash-600">78 ms total</span>
-      </div>
-
-      <ol className="relative space-y-0">
-        {/* Spine */}
-        <span className="absolute bottom-3 left-[7px] top-3 w-px bg-white/[0.09]" aria-hidden />
-        {!reduced && (
-          <span className="arch-loop-pulse absolute left-[5px] top-3 block size-[5px] rounded-full bg-signal-500" aria-hidden />
-        )}
-
-        {LOOP.map((step, index) => (
-          <li key={step.stage} className="relative flex items-start gap-4 py-2.5">
-            <span
-              className="relative z-10 mt-1.5 grid size-[15px] shrink-0 place-items-center rounded-full border border-white/[0.14] bg-ink-900"
-              aria-hidden
-            >
-              <span className="size-[5px] rounded-full bg-ash-500" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="flex flex-wrap items-baseline gap-x-2.5">
-                <span className="arch-mono text-[11px] font-bold uppercase tracking-[0.14em] text-bone">
-                  {String(index + 1).padStart(2, '0')} · {step.stage}
-                </span>
-                <span className="arch-mono arch-tabular text-[10px] text-ash-600">{step.ms}</span>
-              </p>
-              <p className="mt-1 text-[13px] leading-relaxed text-ash-400">{step.detail}</p>
-            </div>
-          </li>
-        ))}
-      </ol>
-
-      <p className="mt-4 border-t border-white/[0.07] pt-4 text-[12.5px] leading-relaxed text-ash-500">
-        The loop runs entirely in-process. It does not browse the internet while a responder is
-        waiting, and the only thing it can execute is Python inside a throwaway sandbox with no
-        credentials attached.
-      </p>
-    </div>
-  );
-}
-
-/** Verified Fix Loop — the before/after test result is the whole point. */
-function VerifiedFix() {
-  return (
-    <div className="arch-panel overflow-hidden">
-      <div className="flex items-center justify-between border-b border-white/[0.07] bg-white/[0.02] px-5 py-3">
-        <h3 className="arch-display text-[15px] font-semibold tracking-[-0.01em] text-bone">Verified Fix Loop</h3>
-        <span className="arch-mono text-[9.5px] uppercase tracking-[0.14em] text-ash-600">draft #214</span>
-      </div>
-
-      <div className="grid gap-px bg-white/[0.07] sm:grid-cols-2">
-        <div className="bg-ink-900 px-5 py-4">
-          <p className="arch-mono mb-2.5 text-[9.5px] uppercase tracking-[0.14em] text-ash-600">before patch</p>
-          <p className="arch-mono text-[11.5px] leading-relaxed text-sev-critical">
-            ✗ pool_exhaustion_raises_5xx
-            <br />
-            <span className="text-ash-600">  expected 200, got 503 (queued 42)</span>
-          </p>
-          <p className="arch-mono mt-2 text-[10px] text-ash-600">1 failed · 213 passed</p>
-        </div>
-        <div className="bg-ink-900 px-5 py-4">
-          <p className="arch-mono mb-2.5 text-[9.5px] uppercase tracking-[0.14em] text-ash-600">after patch</p>
-          <p className="arch-mono text-[11.5px] leading-relaxed text-state-ok">
-            ✓ pool_exhaustion_raises_5xx
-            <br />
-            <span className="text-ash-600">  200 in 84 ms · queue depth 0</span>
-          </p>
-          <p className="arch-mono mt-2 text-[10px] text-ash-600">214 passed</p>
-        </div>
-      </div>
-
-      <div className="space-y-2.5 border-t border-white/[0.07] px-5 py-4">
-        <div className="flex items-start gap-3 rounded-lg border border-white/[0.08] bg-white/[0.02] px-3.5 py-3">
-          <span className="arch-mono mt-px shrink-0 rounded-[4px] border border-state-ok/30 bg-state-ok/10 px-1.5 py-px text-[9.5px] font-bold tracking-[0.08em] text-state-ok">
-            PR
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-[12.5px] font-medium text-bone">fix(db): raise checkout pool 10→40, cap statement timeout</p>
-            <p className="arch-mono mt-1 truncate text-[10px] tracking-[0.04em] text-ash-500">
-              draft · against pinned a91f3c2 · opened only after a human approved
-            </p>
-          </div>
-        </div>
-        <p className="text-[12px] leading-relaxed text-ash-500">
-          A fix is only ever called <span className="text-ash-300">verified</span> when the generated
-          test fails before the patch and passes after it. Generation alone proves nothing, so it
-          earns no label.
-        </p>
-      </div>
-    </div>
+    <span className="inline-flex h-8 w-[112px] items-center justify-center gap-1 rounded-full border border-zinc-700/85 bg-zinc-900/90 px-2.5 font-mono text-[10px] font-medium whitespace-nowrap text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+      <span className="size-1.5 rounded-full bg-[#FEF62A]" />
+      {label}
+    </span>
   );
 }
 
 export function Intelligence() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const [buttonMode, setButtonMode] = useState<'dedup' | 'ack'>('dedup');
+  const [mergedCount, setMergedCount] = useState(14);
+  const [activeHypIdx, setActiveHypIdx] = useState(0);
+
+  const activeHyp = HYPOTHESES[activeHypIdx] ?? HYPOTHESES[0]!;
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (prefersReduced) return;
+
+    gsap.registerPlugin(ScrollTrigger);
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        '.vui-matrix-card',
+        { y: 28, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.75,
+          stagger: 0.12,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: 'top 80%',
+          },
+        }
+      );
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
     <section
       id="intelligence"
-      className="relative scroll-mt-20 overflow-hidden border-t border-white/[0.07] bg-ink-950"
-      aria-label={AI_NAME}
+      ref={sectionRef}
+      className="relative border-b border-[#222] bg-[#050608] overflow-hidden"
     >
-      <div className="arch-grid-fine pointer-events-none absolute inset-0 opacity-30" aria-hidden />
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-[420px]"
-        style={{ background: 'radial-gradient(70% 100% at 78% 0%, rgb(var(--arch-accent-rgb) / 0.045), transparent 68%)' }}
-        aria-hidden
-      />
-
-      <div className="relative mx-auto grid max-w-[1400px] grid-cols-1 gap-12 px-5 py-24 sm:px-8 lg:grid-cols-[minmax(0,26rem)_minmax(0,1fr)] lg:gap-20 lg:py-32">
-        {/* ---- Sticky claim column ---- */}
-        <div className="lg:sticky lg:top-28 lg:self-start">
-          <Reveal variant="fade">
-            <p className="arch-mono mb-5 flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.24em] text-ash-500">
-              <span className="block h-px w-8 bg-signal-500" aria-hidden />
-              {AI_NAME}
-            </p>
-          </Reveal>
-
-          <Reveal variant="mask" duration={1000}>
-            <h2 className="arch-display text-[clamp(2.1rem,4.4vw,3.4rem)] font-semibold leading-[0.98] tracking-[-0.04em] text-bone">
-              An on-call brain with
-              <br />
-              nowhere to phone home.
-            </h2>
-          </Reveal>
-
-          <Reveal variant="rise" delay={120}>
-            <p className="mt-6 max-w-[34rem] text-[15px] leading-[1.75] text-ash-400">
-              There is no OpenAI key to paste and no per-seat AI upsell, because there is no adapter
-              to configure. {AI_NAME} is classifiers, retrieval, a planner and a sandbox — compiled
-              into this repository, trained on your own resolved incidents, and structurally unable
-              to make a network call.
-            </p>
-          </Reveal>
-
-          {/* The spec block reads like an instrument's data plate. */}
-          <Reveal variant="rise" delay={220}>
-            <dl className="arch-mono mt-8 divide-y divide-white/[0.07] border-y border-white/[0.07]">
-              {SPEC.map((row) => (
-                <div key={row.key} className="group flex items-baseline justify-between gap-4 py-2.5 transition-colors hover:bg-white/[0.02]">
-                  <dt className="text-[10.5px] uppercase tracking-[0.14em] text-ash-600">{row.key}</dt>
-                  <dd className="flex items-baseline gap-3 text-right">
-                    <span className="text-[10px] tracking-[0.04em] text-ash-600 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                      {row.note}
-                    </span>
-                    <span className="arch-tabular text-[12.5px] font-semibold text-bone">{row.value}</span>
-                  </dd>
+      <div id="library-map" className="scroll-mt-20" />
+      <Container>
+        <div className="md:border-x border-[#222]">
+          {/* ================================================================
+              IntroBand (Exact Vengeance UI LandingPageGrid IntroBand)
+             ================================================================ */}
+          <div className="relative overflow-hidden border-b border-[#222] px-5 py-8 md:px-8 lg:px-10">
+            <div className="relative grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+              <div>
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3 py-1 text-[11px] font-medium text-zinc-400">
+                  <span className="text-[#FEF62A]">✦</span>
+                  <span className="font-mono">Architecture Map · ARCH V1.1</span>
                 </div>
-              ))}
-            </dl>
-          </Reveal>
 
-          <Reveal variant="rise" delay={300}>
-            <div className="mt-7 flex flex-wrap gap-1.5">
-              {LIMITS.map((limit) => (
-                <span
-                  key={limit.key}
-                  className="arch-mono rounded-[5px] border border-white/[0.08] bg-white/[0.025] px-2.5 py-1.5 text-[10px] tracking-[0.04em] text-ash-400"
-                  title="Ceiling enforced in src/server/ai/guardrails.ts"
-                >
-                  <span className="text-ash-600">{limit.key}</span>{' '}
-                  <span className="arch-tabular text-signal-300">{limit.value}</span>
-                </span>
-              ))}
+                <Heading as="h2" variant="big" className="max-w-3xl text-left">
+                  Build with ARCH Intelligence
+                </Heading>
+
+                <SubHeading className="mt-2 max-w-2xl text-left">
+                  Explore the alert ingestion forge, deterministic root-cause motion kernel, and audit-grade incident composer — then jump into any workflow in one click.
+                </SubHeading>
+
+                <CopyCliField />
+              </div>
+
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-2">
+                <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                  <div className="font-orbitron text-lg font-bold text-zinc-100 tnum">&lt;180ms</div>
+                  <div className="font-mono text-[11px] text-zinc-500">Webhook ingest p99</div>
+                </div>
+                <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                  <div className="font-orbitron text-lg font-bold text-[#FEF62A] tnum">87%</div>
+                  <div className="font-mono text-[11px] text-zinc-500">Top-1 RCA accuracy</div>
+                </div>
+                <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                  <div className="font-orbitron text-lg font-bold text-zinc-100">Self-Hosted</div>
+                  <div className="font-mono text-[11px] text-zinc-500">Postgres 16 + Prisma</div>
+                </div>
+                <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                  <div className="font-orbitron text-lg font-bold text-zinc-100">SHA-256</div>
+                  <div className="font-mono text-[11px] text-zinc-500">Append-only audit</div>
+                </div>
+              </div>
             </div>
-            <p className="mt-3 text-[12px] leading-relaxed text-ash-600">
-              Context is bounded before it is used. A provider never receives your whole history —
-              and credentials are redacted before text leaves the calling module.
-            </p>
-          </Reveal>
-        </div>
+          </div>
 
-        {/* ---- Scrolling evidence column ---- */}
-        <div className="space-y-6">
-          <Reveal variant="rise" duration={1000}>
-            <Transcript />
-          </Reveal>
-          <Reveal variant="rise" delay={80} duration={1000}>
-            <AgentLoop />
-          </Reveal>
-          <Reveal variant="rise" delay={80} duration={1000}>
-            <VerifiedFix />
-          </Reveal>
+          {/* ================================================================
+              PreviewMatrix (Exact Vengeance UI 3-Column 01/03 · 02/03 · 03/03)
+             ================================================================ */}
+          <div className="relative overflow-hidden border-b border-[#222]">
+            <FlowLayer />
 
-          {/* What it learns from — with the licences named, because the optional corpora are real. */}
-          <Reveal variant="rise" delay={80} duration={1000}>
-            <div className="arch-panel p-5 sm:p-6">
-              <h3 className="arch-display mb-4 text-[15px] font-semibold tracking-[-0.01em] text-bone">
-                What the model trains on
-              </h3>
-              <ul className="divide-y divide-white/[0.06]">
-                {[
-                  { source: 'your resolved incidents', note: 'timeline notes written by humans; copilot entries excluded', licence: 'yours' },
-                  { source: 'approved postmortems', note: 'only the ones a human signed off', licence: 'yours' },
-                  { source: 'pattern library', note: '44 failure patterns across 22 categories', licence: 'original' },
-                  { source: 'public postmortems', note: '~340 incidents, opt-in fetch', licence: 'optional' },
-                  { source: 'code-fix corpus', note: 'SWE-bench + ManySStuBs4J', licence: 'MIT' },
-                  { source: 'code-review corpus', note: 'github-codereview + CodeReviewer', licence: 'MIT · Apache-2.0' },
-                ].map((row) => (
-                  <li key={row.source} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-2.5">
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-medium text-ash-200">{row.source}</p>
-                      <p className="mt-0.5 text-[11.5px] leading-relaxed text-ash-600">{row.note}</p>
+            <div className="relative z-10 grid grid-cols-1 divide-y divide-[#222] lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+              {/* COLUMN 01/03: Alert Ingest Forge */}
+              <div className="vui-matrix-card relative flex min-h-[390px] flex-col justify-between p-5 md:p-6">
+                <div>
+                  <CardTopline index="01/03" tag="Alert Ingest Forge" />
+                  <h3 className="text-xl font-semibold tracking-tight text-zinc-100">
+                    Interactive Deduplication Controls
+                  </h3>
+                  <p className="mt-1.5 font-mono text-xs text-zinc-400">
+                    HMAC-SHA256 verified webhook intake that collapses alert storms into a single fingerprinted incident.
+                  </p>
+                </div>
+
+                <div className="my-5 rounded-2xl border border-zinc-800/90 bg-zinc-950/90 p-3.5 shadow-[0_24px_72px_-48px_rgba(0,0,0,1),inset_0_1px_0_rgba(255,255,255,0.06)]">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="inline-flex rounded-lg border border-zinc-700/80 bg-zinc-900/90 p-0.5 text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => setButtonMode('dedup')}
+                        className={cn(
+                          'rounded-md px-2.5 py-1 font-mono font-medium transition-colors cursor-pointer',
+                          buttonMode === 'dedup'
+                            ? 'bg-zinc-200 text-zinc-900'
+                            : 'text-zinc-400 hover:text-zinc-200'
+                        )}
+                      >
+                        Deduplicate
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setButtonMode('ack')}
+                        className={cn(
+                          'rounded-md px-2.5 py-1 font-mono font-medium transition-colors cursor-pointer',
+                          buttonMode === 'ack'
+                            ? 'bg-zinc-200 text-zinc-900'
+                            : 'text-zinc-400 hover:text-zinc-200'
+                        )}
+                      >
+                        Acknowledge
+                      </button>
                     </div>
-                    <span className="arch-mono shrink-0 rounded-[4px] border border-white/[0.08] px-1.5 py-px text-[9.5px] uppercase tracking-[0.1em] text-ash-500">
-                      {row.licence}
+
+                    <span className="rounded-md border border-zinc-700/80 bg-zinc-900/90 px-2 py-0.5 font-mono text-[10px] text-[#FEF62A]">
+                      +{mergedCount} merged
                     </span>
-                  </li>
-                ))}
-              </ul>
+                  </div>
+
+                  <div className="mt-3 flex min-h-[142px] flex-col items-center justify-center gap-3 rounded-xl border border-zinc-800/90 bg-zinc-900/75 px-3 py-4">
+                    {buttonMode === 'dedup' ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => setMergedCount((c) => c + 1)}
+                          className="rounded-xl border border-zinc-700/85 bg-zinc-950/90 px-4 py-2.5 transition-colors hover:border-[#FEF62A]/60 cursor-pointer"
+                        >
+                          <FlipTextWord text="DEDUPLICATE" />
+                        </button>
+                        <span className="font-mono text-[10px] text-zinc-500">
+                          fingerprint: sha256(service + alert_rule + region)
+                        </span>
+                      </>
+                    ) : (
+                      <CreepyAckButton onTrigger={() => setMergedCount((c) => c + 1)} />
+                    )}
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between font-mono text-[11px] text-zinc-400">
+                    <span>Click preview to test intake</span>
+                    <a
+                      href="#workspace"
+                      className="inline-flex items-center gap-1 font-medium text-zinc-200 hover:text-[#FEF62A]"
+                    >
+                      Open War Room →
+                    </a>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5 font-mono text-[11px]">
+                  <span className="rounded-md border border-zinc-800 bg-zinc-900 px-2 py-1 text-zinc-400">
+                    Alertmanager
+                  </span>
+                  <span className="rounded-md border border-zinc-800 bg-zinc-900 px-2 py-1 text-zinc-400">
+                    Datadog
+                  </span>
+                  <span className="rounded-md border border-zinc-800 bg-zinc-900 px-2 py-1 text-zinc-400">
+                    Sentry HMAC
+                  </span>
+                </div>
+              </div>
+
+              {/* COLUMN 02/03: Motion Kernel / ARCH V1.1 Native Engine */}
+              <div className="vui-matrix-card relative flex min-h-[390px] flex-col justify-between bg-[radial-gradient(circle_at_50%_20%,rgba(254,246,42,0.06),transparent_62%)] p-5 md:p-6">
+                <div>
+                  <CardTopline index="02/03" tag="Neural Kernel" />
+                  <h3 className="text-xl font-semibold tracking-tight text-zinc-100">
+                    ARCH V1.1 Root-Cause Core
+                  </h3>
+                  <p className="mt-1.5 font-mono text-xs text-zinc-400">
+                    Correlates recent deploys, DB locks, and service topology inside your VPC — zero external LLM leaks.
+                  </p>
+                </div>
+
+                <div className="my-5 flex items-center justify-center">
+                  <div className="relative flex h-56 w-full max-w-[330px] items-center justify-center">
+                    <svg
+                      viewBox="0 0 320 220"
+                      className="pointer-events-none absolute inset-0 h-full w-full"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path d="M 160 110 L 66 44" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" strokeDasharray="3 5" />
+                      <path d="M 160 110 L 254 44" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" strokeDasharray="3 5" />
+                      <path d="M 160 110 L 52 170" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" strokeDasharray="3 5" />
+                      <path d="M 160 110 L 268 170" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" strokeDasharray="3 5" />
+                      <path d="M 160 110 L 160 22" stroke="rgba(254,246,42,0.45)" strokeWidth="1.2" strokeDasharray="3 5" />
+                    </svg>
+
+                    <div className="absolute h-44 w-44 rounded-full border border-zinc-800/90" />
+                    <div className="absolute h-32 w-32 rounded-full border border-dashed border-zinc-700/80" />
+
+                    {/* Vengeance UI motion-core-ring */}
+                    <div className="motion-core-ring relative flex h-24 w-40 flex-col items-center justify-center rounded-2xl border border-zinc-600/85 bg-zinc-900/90 px-3 text-center shadow-[0_20px_50px_-30px_rgba(0,0,0,1)]">
+                      <span className="font-mono text-[10px] tracking-[0.18em] uppercase text-zinc-500">
+                        Engine
+                      </span>
+                      <span className="mt-1 font-mono text-xs font-semibold text-zinc-100">
+                        ARCH V1.1
+                        <span className="motion-caret" />
+                      </span>
+                      <span className="mt-1 font-mono text-[10px] text-[#FEF62A]">
+                        {activeHyp.confidence}% confidence
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setActiveHypIdx(0)}
+                      className={cn(
+                        'absolute top-4 left-3 rounded-full border px-2.5 py-1 font-mono text-[10px] transition-colors cursor-pointer',
+                        activeHypIdx === 0
+                          ? 'border-[#FEF62A] bg-[#FEF62A]/15 text-[#FEF62A]'
+                          : 'border-zinc-700/80 bg-zinc-900/90 text-zinc-300'
+                      )}
+                    >
+                      pg-primary
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveHypIdx(1)}
+                      className={cn(
+                        'absolute top-4 right-3 rounded-full border px-2.5 py-1 font-mono text-[10px] transition-colors cursor-pointer',
+                        activeHypIdx === 1
+                          ? 'border-[#FEF62A] bg-[#FEF62A]/15 text-[#FEF62A]'
+                          : 'border-zinc-700/80 bg-zinc-900/90 text-zinc-300'
+                      )}
+                    >
+                      webhooks
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveHypIdx(2)}
+                      className={cn(
+                        'absolute bottom-4 left-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] transition-colors cursor-pointer',
+                        activeHypIdx === 2
+                          ? 'border-[#FEF62A] bg-[#FEF62A]/15 text-[#FEF62A]'
+                          : 'border-zinc-700/80 bg-zinc-900/90 text-zinc-300'
+                      )}
+                    >
+                      auth-svc
+                    </button>
+                    <span className="absolute right-1.5 bottom-4 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-2.5 py-1 font-mono text-[10px] text-zinc-300">
+                      checkout
+                    </span>
+                    <span className="absolute top-0.5 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-2.5 py-1 font-mono text-[10px] text-[#FEF62A]">
+                      v2.18.4
+                    </span>
+                  </div>
+                </div>
+
+                {/* Selected Hypothesis Bar */}
+                <div className="rounded-xl border border-zinc-800 bg-zinc-950/90 p-3 font-mono text-[11px]">
+                  <div className="flex items-center justify-between text-zinc-400">
+                    <span>HYPOTHESIS #{activeHyp.rank}</span>
+                    <span className="text-[#FEF62A]">{activeHyp.confidence}% MATCH</span>
+                  </div>
+                  <div className="mt-1 text-zinc-200 font-sans text-xs font-medium">
+                    {activeHyp.title}
+                  </div>
+                  <div className="mt-1 text-[10px] text-zinc-500 truncate">{activeHyp.evidence}</div>
+                </div>
+              </div>
+
+              {/* COLUMN 03/03: Runbook & Audit Composer */}
+              <div className="vui-matrix-card relative flex min-h-[390px] flex-col justify-between p-5 md:p-6">
+                <div>
+                  <CardTopline index="03/03" tag="Incident Composer" />
+                  <h3 className="text-xl font-semibold tracking-tight text-zinc-100">
+                    From Alert to Signed Audit Ledger
+                  </h3>
+                  <p className="mt-1.5 font-mono text-xs text-zinc-400">
+                    State-machine transitions, Slack/Status broadcasts, and postmortem synthesis wired into one bus.
+                  </p>
+                </div>
+
+                <div className="my-5 rounded-2xl border border-zinc-800/90 bg-zinc-950/90 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                  <div className="relative h-48 overflow-hidden rounded-xl border border-zinc-800/80 bg-zinc-950/80 p-3">
+                    <svg
+                      viewBox="0 0 360 190"
+                      className="pointer-events-none absolute inset-0 h-full w-full"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <line x1="112" y1="32" x2="146" y2="74" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" />
+                      <line x1="112" y1="95" x2="132" y2="95" stroke="rgba(254,246,42,0.45)" strokeWidth="1.2" />
+                      <line x1="112" y1="158" x2="146" y2="116" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" />
+                      <line x1="248" y1="32" x2="214" y2="74" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" />
+                      <line x1="248" y1="95" x2="228" y2="95" stroke="rgba(254,246,42,0.45)" strokeWidth="1.2" />
+                      <line x1="248" y1="158" x2="214" y2="116" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" />
+                    </svg>
+
+                    <div className="relative z-10 flex h-full items-center justify-between gap-2">
+                      <div className="flex flex-col gap-2">
+                        <SystemActionPill label="State Machine" />
+                        <SystemActionPill label="Audit SHA-256" />
+                        <SystemActionPill label="Status 90d" />
+                      </div>
+
+                      <div className="flex h-16 w-28 flex-col items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-900/90 text-center shadow-[0_16px_34px_-22px_rgba(0,0,0,1)]">
+                        <span className="font-mono text-[10px] tracking-[0.15em] uppercase text-zinc-500">
+                          Core
+                        </span>
+                        <span className="mt-0.5 font-orbitron text-xs font-bold text-zinc-100">
+                          ARCH<span className="text-[#FEF62A]">.</span>
+                        </span>
+                      </div>
+
+                      <div className="flex flex-col items-end gap-2">
+                        <SystemActionPill label="RBAC Matrix" />
+                        <SystemActionPill label="Alert Rules" />
+                        <SystemActionPill label="Postmortem" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between font-mono text-xs text-zinc-400">
+                  <span>Ready for production on-call</span>
+                  <Link
+                    href="/login"
+                    className="inline-flex items-center gap-1 font-medium text-zinc-200 hover:text-[#FEF62A]"
+                  >
+                    Launch Console →
+                  </Link>
+                </div>
+              </div>
             </div>
-          </Reveal>
+          </div>
+
+          {/* ================================================================
+              QuickPicks Bar (Exact Vengeance UI QuickPicks)
+             ================================================================ */}
+          <div className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between md:px-8">
+            <div className="flex items-center gap-2 font-mono text-xs text-zinc-400">
+              <span className="size-1.5 rounded-full bg-[#FEF62A]" />
+              <span>Registry picks: jump directly into a live subsystem</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {QUICK_PICKS.map((item) => (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  className="inline-flex items-center gap-1 rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1 font-mono text-xs text-zinc-300 transition-colors hover:border-zinc-600 hover:text-white"
+                >
+                  <span>{item.name}</span>
+                  <span className="text-zinc-500">↗</span>
+                </a>
+              ))}
+            </div>
+          </div>
         </div>
-      </div>
+      </Container>
     </section>
   );
 }

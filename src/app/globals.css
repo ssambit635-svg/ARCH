@@ -1,556 +1,425 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
-/*
- * ARCH — "Mission Control" design language.
- *
- * The rule that governs every token below: colour is *information*, never decoration.
- *
- *   1. The base is blue-black, not blue-black-with-a-vibe. Near-zero chroma, so nothing in
- *      the shell competes with a severity colour.
- *   2. There is exactly one decorative hue — signal blue. It marks ARCH itself: the
- *      logotype, focus, active navigation, and the V1.1 intelligence. Nothing else.
- *      It is a *flat* product blue (the Stripe/GitHub end of the spectrum), not the neon
- *      cyan→violet "AI" gradient: no glow, no bloom, no gradient-filled display type.
- *   3. Red / orange / amber / green / sky belong to incident and service state. A chart
- *      may use them. A headline, a button glow or a hero backdrop may not.
- *   4. No aurora blobs, no `blur-[130px]` orbs, no gradient-filled display type, no
- *      coloured drop-shadows. Depth comes from hairlines, grain, elevation and light
- *      that behaves like light (specular on 3D geometry) — not from CSS glow.
- *
- * Legacy note: `abyss-*`, `arch-*`, `indigo-*` and `violet-*` are kept as *aliases* onto
- * this palette. Roughly 250 existing utility classes across 38 components referenced the
- * old indigo→violet scheme; remapping the scales retires all of them at once instead of
- * leaving half the product glowing blue.
- */
+/* ============================================================================
+   ARCH — Vengeance UI Design System (DESIGN.md & SKILL.md)
+   Palette:
+     color-1: #050608 (Dark Background) / #000000 (Deepest Dark)
+     color-2: #FEF62A (Signature Yellow-Lime Highlight)
+     color-3: #FFFFFF (Text Light)
+   Typography:
+     Heading: Orbitron (--font-orbitron / --font-display)
+     Body:    Inter (--font-inter / --font-sans)
+     Mono:    Geist Mono (--font-geist-mono / --font-mono)
+   ============================================================================ */
 
 @theme {
-  /* ---- Type -------------------------------------------------------------
-   * All three families are self-hosted (OFL-1.1). No network fetch at build
-   * or run time — an air-gapped install must still build. See layout.tsx.
-   */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --font-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --font-orbitron: var(--font-orbitron), var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-orbitron), var(--font-space-grotesk), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
 
-  /* ---- Blue-black scale (the base; a breath of blue, near-zero chroma) -- */
-  --color-ink-1000: #04060b;
-  --color-ink-950: #070a11;
-  --color-ink-900: #0b0f18;
-  --color-ink-850: #10151f;
-  --color-ink-800: #151b26;
-  --color-ink-750: #1b222e;
-  --color-ink-700: #222a37;
-  --color-ink-650: #2a3441;
-  --color-ink-600: #35404f;
-  --color-ink-500: #48566a;
+  /* Carbon Dark Surface Ramp (DESIGN.md: #050608 / #000000) */
+  --color-ink-1000: #000000;
+  --color-ink-950: #050608;
+  --color-ink-900: #08090c;
+  --color-ink-850: #0d0e12;
+  --color-ink-800: #121318;
+  --color-ink-750: #18181b;
+  --color-ink-700: #222226;
 
-  /* Legacy alias — every `bg-abyss-*` in the product now resolves to blue-black. */
-  --color-abyss-950: #070a11;
-  --color-abyss-900: #0b0f18;
-  --color-abyss-850: #10151f;
-  --color-abyss-800: #151b26;
-  --color-abyss-700: #222a37;
+  /* Foreground Ramp (DESIGN.md: #FFFFFF -> zinc) */
+  --color-bone: #ffffff;
+  --color-bone-dim: #e4e4e7;
+  --color-ash-200: #d4d4d8;
+  --color-ash-300: #a1a1aa;
+  --color-ash-400: #8b8b95;
+  --color-ash-500: #71717a;
+  --color-ash-600: #52525b;
+  --color-ash-700: #3f3f46;
+  --color-ash-800: #27272a;
 
-  /* ---- Text (bone, not pure white — pure white on blue-black vibrates) ---- */
-  --color-bone: #f4f3f0;
-  --color-bone-dim: #dedbd4;
-  --color-ash-200: #c7cbd0;
-  --color-ash-300: #a5abb3;
-  --color-ash-400: #858c95;
-  --color-ash-500: #6a717a;
-  --color-ash-600: #525862;
-  --color-ash-700: #3d424a;
+  /* Vengeance UI Primary Accent (#FEF62A + Crisp Monochrome) — No Blue AI Slop */
+  --color-vui-yellow: #FEF62A;
+  --color-signal-300: #FEF62A;
+  --color-signal-400: #ffffff;
+  --color-signal-500: #e4e4e7;
+  --color-signal-600: #d4d4d8;
 
-  /* ---- Signal blue (the single decorative hue) -------------------------- */
-  --color-signal-100: #e6f0fd;
-  --color-signal-200: #c9e0fb;
-  --color-signal-300: #9cc8f7;
-  --color-signal-400: #63a6f0;
-  --color-signal-500: #2f7ee0;
-  --color-signal-600: #2263bd;
-  --color-signal-700: #1b4d93;
-  --color-signal-800: #153a6d;
-  --color-signal-900: #0f2849;
+  /* ARCH Native AI Accent — Crisp Yellow-Lime (#FEF62A) & Zinc instead of Violet */
+  --color-arch-300: #FEF62A;
+  --color-arch-400: #FEF62A;
+  --color-arch-500: #e4dc24;
+  --color-arch-600: #c7bf1b;
 
-  /* Legacy alias — `arch-*` was the brand hue; it is signal blue now. */
-  --color-arch-50: #f2f7fe;
-  --color-arch-100: #e6f0fd;
-  --color-arch-200: #c9e0fb;
-  --color-arch-300: #9cc8f7;
-  --color-arch-400: #63a6f0;
-  --color-arch-500: #2f7ee0;
-  --color-arch-600: #2263bd;
-  --color-arch-700: #1b4d93;
+  /* Remap legacy indigo/violet utility tokens to crisp neutral zinc/yellow so no component glows purple/blue */
+  --color-indigo-300: #e4e4e7;
+  --color-indigo-400: #d4d4d8;
+  --color-indigo-500: #a1a1aa;
+  --color-indigo-600: #71717a;
+  --color-violet-200: #fef9c3;
+  --color-violet-300: #FEF62A;
+  --color-violet-400: #FEF62A;
+  --color-violet-500: #d4d4d8;
 
-  /* ---- Retired: the indigo→violet "AI glow" -----------------------------
-   * These scales are deliberately reassigned rather than deleted. Components
-   * still referencing them inherit the new language, and any that fade an
-   * indigo→violet gradient now fade blue→blue, i.e. flat and calm.
-   */
-  --color-indigo-50: #f2f7fe;
-  --color-indigo-100: #e6f0fd;
-  --color-indigo-200: #c9e0fb;
-  --color-indigo-300: #9cc8f7;
-  --color-indigo-400: #63a6f0;
-  --color-indigo-500: #2f7ee0;
-  --color-indigo-600: #2263bd;
-  --color-indigo-700: #1b4d93;
-  --color-indigo-800: #153a6d;
-  --color-indigo-900: #0f2849;
-  --color-indigo-950: #0a1a30;
+  /* Operational Status Semantics */
+  --color-ok-400: #34d399;
+  --color-ok-500: #10b981;
+  --color-warn-400: #fbbf24;
+  --color-warn-500: #f59e0b;
+  --color-crit-400: #fb7185;
+  --color-crit-500: #f43f5e;
+  --color-crit-600: #e11d48;
 
-  --color-violet-50: #f2f7fe;
-  --color-violet-100: #e6f0fd;
-  --color-violet-200: #c9e0fb;
-  --color-violet-300: #9cc8f7;
-  --color-violet-400: #63a6f0;
-  --color-violet-500: #2f7ee0;
-  --color-violet-600: #2263bd;
-  --color-violet-700: #1b4d93;
-  --color-violet-800: #153a6d;
-  --color-violet-900: #0f2849;
-  --color-violet-950: #0a1a30;
+  /* Vengeance UI Semantic Variables */
+  --color-background: #050608;
+  --color-foreground: #ffffff;
+  --color-muted: #141519;
+  --color-muted-foreground: #8e929f;
+  --color-border: #222222;
+  --color-card: #08090c;
+  --color-card-foreground: #ffffff;
+  --color-primary: #ffffff;
+  --color-primary-foreground: #050608;
+  --color-secondary: #141519;
+  --color-secondary-foreground: #ffffff;
+  --color-accent: #18181b;
+  --color-accent-foreground: #ffffff;
 
-  /* A blue that reads as steel, not as a link. Used for neutral data lines. */
-  --color-blue-300: #9cc8f7;
-  --color-blue-400: #63a6f0;
-  --color-blue-500: #2f7ee0;
-  --color-fuchsia-500: #2f7ee0;
-  --color-purple-500: #2f7ee0;
-
-/* ---- Retired: slate's blue cast ---------------------------------------
-   * 550 utility classes across the product take their text and border colour
-   * from `slate-*`, which is a blue-gray. Blue-gray body copy on a blue-black
-   * base is what makes a dark UI read as a default AI theme long before any
-   * gradient shows up. The ramp is remapped to a stone neutral with a breath of
-   * warmth, which sits correctly against the blue-black surfaces and the
-   * signal-blue accent. Severity hues (rose, amber, emerald, sky) are untouched — those are
-   * data, and they are supposed to be saturated.
-   */
-  --color-slate-50: #fafaf9;
-  --color-slate-100: #f1f1ef;
-  --color-slate-200: #e3e3e0;
-  --color-slate-300: #d0d0cc;
-  --color-slate-400: #a6a6a1;
-  --color-slate-500: #7d7d78;
-  --color-slate-600: #5e5e59;
-  --color-slate-700: #474743;
-  --color-slate-800: #2f2f2c;
-  --color-slate-900: #1e1e1c;
-  --color-slate-950: #121211;
-
-  --color-gray-400: #a6a6a1;
-  --color-gray-500: #7d7d78;
-  --color-zinc-400: #a6a6a1;
-
-  /* ---- Severity & service state — SEMANTIC ONLY -------------------------
-   * Never use these for a background wash, a hero, or a headline.
-   */
-  --color-sev-critical: #ff4438;
-  --color-sev-high: #ff8a1f;
-  --color-sev-medium: #ffd60a;
-  --color-sev-low: #93a1b0;
-  --color-state-ok: #2fbf71;
-  --color-state-info: #38bdf8;
-  --color-state-warn: #ffb627;
-  --color-state-down: #ff4438;
-
-  /* ---- Hairlines & elevation ------------------------------------------- */
-  --color-hairline: rgb(255 255 255 / 0.075);
-  --color-hairline-strong: rgb(255 255 255 / 0.14);
-
-  /* ---- Motion ---------------------------------------------------------- */
-  --animate-fade-in: fade-in 0.35s ease both;
-  --animate-rise: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-scale-in: scale-in 0.18s ease-out both;
-  --animate-slide-in-right: slide-in-right 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-pulse-dot: pulse-dot 2.4s ease-in-out infinite;
-  --animate-shimmer: shimmer 1.8s linear infinite;
-  --animate-spin-slow: spin 2.5s linear infinite;
-  --animate-marquee: marquee 42s linear infinite;
-  --animate-marquee-rev: marquee-rev 42s linear infinite;
-  --animate-scan: scan 7s linear infinite;
-  --animate-breathe: breathe 9s ease-in-out infinite;
-  --animate-ticker: ticker 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
-  --animate-sweep: sweep 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-  --animate-blink: blink 1.05s steps(2, start) infinite;
-
-  @keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  @keyframes rise {
-    from { opacity: 0; transform: translateY(14px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes scale-in {
-    from { opacity: 0; transform: scale(0.97) translateY(4px); }
-    to { opacity: 1; transform: scale(1) translateY(0); }
-  }
-  @keyframes slide-in-right {
-    from { opacity: 0; transform: translateX(16px); }
-    to { opacity: 1; transform: translateX(0); }
-  }
-  @keyframes pulse-dot {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.4; }
-  }
-  @keyframes shimmer {
-    from { background-position: -200% 0; }
-    to { background-position: 200% 0; }
-  }
-  @keyframes marquee {
-    from { transform: translate3d(0, 0, 0); }
-    to { transform: translate3d(-50%, 0, 0); }
-  }
-  @keyframes marquee-rev {
-    from { transform: translate3d(-50%, 0, 0); }
-    to { transform: translate3d(0, 0, 0); }
-  }
-  @keyframes scan {
-    0% { transform: translateY(-100%); opacity: 0; }
-    8% { opacity: 1; }
-    92% { opacity: 1; }
-    100% { transform: translateY(100%); opacity: 0; }
-  }
-  @keyframes breathe {
-    0%, 100% { opacity: 0.45; }
-    50% { opacity: 0.9; }
-  }
-  @keyframes ticker {
-    from { opacity: 0; transform: translateY(60%); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  @keyframes sweep {
-    0% { transform: translateX(-110%); }
-    60%, 100% { transform: translateX(210%); }
-  }
-  @keyframes blink {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0; }
-  }
+  /* Shadows from SKILL.md */
+  --shadow-hairline: inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
+  --shadow-card: 0 10px 26px -18px rgba(0, 0, 0, 0.75), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+  --shadow-elevated: 0 24px 72px -48px rgb(0, 0, 0), inset 0 1px 0 0 rgba(255, 255, 255, 0.043);
+  --shadow-signal: inset 0 1px 0 0 rgba(255, 255, 255, 0.12), 0 10px 26px -18px rgba(0, 0, 0, 0.85);
 }
 
 :root {
   color-scheme: dark;
-  --arch-accent: #5b9fea;
-  --arch-accent-soft: rgb(91 159 234 / 0.14);
-  --arch-hairline: rgb(255 255 255 / 0.075);
-  --arch-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --bg: #050608;
+  --bg-elevated: #08090c;
+  --bg-panel: #0d0e12;
+  --bg-muted: #141519;
+  --fg: #ffffff;
+  --fg-muted: #a1a1aa;
+  --fg-subtle: #71717a;
+  --border-hairline: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --ring: rgba(254, 246, 42, 0.45);
+  --background: #050608;
+  --foreground: #ffffff;
+  --border: #222222;
+  --muted: #141519;
+  --muted-foreground: #8e929f;
+}
+
+* {
+  box-sizing: border-box;
+  border-color: var(--border-hairline);
 }
 
 html,
 body {
-  min-height: 100%;
-}
-
-html {
-  /* Lenis owns scrolling on the marketing surface; keep native behaviour sane elsewhere. */
-  -webkit-text-size-adjust: 100%;
-}
-
-body {
-  @apply bg-ink-1000 font-sans text-ash-200 antialiased;
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01';
-  text-rendering: optimizeLegibility;
+  background: #050608;
+  color: #ffffff;
+  font-family: var(--font-sans);
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
   -webkit-font-smoothing: antialiased;
-}
-
-/* Lenis: required so the smooth-scroll transform never fights the browser. */
-html.lenis,
-html.lenis body {
-  height: auto;
-}
-.lenis.lenis-smooth {
-  scroll-behavior: auto !important;
-}
-.lenis.lenis-smooth [data-lenis-prevent] {
-  overscroll-behavior: contain;
-}
-.lenis.lenis-stopped {
-  overflow: hidden;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 ::selection {
-  background: rgb(47 126 224 / 0.32);
-  color: #f2f7fe;
+  background: #FEF62A;
+  color: #050608;
 }
 
-/* Keyboard focus is a hard signal-blue ring — the only place the accent shouts. */
-:where(a, button, input, select, textarea, [tabindex]):focus-visible {
-  outline: 2px solid var(--arch-accent);
-  outline-offset: 2px;
-  border-radius: 2px;
+/* Custom Scrollbar (Vengeance UI) */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
 }
-
-.arch-mono {
-  font-family: var(--font-mono);
-  font-feature-settings: 'zero', 'ss02';
-}
-
-.arch-display {
-  font-family: var(--font-display);
-  letter-spacing: -0.03em;
-}
-
-/* Tabular figures for every number in a grid, so columns stop jittering. */
-.arch-tabular {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: 'tnum';
-}
-
-/* ---- Surfaces ---------------------------------------------------------- */
-
-/* Engineering grid + vignette. No aurora, no coloured radial wash. */
-.arch-backdrop {
-  background-image:
-    linear-gradient(rgb(255 255 255 / 0.022) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(255 255 255 / 0.022) 1px, transparent 1px);
-  background-size: 56px 56px, 56px 56px;
-  mask-image: radial-gradient(ellipse 90% 70% at 50% 0%, black 0%, transparent 78%);
-}
-
-/* Hairline grid used behind dense data panels — reads as graph paper. */
-.arch-grid-fine {
-  background-image:
-    linear-gradient(rgb(255 255 255 / 0.028) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(255 255 255 / 0.028) 1px, transparent 1px);
-  background-size: 22px 22px, 22px 22px;
-}
-
-/* Panels: one hairline, a whisper of top light, no coloured bloom. */
-.arch-panel {
-  position: relative;
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 0.028), rgb(255 255 255 / 0) 42%),
-    #0c0e10;
-  border: 1px solid var(--arch-hairline);
-  border-radius: 14px;
-}
-.arch-panel::before {
-  content: '';
-  position: absolute;
-  inset: 0 0 auto;
-  height: 1px;
-  border-radius: 14px 14px 0 0;
-  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.16) 22%, rgb(255 255 255 / 0.16) 78%, transparent);
-  pointer-events: none;
-}
-
-.arch-hairline {
-  border-color: var(--arch-hairline);
-}
-
-/* Neutral glass — no tint, so it never reads as a coloured glow. */
-.glass {
-  background: rgb(8 9 11 / 0.72);
-  backdrop-filter: blur(16px) saturate(1.2);
-  -webkit-backdrop-filter: blur(16px) saturate(1.2);
-}
-
-/* Lift is border + elevation only. The old version painted an indigo shadow. */
-.card-lift {
-  transition:
-    transform 0.45s var(--arch-ease),
-    border-color 0.3s ease,
-    background-color 0.3s ease,
-    box-shadow 0.45s var(--arch-ease);
-}
-.card-lift:hover {
-  transform: translateY(-2px);
-  border-color: rgb(255 255 255 / 0.16);
-  box-shadow:
-    0 1px 0 0 rgb(255 255 255 / 0.05) inset,
-    0 18px 44px -22px rgb(0 0 0 / 0.95);
-}
-
-.link-row {
-  transition: background-color 0.15s ease;
-}
-
-/* ---- Type treatments --------------------------------------------------- */
-
-/* Monochrome letterpress. Was a transparent indigo→violet clip; display type
- * is now solid bone, because gradient text is the single loudest "AI template"
- * tell there is. Kept as a class so existing markup still resolves. */
-.text-gradient {
-  background: linear-gradient(178deg, #fbfaf8 8%, #cfccc4 92%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-
-/* A hairline that draws itself in — used under eyebrows and section rules. */
-.rule-draw {
-  position: relative;
-  overflow: hidden;
-}
-.rule-draw::after {
-  content: '';
-  position: absolute;
-  inset-block-end: 0;
-  inset-inline: 0;
-  height: 1px;
-  background: linear-gradient(90deg, var(--arch-accent), rgb(255 255 255 / 0.05));
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 0.9s var(--arch-ease);
-}
-.rule-draw[data-shown='true']::after {
-  transform: scaleX(1);
-}
-
-/* Line-mask reveal: each line sits in an overflow clip and translates up. */
-.line-mask {
-  display: block;
-  overflow: hidden;
-}
-.line-mask > span {
-  display: block;
-  transform: translateY(105%);
-  transition: transform 1s var(--arch-ease);
-}
-[data-shown='true'] .line-mask > span,
-.line-mask[data-shown='true'] > span {
-  transform: translateY(0);
-}
-
-/* ---- Data / console ---------------------------------------------------- */
-
-.skeleton-shimmer {
-  background: linear-gradient(100deg, rgb(255 255 255 / 0.035) 40%, rgb(255 255 255 / 0.085) 50%, rgb(255 255 255 / 0.035) 60%);
-  background-size: 200% 100%;
-  animation: var(--animate-shimmer);
-}
-
-.layer-shadow {
-  box-shadow:
-    0 32px 90px -24px rgb(0 0 0 / 0.85),
-    0 0 0 1px rgb(255 255 255 / 0.07);
-}
-
-/* Severity chip — a 2px state bar plus tinted text. Reads at a glance in a
- * dense grid the way Cloudflare and Grafana chips do, without a glow. */
-.arch-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  border-radius: 4px;
-  border: 1px solid currentColor;
-  padding: 0.1rem 0.42rem;
-  font-family: var(--font-mono);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  background: color-mix(in oklab, currentColor 10%, transparent);
-}
-
-/* Uptime bar segment (status page / 90-day history). */
-.arch-uptime-seg {
-  border-radius: 1px;
-  transition: transform 0.25s var(--arch-ease), filter 0.25s ease;
-}
-.arch-uptime-seg:hover {
-  transform: scaleY(1.28);
-  filter: brightness(1.25);
-}
-
-/* Scanline that travels down a panel — the "live system" cue. */
-.arch-scanline {
-  position: absolute;
-  inset-inline: 0;
-  height: 22%;
-  background: linear-gradient(180deg, transparent, rgb(255 255 255 / 0.045) 55%, transparent);
-  animation: var(--animate-scan);
-  pointer-events: none;
-}
-
-/* Specular sheen that sweeps across a surface on hover (physical, not glow). */
-.arch-sheen {
-  position: relative;
-  overflow: hidden;
-}
-.arch-sheen::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(105deg, transparent 38%, rgb(255 255 255 / 0.09) 50%, transparent 62%);
-  transform: translateX(-110%);
-  pointer-events: none;
-}
-.arch-sheen:hover::after {
-  animation: var(--animate-sweep);
-}
-
-/* ---- Scrollbars -------------------------------------------------------- */
-
-.scroll-thin {
-  scrollbar-width: thin;
-  scrollbar-color: rgb(255 255 255 / 0.14) transparent;
-}
-.scroll-thin::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-.scroll-thin::-webkit-scrollbar-thumb {
-  background: rgb(255 255 255 / 0.13);
-  border-radius: 8px;
-}
-.scroll-thin::-webkit-scrollbar-thumb:hover {
-  background: rgb(255 255 255 / 0.22);
-}
-.scroll-thin::-webkit-scrollbar-track {
+::-webkit-scrollbar-track {
   background: transparent;
 }
-
-/* ---- Marketing-only utilities ------------------------------------------ */
-
-/* Vertical eyebrow text, used on pinned scroll sections. */
-.arch-vertical {
-  writing-mode: vertical-rl;
-  text-orientation: mixed;
+::-webkit-scrollbar-thumb {
+  background: rgba(156, 163, 175, 0.25);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.45);
 }
 
-.arch-marquee-mask {
-  mask-image: linear-gradient(90deg, transparent, black 9%, black 91%, transparent);
+/* Tabular Numerals */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "zero" 1;
 }
 
-/* The pulse that walks the agent-loop spine. One element, transform-only, so it stays on the
-   compositor for the whole section. */
-.arch-loop-pulse {
-  animation: loop-pulse 3.4s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+.font-orbitron {
+  font-family: var(--font-orbitron);
 }
 
-@keyframes loop-pulse {
-  0% { transform: translateY(0); opacity: 0; }
-  10% { opacity: 1; }
-  88% { opacity: 1; }
-  100% { transform: translateY(15.5rem); opacity: 0; }
+/* ============================================================================
+   Surface & Hairline Utilities (SKILL.md Exact Shadow Tokens)
+   ============================================================================ */
+.surface-card {
+  background: linear-gradient(180deg, rgba(16, 17, 22, 0.92) 0%, rgba(8, 9, 12, 0.96) 100%);
+  border: 1px solid #222222;
+  box-shadow: 0 10px 26px -18px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
-/* Deploy terminal: lines deal out top-to-bottom when the tab changes. Re-keyed on switch so the
-   stagger replays rather than cross-fading into mush. */
-.arch-deploy-line {
-  animation: deploy-line 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+.surface-panel {
+  background: rgba(12, 13, 17, 0.85);
+  border: 1px solid #222222;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-@keyframes deploy-line {
-  from { opacity: 0; transform: translateX(-8px); }
-  to { opacity: 1; transform: translateX(0); }
+.surface-elevated {
+  background: linear-gradient(180deg, #121318 0%, #08090c 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 24px 72px -48px rgb(0, 0, 0), inset 0 1px 0 rgba(255, 255, 255, 0.043);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+.surface-interactive {
+  transition: background-color 150ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 150ms cubic-bezier(0.16, 1, 0.3, 1),
+    transform 150ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.surface-interactive:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: linear-gradient(180deg, rgba(22, 23, 29, 0.96) 0%, rgba(12, 13, 17, 0.98) 100%);
+}
+
+/* Structural Background Grid (Vengeance UI) */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.bg-dots {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.bg-radial-spot {
+  background: radial-gradient(70% 45% at 50% 0%, rgba(255, 255, 255, 0.05) 0%, rgba(254, 246, 42, 0.02) 45%, transparent 75%);
+}
+
+.bg-radial-arch {
+  background: radial-gradient(60% 50% at 50% 0%, rgba(254, 246, 42, 0.05) 0%, transparent 70%);
+}
+
+/* Focus Ring */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.35rem;
+  height: 1.25rem;
+  padding: 0 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1;
+  color: var(--color-ash-300);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom-width: 2px;
+  border-radius: 0.25rem;
+}
+
+/* ============================================================================
+   Vengeance UI Keyframes & Animations (SKILL.md + globals.css + landing-grid.css)
+   ============================================================================ */
+@keyframes pulse-dot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
   }
-  /* Reveals must not strand content off-screen when motion is disabled. */
-  .line-mask > span {
-    transform: none !important;
+  50% {
+    opacity: 0.45;
+    transform: scale(0.92);
   }
+}
+
+.animate-pulse-dot {
+  animation: pulse-dot 2.2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes iso-draw {
+  0% {
+    stroke-dashoffset: 1000;
+  }
+  100% {
+    stroke-dashoffset: 0;
+  }
+}
+
+.iso-grid-path {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: iso-draw 2s ease-out forwards;
+}
+
+@keyframes border-beam {
+  100% {
+    offset-distance: 100%;
+  }
+}
+
+.animate-border-beam {
+  animation: border-beam calc(var(--duration, 12) * 1s) infinite linear;
+}
+
+@keyframes testimonial-scroll {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(0, -50%, 0);
+  }
+}
+
+.testimonial-marquee-track {
+  display: flex;
+  flex-direction: column;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+  animation-name: testimonial-scroll;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes hero-face-preview-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+.hero-face-preview {
+  animation: hero-face-preview-in 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity;
+}
+
+@keyframes cta-float {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -5px, 0);
+  }
+}
+
+@keyframes cta-logo-float {
+  0%, 100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -3px, 0);
+  }
+}
+
+.cta-box-float {
+  will-change: transform;
+  animation: cta-float 3s ease-in-out infinite;
+}
+
+.cta-logo-float {
+  will-change: transform;
+  animation: cta-logo-float 3s ease-in-out infinite;
+}
+
+/* Vengeance UI Motion Core Ring & Caret (SKILL.md) */
+@keyframes motion-core-ring {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes motion-caret {
+  0%, 49% {
+    opacity: 1;
+  }
+  50%, 100% {
+    opacity: 0;
+  }
+}
+
+.motion-core-ring {
+  position: relative;
+}
+
+.motion-core-ring::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1.4px;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 240deg,
+    rgba(255, 255, 255, 0.24) 286deg,
+    rgba(254, 246, 42, 0.95) 326deg,
+    rgba(255, 255, 255, 0.24) 352deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: motion-core-ring 5.2s linear infinite;
+  pointer-events: none;
+}
+
+.motion-caret {
+  display: inline-block;
+  width: 0.42ch;
+  height: 0.95em;
+  margin-left: 2px;
+  vertical-align: -0.08em;
+  border-radius: 1px;
+  background: currentColor;
+  animation: motion-caret 1s steps(1, end) infinite;
+}
+
+/* Vengeance UI GitHub Star CTA */
+.github-star-cta {
+  isolation: isolate;
+}
+.github-star-cta::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(120% 90% at 50% 0%, rgba(255, 255, 255, 0.14), transparent 65%);
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+/* Vengeance UI Flip Text */
+@keyframes flip-wave {
+  0%, 100% {
+    transform: rotateX(0deg) translateY(0);
+  }
+  45% {
+    transform: rotateX(360deg) translateY(-2px);
+  }
+}
+
+.flip-char {
+  display: inline-block;
+  transform-style: preserve-3d;
+  animation: flip-wave calc(var(--flip-duration, 2.2s)) ease-in-out infinite;
+  animation-delay: calc(var(--index, 0) * var(--flip-delay, 0.06s));
 }

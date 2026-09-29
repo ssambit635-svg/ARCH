@@ -1,45 +1,109 @@
-import type { ReactNode } from 'react';
-import { Card, CardBody } from './index';
+import React from 'react';
 
-type Tone = 'neutral' | 'danger' | 'success' | 'warning' | 'info' | 'ai';
+type Accent = 'default' | 'critical' | 'warning' | 'ok' | 'indigo' | 'violet';
 
-const valueTones: Record<Tone, string> = {
-  neutral: 'text-bone',
-  danger: 'text-sev-critical',
-  success: 'text-state-ok',
-  warning: 'text-sev-medium',
-  info: 'text-state-info',
-  ai: 'text-signal-300',
+const accentBar: Record<Accent, string> = {
+  default: 'from-white/30 to-transparent',
+  critical: 'from-crit-500 to-crit-500/0',
+  warning: 'from-warn-500 to-warn-500/0',
+  ok: 'from-ok-500 to-ok-500/0',
+  indigo: 'from-[#FEF62A] to-transparent',
+  violet: 'from-[#FEF62A] to-transparent',
 };
+
+const valueAccent: Record<Accent, string> = {
+  default: 'text-white',
+  critical: 'text-crit-400',
+  warning: 'text-warn-400',
+  ok: 'text-ok-400',
+  indigo: 'text-white',
+  violet: 'text-[#FEF62A]',
+};
+
+export interface StatProps {
+  label: string;
+  value: React.ReactNode;
+  hint?: React.ReactNode;
+  sublabel?: string;
+  tone?: string;
+  spark?: React.ReactNode;
+  delta?: { value: string; positive?: boolean };
+  trend?: { direction: 'up' | 'down' | 'flat'; value: string; positive?: boolean };
+  accent?: Accent;
+  icon?: React.ReactNode;
+}
+
+function resolveAccent(accent?: Accent, tone?: string): Accent {
+  if (accent) return accent;
+  if (tone === 'danger' || tone === 'critical' || tone === 'rose') return 'critical';
+  if (tone === 'warn' || tone === 'warning' || tone === 'amber') return 'warning';
+  if (tone === 'ok' || tone === 'emerald' || tone === 'success') return 'ok';
+  if (tone === 'ai' || tone === 'violet' || tone === 'indigo') return 'violet';
+  return 'default';
+}
 
 export function Stat({
   label,
   value,
   hint,
-  tone = 'neutral',
-  icon,
+  sublabel,
+  tone,
   spark,
-}: {
-  label: string;
-  value: ReactNode;
-  hint?: ReactNode;
-  tone?: Tone;
-  icon?: ReactNode;
-  spark?: ReactNode;
-}) {
+  delta,
+  trend,
+  accent,
+  icon,
+}: StatProps) {
+  const resolved = resolveAccent(accent, tone);
+  const footnote = hint ?? sublabel;
   return (
-    <Card className="card-lift relative overflow-hidden">
-      <CardBody>
-        <div className="flex items-start justify-between gap-3">
-          <p className="arch-mono text-[10.5px] font-semibold uppercase tracking-[0.14em] text-ash-500">{label}</p>
-          {icon ? <span className="text-slate-500">{icon}</span> : null}
+    <div className="relative overflow-hidden rounded-xl surface-card p-5 group">
+      <div
+        className={`pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r ${accentBar[resolved]}`}
+      />
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-mono text-[11px] font-medium uppercase tracking-[0.1em] text-zinc-400">
+          {label}
+        </span>
+        {(icon || spark) && (
+          <span className="text-zinc-500 group-hover:text-zinc-300 transition-colors">
+            {icon ?? spark}
+          </span>
+        )}
+      </div>
+      <div className="mt-2.5 flex items-baseline gap-2.5">
+        <div
+          className={`font-orbitron text-3xl font-bold tracking-tight tnum ${valueAccent[resolved]}`}
+        >
+          {value}
         </div>
-        <p className={`arch-display mt-2.5 text-[34px] font-semibold leading-none tracking-[-0.03em] arch-tabular ${valueTones[tone]}`}>{value}</p>
-        <div className="mt-2 flex items-end justify-between gap-3">
-          {hint ? <p className="text-xs leading-relaxed text-slate-500">{hint}</p> : <span />}
-          {spark}
-        </div>
-      </CardBody>
-    </Card>
+        {delta && (
+          <span
+            className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 font-mono text-[11px] font-medium ${
+              delta.positive
+                ? 'bg-ok-500/10 text-ok-400 border border-ok-500/20'
+                : 'bg-white/[0.04] text-zinc-400 border border-white/[0.06]'
+            }`}
+          >
+            {delta.value}
+          </span>
+        )}
+        {trend && (
+          <span
+            className={`inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 font-mono text-[11px] font-medium ${
+              trend.positive
+                ? 'bg-ok-500/10 text-ok-400 border border-ok-500/20'
+                : 'bg-white/[0.04] text-zinc-400 border border-white/[0.06]'
+            }`}
+          >
+            {trend.direction === 'up' ? '↑' : trend.direction === 'down' ? '↓' : '·'}{' '}
+            {trend.value}
+          </span>
+        )}
+      </div>
+      {footnote && <div className="mt-1.5 font-mono text-xs text-zinc-500">{footnote}</div>}
+    </div>
   );
 }
+
+export const StatCard = Stat;

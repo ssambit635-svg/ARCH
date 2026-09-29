@@ -1,121 +1,107 @@
 import Link from 'next/link';
 import { Logo } from '@/components/ui/logo';
-import { AI_NAME } from '@/lib/brand';
-
-/**
- * Auth shell.
- *
- * The brand panel used to carry two `blur-[130px]` colour orbs behind the headline — the single
- * loudest "generated dark SaaS" tell there is, and the reason the page read as a template. It now
- * carries structure instead: engineering graph paper, a top light bar, mono spec rows and an
- * oversized watermark of the mark. Depth comes from layering and hairlines, not from bloom.
- *
- * This is the surface a responder sees at 3am, so it is deliberately calm: no motion, no autoplay,
- * nothing to wait for. The form is the only thing that matters here.
- */
-
-const highlights = [
-  {
-    title: 'Declare in seconds',
-    body: 'Title first, everything else optional. The timeline, notifications and service status update themselves.',
-  },
-  {
-    title: `${AI_NAME} on every incident`,
-    body: 'Triage, summaries and verified fixes — generated on your server from your own history. No vendor, no key.',
-  },
-  {
-    title: 'Status pages + audit trail',
-    body: 'Customers read the page. Auditors read the log. Both are written in the same transaction, so they agree.',
-  },
-];
-
-const SPEC = [
-  ['deployment', 'self-hosted'],
-  ['database', 'postgresql 16'],
-  ['ai egress', 'none'],
-  ['audit coverage', '100%'],
-];
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative flex min-h-screen bg-ink-1000">
-      {/* ---- Brand panel ---- */}
-      <div className="relative hidden w-[46%] flex-col justify-between overflow-hidden border-r border-white/[0.07] bg-ink-950 p-10 lg:flex">
-        {/* Graph paper + vignette. Structured, and it ties the panel to the marketing surface. */}
-        <div className="arch-grid-fine pointer-events-none absolute inset-0 opacity-60" aria-hidden />
-        <div
-          className="pointer-events-none absolute inset-0"
-          style={{ background: 'radial-gradient(105% 78% at 18% 6%, rgb(255 255 255 / 0.035), transparent 58%)' }}
-          aria-hidden
-        />
-        {/* Top light bar — one sodium hairline, the only warm thing in the panel. */}
-        <div
-          className="pointer-events-none absolute inset-x-0 top-0 h-px"
-          style={{ background: 'linear-gradient(90deg, transparent, rgb(255 182 39 / 0.55) 18%, rgb(255 255 255 / 0.1) 62%, transparent)' }}
-          aria-hidden
-        />
-        {/* Oversized watermark of the wordmark, cropped by the panel. */}
-        <p
-          className="arch-display pointer-events-none absolute -bottom-[4.5rem] -left-2 select-none text-[15rem] font-semibold leading-[0.72] tracking-[-0.06em] text-white/[0.028]"
-          aria-hidden
-        >
-          ARCH
-        </p>
+    <div className="relative min-h-screen bg-[#050608] text-white flex flex-col overflow-hidden">
+      <div className="pointer-events-none fixed inset-0 bg-grid opacity-30" aria-hidden />
 
-        <Link href="/" className="relative w-fit" aria-label="ARCH home">
-          <Logo />
-        </Link>
+      <header className="relative z-10 border-b border-[#222]">
+        <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
+          <Link href="/" aria-label="ARCH home">
+            <Logo subtitle="Incident Platform" />
+          </Link>
+          <div className="flex items-center gap-4 text-xs text-zinc-400">
+            <Link href="/status/arch" className="hover:text-white transition-colors flex items-center gap-1.5 font-mono">
+              <span className="h-1.5 w-1.5 rounded-full bg-ok-400 animate-pulse-dot" />
+              System status
+            </Link>
+            <span className="text-zinc-700">·</span>
+            <Link href="/" className="hover:text-white transition-colors font-mono">
+              ← Back to overview
+            </Link>
+          </div>
+        </div>
+      </header>
 
-        <div className="relative space-y-8">
+      <main className="relative z-10 flex-1 grid lg:grid-cols-12 mx-auto w-full max-w-7xl border-x border-[#222]">
+        <aside className="hidden lg:flex lg:col-span-6 flex-col justify-between p-12 border-r border-[#222] bg-[#08090c]">
           <div>
-            <p className="arch-mono flex items-center gap-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-ash-500">
-              <span className="block h-px w-8 bg-signal-500" aria-hidden />
-              incident response, minus the chaos
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#222] bg-[#0d0e12] px-3 py-1 font-mono text-[11px] font-medium text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[#FEF62A]" />
+              ARCH Platform · Native Intelligence V1.1
+            </div>
+            <h1 className="mt-6 font-orbitron text-3xl font-bold tracking-tight text-white leading-[1.15]">
+              When production breaks at 03:00, clarity beats heroics.
+            </h1>
+            <p className="mt-3 font-mono text-sm text-zinc-400 leading-relaxed max-w-md">
+              A single operational plane for alert deduplication, on-call routing, live collaboration, native AI root-cause hypotheses, and public status telemetry.
             </p>
-            <h2 className="arch-display mt-4 max-w-[16ch] text-[2.6rem] font-semibold leading-[1.02] tracking-[-0.04em] text-bone">
-              Where your team goes when the app breaks.
-            </h2>
+
+            <div className="mt-8 rounded-xl border border-[#222] bg-[#050608] overflow-hidden shadow-[0_24px_72px_-48px_rgb(0,0,0),inset_0_1px_0_rgba(255,255,255,0.043)]">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-[#222] bg-[#0c0d11]">
+                <div className="flex items-center gap-2">
+                  <span className="h-2 w-2 rounded-full bg-crit-400 animate-pulse-dot" />
+                  <span className="font-mono text-[11px] text-white font-semibold">INC-204</span>
+                  <span className="text-[11px] text-zinc-400 truncate">
+                    Checkout latency &gt; 4.2s p99 · eu-central-1
+                  </span>
+                </div>
+                <span className="font-mono text-[10px] rounded bg-crit-500/15 text-crit-400 border border-crit-500/30 px-1.5 py-0.5">
+                  SEV-1 · INVESTIGATING
+                </span>
+              </div>
+              <div className="p-4 space-y-2.5 text-xs">
+                <div className="flex items-start gap-2.5">
+                  <span className="mt-0.5 font-mono text-[10px] text-zinc-500 tnum">03:12:04</span>
+                  <div className="text-zinc-300">
+                    Alert deduplicated <span className="font-mono text-zinc-400">(14 events → 1 incident)</span> · routed to{' '}
+                    <span className="text-white font-medium">@primary-oncall</span>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <span className="mt-0.5 font-mono text-[10px] text-zinc-500 tnum">03:12:19</span>
+                  <div className="rounded-lg border border-[#222] bg-[#0d0e13] px-3 py-2 text-zinc-200 flex-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                    <div className="flex items-center justify-between text-[10px] font-mono text-[#FEF62A] uppercase tracking-wider">
+                      <span>ARCH V1.1 · Root-Cause Hypothesis</span>
+                      <span>87% confidence</span>
+                    </div>
+                    <p className="mt-1 text-zinc-200 leading-relaxed">
+                      Connection pool saturation on <span className="font-mono text-white">pg-primary-02</span> following deploy{' '}
+                      <span className="font-mono text-white">v2.18.4</span>. Recommend rolling back migration #418.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <span className="mt-0.5 font-mono text-[10px] text-zinc-500 tnum">03:14:02</span>
+                  <div className="text-zinc-300">
+                    Status page updated · <span className="text-ok-400 font-medium">Mitigation verified</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <ul className="max-w-md divide-y divide-white/[0.07] border-y border-white/[0.07]">
-            {highlights.map((item, index) => (
-              <li key={item.title} className="group flex gap-4 py-4 transition-colors duration-300 hover:bg-white/[0.018]">
-                <span className="arch-mono arch-tabular mt-0.5 shrink-0 text-[11px] font-bold tracking-[0.08em] text-ash-700 transition-colors duration-300 group-hover:text-signal-500">
-                  0{index + 1}
-                </span>
-                <div className="min-w-0">
-                  <p className="text-[13.5px] font-semibold text-bone">{item.title}</p>
-                  <p className="mt-1 text-[12.5px] leading-relaxed text-ash-500">{item.body}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <dl className="arch-mono relative grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
-          {SPEC.map(([key, value]) => (
-            <div key={key}>
-              <dt className="text-[9px] uppercase tracking-[0.14em] text-ash-700">{key}</dt>
-              <dd className="mt-0.5 text-[11px] font-medium text-ash-400">{value}</dd>
+          <div className="grid grid-cols-3 gap-4 pt-8 border-t border-[#222] text-xs">
+            <div>
+              <div className="font-orbitron text-lg font-bold text-white tnum">&lt; 180ms</div>
+              <div className="font-mono text-zinc-500 text-[11px] mt-0.5">Webhook ingest p99</div>
             </div>
-          ))}
-        </dl>
-      </div>
+            <div>
+              <div className="font-orbitron text-lg font-bold text-white tnum">99.98%</div>
+              <div className="font-mono text-zinc-500 text-[11px] mt-0.5">90-day uptime ledger</div>
+            </div>
+            <div>
+              <div className="font-orbitron text-lg font-bold text-[#FEF62A] tnum">SHA-256</div>
+              <div className="font-mono text-zinc-500 text-[11px] mt-0.5">Append-only audit log</div>
+            </div>
+          </div>
+        </aside>
 
-      {/* ---- Form panel ---- */}
-      <div className="relative flex flex-1 flex-col items-center justify-center px-4 py-12 sm:px-8">
-        <div className="arch-grid-fine pointer-events-none absolute inset-0 opacity-25 lg:hidden" aria-hidden />
-
-        <Link href="/" className="relative mb-8 lg:hidden" aria-label="ARCH home">
-          <Logo />
-        </Link>
-
-        <div className="arch-panel layer-shadow relative w-full max-w-md animate-rise p-6 sm:p-8">{children}</div>
-
-        <p className="arch-mono relative mt-6 text-center text-[10px] uppercase tracking-[0.14em] text-ash-700">
-          rate-limited auth · sessions stay on this server
-        </p>
-      </div>
+        <section className="lg:col-span-6 flex items-center justify-center p-6 sm:p-12">
+          <div className="w-full max-w-md">{children}</div>
+        </section>
+      </main>
     </div>
   );
 }
