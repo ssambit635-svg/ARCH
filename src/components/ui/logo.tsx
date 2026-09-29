@@ -1,16 +1,29 @@
 import React from 'react';
 
 /**
- * Pure typographic wordmark following Vengeance UI & the reference hero ("ARCH.").
- * No custom invented SVG logo icon is rendered.
+ * ARCH Brand Logo & Mark.
+ * Features the official Flow AI-designed ARCH dragon emblem with Orbitron typography.
  */
-export function LogoMark({ className = '' }: { size?: number; className?: string }) {
+export function LogoMark({
+  className = '',
+  size = 22,
+}: {
+  size?: number;
+  className?: string;
+}) {
   return (
     <span
-      className={`inline-flex items-baseline font-orbitron text-xs font-extrabold tracking-tight text-white select-none ${className}`}
-      aria-hidden
+      className={`inline-flex items-center justify-center select-none ${className}`}
+      aria-label="ARCH Logo Mark"
     >
-      A<span className="text-[#FEF62A]">.</span>
+      <img
+        src="/dragon-mark.png"
+        alt="ARCH Dragon Mark"
+        width={size}
+        height={size}
+        style={{ width: `${size}px`, height: `${size}px` }}
+        className="object-contain drop-shadow-[0_0_10px_rgba(59,130,246,0.35)] shrink-0"
+      />
     </span>
   );
 }
@@ -24,8 +37,18 @@ export function Logo({
   compact?: boolean;
   className?: string;
 }) {
+  const iconSize = compact ? 22 : 28;
+
   return (
     <span className={`inline-flex items-center gap-2.5 select-none ${className}`}>
+      <img
+        src="/dragon-mark.png"
+        alt="ARCH Logo"
+        width={iconSize}
+        height={iconSize}
+        style={{ width: `${iconSize}px`, height: `${iconSize}px` }}
+        className="object-contain drop-shadow-[0_0_12px_rgba(59,130,246,0.35)] shrink-0 transition-transform duration-300 hover:scale-105"
+      />
       <span className="flex flex-col leading-none">
         <span className="inline-flex items-baseline gap-2">
           <span
@@ -54,7 +77,11 @@ export function AiBadge({ className = '' }: { className?: string }) {
     <span
       className={`inline-flex items-center gap-1.5 rounded-full border border-[#222] bg-[#0c0d11] px-2.5 py-0.5 font-mono text-[11px] font-medium text-zinc-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] ${className}`}
     >
-      <span className="h-1.5 w-1.5 rounded-full bg-[#FEF62A]" aria-hidden />
+      <img
+        src="/dragon-mark.png"
+        alt=""
+        className="h-3.5 w-3.5 object-contain"
+      />
       <span>ARCH V1.1</span>
     </span>
   );

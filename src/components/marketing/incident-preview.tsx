@@ -5,6 +5,7 @@ import Link from 'next/link';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Container, Heading, SubHeading, cn } from './vui-primitives';
+import { GsapTextReveal } from './gsap-reveal';
 
 type Severity = 'SEV-1' | 'SEV-2' | 'SEV-3';
 type Status = 'INVESTIGATING' | 'IDENTIFIED' | 'MONITORING' | 'RESOLVED';
@@ -46,7 +47,7 @@ const INCIDENTS: SampleIncident[] = [
     status: 'IDENTIFIED',
     service: 'checkout-api',
     region: 'eu-central-1',
-    commander: 'Elena Vance',
+    commander: 'Alex Mercer',
     commanderRole: 'Primary SRE',
     startedAt: '03:12 UTC',
     mtta: '01m 14s',
@@ -70,7 +71,7 @@ const INCIDENTS: SampleIncident[] = [
         time: '03:12:04',
         actor: 'webhook/prometheus',
         kind: 'alert',
-        text: '14 firing alerts deduplicated into INC-204 · paged @elena.vance',
+        text: '14 firing alerts deduplicated into INC-204 · paged @alex.mercer',
       },
       {
         time: '03:12:19',
@@ -80,7 +81,7 @@ const INCIDENTS: SampleIncident[] = [
       },
       {
         time: '03:13:18',
-        actor: 'elena.vance',
+        actor: 'alex.mercer',
         kind: 'action',
         text: 'Acknowledged incident · transitioned status to IDENTIFIED · initiated rollback of v2.18.4.',
       },
@@ -100,7 +101,7 @@ const INCIDENTS: SampleIncident[] = [
     status: 'MONITORING',
     service: 'webhook-ingest',
     region: 'us-east-1',
-    commander: 'Marcus Chen',
+    commander: 'Marcus Reed',
     commanderRole: 'Platform Lead',
     startedAt: '01:44 UTC',
     mtta: '02m 08s',
@@ -123,7 +124,7 @@ const INCIDENTS: SampleIncident[] = [
         time: '01:44:11',
         actor: 'webhook/datadog',
         kind: 'alert',
-        text: '6 queue-depth alerts grouped into INC-203 · routed to @marcus.chen',
+        text: '6 queue-depth alerts grouped into INC-203 · routed to @marcus.reed',
       },
       {
         time: '01:45:02',
@@ -133,7 +134,7 @@ const INCIDENTS: SampleIncident[] = [
       },
       {
         time: '01:48:30',
-        actor: 'marcus.chen',
+        actor: 'marcus.reed',
         kind: 'action',
         text: 'Applied per-tenant circuit breaker · queue draining at 1,400 msg/s.',
       },
@@ -147,7 +148,7 @@ const INCIDENTS: SampleIncident[] = [
     status: 'RESOLVED',
     service: 'edge-proxy',
     region: 'eu-west-1',
-    commander: 'Priya Nair',
+    commander: 'Priya Sharma',
     commanderRole: 'Infra Engineer',
     startedAt: 'Yesterday',
     mtta: '03m 40s',
@@ -173,7 +174,7 @@ const INCIDENTS: SampleIncident[] = [
       },
       {
         time: '19:11:45',
-        actor: 'priya.nair',
+        actor: 'priya.sharma',
         kind: 'action',
         text: 'Verified backup issuer rotation · marked incident RESOLVED.',
       },
@@ -234,15 +235,12 @@ export function IncidentPreview() {
                 <span className="size-1.5 rounded-full bg-[#FEF62A]" />
                 <span>LIVE WAR ROOM · INTERACTIVE CONSOLE PREVIEW</span>
               </div>
-              <Heading as="h2" variant="big" className="text-left">
-                One Workspace for{' '}
-                <span className="bg-gradient-to-b from-zinc-400 via-zinc-200 to-white bg-clip-text text-transparent">
-                  Every Severity
-                </span>
-              </Heading>
-              <SubHeading className="mt-2 max-w-2xl text-left">
+              <GsapTextReveal as="h2" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight text-left">
+                One Workspace for Every Severity
+              </GsapTextReveal>
+              <p className="mt-2 max-w-2xl text-left font-mono text-xs sm:text-sm text-zinc-400 leading-relaxed">
                 Select an incident in the queue, transition its state machine, or inspect the root-cause hypothesis and postmortem draft below.
-              </SubHeading>
+              </p>
             </div>
 
             <div className="flex items-center gap-2.5">

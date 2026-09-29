@@ -51,14 +51,21 @@ export function MarketingNav() {
     <>
       <header className="sticky top-0 isolate z-[200] border-b border-[#222] bg-[#050608]/95 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between gap-4 px-4 md:px-8 xl:px-20">
-          {/* Left: Pure Orbitron Wordmark (no custom invented logo icon) + Pill Nav */}
+          {/* Left: ARCH Brand with Official Dragon Logo + Pill Nav */}
           <div className="flex items-center gap-5">
             <Link
               href="/"
-              className="font-orbitron text-xl font-extrabold tracking-tight text-white hover:opacity-90 transition-opacity"
+              className="flex items-center gap-2.5 font-orbitron text-xl font-extrabold tracking-tight text-white hover:opacity-90 transition-opacity"
               aria-label="ARCH home"
             >
-              ARCH<span className="text-[#FEF62A]">.</span>
+              <img
+                src="/dragon-mark.png"
+                alt="ARCH"
+                className="h-7 w-auto object-contain drop-shadow-[0_0_12px_rgba(59,130,246,0.35)]"
+              />
+              <span>
+                ARCH<span className="text-[#FEF62A]">.</span>
+              </span>
             </Link>
 
             <nav

@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { Container, Heading, SubHeading, cn } from './vui-primitives';
+import { Container, cn } from './vui-primitives';
+import { GsapTextReveal, GsapFadeUp } from './gsap-reveal';
 
 const COMMANDS = [
   'git clone https://github.com/ssambit635-svg/ARCH.git && cd ARCH',
@@ -62,15 +63,12 @@ export function Deploy() {
               <span className="size-1.5 rounded-full bg-[#FEF62A]" />
               <span>SELF-HOSTED DEPLOYMENT · DOCKER + POSTGRES 16 + PYTHON SDK</span>
             </div>
-            <Heading as="h2" variant="big" className="text-left">
-              Up in Four Commands.{' '}
-              <span className="bg-gradient-to-b from-zinc-400 via-zinc-200 to-white bg-clip-text text-transparent">
-                Yours Forever.
-              </span>
-            </Heading>
-            <SubHeading className="max-w-2xl text-left">
+            <GsapTextReveal as="h2" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight text-left">
+              Up in Four Commands. Yours Forever.
+            </GsapTextReveal>
+            <p className="max-w-2xl font-mono text-xs sm:text-sm text-zinc-400 text-left leading-relaxed">
               Deploy on a single VM, Kubernetes cluster, or private VPC with PostgreSQL 16. Pipe alerts in via the typed Python SDK or standard HMAC-SHA256 webhooks.
-            </SubHeading>
+            </p>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-[#222]">
