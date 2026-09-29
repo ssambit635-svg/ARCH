@@ -791,3 +791,44 @@
 @media (hover: none) {
   .arch-preview-stage { transform: none !important; }
 }
+
+/* Vengeance/Sleek dark token layer for the public ARCH surface. */
+.arch-marketing-surface {
+  --arch-accent: #ffffff;
+  --arch-accent-soft: rgb(255 255 255 / 0.08);
+  --arch-accent-rgb: 255 255 255;
+  --color-signal-100: #ffffff;
+  --color-signal-200: #ffffff;
+  --color-signal-300: #ffffff;
+  --color-signal-400: #ffffff;
+  --color-signal-500: #ffffff;
+  --color-signal-600: #d9d9d9;
+  --color-signal-700: #ababab;
+  --color-signal-800: #777777;
+  --color-signal-900: #4a4a4a;
+  background: #050608;
+}
+.arch-marketing-surface .arch-landing-hero { background: #050608; }
+.arch-marketing-surface .arch-hero-grid {
+  background-image: linear-gradient(rgb(255 255 255 / 0.035) 1px, transparent 1px), linear-gradient(90deg, rgb(255 255 255 / 0.035) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+.arch-marketing-surface .arch-hero-toplight { background: radial-gradient(68% 88% at 50% 0%, rgb(255 255 255 / 0.055), transparent 78%); }
+.arch-marketing-surface .arch-hero-layout { border-bottom-color: rgb(255 255 255 / 0.1); }
+.arch-marketing-surface .arch-hero-eyebrow { border-color: rgb(255 255 255 / 0.12); background: rgb(255 255 255 / 0.025); color: rgb(255 255 255 / 0.62); }
+.arch-marketing-surface .arch-hero-heading-accent { color: #ffffff; }
+.arch-marketing-surface .arch-hero-status-dot { background: #ffffff; box-shadow: 0 0 0 3px rgb(255 255 255 / 0.1); }
+.arch-marketing-surface .arch-hero-primary { color: #050608; background: #ffffff; }
+.arch-marketing-surface .arch-hero-primary:hover { background: #d9d9d9; }
+.arch-marketing-surface .arch-hero-secondary { color: rgb(255 255 255 / 0.82); border-color: rgb(255 255 255 / 0.16); background: rgb(255 255 255 / 0.025); }
+.arch-marketing-surface .arch-hero-secondary:hover { color: #ffffff; border-color: rgb(255 255 255 / 0.35); background: rgb(255 255 255 / 0.07); }
+.arch-marketing-surface .arch-hero-secondary-arrow { color: #ffffff; }
+.arch-marketing-surface .arch-hero-footnote-rule { background: rgb(255 255 255 / 0.45); }
+.arch-marketing-surface :is(a, button):focus-visible { outline: 2px solid #ffffff; outline-offset: 3px; }
+
+@media (max-width: 1023px) {
+  .arch-marketing-surface .arch-hero-layout { grid-template-columns: 1fr; }
+  .arch-marketing-surface .arch-hero-layout > div:first-child { max-width: 720px; margin-inline: auto; text-align: center; }
+  .arch-marketing-surface .arch-hero-layout > div:first-child .arch-hero-eyebrow { margin-inline: auto; }
+  .arch-marketing-surface .arch-hero-layout > div:first-child .mt-7 { justify-content: center; }
+}

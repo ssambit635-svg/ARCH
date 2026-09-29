@@ -121,7 +121,7 @@ export function Nav() {
             </Link>
             <Link
               href="/register"
-              className="inline-flex min-h-9 items-center gap-2 rounded-md border border-white/[0.12] bg-[#e7edf2] px-3.5 py-2 text-[12px] font-semibold text-[#10171d] transition-colors hover:bg-white"
+              className="inline-flex min-h-9 items-center gap-2 rounded-md border border-white/[0.14] bg-white px-3.5 py-2 text-[12px] font-semibold text-ink-1000 transition-colors hover:bg-signal-400"
             >
               Get started <span aria-hidden="true">→</span>
             </Link>
@@ -182,7 +182,7 @@ export function Nav() {
           </nav>
           <div className="mt-5 flex gap-2">
             <Link href="/login" onClick={() => setOpen(false)} tabIndex={open ? 0 : -1} className="flex-1 rounded-md border border-white/[0.1] px-4 py-2.5 text-center text-[13px] font-medium text-ash-200">Sign in</Link>
-            <Link href="/register" onClick={() => setOpen(false)} tabIndex={open ? 0 : -1} className="flex-1 rounded-md bg-[#e7edf2] px-4 py-2.5 text-center text-[13px] font-semibold text-[#10171d]">Get started</Link>
+            <Link href="/register" onClick={() => setOpen(false)} tabIndex={open ? 0 : -1} className="flex-1 rounded-md bg-white px-4 py-2.5 text-center text-[13px] font-semibold text-ink-1000">Get started</Link>
           </div>
         </div>
       </div>
