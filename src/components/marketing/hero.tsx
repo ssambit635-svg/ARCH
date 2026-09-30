@@ -86,8 +86,8 @@ export function Hero() {
         style={{ transform: 'translateZ(0)', willChange: 'transform' }}
       >
         <AmbientVideo
-          src="/arch-mountain-reveal.mp4"
-          poster="/arch-mountain-poster.jpg"
+          src="/arch-dragon-reveal.mp4"
+          poster="/arch-dragon-poster.jpg"
           playOnce
           className="mk-hero-video absolute inset-0 h-full w-full object-cover [image-rendering:-webkit-optimize-contrast] [transform:translateZ(0)] will-change-[transform,opacity] [backface-visibility:hidden]"
         />
