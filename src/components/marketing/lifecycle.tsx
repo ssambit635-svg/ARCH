@@ -53,7 +53,7 @@ const STAGES: Stage[] = [
     body: 'ARCH compares deployments, dependencies, and past incidents to surface evidence-backed causes.',
     caption: 'ARCH V1.1 · native root-cause correlation',
     lines: [
-      { label: 'HYPOTHESIS #1', value: 'pg-primary-02 pool saturation (87%)', tone: 'accent' },
+      { label: 'HYPOTHESIS #1', value: 'pg-primary-02 pool saturation (example)', tone: 'accent' },
       { label: 'CORRELATED DEPLOY', value: 'checkout-api v2.18.4 (-6m)', tone: 'crit' },
       { label: 'BLAST RADIUS', value: '3 downstream services affected' },
       { label: 'SUGGESTED ACTION', value: 'Rollback migration #418', tone: 'ok' },

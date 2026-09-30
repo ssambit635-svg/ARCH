@@ -195,7 +195,7 @@ export function Closing() {
                   </li>
                   <li>
                     <a href="#topology" className="hover:text-white transition-colors">
-                      Neural Brain
+                      Meet the Robot
                     </a>
                   </li>
                   <li>

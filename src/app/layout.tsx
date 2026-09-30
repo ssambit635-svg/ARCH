@@ -57,7 +57,7 @@ export const metadata: Metadata = {
     template: '%s | ARCH',
   },
   description:
-    'Self-hosted incident management, native on-call neural intelligence, blast-radius topology, and public status pages for engineering teams.',
+    'Self-hosted incident management, native incident assistance, service dependencies, and public status pages for engineering teams.',
   applicationName: 'ARCH',
   keywords: [
     'incident response',
