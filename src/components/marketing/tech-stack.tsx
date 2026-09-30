@@ -40,13 +40,23 @@ const ICONS: Record<TechId, ReactNode> = {
 
 export function TechStackTiles() {
   return (
-    // gap-px on a #222 ground draws the hairlines between cells, so the grid stays correct however
-    // the tiles wrap (a divide-x/divide-y stack breaks as soon as there is more than one row).
-    <div className="grid w-full grid-cols-3 gap-px border-t border-[#222] bg-[#222] lg:w-2/3 lg:grid-cols-5 lg:border-l lg:border-t-0">
+    // Production stack grid — 15 proven dependencies (see tech-stack-data.ts). gap-px on #222
+    // draws exact 1px hairlines however tiles wrap; outer ring is the same token so gutters
+    // never double at the edge. Hover lifts the tile and tints the label — the proven
+    // “somany stuff we actually use” deserves to feel deliberate, not like a footnote.
+    <div className="grid w-full grid-cols-3 gap-px overflow-hidden rounded-2xl border border-[#222] bg-[#222] sm:grid-cols-4 lg:grid-cols-5">
       {TECH_STACK.map((tech) => (
-        <div key={tech.id} className="flex flex-col items-center justify-center gap-2 bg-[#050608] px-2 py-6 xl:px-4">
-          <IsometricStack>{ICONS[tech.id]}</IsometricStack>
-          <span className="text-center font-mono text-[11px] leading-tight text-zinc-400 sm:text-xs">{tech.label}</span>
+        <div
+          key={tech.id}
+          title={`${tech.label} — proven via ${'dependency' in tech.proof ? tech.proof.dependency : 'engine' in tech.proof ? `engines.${tech.proof.engine}` : tech.proof.path}`}
+          className="group flex flex-col items-center justify-center gap-2.5 bg-[#050608] px-2 py-6 transition-colors duration-200 hover:bg-[#0b0c10] xl:px-3"
+        >
+          <span className="transition-transform duration-200 group-hover:scale-[1.04] group-hover:drop-shadow-[0_4px_16px_rgba(59,142,244,0.18)]">
+            <IsometricStack>{ICONS[tech.id]}</IsometricStack>
+          </span>
+          <span className="text-center font-mono text-[11px] font-medium leading-tight tracking-tight text-zinc-400 transition-colors group-hover:text-zinc-100 sm:text-xs">
+            {tech.label}
+          </span>
         </div>
       ))}
     </div>

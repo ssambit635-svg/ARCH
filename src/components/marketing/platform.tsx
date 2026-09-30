@@ -28,7 +28,7 @@ function FeatureCard1() {
 
   return (
     <div
-      className="relative flex flex-col justify-between p-5 md:p-8 w-full h-[380px] md:h-full overflow-hidden group select-none"
+      className="relative flex flex-col justify-between p-5 md:p-8 w-full h-[380px] md:h-full overflow-visible group select-none"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
@@ -256,7 +256,7 @@ function FeatureCard1() {
    ============================================================================ */
 function FeatureCard2() {
   return (
-    <div className="relative flex flex-col justify-between p-5 md:p-8 w-full md:h-full overflow-hidden group">
+    <div className="relative flex flex-col justify-between p-5 md:p-8 w-full md:h-full overflow-visible group">
       <div className="flex-1 w-full relative flex flex-col justify-center items-center -space-y-4 sm:space-y-1 py-4">
         <div className="flex items-center gap-4 scale-[0.65] sm:scale-[0.8] lg:scale-[0.95]">
           <IsometricBox>
@@ -333,7 +333,7 @@ function ResponderNode({
 
 function FeatureCard3() {
   return (
-    <div className="relative flex flex-col justify-between p-5 md:p-8 w-full md:h-full overflow-hidden">
+    <div className="relative flex flex-col justify-between p-5 md:p-8 w-full md:h-full overflow-visible">
       <div className="flex-1 flex flex-col items-center justify-center gap-6 sm:gap-10 py-6 w-full max-w-lg mx-auto">
         {/* Top Row: 3 On-Call Responder Nodes */}
         <div className="relative flex items-center justify-between w-full px-2 sm:px-4">
@@ -571,7 +571,7 @@ function FeatureCard4() {
 
   return (
     <div
-      className="relative flex flex-col justify-between p-5 md:p-8 w-full h-[380px] md:h-full overflow-hidden group select-none"
+      className="relative flex flex-col justify-between p-5 md:p-8 w-full h-[380px] md:h-full overflow-visible group select-none"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

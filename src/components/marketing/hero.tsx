@@ -36,20 +36,22 @@ export function Hero() {
         { y: 0, opacity: 1, duration: 1.1, stagger: 0.12, ease: 'power3.out', delay: 0.3 }
       );
 
-      // Sticky pin + parallax scrub: the mountain stays stuck while the page keeps scrolling.
+      // Sticky pin + subtle parallax: the mountain stays stuck while the page keeps scrolling.
+      // Reduced scale (1.16 → 1.04) keeps the 1080p source razor-sharp — large upscales
+      // soften the mountain ridgeline and the ARCH wordmark.
       gsap
         .timeline({
           scrollTrigger: {
             trigger: sectionRef.current,
             start: 'top top',
-            end: '+=130%',
-            scrub: 0.6,
+            end: '+=110%',
+            scrub: 0.55,
             pin: true,
             anticipatePin: 1,
           },
         })
-        .to(mediaRef.current, { scale: 1.16, yPercent: -6, ease: 'none' }, 0)
-        .to(contentRef.current, { yPercent: -46, opacity: 0, ease: 'power1.in' }, 0)
+        .to(mediaRef.current, { scale: 1.06, yPercent: -3, ease: 'none' }, 0)
+        .to(contentRef.current, { yPercent: -36, opacity: 0, ease: 'power1.in' }, 0)
         .to('.mk-scroll-cue', { opacity: 0, ease: 'none', duration: 0.25 }, 0)
         .to(veilRef.current, { opacity: 1, ease: 'none' }, 0);
     }, sectionRef);
@@ -66,18 +68,18 @@ export function Hero() {
       style={{ height: '100svh' }}
     >
       {/* Film layer — one-shot play, frozen final frame acts as the resting visual. */}
-      <div ref={mediaRef} className="absolute inset-0 will-change-transform">
+      <div ref={mediaRef} className="absolute inset-0 will-change-transform [transform:translateZ(0)]">
         <AmbientVideo
           src="/arch-mountain-reveal.mp4"
           poster="/arch-mountain-poster.jpg"
           playOnce
-          className="mk-hero-video absolute inset-0 h-full w-full"
+          className="mk-hero-video absolute inset-0 h-full w-full [image-rendering:-webkit-optimize-contrast]"
         />
       </div>
 
-      {/* Legibility gradients + vignette. */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#050608] via-[#050608]/20 to-[#050608]/35" />
-      <div aria-hidden className="pointer-events-none absolute inset-0 mk-hero-vignette" />
+      {/* Legibility gradients + vignette — lightened so the 1080p mountain stays crisp. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#050608]/85 via-[#050608]/12 to-[#050608]/18" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 mk-hero-vignette opacity-60" />
 
       {/* Scrub veil — the hero settles to ink before the next section scrolls across it. */}
       <div ref={veilRef} aria-hidden className="pointer-events-none absolute inset-0 bg-[#050608] opacity-0" />
