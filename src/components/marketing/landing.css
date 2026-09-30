@@ -1,7 +1,7 @@
 /* ============================================================================
    ARCH — Vengeance UI Marketing Stylesheet (DESIGN.md & SKILL.md)
-   Carbon Dark (#050608 / #000000), Crisp White (#FFFFFF), Yellow-Lime (#FEF62A),
-   and #222222 architectural grid lines — zero blue AI slop.
+   Carbon Dark (#050608 / #000000), Crisp White (#FFFFFF), Dragon Blue (#3b8ef4),
+   and #222222 architectural grid lines.
    ============================================================================ */
 
 .mk {
@@ -18,7 +18,7 @@
   --mk-line: #222222;
   --mk-line-strong: rgba(255, 255, 255, 0.14);
 
-  --mk-accent: #FEF62A;
+  --mk-accent: #3b8ef4;
   --mk-accent-strong: #ffffff;
   --mk-ok: #34d399;
   --mk-warn: #fbbf24;
@@ -40,7 +40,7 @@
   z-index: 300;
   padding: 0.5rem 0.875rem;
   border-radius: 0.5rem;
-  background: #FEF62A;
+  background: #3b8ef4;
   color: #050608;
   font-family: var(--font-mono);
   font-size: 0.75rem;
@@ -52,7 +52,7 @@
   transform: translateY(0);
 }
 
-/* Scroll Progress Bar (#FEF62A Vengeance UI Accent) */
+/* Scroll Progress Bar (ARCH blue accent) */
 .mk-progress {
   position: fixed;
   top: 0;
@@ -68,5 +68,5 @@
   width: 100%;
   transform-origin: 0% 50%;
   transform: scaleX(0);
-  background: linear-gradient(90deg, #ffffff 0%, #FEF62A 100%);
+  background: linear-gradient(90deg, #ffffff 0%, #3b8ef4 100%);
 }

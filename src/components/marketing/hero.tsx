@@ -1,250 +1,49 @@
-'use client';
-
-import { useEffect, useRef } from 'react';
 import Link from 'next/link';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { BorderBeam, Container, Heading, IsometricHeroBox, SubHeading } from './vui-primitives';
+import { BorderBeam, Container, Heading, IsometricHeroBox } from './vui-primitives';
 import { TechStackTiles } from './tech-stack';
 import { GsapTextReveal } from './gsap-reveal';
+import { AmbientVideo } from './ambient-video';
 
-const FACETS = [
-  { index: '/01', label: 'Self-hosted' },
-  { index: '/02', label: 'Collaborative' },
-  { index: '/03', label: 'Real-time' },
-];
-
+/** The film is the hero wordmark: don't overlay a second ARCH logo on its reveal. */
 export function Hero() {
-  const stageRef = useRef<HTMLDivElement>(null);
-  const wordmarkRef = useRef<HTMLHeadingElement>(null);
-  const splitRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced) return;
-
-    gsap.registerPlugin(ScrollTrigger);
-
-    const ctx = gsap.context(() => {
-      // Initial entrance timeline for the SAPFORCE-matched Hero Stage
-      const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
-
-      tl.fromTo(
-        '.hero-stage-topbar',
-        { y: -18, opacity: 0 },
-        { y: 0, opacity: 1, duration: 0.7 }
-      )
-        .fromTo(
-          '.hero-wordmark-char',
-          { yPercent: 35, opacity: 0, rotateX: -28 },
-          {
-            yPercent: 0,
-            opacity: 1,
-            rotateX: 0,
-            duration: 0.85,
-            stagger: 0.06,
-          },
-          '-=0.45'
-        )
-        .fromTo(
-          '.hero-corner-item',
-          { y: 20, opacity: 0 },
-          { y: 0, opacity: 1, duration: 0.7, stagger: 0.08 },
-          '-=0.25'
-        );
-
-      // Scroll-driven subtle parallax on the giant wordmark
-      if (stageRef.current && wordmarkRef.current) {
-        gsap.to(wordmarkRef.current, {
-          yPercent: -8,
-          ease: 'none',
-          scrollTrigger: {
-            trigger: stageRef.current,
-            start: 'top top',
-            end: 'bottom top',
-            scrub: 0.6,
-          },
-        });
-      }
-
-      // Vengeance UI Split Showcase + TechStack reveal
-      if (splitRef.current) {
-        gsap.fromTo(
-          splitRef.current.querySelectorAll('.vui-reveal-block'),
-          { y: 24, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0.75,
-            stagger: 0.1,
-            ease: 'power3.out',
-            scrollTrigger: {
-              trigger: splitRef.current,
-              start: 'top 84%',
-            },
-          }
-        );
-      }
-    }, stageRef);
-
-    return () => ctx.revert();
-  }, []);
-
   return (
-    <section className="relative border-b border-[#222] bg-[#050608] overflow-hidden">
+    <section className="relative overflow-hidden border-b border-[#222] bg-[#050608]">
       <Container>
-        {/* ====================================================================
-            PART 1: Reference Hero Stage (Exact match to WhatsApp Image 10.20.54.jpeg)
-            Framed inside Vengeance UI's structural border-x container
-           ==================================================================== */}
-        <div
-          ref={stageRef}
-          className="relative md:border-x border-b border-[#222] bg-[#08090d] px-5 py-6 sm:px-8 sm:py-8 lg:px-12 lg:py-10 overflow-hidden"
-        >
-          {/* Subtle top studio spotlight (no blue glow) */}
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-0"
-            style={{
-              background:
-                'radial-gradient(56% 48% at 50% 44%, rgba(254, 246, 42, 0.06) 0%, rgba(255, 255, 255, 0.03) 42%, transparent 75%)',
-            }}
-          />
-
-          {/* Top Pill Bar inside the Hero Frame (exact match to SAPFORCE reference top bar) */}
-          <div className="hero-stage-topbar relative z-20 flex flex-wrap items-center justify-between gap-4">
-            <div className="inline-flex flex-wrap items-center gap-1 sm:gap-2 rounded-xl border border-white/[0.08] bg-[#14161c]/90 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-              <a
-                href="#workspace"
-                className="rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white"
-              >
-                Services
-              </a>
-              <a
-                href="#lifecycle"
-                className="rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white"
-              >
-                Workflow
-              </a>
-              <a
-                href="#topology"
-                className="rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white"
-              >
-                Neural
-              </a>
-              <a
-                href="#library-map"
-                className="rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white"
-              >
-                Insights
-              </a>
-              <a
-                href="#deploy"
-                className="rounded-lg px-2.5 py-1 text-xs font-medium text-zinc-300 transition-colors hover:bg-white/[0.06] hover:text-white"
-              >
-                Deploy
-              </a>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Link
-                href="/login"
-                className="px-3 py-1.5 text-xs font-medium text-zinc-300 transition-colors hover:text-white"
-              >
-                Login
-              </Link>
-              <Link
-                href="/register"
-                className="inline-flex items-center gap-2 rounded-xl border border-white/[0.1] bg-[#1a1d24] px-4 py-2 text-xs font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-all hover:border-[#FEF62A]/60 hover:bg-[#FEF62A] hover:text-black"
-              >
-                <span>Get Started</span>
-                <span aria-hidden>→</span>
-              </Link>
-            </div>
+        <div className="border-x border-b border-[#222] bg-[#06101e]">
+          <div className="relative aspect-[848/478] w-full overflow-hidden bg-[#06101e]" style={{ backgroundImage: 'url(/arch-mountain-poster.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+            <AmbientVideo
+              src="/arch-mountain-reveal.mp4"
+              poster="/arch-mountain-poster.jpg"
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#050a13]/50 via-transparent to-transparent" />
+            <span className="absolute left-4 top-4 sm:left-8 sm:top-8 rounded-full border border-white/20 bg-[#050a13]/65 px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-blue-100 backdrop-blur-sm">
+              ARCH / Incident operations
+            </span>
           </div>
-
-          {/* Giant Geometric Wordmark ("ARCH." matching "SAPFORCE." in the reference) */}
-          <div className="relative z-10 mt-6 sm:mt-8 select-none">
-            <h1
-              ref={wordmarkRef}
-              aria-label="ARCH."
-              className="font-orbitron font-black tracking-[-0.055em] text-white uppercase leading-[0.86] text-center"
-              style={{
-                fontSize: 'clamp(4.2rem, 16.2vw, 14.5rem)',
-              }}
-            >
-              {'ARCH.'.split('').map((ch, idx) => (
-                <span
-                  key={idx}
-                  className={`hero-wordmark-char inline-block ${
-                    ch === '.' ? 'text-[#FEF62A]' : 'text-white'
-                  }`}
-                >
-                  {ch}
-                </span>
-              ))}
-            </h1>
-          </div>
-
-          {/* Corner layout under the wordmark: tagline bottom-left, facets + CTA disc bottom-right, centre left open */}
-          <div className="relative z-20 mt-8 sm:mt-10 lg:mt-12 grid grid-cols-1 lg:grid-cols-12 items-end gap-8 pt-4 pb-2">
-            {/* Bottom-Left Column: Tagline + Dotted Line */}
-            <div className="hero-corner-item lg:col-span-4">
-              <div className="max-w-[290px]">
-                <p className="text-sm sm:text-[15px] leading-relaxed text-zinc-200 font-normal">
-                  Self-hosted incident response, built for your team’s flow.
-                </p>
-                <div
-                  aria-hidden
-                  className="mt-5 h-[3px] w-full opacity-55"
-                  style={{
-                    backgroundImage:
-                      'radial-gradient(circle, rgba(255,255,255,0.65) 1.25px, transparent 1.5px)',
-                    backgroundSize: '10px 4px',
-                    backgroundRepeat: 'repeat-x',
-                  }}
-                />
-              </div>
+          <div className="grid gap-7 border-t border-white/10 bg-[#080c14] px-5 py-8 sm:px-8 sm:py-10 lg:grid-cols-[1fr_auto] lg:items-end lg:px-12">
+            <div className="max-w-2xl">
+              <p className="mb-3 font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-[#75b3ff]">Built for the moments that matter</p>
+              <h1 className="font-orbitron text-2xl font-bold leading-tight tracking-tight text-white sm:text-3xl lg:text-4xl">
+                Incident response, under control.
+              </h1>
+              <p className="mt-3 max-w-xl text-sm leading-relaxed text-zinc-300 sm:text-base">
+                Bring alerts, responders, impact, and updates into one self-hosted workspace.
+              </p>
             </div>
-
-            {/* Bottom-Right Column: /01 /02 /03 Facets + Acid-Lime Circular "▶ How it works?" Button */}
-            <div className="hero-corner-item lg:col-span-4 lg:col-start-9 flex flex-col items-start lg:items-end justify-between gap-8">
-              {/* /01 /02 /03 Facet Stack */}
-              <ul className="w-full max-w-[220px] space-y-3 lg:text-right">
-                {FACETS.map((f) => (
-                  <li
-                    key={f.index}
-                    className="flex items-baseline justify-between lg:justify-end gap-5 border-b border-white/[0.07] pb-2 text-xs"
-                  >
-                    <span className="font-medium text-zinc-200">{f.label}</span>
-                    <span className="font-mono text-[11px] text-zinc-500 tnum">{f.index}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {/* Acid-Lime (#FEF62A) Circular Disc CTA Button (Exact match to bottom-right of reference) */}
-              <div className="flex items-center gap-4">
-                <a
-                  href="#workspace"
-                  className="group relative flex size-28 sm:size-32 flex-col items-center justify-center rounded-full bg-[#FEF62A] text-[#050608] shadow-[0_20px_50px_rgba(254,246,42,0.22),inset_0_1px_0_rgba(255,255,255,0.65)] transition-all duration-300 hover:scale-105 active:scale-95"
-                >
-                  <span className="flex items-center gap-1.5 text-xs sm:text-[13px] font-semibold tracking-tight text-black">
-                    <span className="inline-block text-[10px] transition-transform duration-300 group-hover:translate-x-0.5">
-                      ▶
-                    </span>
-                    <span>How it works?</span>
-                  </span>
-                </a>
-              </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <Link href="/register" className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#3b8ef4] px-5 text-sm font-semibold text-[#04101e] transition-colors hover:bg-[#75b3ff]">
+                Get Started <span aria-hidden>→</span>
+              </Link>
+              <a href="#workspace" className="inline-flex h-11 items-center justify-center rounded-lg border border-white/20 px-5 text-sm font-medium text-white transition-colors hover:border-[#75b3ff] hover:bg-white/5">
+                Explore the platform
+              </a>
             </div>
           </div>
         </div>
 
-        {/* ====================================================================
-            PART 2: Vengeance UI Split Hero Showcase + IsometricHeroBox + TechStack
-           ==================================================================== */}
-        <div ref={splitRef}>
+        {/* Product details follow the cinematic introduction. */}
+        <div>
           <div className="flex flex-col md:flex-row md:divide-x divide-[#222] md:border-x border-b border-[#222]">
             {/* Left Column: Vengeance UI Badge + Orbitron Heading + Mono SubHeading + Dual CTAs */}
             <div className="vui-reveal-block flex-1 flex flex-col justify-center gap-5 px-5 py-12 md:px-8 lg:px-12">
@@ -256,18 +55,18 @@ export function Hero() {
                   size={68}
                   duration={4.2}
                   borderWidth={1.5}
-                  colorFrom="#FEF62A"
+                  colorFrom="#3b8ef4"
                   colorTo="#71717a"
                 />
                 <span className="text-zinc-400">Backed by</span>
                 <span className="inline-flex items-center gap-1 font-semibold text-white">
-                  <span className="text-[9px] leading-none text-[#FEF62A]">▲</span>
+                  <span className="text-[9px] leading-none text-[#3b8ef4]">▲</span>
                   <span>ARCH Native Engine</span>
                 </span>
               </a>
 
               <GsapTextReveal as="h2" className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight text-left">
-                Next-Gen Incident Operations
+                Clarity from alert to resolution
               </GsapTextReveal>
 
               <p className="font-mono text-xs sm:text-sm text-zinc-400 leading-relaxed text-left max-w-xl">
@@ -285,7 +84,7 @@ export function Hero() {
                   href="#topology"
                   className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#222] bg-[#111216] px-5 text-xs font-medium text-zinc-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-colors hover:border-zinc-700 hover:text-white"
                 >
-                  <span className="size-1.5 rounded-full bg-[#FEF62A]" />
+                  <span className="size-1.5 rounded-full bg-[#3b8ef4]" />
                   <span>Explore Neural Brain</span>
                 </a>
                 <Link

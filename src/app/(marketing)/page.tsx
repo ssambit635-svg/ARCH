@@ -7,7 +7,6 @@ import { Lifecycle } from '@/components/marketing/lifecycle';
 import { Platform } from '@/components/marketing/platform';
 import { Deploy } from '@/components/marketing/deploy';
 import { Closing } from '@/components/marketing/closing';
-import { SiteChrome } from '@/components/marketing/site-chrome';
 import '@/components/marketing/landing.css';
 
 export default function LandingPage() {
@@ -16,19 +15,17 @@ export default function LandingPage() {
       <a href="#main" className="mk-skip">
         Skip to content
       </a>
-      <SiteChrome>
-        <MarketingNav />
-        <main id="main" className="relative z-10">
-          <Hero />
-          <Intelligence />
-          <Topology />
-          <IncidentPreview />
-          <Lifecycle />
-          <Platform />
-          <Deploy />
-        </main>
-        <Closing />
-      </SiteChrome>
+      <MarketingNav />
+      <main id="main" className="relative z-10">
+        <Hero />
+        <Intelligence />
+        <Topology />
+        <IncidentPreview />
+        <Lifecycle />
+        <Platform />
+        <Deploy />
+      </main>
+      <Closing />
     </div>
   );
 }

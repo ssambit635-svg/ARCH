@@ -40,7 +40,7 @@ function FeatureCard1() {
             scale: isHovered ? 1.15 : 0.9,
           }}
           transition={{ duration: 0.5 }}
-          className="w-40 h-40 bg-gradient-to-tr from-[#FEF62A]/15 via-white/10 to-transparent rounded-full blur-3xl absolute pointer-events-none"
+          className="w-40 h-40 bg-gradient-to-tr from-[#3b8ef4]/15 via-white/10 to-transparent rounded-full blur-3xl absolute pointer-events-none"
         />
 
         <div className="relative flex items-center justify-center">
@@ -70,7 +70,7 @@ function FeatureCard1() {
                     animate={{
                       backgroundColor:
                         isHovered && i !== 2
-                          ? 'rgba(254, 246, 42, 0.25)'
+                          ? 'rgba(59, 142, 244, 0.25)'
                           : 'rgba(38, 38, 38, 1)',
                     }}
                     className="w-5 h-3 rounded-full p-0.5 flex items-center border border-neutral-700"
@@ -78,7 +78,7 @@ function FeatureCard1() {
                     <motion.div
                       animate={{ x: isHovered && i !== 2 ? 8 : 0 }}
                       className={`w-2 h-2 rounded-full ${
-                        isHovered && i !== 2 ? 'bg-[#FEF62A]' : 'bg-neutral-400'
+                        isHovered && i !== 2 ? 'bg-[#3b8ef4]' : 'bg-neutral-400'
                       }`}
                     />
                   </motion.div>
@@ -88,7 +88,7 @@ function FeatureCard1() {
             <div className="w-full h-1.5 bg-neutral-800 rounded-full overflow-hidden">
               <motion.div
                 animate={{ width: isHovered ? '78%' : '32%' }}
-                className="h-full bg-[#FEF62A]"
+                className="h-full bg-[#3b8ef4]"
               />
             </div>
           </motion.div>
@@ -128,7 +128,7 @@ function FeatureCard1() {
                 >
                   <span
                     className={`size-1.5 rounded-full ${
-                      item.active ? 'bg-[#FEF62A]' : 'bg-neutral-600'
+                      item.active ? 'bg-[#3b8ef4]' : 'bg-neutral-600'
                     }`}
                   />
                   <span
@@ -171,7 +171,7 @@ function FeatureCard1() {
                 <motion.div
                   animate={{ rotate: isHovered ? 360 : 0 }}
                   transition={{ duration: 0.6, ease: 'easeInOut' }}
-                  className="font-mono text-xs text-[#FEF62A]"
+                  className="font-mono text-xs text-[#3b8ef4]"
                 >
                   ✦
                 </motion.div>
@@ -189,7 +189,7 @@ function FeatureCard1() {
             <div className="space-y-1.5 bg-neutral-950/80 p-2 rounded-xl border border-neutral-800/80">
               <div className="flex justify-between font-mono text-[8px] text-neutral-400">
                 <span>Confidence</span>
-                <motion.span className="text-[#FEF62A] font-medium">
+                <motion.span className="text-[#3b8ef4] font-medium">
                   {isHovered ? '87%' : '45%'}
                 </motion.span>
               </div>
@@ -197,7 +197,7 @@ function FeatureCard1() {
                 <motion.div
                   animate={{ width: isHovered ? '87%' : '45%' }}
                   transition={{ type: 'spring', stiffness: 200, damping: 20 }}
-                  className="h-full bg-gradient-to-r from-neutral-400 to-[#FEF62A] rounded-full"
+                  className="h-full bg-gradient-to-r from-neutral-400 to-[#3b8ef4] rounded-full"
                 />
               </div>
             </div>
@@ -215,7 +215,7 @@ function FeatureCard1() {
             transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.05 }}
             className="absolute z-40 bg-neutral-900 border border-neutral-700 px-2.5 py-1 rounded-full shadow-lg flex items-center gap-1.5 pointer-events-none"
           >
-            <span className="text-[10px] text-[#FEF62A]">✦</span>
+            <span className="text-[10px] text-[#3b8ef4]">✦</span>
             <span className="font-mono text-[10px] text-white font-medium whitespace-nowrap">
               5-State Machine
             </span>
@@ -266,7 +266,7 @@ function FeatureCard2() {
             <MotionIcon className="w-9 h-9" />
           </IsometricBox>
           <IsometricBox>
-            <GSAPIcon className="w-10 h-10 text-[#FEF62A]" />
+            <GSAPIcon className="w-10 h-10 text-[#3b8ef4]" />
           </IsometricBox>
         </div>
 
@@ -320,7 +320,7 @@ function ResponderNode({
       className="relative group"
     >
       <div className="relative size-12 sm:size-16 rounded-xl bg-zinc-900 border border-neutral-800 p-1.5 flex flex-col items-center justify-center shadow-md group-hover:border-blue-500/50 group-hover:shadow-[0_0_15px_rgba(59,130,246,0.25)] transition-all duration-300">
-        <div className="text-zinc-400 group-hover:text-[#FEF62A] transition-colors">
+        <div className="text-zinc-400 group-hover:text-[#3b8ef4] transition-colors">
           {icon}
         </div>
         <span className="font-mono text-[8px] sm:text-[9px] font-semibold text-zinc-300 tracking-wider mt-1 uppercase text-center leading-tight">
@@ -395,12 +395,12 @@ function FeatureCard3() {
           <div className="relative z-10">
             <div className="relative size-16 sm:size-20 rounded-2xl bg-neutral-950 border border-neutral-800 flex flex-col items-center justify-center shadow-lg group-hover:border-blue-500/40 transition-colors">
               <img
-                src="/dragon-mark-yellow.png"
+                src="/dragon-mark.webp"
                 alt="ARCH Dragon"
-                className="size-6 object-contain drop-shadow-[0_0_8px_rgba(254,246,42,0.32)]"
+                className="size-6 object-contain drop-shadow-[0_0_8px_rgba(59,142,244,0.32)]"
               />
               <span className="font-orbitron text-xs sm:text-sm font-extrabold text-white mt-0.5">
-                ARCH<span className="text-[#FEF62A]">.</span>
+                ARCH<span className="text-[#3b8ef4]">.</span>
               </span>
               <span className="font-mono text-[7px] uppercase tracking-widest text-zinc-500">
                 SHA-256
@@ -455,7 +455,7 @@ function MiniStatusPage({ mode }: { mode: 'wireframe' | 'live' }) {
       }`}
     >
       {isLive && (
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 bg-[#FEF62A]/10 rounded-full blur-xl pointer-events-none" />
+        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 bg-[#3b8ef4]/10 rounded-full blur-xl pointer-events-none" />
       )}
 
       {/* Mini Navbar */}
@@ -466,7 +466,7 @@ function MiniStatusPage({ mode }: { mode: 'wireframe' | 'live' }) {
       >
         <div className="flex items-center gap-1.5">
           {isLive ? (
-            <div className="size-3.5 rounded bg-[#FEF62A] flex items-center justify-center">
+            <div className="size-3.5 rounded bg-[#3b8ef4] flex items-center justify-center">
               <span className="text-[7px] font-bold text-black">✓</span>
             </div>
           ) : (
@@ -529,7 +529,7 @@ function MiniStatusPage({ mode }: { mode: 'wireframe' | 'live' }) {
               className={`w-1.5 h-4 rounded-[1px] ${
                 isLive
                   ? idx === 12
-                    ? 'bg-[#FEF62A]'
+                    ? 'bg-[#3b8ef4]'
                     : 'bg-ok-400'
                   : 'bg-neutral-800 border border-neutral-700/50'
               }`}
@@ -551,7 +551,7 @@ function MiniStatusPage({ mode }: { mode: 'wireframe' | 'live' }) {
           >
             <div
               className={`size-2 rounded-sm ${
-                isLive ? 'bg-[#FEF62A]/80' : 'bg-neutral-700'
+                isLive ? 'bg-[#3b8ef4]/80' : 'bg-neutral-700'
               }`}
             />
             <div
@@ -582,14 +582,14 @@ function FeatureCard4() {
             scale: isHovered ? 1.05 : 0.9,
           }}
           transition={{ duration: 0.5 }}
-          className="w-48 h-36 bg-gradient-to-tr from-[#FEF62A]/15 via-neutral-500/10 to-transparent rounded-full blur-2xl absolute pointer-events-none"
+          className="w-48 h-36 bg-gradient-to-tr from-[#3b8ef4]/15 via-neutral-500/10 to-transparent rounded-full blur-2xl absolute pointer-events-none"
         />
 
         <div className="relative w-64 h-48 rounded-xl bg-neutral-900 border border-neutral-800 shadow-2xl overflow-hidden flex flex-col">
           {/* Browser Top Bar */}
           <div className="h-6 bg-neutral-950 border-b border-neutral-800 flex items-center px-2.5 gap-1.5 z-30">
             <div className="size-2 rounded-full bg-neutral-700 group-hover:bg-red-500/80 transition-colors" />
-            <div className="size-2 rounded-full bg-neutral-700 group-hover:bg-yellow-500/80 transition-colors" />
+            <div className="size-2 rounded-full bg-neutral-700 group-hover:bg-blue-400/80 transition-colors" />
             <div className="size-2 rounded-full bg-neutral-700 group-hover:bg-green-500/80 transition-colors" />
             <div className="ml-2 flex-1 h-3 bg-neutral-900 rounded-sm border border-neutral-800 flex items-center justify-center">
               <span className="font-mono text-[7px] text-neutral-500">
@@ -616,7 +616,7 @@ function FeatureCard4() {
               <MiniStatusPage mode="live" />
             </motion.div>
 
-            {/* Layer 3: Glowing #FEF62A Scanner Line */}
+            {/* Layer 3: Glowing #3b8ef4 Scanner Line */}
             <motion.div
               initial={{ top: '0%', opacity: 0 }}
               animate={{
@@ -624,7 +624,7 @@ function FeatureCard4() {
                 opacity: isHovered ? [0, 1, 1, 0] : 0,
               }}
               transition={{ duration: 0.75, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#FEF62A] to-transparent shadow-[0_0_12px_2px_rgba(254,246,42,0.7)] z-20 pointer-events-none"
+              className="absolute left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#3b8ef4] to-transparent shadow-[0_0_12px_2px_rgba(59,142,244,0.7)] z-20 pointer-events-none"
             />
           </div>
         </div>
@@ -639,7 +639,7 @@ function FeatureCard4() {
             rotate: isHovered ? 8 : 0,
           }}
           transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.1 }}
-          className="absolute z-30 bg-[#FEF62A] text-black px-2.5 py-1 rounded-full shadow-[0_0_20px_rgba(254,246,42,0.3)] flex items-center gap-1 pointer-events-none"
+          className="absolute z-30 bg-[#3b8ef4] text-black px-2.5 py-1 rounded-full shadow-[0_0_20px_rgba(59,142,244,0.3)] flex items-center gap-1 pointer-events-none"
         >
           <span className="text-[10px]">⚡</span>
           <span className="font-mono text-[10px] font-bold">90d Ledger</span>

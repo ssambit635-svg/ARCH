@@ -6,6 +6,7 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Container } from './vui-primitives';
 import { GsapTextReveal } from './gsap-reveal';
+import { AmbientVideo } from './ambient-video';
 
 /** A single-play, borderless showcase for the ARCH mark. */
 function DragonLogoVideo() {
@@ -44,14 +45,11 @@ function DragonLogoVideo() {
       ref={containerRef}
       className="relative flex size-full items-center justify-center overflow-hidden p-4 sm:p-6"
     >
-      <video
-        src="/arch-logo-animation.mp4"
-        autoPlay
-        muted
-        playsInline
-        preload="metadata"
-        aria-label="ARCH dragon logo animation"
-        className="h-auto max-h-[320px] w-full max-w-[460px] object-contain [filter:hue-rotate(200deg)_saturate(1.1)]"
+      <AmbientVideo
+        src="/arch-dragon-reveal.mp4"
+        poster="/arch-dragon-poster.jpg"
+        defer
+        className="aspect-[848/478] max-h-[320px] w-full max-w-[460px] object-contain"
       />
     </div>
   );
@@ -97,8 +95,8 @@ export function Closing() {
           <div className="grid grid-cols-1 md:grid-cols-2 md:min-h-[360px] overflow-hidden">
             {/* Left Column: Heading, Subheading & CTAs */}
             <div className="flex flex-col justify-center gap-5 p-8 md:p-12 lg:p-14">
-              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#FEF62A]/25 bg-[#FEF62A]/[0.06] px-3 py-1 font-mono text-[11px] font-medium text-[#FEF62A]">
-                <span className="size-1.5 rounded-full bg-[#FEF62A]" />
+              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#3b8ef4]/25 bg-[#3b8ef4]/[0.06] px-3 py-1 font-mono text-[11px] font-medium text-[#3b8ef4]">
+                <span className="size-1.5 rounded-full bg-[#3b8ef4]" />
                 <span>INCIDENT RESPONSE</span>
               </div>
 
@@ -147,12 +145,12 @@ export function Closing() {
                 className="inline-flex items-center gap-3 font-orbitron text-2xl font-extrabold tracking-tight text-white hover:opacity-90 transition-opacity"
               >
                 <img
-                  src="/dragon-mark-yellow.png"
+                  src="/dragon-mark.webp"
                   alt="ARCH Dragon Logo"
-                  className="h-8 w-auto object-contain drop-shadow-[0_0_12px_rgba(254,246,42,0.28)]"
+                  className="h-8 w-auto object-contain drop-shadow-[0_0_12px_rgba(59,142,244,0.28)]"
                 />
                 <span>
-                  ARCH<span className="text-[#FEF62A]">.</span>
+                  ARCH<span className="text-[#3b8ef4]">.</span>
                 </span>
               </Link>
               <p className="font-mono text-xs text-zinc-400 max-w-sm leading-relaxed">

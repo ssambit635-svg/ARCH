@@ -179,7 +179,7 @@ function FlowLayer() {
       <defs>
         <linearGradient id="arch-flow-line" x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stopColor="rgba(255,255,255,0.08)" />
-          <stop offset="50%" stopColor="rgba(254,246,42,0.45)" />
+          <stop offset="50%" stopColor="rgba(59,142,244,0.45)" />
           <stop offset="100%" stopColor="rgba(255,255,255,0.08)" />
         </linearGradient>
       </defs>
@@ -200,7 +200,7 @@ function FlowLayer() {
         strokeDasharray="5 8"
       />
 
-      <circle r="3.4" fill="rgba(254,246,42,0.95)">
+      <circle r="3.4" fill="rgba(59,142,244,0.95)">
         <animateMotion
           dur="6.5s"
           repeatCount="indefinite"
@@ -234,7 +234,7 @@ function CardTopline({ index, tag }: { index: string; tag: string }) {
 function SystemActionPill({ label }: { label: string }) {
   return (
     <span className="inline-flex h-8 w-[112px] items-center justify-center gap-1 rounded-full border border-zinc-700/85 bg-zinc-900/90 px-2.5 font-mono text-[10px] font-medium whitespace-nowrap text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-      <span className="size-1.5 rounded-full bg-[#FEF62A]" />
+      <span className="size-1.5 rounded-full bg-[#3b8ef4]" />
       {label}
     </span>
   );
@@ -291,7 +291,7 @@ export function Intelligence() {
             <div className="relative grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
               <div>
                 <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3 py-1 text-[11px] font-medium text-zinc-400">
-                  <span className="text-[#FEF62A]">✦</span>
+                  <span className="text-[#3b8ef4]">✦</span>
                   <span className="font-mono">Architecture Map · ARCH V1.1</span>
                 </div>
 
@@ -312,7 +312,7 @@ export function Intelligence() {
                   <div className="font-mono text-[11px] text-zinc-500">Webhook ingest p99</div>
                 </div>
                 <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-                  <div className="font-orbitron text-lg font-bold text-[#FEF62A] tnum">87%</div>
+                  <div className="font-orbitron text-lg font-bold text-[#3b8ef4] tnum">87%</div>
                   <div className="font-mono text-[11px] text-zinc-500">Top-1 RCA accuracy</div>
                 </div>
                 <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
@@ -375,7 +375,7 @@ export function Intelligence() {
                       </button>
                     </div>
 
-                    <span className="rounded-md border border-zinc-700/80 bg-zinc-900/90 px-2 py-0.5 font-mono text-[10px] text-[#FEF62A]">
+                    <span className="rounded-md border border-zinc-700/80 bg-zinc-900/90 px-2 py-0.5 font-mono text-[10px] text-[#3b8ef4]">
                       +{mergedCount} merged
                     </span>
                   </div>
@@ -386,7 +386,7 @@ export function Intelligence() {
                         <button
                           type="button"
                           onClick={() => setMergedCount((c) => c + 1)}
-                          className="rounded-xl border border-zinc-700/85 bg-zinc-950/90 px-4 py-2.5 transition-colors hover:border-[#FEF62A]/60 cursor-pointer"
+                          className="rounded-xl border border-zinc-700/85 bg-zinc-950/90 px-4 py-2.5 transition-colors hover:border-[#3b8ef4]/60 cursor-pointer"
                         >
                           <FlipTextWord text="DEDUPLICATE" />
                         </button>
@@ -403,7 +403,7 @@ export function Intelligence() {
                     <span>Click preview to test intake</span>
                     <a
                       href="#workspace"
-                      className="inline-flex items-center gap-1 font-medium text-zinc-200 hover:text-[#FEF62A]"
+                      className="inline-flex items-center gap-1 font-medium text-zinc-200 hover:text-[#3b8ef4]"
                     >
                       Open War Room →
                     </a>
@@ -424,7 +424,7 @@ export function Intelligence() {
               </div>
 
               {/* COLUMN 02/03: Motion Kernel / ARCH V1.1 Native Engine */}
-              <div className="vui-matrix-card relative flex min-h-[390px] flex-col justify-between bg-[radial-gradient(circle_at_50%_20%,rgba(254,246,42,0.06),transparent_62%)] p-5 md:p-6">
+              <div className="vui-matrix-card relative flex min-h-[390px] flex-col justify-between bg-[radial-gradient(circle_at_50%_20%,rgba(59,142,244,0.06),transparent_62%)] p-5 md:p-6">
                 <div>
                   <CardTopline index="02/03" tag="Neural Kernel" />
                   <h3 className="text-xl font-semibold tracking-tight text-zinc-100">
@@ -447,7 +447,7 @@ export function Intelligence() {
                       <path d="M 160 110 L 254 44" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" strokeDasharray="3 5" />
                       <path d="M 160 110 L 52 170" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" strokeDasharray="3 5" />
                       <path d="M 160 110 L 268 170" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" strokeDasharray="3 5" />
-                      <path d="M 160 110 L 160 22" stroke="rgba(254,246,42,0.45)" strokeWidth="1.2" strokeDasharray="3 5" />
+                      <path d="M 160 110 L 160 22" stroke="rgba(59,142,244,0.45)" strokeWidth="1.2" strokeDasharray="3 5" />
                     </svg>
 
                     <div className="absolute h-44 w-44 rounded-full border border-zinc-800/90" />
@@ -462,7 +462,7 @@ export function Intelligence() {
                         ARCH V1.1
                         <span className="motion-caret" />
                       </span>
-                      <span className="mt-1 font-mono text-[10px] text-[#FEF62A]">
+                      <span className="mt-1 font-mono text-[10px] text-[#3b8ef4]">
                         {activeHyp.confidence}% confidence
                       </span>
                     </div>
@@ -473,7 +473,7 @@ export function Intelligence() {
                       className={cn(
                         'absolute top-4 left-3 rounded-full border px-2.5 py-1 font-mono text-[10px] transition-colors cursor-pointer',
                         activeHypIdx === 0
-                          ? 'border-[#FEF62A] bg-[#FEF62A]/15 text-[#FEF62A]'
+                          ? 'border-[#3b8ef4] bg-[#3b8ef4]/15 text-[#3b8ef4]'
                           : 'border-zinc-700/80 bg-zinc-900/90 text-zinc-300'
                       )}
                     >
@@ -485,7 +485,7 @@ export function Intelligence() {
                       className={cn(
                         'absolute top-4 right-3 rounded-full border px-2.5 py-1 font-mono text-[10px] transition-colors cursor-pointer',
                         activeHypIdx === 1
-                          ? 'border-[#FEF62A] bg-[#FEF62A]/15 text-[#FEF62A]'
+                          ? 'border-[#3b8ef4] bg-[#3b8ef4]/15 text-[#3b8ef4]'
                           : 'border-zinc-700/80 bg-zinc-900/90 text-zinc-300'
                       )}
                     >
@@ -497,7 +497,7 @@ export function Intelligence() {
                       className={cn(
                         'absolute bottom-4 left-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] transition-colors cursor-pointer',
                         activeHypIdx === 2
-                          ? 'border-[#FEF62A] bg-[#FEF62A]/15 text-[#FEF62A]'
+                          ? 'border-[#3b8ef4] bg-[#3b8ef4]/15 text-[#3b8ef4]'
                           : 'border-zinc-700/80 bg-zinc-900/90 text-zinc-300'
                       )}
                     >
@@ -506,7 +506,7 @@ export function Intelligence() {
                     <span className="absolute right-1.5 bottom-4 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-2.5 py-1 font-mono text-[10px] text-zinc-300">
                       checkout
                     </span>
-                    <span className="absolute top-0.5 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-2.5 py-1 font-mono text-[10px] text-[#FEF62A]">
+                    <span className="absolute top-0.5 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-2.5 py-1 font-mono text-[10px] text-[#3b8ef4]">
                       v2.18.4
                     </span>
                   </div>
@@ -516,7 +516,7 @@ export function Intelligence() {
                 <div className="rounded-xl border border-zinc-800 bg-zinc-950/90 p-3 font-mono text-[11px]">
                   <div className="flex items-center justify-between text-zinc-400">
                     <span>HYPOTHESIS #{activeHyp.rank}</span>
-                    <span className="text-[#FEF62A]">{activeHyp.confidence}% MATCH</span>
+                    <span className="text-[#3b8ef4]">{activeHyp.confidence}% MATCH</span>
                   </div>
                   <div className="mt-1 text-zinc-200 font-sans text-xs font-medium">
                     {activeHyp.title}
@@ -546,10 +546,10 @@ export function Intelligence() {
                       aria-hidden="true"
                     >
                       <line x1="112" y1="32" x2="146" y2="74" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" />
-                      <line x1="112" y1="95" x2="132" y2="95" stroke="rgba(254,246,42,0.45)" strokeWidth="1.2" />
+                      <line x1="112" y1="95" x2="132" y2="95" stroke="rgba(59,142,244,0.45)" strokeWidth="1.2" />
                       <line x1="112" y1="158" x2="146" y2="116" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" />
                       <line x1="248" y1="32" x2="214" y2="74" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" />
-                      <line x1="248" y1="95" x2="228" y2="95" stroke="rgba(254,246,42,0.45)" strokeWidth="1.2" />
+                      <line x1="248" y1="95" x2="228" y2="95" stroke="rgba(59,142,244,0.45)" strokeWidth="1.2" />
                       <line x1="248" y1="158" x2="214" y2="116" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" />
                     </svg>
 
@@ -565,7 +565,7 @@ export function Intelligence() {
                           Core
                         </span>
                         <span className="mt-0.5 font-orbitron text-xs font-bold text-zinc-100">
-                          ARCH<span className="text-[#FEF62A]">.</span>
+                          ARCH<span className="text-[#3b8ef4]">.</span>
                         </span>
                       </div>
 
@@ -582,7 +582,7 @@ export function Intelligence() {
                   <span>Ready for production on-call</span>
                   <Link
                     href="/login"
-                    className="inline-flex items-center gap-1 font-medium text-zinc-200 hover:text-[#FEF62A]"
+                    className="inline-flex items-center gap-1 font-medium text-zinc-200 hover:text-[#3b8ef4]"
                   >
                     Launch Console →
                   </Link>
@@ -596,7 +596,7 @@ export function Intelligence() {
              ================================================================ */}
           <div className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between md:px-8">
             <div className="flex items-center gap-2 font-mono text-xs text-zinc-400">
-              <span className="size-1.5 rounded-full bg-[#FEF62A]" />
+              <span className="size-1.5 rounded-full bg-[#3b8ef4]" />
               <span>Registry picks: jump directly into a live subsystem</span>
             </div>
 

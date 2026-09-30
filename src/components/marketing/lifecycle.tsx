@@ -127,7 +127,7 @@ export function Lifecycle() {
           <div className="flex flex-col gap-4 border-b border-[#222] px-5 py-10 md:px-8 lg:flex-row lg:items-end lg:justify-between lg:px-10">
             <div>
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3 py-1 font-mono text-[11px] font-medium text-zinc-300">
-                <span className="size-1.5 rounded-full bg-[#FEF62A]" />
+                <span className="size-1.5 rounded-full bg-[#3b8ef4]" />
                 <span>INCIDENT LIFECYCLE · 4 STAGES</span>
               </div>
               <GsapTextReveal as="h2" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight text-left">
@@ -143,7 +143,7 @@ export function Lifecycle() {
               <span>STAGE {current.step} / 04</span>
               <div className="h-1.5 w-36 overflow-hidden rounded-full bg-zinc-900 border border-zinc-800">
                 <div
-                  className="h-full bg-[#FEF62A] transition-all duration-150"
+                  className="h-full bg-[#3b8ef4] transition-all duration-150"
                   style={{
                     width: `${Math.max((activeIdx + 1) * 25, Math.round(progress * 100))}%`,
                   }}
@@ -175,7 +175,7 @@ export function Lifecycle() {
                       className={cn(
                         'flex size-9 shrink-0 items-center justify-center rounded-lg border font-mono text-xs font-bold',
                         isActive
-                          ? 'border-[#FEF62A] bg-[#FEF62A] text-black'
+                          ? 'border-[#3b8ef4] bg-[#3b8ef4] text-black'
                           : 'border-zinc-800 bg-zinc-900 text-zinc-400'
                       )}
                     >
@@ -186,7 +186,7 @@ export function Lifecycle() {
                         <span
                           className={cn(
                             'uppercase tracking-[0.14em]',
-                            isActive ? 'text-[#FEF62A] font-semibold' : 'text-zinc-500'
+                            isActive ? 'text-[#3b8ef4] font-semibold' : 'text-zinc-500'
                           )}
                         >
                           {stage.tag}
@@ -212,7 +212,7 @@ export function Lifecycle() {
               <div>
                 <div className="flex items-center justify-between border-b border-[#222] pb-4 font-mono text-xs">
                   <span className="inline-flex items-center gap-2 text-white font-semibold">
-                    <span className="size-2 rounded-full bg-[#FEF62A]" />
+                    <span className="size-2 rounded-full bg-[#3b8ef4]" />
                     STAGE {current.step} · {current.tag}
                   </span>
                   <span className="text-zinc-400 tnum">{current.time}</span>
@@ -229,7 +229,7 @@ export function Lifecycle() {
                 <div className="mt-6 rounded-2xl border border-[#222] bg-[#050608] p-4 shadow-[0_24px_72px_-48px_rgb(0,0,0),inset_0_1px_0_rgba(255,255,255,0.06)]">
                   <div className="mb-3 flex items-center justify-between border-b border-[#191a20] pb-2.5 font-mono text-[11px] text-zinc-500">
                     <span>{current.caption}</span>
-                    <span className="text-[#FEF62A]">LIVE TRACE</span>
+                    <span className="text-[#3b8ef4]">LIVE TRACE</span>
                   </div>
                   <div className="space-y-2.5 font-mono text-xs">
                     {current.lines.map((l) => (
@@ -244,7 +244,7 @@ export function Lifecycle() {
                           className={cn(
                             'text-right font-medium',
                             l.tone === 'accent'
-                              ? 'text-[#FEF62A]'
+                              ? 'text-[#3b8ef4]'
                               : l.tone === 'ok'
                               ? 'text-ok-400'
                               : l.tone === 'crit'

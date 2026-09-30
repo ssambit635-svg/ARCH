@@ -7,8 +7,8 @@ const accentBar: Record<Accent, string> = {
   critical: 'from-crit-500 to-crit-500/0',
   warning: 'from-warn-500 to-warn-500/0',
   ok: 'from-ok-500 to-ok-500/0',
-  indigo: 'from-[#FEF62A] to-transparent',
-  violet: 'from-[#FEF62A] to-transparent',
+  indigo: 'from-[#3b8ef4] to-transparent',
+  violet: 'from-[#3b8ef4] to-transparent',
 };
 
 const valueAccent: Record<Accent, string> = {
@@ -17,7 +17,7 @@ const valueAccent: Record<Accent, string> = {
   warning: 'text-warn-400',
   ok: 'text-ok-400',
   indigo: 'text-white',
-  violet: 'text-[#FEF62A]',
+  violet: 'text-[#3b8ef4]',
 };
 
 export interface StatProps {

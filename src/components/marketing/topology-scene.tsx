@@ -93,10 +93,10 @@ export function TopologyScene({
     let rafId = 0;
     let width = 0;
     let height = 0;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
 
     // Generate cortical micro-neurons inside the brain silhouette
-    const palette = ['#22d3ee', '#f43f5e', '#FEF62A', '#c084fc', '#38bdf8', '#fb7185'] as const;
+    const palette = ['#22d3ee', '#f43f5e', '#3b8ef4', '#c084fc', '#38bdf8', '#fb7185'] as const;
     const microNeurons: MicroNeuron[] = Array.from({ length: 68 }, (_, i) => {
       // Concentrate inside the brain ellipse (center ~0.49, 0.46, rx ~0.34, ry ~0.28)
       const angle = (i / 68) * Math.PI * 2 + (i % 5) * 0.4;
@@ -136,6 +136,8 @@ export function TopologyScene({
     });
 
     let t = 0;
+    let visible = false;
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const render = () => {
       t += 0.016;
       ctx.clearRect(0, 0, width, height);
@@ -222,7 +224,7 @@ export function TopologyScene({
           const sy = inv * inv * y1 + 2 * inv * prog * midY + prog * prog * y2;
 
           ctx.globalAlpha = isActive ? 1 : 0.75;
-          ctx.fillStyle = isActive ? '#FEF62A' : edge.from.color;
+          ctx.fillStyle = isActive ? '#3b8ef4' : edge.from.color;
           ctx.beginPath();
           ctx.arc(sx, sy, isActive ? 3.4 : 2.3, 0, Math.PI * 2);
           ctx.fill();
@@ -257,11 +259,30 @@ export function TopologyScene({
       }
 
       ctx.globalAlpha = 1;
-      rafId = window.requestAnimationFrame(render);
+      if (visible && !document.hidden && !reducedMotion) {
+        rafId = window.requestAnimationFrame(render);
+      } else {
+        rafId = 0;
+      }
     };
 
-    rafId = window.requestAnimationFrame(render);
+    const syncPlayback = () => {
+      if (visible && !document.hidden && !rafId) rafId = window.requestAnimationFrame(render);
+      if ((!visible || document.hidden) && rafId) {
+        window.cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+    };
+    // Do not spend a frame on the offscreen brain while the visitor is watching the hero.
+    const observer = new IntersectionObserver(([entry]) => {
+      visible = !!entry?.isIntersecting;
+      syncPlayback();
+    });
+    observer.observe(canvas);
+    document.addEventListener('visibilitychange', syncPlayback);
     return () => {
+      observer.disconnect();
+      document.removeEventListener('visibilitychange', syncPlayback);
       window.cancelAnimationFrame(rafId);
       window.removeEventListener('resize', resize);
     };
@@ -360,13 +381,13 @@ export function TopologyScene({
                   {(isSelected || isCrit) && (
                     <span
                       className="absolute -inset-2.5 rounded-full animate-ping opacity-40"
-                      style={{ backgroundColor: isCrit ? '#f43f5e' : '#FEF62A' }}
+                      style={{ backgroundColor: isCrit ? '#f43f5e' : '#3b8ef4' }}
                     />
                   )}
                   <span
                     className={`relative flex items-center justify-center rounded-full border transition-transform duration-200 ${
                       isSelected
-                        ? 'size-5 scale-125 border-white bg-[#FEF62A] shadow-[0_0_20px_rgba(254,246,42,0.9)]'
+                        ? 'size-5 scale-125 border-white bg-[#3b8ef4] shadow-[0_0_20px_rgba(59,142,244,0.9)]'
                         : isCrit
                         ? 'size-4 border-white bg-[#f43f5e] shadow-[0_0_16px_rgba(244,63,94,0.85)]'
                         : isWarn
@@ -375,7 +396,7 @@ export function TopologyScene({
                     }`}
                     style={{
                       backgroundColor: isSelected
-                        ? '#FEF62A'
+                        ? '#3b8ef4'
                         : isCrit
                         ? '#f43f5e'
                         : isWarn
@@ -389,7 +410,7 @@ export function TopologyScene({
                 <span
                   className={`rounded-md border px-2 py-0.5 font-mono text-[10px] tracking-tight whitespace-nowrap transition-all duration-200 ${
                     isSelected
-                      ? 'border-[#FEF62A] bg-black/95 text-[#FEF62A] font-semibold shadow-[0_8px_24px_rgba(0,0,0,0.9)]'
+                      ? 'border-[#3b8ef4] bg-black/95 text-[#3b8ef4] font-semibold shadow-[0_8px_24px_rgba(0,0,0,0.9)]'
                       : isHovered
                       ? 'border-white/40 bg-black/90 text-white'
                       : isCrit
