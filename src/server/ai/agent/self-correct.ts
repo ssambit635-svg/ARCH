@@ -81,7 +81,8 @@ function sandboxedEnv(tmpdir: string): NodeJS.ProcessEnv {
 export async function findPython(): Promise<string | null> {
   for (const binary of ['python3', 'python']) {
     const probe = await new Promise<boolean>((resolve) => {
-      const child = spawn(binary, ['--version'], { stdio: 'ignore' });
+      // The binary comes from a fixed allowlist; it is not a project file to bundle.
+      const child = spawn(/* turbopackIgnore: true */ binary, ['--version'], { stdio: 'ignore' });
       child.on('error', () => resolve(false));
       child.on('close', (code) => resolve(code === 0));
     });
@@ -126,7 +127,8 @@ export async function runPythonScript(code: string, options: { timeoutMs?: numbe
         });
       };
 
-      const child = spawn(python, [scriptPath], { cwd: dir, env: sandboxedEnv(dir), stdio: ['ignore', 'pipe', 'pipe'] });
+      // Temporary sandbox scripts are created at runtime, outside the deployed bundle.
+      const child = spawn(/* turbopackIgnore: true */ python, [scriptPath], { cwd: dir, env: sandboxedEnv(dir), stdio: ['ignore', 'pipe', 'pipe'] });
 
       child.stdout.on('data', (chunk: Buffer) => {
         stdout += chunk.toString();

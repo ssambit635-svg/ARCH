@@ -173,8 +173,12 @@ are missing or out of date. Run `npm run db:migrate` against the same `DATABASE_
 `npm run dev`, which migrates automatically). On a hosting platform, either make the build command
 `npm run db:migrate && npm run build`, or run `DATABASE_URL="<production url>" npm run db:migrate`
 once from your own machine after each release that adds a migration. Managed databases that
-require SSL work as-is: the migrator connects with the URL unchanged (including `?sslmode=…`) and
-never needs the `postgres` maintenance database. Any other unexpected sign-up/sign-in failure shows an
+require SSL work with `?sslmode=verify-full` (and `sslrootcert` if your provider uses a custom CA).
+For compatibility, ARCH normalizes legacy `prefer` / `require` / `verify-ca` URL modes to
+`verify-full` in both the app and migrator. This preserves pg's current verified TLS behavior
+without its security warning; it does **not** bypass certificate or hostname checks. Use your
+provider's certificate-matching hostname. The migrator never needs the `postgres` maintenance
+database on a hosted instance. Any other unexpected sign-up/sign-in failure shows an
 **Error ID**; the server log has a matching `[register] failed` / `[login] failed` line with the
 Prisma/PostgreSQL error codes and the table involved (never passwords, form data or connection
 strings).

@@ -1,6 +1,7 @@
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Prisma, PrismaClient } from '@/generated/prisma/client';
 import { env, isProduction } from './env';
+import { verifiedPgUrl } from './pg-connection.mjs';
 
 /**
  * Prisma 7 client.
@@ -13,7 +14,7 @@ import { env, isProduction } from './env';
 const globalForPrisma = globalThis as unknown as { __archPrisma?: PrismaClient };
 
 function createPrismaClient(): PrismaClient {
-  const adapter = new PrismaPg({ connectionString: env.DATABASE_URL, max: 10 });
+  const adapter = new PrismaPg({ connectionString: verifiedPgUrl(env.DATABASE_URL), max: 10 });
   return new PrismaClient({
     adapter,
     log: env.LOG_LEVEL === 'debug' && !isProduction ? ['warn', 'error'] : ['error'],
