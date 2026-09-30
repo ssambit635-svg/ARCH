@@ -175,7 +175,7 @@ export function Lifecycle() {
                       className={cn(
                         'flex size-9 shrink-0 items-center justify-center rounded-lg border font-mono text-xs font-bold',
                         isActive
-                          ? 'border-[#3b8ef4] bg-[#3b8ef4] text-black'
+                          ? 'border-[#3b8ef4] bg-[#3b8ef4] text-white'
                           : 'border-zinc-800 bg-zinc-900 text-zinc-400'
                       )}
                     >

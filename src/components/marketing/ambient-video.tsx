@@ -50,6 +50,7 @@ export function AmbientVideo({
       poster={poster}
       autoPlay
       muted
+      loop
       playsInline
       preload="none"
       aria-hidden="true"

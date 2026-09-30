@@ -639,7 +639,7 @@ function FeatureCard4() {
             rotate: isHovered ? 8 : 0,
           }}
           transition={{ type: 'spring', stiffness: 260, damping: 18, delay: 0.1 }}
-          className="absolute z-30 bg-[#3b8ef4] text-black px-2.5 py-1 rounded-full shadow-[0_0_20px_rgba(59,142,244,0.3)] flex items-center gap-1 pointer-events-none"
+          className="absolute z-30 bg-[#3b8ef4] text-white px-2.5 py-1 rounded-full shadow-[0_0_20px_rgba(59,142,244,0.3)] flex items-center gap-1 pointer-events-none"
         >
           <span className="text-[10px]">⚡</span>
           <span className="font-mono text-[10px] font-bold">90d Ledger</span>
