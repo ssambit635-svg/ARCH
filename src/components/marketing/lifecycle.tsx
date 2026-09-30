@@ -13,7 +13,7 @@ interface Stage {
   title: string;
   body: string;
   caption: string;
-  lines: Array<{ label: string; value: string; tone?: 'accent' | 'ok' | 'crit' | 'muted' }>;
+  lines: Array<{ label: string; value: string; tone?: 'accent' | 'muted' }>;
 }
 
 const STAGES: Stage[] = [
@@ -26,9 +26,9 @@ const STAGES: Stage[] = [
     caption: 'POST /api/webhooks/alerts · X-Arch-Signature: sha256=…',
     lines: [
       { label: 'SOURCE', value: 'prometheus / eu-central-1' },
-      { label: 'FINGERPRINT', value: 'sha256:9c4a…e81b (14 merged)', tone: 'accent' },
-      { label: 'INCIDENT', value: 'INC-204 · SEV-1 · INVESTIGATING', tone: 'crit' },
-      { label: 'INGEST LATENCY', value: '18ms · 202 Accepted', tone: 'ok' },
+      { label: 'FINGERPRINT', value: 'sha256:9c4a…e81b', tone: 'accent' },
+      { label: 'INCIDENT', value: 'INC-204 · SEV-1 · INVESTIGATING', tone: 'accent' },
+      { label: 'INGEST LATENCY', value: '18ms · 202 Accepted' },
     ],
   },
   {
@@ -41,7 +41,7 @@ const STAGES: Stage[] = [
     lines: [
       { label: 'SERVICE', value: 'checkout-api (tier-1 · commerce)' },
       { label: 'PRIMARY ON-CALL', value: 'lead-sre@arch.internal', tone: 'accent' },
-      { label: 'ACKNOWLEDGED', value: '03:13:18 UTC · MTTA 01m 14s', tone: 'ok' },
+      { label: 'ACKNOWLEDGED', value: '03:13:18 UTC · MTTA 01m 14s' },
       { label: 'AUDIT HASH', value: 'a94f1c…83d2 (signed)', tone: 'muted' },
     ],
   },
@@ -54,9 +54,9 @@ const STAGES: Stage[] = [
     caption: 'ARCH V1.1 · native root-cause correlation',
     lines: [
       { label: 'HYPOTHESIS #1', value: 'pg-primary-02 pool saturation (example)', tone: 'accent' },
-      { label: 'CORRELATED DEPLOY', value: 'checkout-api v2.18.4 (-6m)', tone: 'crit' },
+      { label: 'CORRELATED DEPLOY', value: 'checkout-api v2.18.4 (-6m)' },
       { label: 'BLAST RADIUS', value: '3 downstream services affected' },
-      { label: 'SUGGESTED ACTION', value: 'Rollback migration #418', tone: 'ok' },
+      { label: 'SUGGESTED ACTION', value: 'Rollback migration #418', tone: 'accent' },
     ],
   },
   {
@@ -67,8 +67,8 @@ const STAGES: Stage[] = [
     body: 'Publish updates from the timeline, then create a postmortem with key events and action items.',
     caption: 'Status advisory + postmortem generated from the same timeline',
     lines: [
-      { label: 'STATE TRANSITION', value: 'MONITORING → RESOLVED', tone: 'ok' },
-      { label: 'MTTR', value: '06m 15s (SLO target < 15m)', tone: 'ok' },
+      { label: 'STATE TRANSITION', value: 'MONITORING → RESOLVED', tone: 'accent' },
+      { label: 'MTTR', value: '06m 15s (SLO target < 15m)' },
       { label: 'PUBLIC STATUS', value: '/status/arch updated · 99.98% 90d', tone: 'accent' },
       { label: 'POSTMORTEM', value: 'Drafted with 4 timeline milestones' },
     ],
@@ -79,9 +79,6 @@ export function Lifecycle() {
   const [activeIdx, setActiveIdx] = useState(0);
   const sectionRef = useRef<HTMLElement>(null);
 
-  // Light entrance animation only — no pin / no scrub. The former pinned scrub
-  // felt “sticky” and blocked normal scrolling, so we keep the section as a
-  // regular, responsive split-pane with click-driven stage selection.
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -116,18 +113,20 @@ export function Lifecycle() {
     <section
       id="lifecycle"
       ref={sectionRef}
-      className="relative border-b border-[#222] bg-[#050608] overflow-hidden"
+      className="relative border-b border-[#182438] bg-[#04070e] overflow-hidden"
     >
       <Container>
-        <div className="md:border-x border-[#222]">
+        <div className="md:border-x border-[#182438]">
           {/* Top Header */}
-          <div className="flex flex-col gap-4 border-b border-[#222] px-5 py-10 md:px-8 lg:flex-row lg:items-end lg:justify-between lg:px-10">
+          <div className="flex flex-col gap-4 border-b border-[#182438] px-5 py-10 md:px-8 lg:flex-row lg:items-end lg:justify-between lg:px-10">
             <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3 py-1 font-mono text-[11px] font-medium text-zinc-300">
-                <span className="size-1.5 rounded-full bg-[#3b8ef4]" />
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#182438] bg-[#070d19] px-3 py-1 font-mono text-[11px] font-medium text-[#3b8ef4]">
                 <span>INCIDENT LIFECYCLE · 4 STAGES</span>
               </div>
-              <GsapTextReveal as="h2" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight text-left">
+              <GsapTextReveal
+                as="h2"
+                className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight text-left"
+              >
                 From Alert to Postmortem
               </GsapTextReveal>
               <p className="mt-2 max-w-2xl text-left font-mono text-xs sm:text-sm text-zinc-400 leading-relaxed">
@@ -135,10 +134,10 @@ export function Lifecycle() {
               </p>
             </div>
 
-            {/* Progress indicator — now purely click-driven, no scroll scrub */}
+            {/* Progress indicator */}
             <div className="flex items-center gap-3 font-mono text-xs text-zinc-400">
               <span>STAGE {current.step} / 04</span>
-              <div className="h-1.5 w-36 overflow-hidden rounded-full bg-zinc-900 border border-zinc-800">
+              <div className="h-1.5 w-36 overflow-hidden rounded-full bg-[#070d19] border border-[#182438]">
                 <div
                   className="h-full bg-[#3b8ef4] transition-all duration-400 ease-out"
                   style={{
@@ -149,10 +148,10 @@ export function Lifecycle() {
             </div>
           </div>
 
-          {/* 12-Column Split: Left 4 Stages + Right Live Terminal Card */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-[#222]">
+          {/* 12-Column Split: Left 4 Stages + Right Terminal Card */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-[#182438]">
             {/* Left 6 Columns: 4 Stage Selector Cards */}
-            <div className="lg:col-span-6 divide-y divide-[#222]">
+            <div className="lg:col-span-6 divide-y divide-[#182438]">
               {STAGES.map((stage, idx) => {
                 const isActive = idx === activeIdx;
                 return (
@@ -163,16 +162,16 @@ export function Lifecycle() {
                     className={cn(
                       'lifecycle-card w-full text-left p-5 md:p-6 transition-all duration-200 cursor-pointer flex items-start gap-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3b8ef4]/50',
                       isActive
-                        ? 'bg-[#0e1016] border-l-2 border-l-[#3b8ef4]'
-                        : 'bg-[#050608] hover:bg-[#090a0e] border-l-2 border-l-transparent'
+                        ? 'bg-[#081020] border-l-2 border-l-[#3b8ef4]'
+                        : 'bg-[#04070e] hover:bg-[#060b16] border-l-2 border-l-transparent'
                     )}
                   >
                     <span
                       className={cn(
                         'flex size-9 shrink-0 items-center justify-center rounded-lg border font-mono text-xs font-bold',
                         isActive
-                          ? 'border-[#3b8ef4] bg-[#3b8ef4] text-white'
-                          : 'border-zinc-800 bg-zinc-900 text-zinc-400'
+                          ? 'border-[#3b8ef4] bg-[#3b8ef4] text-[#04070e]'
+                          : 'border-[#182438] bg-[#070d19] text-zinc-400'
                       )}
                     >
                       {stage.step}
@@ -189,7 +188,7 @@ export function Lifecycle() {
                         </span>
                         <span className="text-zinc-500 tnum">{stage.time}</span>
                       </div>
-                      <h3 className="mt-1 text-sm md:text-base font-semibold text-white">
+                      <h3 className="mt-1 text-sm md:text-base font-semibold text-white leading-snug">
                         {stage.title}
                       </h3>
                       {isActive && (
@@ -203,12 +202,12 @@ export function Lifecycle() {
               })}
             </div>
 
-            {/* Right 6 Columns: Live Stage Telemetry Inspector */}
-            <div className="lg:col-span-6 bg-[#08090c] p-6 md:p-8 flex flex-col justify-between">
+            {/* Right 6 Columns: Stage Telemetry Inspector */}
+            <div className="lg:col-span-6 bg-[#060a14] p-6 md:p-8 flex flex-col justify-between">
               <div>
-                <div className="flex items-center justify-between border-b border-[#222] pb-4 font-mono text-xs">
+                <div className="flex items-center justify-between border-b border-[#182438] pb-4 font-mono text-xs">
                   <span className="inline-flex items-center gap-2 text-white font-semibold">
-                    <span className="size-2 rounded-full bg-[#3b8ef4]" />
+                    <span className="text-[#3b8ef4]">//</span>
                     STAGE {current.step} · {current.tag}
                   </span>
                   <span className="text-zinc-400 tnum">{current.time}</span>
@@ -222,16 +221,16 @@ export function Lifecycle() {
                 </p>
 
                 {/* Terminal Output Box */}
-                <div className="mt-6 rounded-2xl border border-[#222] bg-[#050608] p-4 shadow-[0_24px_72px_-48px_rgb(0,0,0),inset_0_1px_0_rgba(255,255,255,0.06)]">
-                  <div className="mb-3 flex items-center justify-between border-b border-[#191a20] pb-2.5 font-mono text-[11px] text-zinc-500">
+                <div className="mt-6 rounded-2xl border border-[#182438] bg-[#04070e] p-4">
+                  <div className="mb-3 flex items-center justify-between border-b border-[#141f33] pb-2.5 font-mono text-[11px] text-zinc-500">
                     <span>{current.caption}</span>
-                    <span className="text-[#3b8ef4]">LIVE TRACE</span>
+                    <span className="text-[#3b8ef4]">TRACE</span>
                   </div>
                   <div className="space-y-2.5 font-mono text-xs">
                     {current.lines.map((l) => (
                       <div
                         key={l.label}
-                        className="flex items-center justify-between gap-4 rounded-lg border border-[#191a20] bg-[#0a0b0f] px-3 py-2"
+                        className="flex items-center justify-between gap-4 rounded-lg border border-[#141f33] bg-[#070d19] px-3 py-2"
                       >
                         <span className="text-[10px] uppercase tracking-wider text-zinc-500">
                           {l.label}
@@ -241,10 +240,8 @@ export function Lifecycle() {
                             'text-right font-medium',
                             l.tone === 'accent'
                               ? 'text-[#3b8ef4]'
-                              : l.tone === 'ok'
-                              ? 'text-ok-400'
-                              : l.tone === 'crit'
-                              ? 'text-crit-400'
+                              : l.tone === 'muted'
+                              ? 'text-zinc-400'
                               : 'text-zinc-200'
                           )}
                         >
@@ -256,7 +253,7 @@ export function Lifecycle() {
                 </div>
               </div>
 
-              <div className="mt-6 flex items-center justify-between border-t border-[#222] pt-4 font-mono text-[11px] text-zinc-500">
+              <div className="mt-6 flex items-center justify-between border-t border-[#182438] pt-4 font-mono text-[11px] text-zinc-500">
                 <span>Deterministic transitions · zero manual spreadsheet handoffs</span>
                 <span className="text-zinc-300">MTTA 01m 14s · MTTR 06m 15s</span>
               </div>

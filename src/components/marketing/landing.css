@@ -1,28 +1,25 @@
 /* ============================================================================
-   ARCH — Vengeance UI Marketing Stylesheet (DESIGN.md & SKILL.md)
-   Carbon Dark (#050608 / #000000), Crisp White (#FFFFFF), Dragon Blue (#3b8ef4),
-   and #222222 architectural grid lines.
+   ARCH — Marketing Stylesheet
+   Dark Mode: Premium Blue (#3b8ef4) with Deep Obsidian Darkness (#04070e)
+   White Mode: Pure Cream (#FAF6EE) + Warm Beige (#EFE6D4) + Sandstone Gold (#c8b07d)
    ============================================================================ */
 
 .mk {
-  --mk-bg-0: #050608;
-  --mk-bg-1: #08090c;
-  --mk-bg-2: #0d0e12;
-  --mk-bg-3: #141519;
+  --mk-bg-0: #04070e;
+  --mk-bg-1: #060a14;
+  --mk-bg-2: #070d19;
+  --mk-bg-3: #0b1426;
 
   --mk-fg-0: #ffffff;
   --mk-fg-1: #e4e4e7;
-  --mk-fg-2: #a1a1aa;
-  --mk-fg-3: #71717a;
+  --mk-fg-2: #94a3b8;
+  --mk-fg-3: #64748b;
 
-  --mk-line: #222222;
-  --mk-line-strong: rgba(255, 255, 255, 0.14);
+  --mk-line: #182438;
+  --mk-line-strong: #1e3454;
 
   --mk-accent: #3b8ef4;
   --mk-accent-strong: #ffffff;
-  --mk-ok: #34d399;
-  --mk-warn: #fbbf24;
-  --mk-crit: #fb7185;
 
   position: relative;
   min-height: 100vh;
@@ -31,6 +28,7 @@
   font-family: var(--font-sans);
   overflow-x: clip;
   isolation: isolate;
+  transition: background-color 280ms ease, color 280ms ease;
 }
 
 .mk-skip {
@@ -40,8 +38,8 @@
   z-index: 300;
   padding: 0.5rem 0.875rem;
   border-radius: 0.5rem;
-  background: #3b8ef4;
-  color: #050608;
+  background: var(--mk-accent);
+  color: #04070e;
   font-family: var(--font-mono);
   font-size: 0.75rem;
   font-weight: 600;
@@ -61,8 +59,6 @@
   object-position: center;
 }
 
-/* Portrait phones would crop the ARCH wordmark badly under `cover`, so letterbox the film
-   instead — the black stage + gradients keep it feeling like a cinema frame. */
 @media (max-aspect-ratio: 4/5) {
   .mk-hero-video {
     object-fit: contain;
@@ -70,7 +66,7 @@
 }
 
 .mk-hero-vignette {
-  background: radial-gradient(120% 90% at 50% 42%, transparent 55%, rgba(5, 6, 8, 0.55) 100%);
+  background: radial-gradient(120% 90% at 50% 42%, transparent 55%, rgba(4, 7, 14, 0.58) 100%);
 }
 
 .mk-scroll-cue-chevron {
@@ -95,7 +91,7 @@
   }
 }
 
-/* Scroll Progress Bar (ARCH blue accent) */
+/* Scroll Progress Bar */
 .mk-progress {
   position: fixed;
   top: 0;
@@ -111,16 +107,245 @@
   width: 100%;
   transform-origin: 0% 50%;
   transform: scaleX(0);
-  background: linear-gradient(90deg, #ffffff 0%, #3b8ef4 100%);
+  background: linear-gradient(90deg, #ffffff 0%, var(--mk-accent) 100%);
 }
 
-/* Original FBX mascot: quiet studio stage, no simulated neural activity. */
+/* Original FBX mascot studio stage */
 .robot-stage {
   height: clamp(380px, 43vw, 590px);
   min-width: 0;
-  background: radial-gradient(ellipse at 50% 42%, rgba(72, 119, 182, 0.13), transparent 65%);
+  background: radial-gradient(ellipse at 50% 42%, rgba(59, 142, 244, 0.11), transparent 65%);
 }
-.robot-stage canvas { display: block; width: 100%; height: 100%; }
+.robot-stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
 @media (prefers-reduced-motion: reduce) {
-  .robot-stage * { transition: none !important; }
+  .robot-stage * {
+    transition: none !important;
+  }
+}
+
+/* ============================================================================
+   WHITE MODE — Pure Cream (#FAF6EE) + Warm Beige (#EFE6D4) + #c8b07d
+   ============================================================================ */
+
+.mk-light .mk {
+  --mk-bg-0: #faf6ee;
+  --mk-bg-1: #f3ecdf;
+  --mk-bg-2: #ebe1cf;
+  --mk-bg-3: #e2d5be;
+
+  --mk-fg-0: #1c1813;
+  --mk-fg-1: #2e271f;
+  --mk-fg-2: #5c5040;
+  --mk-fg-3: #7d6f5b;
+
+  --mk-line: #dfd3bc;
+  --mk-line-strong: #c8b07d;
+
+  --mk-accent: #c8b07d;
+  --mk-accent-strong: #8a6d35;
+
+  background-color: #faf6ee;
+  color: #1c1813;
+}
+
+/* Section & Card Surfaces in Pure Cream + Beige */
+.mk-light .bg-\[\#04070e\],
+.mk-light .bg-\[\#050608\] {
+  background-color: #faf6ee !important;
+}
+
+.mk-light .bg-\[\#060a14\],
+.mk-light .bg-\[\#060a14\]\/90,
+.mk-light .bg-\[\#050811\],
+.mk-light .bg-\[\#08090c\] {
+  background-color: #f4ede0 !important;
+}
+
+.mk-light .bg-\[\#070d19\],
+.mk-light .bg-\[\#080d18\],
+.mk-light .bg-\[\#080e1b\],
+.mk-light .bg-\[\#0a1120\],
+.mk-light .bg-\[\#0a1222\],
+.mk-light .bg-\[\#0b0c10\] {
+  background-color: #ede3d0 !important;
+}
+
+.mk-light .bg-\[\#081020\],
+.mk-light .bg-\[\#0b1528\] {
+  background-color: #e5d8bf !important;
+}
+
+/* Keep the Hero section stage dark behind the mountain night film while adapting the veil & pills */
+.mk-light .mk-hero {
+  background-color: #050811 !important;
+}
+.mk-light .mk-hero-veil {
+  background-color: #faf6ee !important;
+}
+.mk-light .mk-hero-pill {
+  background-color: rgba(250, 246, 238, 0.88) !important;
+  border-color: rgba(200, 176, 125, 0.65) !important;
+  color: #2b2318 !important;
+}
+.mk-light .mk-hero-pill span {
+  color: #2b2318 !important;
+}
+.mk-light .mk-hero-cta-primary {
+  background-color: #c8b07d !important;
+  color: #1c1813 !important;
+}
+.mk-light .mk-hero-cta-primary:hover {
+  background-color: #b89d64 !important;
+}
+.mk-light .mk-hero-cta-secondary {
+  border-color: rgba(200, 176, 125, 0.65) !important;
+  background-color: rgba(250, 246, 238, 0.14) !important;
+}
+
+/* Navbar in Cream Mode */
+.mk-light .mk-nav {
+  background-color: rgba(250, 246, 238, 0.94) !important;
+  border-bottom-color: #dfd3bc !important;
+}
+
+/* FeatureCard1 center card gradient in Cream Mode */
+.mk-light .from-\[\#0c1629\] {
+  --tw-gradient-from: #f5eee0 !important;
+}
+.mk-light .to-\[\#050912\] {
+  --tw-gradient-to: #e6dac2 !important;
+}
+
+/* Dragon video showcase stage in Closing section: keep rich warm espresso frame so white video strokes pop */
+.mk-light .mk-dragon-stage {
+  background-color: #18140f !important;
+}
+
+/* Robot stage in Cream mode */
+.mk-light .robot-stage {
+  background: radial-gradient(ellipse at 50% 42%, rgba(200, 176, 125, 0.28), transparent 65%) !important;
+}
+
+/* Tech stack grid hairlines in Cream mode */
+.mk-light .mk-tech-grid {
+  background-color: #dfd3bc !important;
+  border-color: #dfd3bc !important;
+}
+.mk-light .mk-tech-tile {
+  background-color: #faf6ee !important;
+}
+.mk-light .mk-tech-tile:hover {
+  background-color: #f1e8d6 !important;
+}
+
+/* Borders & Dividers in Cream + Beige + #c8b07d */
+.mk-light .border-\[\#182438\],
+.mk-light .border-\[\#141f33\],
+.mk-light .border-\[\#222\] {
+  border-color: #dfd3bc !important;
+}
+
+.mk-light .border-\[\#1e3454\] {
+  border-color: #c8b07d !important;
+}
+
+.mk-light .divide-\[\#182438\] > :not(:last-child),
+.mk-light .divide-\[\#111a2b\] > :not(:last-child),
+.mk-light .divide-\[\#222\] > :not(:last-child) {
+  border-color: #dfd3bc !important;
+}
+
+/* Accents (#3b8ef4 -> #c8b07d / #8a6d35) in Cream Mode */
+.mk-light .text-\[\#3b8ef4\],
+.mk-light .text-\[\#8ec2ff\],
+.mk-light .text-\[\#b8d6ff\] {
+  color: #8a6d35 !important;
+}
+
+.mk-light .bg-\[\#3b8ef4\] {
+  background-color: #c8b07d !important;
+  color: #1c1813 !important;
+}
+
+.mk-light .bg-\[\#3b8ef4\]\/10,
+.mk-light .bg-\[\#3b8ef4\]\/15,
+.mk-light .bg-\[\#3b8ef4\]\/20,
+.mk-light .bg-\[\#3b8ef4\]\/\[0\.06\] {
+  background-color: rgba(200, 176, 125, 0.2) !important;
+}
+
+.mk-light .border-\[\#3b8ef4\],
+.mk-light .border-l-\[\#3b8ef4\],
+.mk-light .border-\[\#3b8ef4\]\/30,
+.mk-light .border-\[\#3b8ef4\]\/35,
+.mk-light .border-\[\#3b8ef4\]\/40,
+.mk-light .border-\[\#3b8ef4\]\/50,
+.mk-light .border-\[\#3b8ef4\]\/60 {
+  border-color: #c8b07d !important;
+}
+
+/* Typography in Cream Mode (exclude Hero overlay text which sits on the night mountain video) */
+.mk-light :not(.mk-hero) > .text-white,
+.mk-light section:not(.mk-hero) .text-white,
+.mk-light header .text-white,
+.mk-light footer .text-white,
+.mk-light .mk-modal .text-white {
+  color: #1c1813 !important;
+}
+
+.mk-light section:not(.mk-hero) .text-zinc-100,
+.mk-light section:not(.mk-hero) .text-zinc-200,
+.mk-light header .text-zinc-100,
+.mk-light header .text-zinc-200,
+.mk-light .mk > button.text-zinc-200 {
+  color: #2b241b !important;
+}
+
+.mk-light section:not(.mk-hero) .text-zinc-300,
+.mk-light header .text-zinc-300,
+.mk-light footer .text-zinc-300 {
+  color: #463c2e !important;
+}
+
+.mk-light section:not(.mk-hero) .text-zinc-400,
+.mk-light section:not(.mk-hero) .text-\[\#8e929f\],
+.mk-light header .text-zinc-400,
+.mk-light footer .text-zinc-400 {
+  color: #635644 !important;
+}
+
+.mk-light section:not(.mk-hero) .text-zinc-500,
+.mk-light header .text-zinc-500,
+.mk-light footer .text-zinc-500 {
+  color: #7d6f5b !important;
+}
+
+/* Isometric Boxes & Stacks in Cream Mode */
+.mk-light .fill-neutral-900,
+.mk-light .fill-\[\#08090c\] {
+  fill: #f3ecdf !important;
+}
+.mk-light .fill-\[\#141519\] {
+  fill: #e6dac4 !important;
+}
+.mk-light .stroke-neutral-600,
+.mk-light .stroke-neutral-800 {
+  stroke: #c8b07d !important;
+}
+.mk-light .iso-stack-front .text-white {
+  color: #1c1813 !important;
+}
+
+/* Watermark in Cream Mode */
+.mk-light .mk-watermark {
+  background-image: linear-gradient(
+    to bottom,
+    rgba(200, 176, 125, 0.48),
+    rgba(200, 176, 125, 0.18),
+    transparent
+  ) !important;
 }

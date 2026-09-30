@@ -55,16 +55,18 @@ export function Deploy() {
   return (
     <section
       id="deploy"
-      className="relative border-b border-[#222] bg-[#050608] overflow-hidden"
+      className="relative border-b border-[#182438] bg-[#04070e] overflow-hidden"
     >
       <Container>
-        <div className="md:border-x border-[#222]">
-          <div className="flex flex-col gap-4 border-b border-[#222] px-5 py-10 md:px-8 lg:px-10">
-            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3 py-1 font-mono text-[11px] font-medium text-zinc-300">
-              <span className="size-1.5 rounded-full bg-[#3b8ef4]" />
+        <div className="md:border-x border-[#182438]">
+          <div className="flex flex-col gap-4 border-b border-[#182438] px-5 py-10 md:px-8 lg:px-10">
+            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#182438] bg-[#070d19] px-3 py-1 font-mono text-[11px] font-medium text-[#3b8ef4]">
               <span>SELF-HOSTED · DOCKER + POSTGRES</span>
             </div>
-            <GsapTextReveal as="h2" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight text-left">
+            <GsapTextReveal
+              as="h2"
+              className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight text-left"
+            >
               Deploy in Four Commands
             </GsapTextReveal>
             <p className="max-w-2xl font-mono text-xs sm:text-sm text-zinc-400 text-left leading-relaxed">
@@ -72,22 +74,22 @@ export function Deploy() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-[#222]">
+          <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-[#182438]">
             {/* Left 6 Columns: 4-Command Bootstrap + Runtime Specs */}
-            <div className="lg:col-span-6 p-5 md:p-8 flex flex-col justify-between bg-[#08090c]">
+            <div className="lg:col-span-6 p-5 md:p-8 flex flex-col justify-between bg-[#060a14]">
               <div>
-                <div className="flex items-center justify-between border-b border-[#222] pb-3 font-mono text-xs">
+                <div className="flex items-center justify-between border-b border-[#182438] pb-3 font-mono text-xs">
                   <span className="text-zinc-300">shell · quickstart</span>
                   <button
                     type="button"
                     onClick={copyAll}
-                    className="rounded-md border border-zinc-700 bg-zinc-900 px-2.5 py-1 font-mono text-[11px] text-zinc-200 transition-colors hover:border-[#3b8ef4] hover:text-[#3b8ef4] cursor-pointer"
+                    className="rounded-md border border-[#182438] bg-[#070d19] px-2.5 py-1 font-mono text-[11px] text-zinc-200 transition-colors hover:border-[#3b8ef4] hover:text-[#3b8ef4] cursor-pointer"
                   >
                     {copied ? '✓ Copied' : 'Copy commands'}
                   </button>
                 </div>
 
-                <pre className="mt-4 space-y-2.5 overflow-x-auto rounded-xl border border-[#222] bg-[#050608] p-4 font-mono text-xs text-zinc-200">
+                <pre className="mt-4 space-y-2.5 overflow-x-auto rounded-xl border border-[#182438] bg-[#04070e] p-4 font-mono text-xs text-zinc-200">
                   {COMMANDS.map((line, i) => (
                     <div key={i} className="flex items-start gap-3">
                       <span className="select-none text-[#3b8ef4] tnum">$</span>
@@ -98,19 +100,19 @@ export function Deploy() {
               </div>
 
               <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-                <div className="rounded-xl border border-[#222] bg-[#0b0c10] p-3">
+                <div className="rounded-xl border border-[#182438] bg-[#070d19] p-3">
                   <div className="font-mono text-[10px] uppercase text-zinc-500">Runtime</div>
                   <div className="mt-1 font-mono text-xs font-semibold text-white">Node 22 LTS</div>
                 </div>
-                <div className="rounded-xl border border-[#222] bg-[#0b0c10] p-3">
+                <div className="rounded-xl border border-[#182438] bg-[#070d19] p-3">
                   <div className="font-mono text-[10px] uppercase text-zinc-500">Database</div>
                   <div className="mt-1 font-mono text-xs font-semibold text-white">Postgres 16</div>
                 </div>
-                <div className="rounded-xl border border-[#222] bg-[#0b0c10] p-3">
+                <div className="rounded-xl border border-[#182438] bg-[#070d19] p-3">
                   <div className="font-mono text-[10px] uppercase text-zinc-500">Auth</div>
                   <div className="mt-1 font-mono text-xs font-semibold text-white">PBKDF2 + JWT</div>
                 </div>
-                <div className="rounded-xl border border-[#222] bg-[#0b0c10] p-3">
+                <div className="rounded-xl border border-[#182438] bg-[#070d19] p-3">
                   <div className="font-mono text-[10px] uppercase text-zinc-500">License</div>
                   <div className="mt-1 font-mono text-xs font-semibold text-[#3b8ef4]">Self-Hosted</div>
                 </div>
@@ -118,9 +120,9 @@ export function Deploy() {
             </div>
 
             {/* Right 6 Columns: Python SDK / HMAC Webhook Code Preview */}
-            <div className="lg:col-span-6 p-5 md:p-8 flex flex-col justify-between bg-[#06070a]">
+            <div className="lg:col-span-6 p-5 md:p-8 flex flex-col justify-between bg-[#050811]">
               <div>
-                <div className="flex items-center justify-between border-b border-[#222] pb-3 font-mono text-xs">
+                <div className="flex items-center justify-between border-b border-[#182438] pb-3 font-mono text-xs">
                   <div className="flex items-center gap-1.5">
                     <button
                       type="button"
@@ -128,7 +130,7 @@ export function Deploy() {
                       className={cn(
                         'rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer',
                         sdkTab === 'python'
-                          ? 'bg-[#3b8ef4] text-white font-semibold'
+                          ? 'bg-[#3b8ef4] text-[#04070e] font-semibold'
                           : 'text-zinc-400 hover:text-white'
                       )}
                     >
@@ -140,7 +142,7 @@ export function Deploy() {
                       className={cn(
                         'rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer',
                         sdkTab === 'curl'
-                          ? 'bg-[#3b8ef4] text-white font-semibold'
+                          ? 'bg-[#3b8ef4] text-[#04070e] font-semibold'
                           : 'text-zinc-400 hover:text-white'
                       )}
                     >
@@ -150,7 +152,7 @@ export function Deploy() {
                   <span className="text-[11px] text-zinc-500">pip install -e clients/python</span>
                 </div>
 
-                <pre className="mt-4 overflow-x-auto rounded-xl border border-[#222] bg-[#050608] p-4 font-mono text-[11.5px] leading-relaxed text-zinc-300">
+                <pre className="mt-4 overflow-x-auto rounded-xl border border-[#182438] bg-[#04070e] p-4 font-mono text-[11.5px] leading-relaxed text-zinc-300">
                   <code>{sdkTab === 'python' ? PYTHON_SNIPPET : CURL_SNIPPET}</code>
                 </pre>
               </div>
@@ -162,20 +164,21 @@ export function Deploy() {
             </div>
           </div>
 
-          {/* Production stack — 15 verified technologies, every tile proven against package.json */}
-          <div className="border-t border-[#222] px-5 py-8 md:px-8 lg:px-10">
+          {/* Production stack — 15 verified technologies */}
+          <div className="border-t border-[#182438] px-5 py-8 md:px-8 lg:px-10">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div>
-                <div className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#75b3ff]">
-                  <span className="size-1.5 rounded-full bg-[#3b8ef4]" />
-                  Production stack · 15 verified tiles
+                <div className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#3b8ef4]">
+                  <span>Production stack · 15 verified tiles</span>
                 </div>
                 <p className="mt-1.5 max-w-2xl font-mono text-xs leading-relaxed text-zinc-400">
                   Everything ARCH runs on — Next.js 16 to Python — proven in CI against
                   <span className="text-zinc-200"> package.json &amp; docker-compose.yml</span>. No external SaaS.
                 </p>
               </div>
-              <span className="hidden shrink-0 font-mono text-[11px] text-zinc-500 sm:inline">Hover a tile for proof</span>
+              <span className="hidden shrink-0 font-mono text-[11px] text-zinc-500 sm:inline">
+                Hover a tile for proof
+              </span>
             </div>
             <div className="mt-5">
               <TechStackTiles />

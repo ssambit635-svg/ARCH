@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
+import { motion } from 'motion/react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Container, Heading, SubHeading, cn } from './vui-primitives';
+import { Container, cn } from './vui-primitives';
 import { GsapTextReveal } from './gsap-reveal';
 
 const HYPOTHESES = [
@@ -12,6 +13,8 @@ const HYPOTHESES = [
     id: 'hyp-1',
     rank: '01',
     node: 'pg-primary',
+    tag: 'v2.18.4 · lock',
+    score: 92,
     title: 'Pool saturation on postgres-primary after deploy v2.18.4',
     evidence: 'pg_stat_activity = 200/200 · migration #418 holds ACCESS EXCLUSIVE lock',
     remediation: 'Rollback checkout-api to v2.18.3 and drain idle transactions.',
@@ -20,6 +23,8 @@ const HYPOTHESES = [
     id: 'hyp-2',
     rank: '02',
     node: 'webhooks',
+    tag: '3.4× spike',
+    score: 64,
     title: 'Retry storm from payment gateway webhook workers',
     evidence: '3.4× inbound spike on /api/webhooks/alerts over 120s window',
     remediation: 'Enable token-bucket shedder on edge-proxy for non-idempotent retries.',
@@ -28,6 +33,8 @@ const HYPOTHESES = [
     id: 'hyp-3',
     rank: '03',
     node: 'auth-svc',
+    tag: 'eu-central-1b',
+    score: 14,
     title: 'Cross-AZ network jitter in eu-central-1b',
     evidence: 'inter-AZ RTT normal (0.8ms p95); packet loss < 0.01%',
     remediation: 'Ruled out — keep traffic balanced across all 3 availability zones.',
@@ -123,62 +130,10 @@ function CreepyAckButton({ onTrigger }: { onTrigger: () => void }) {
   );
 }
 
-function FlowLayer() {
-  return (
-    <svg
-      viewBox="0 0 1200 540"
-      className="pointer-events-none absolute inset-0 hidden h-full w-full lg:block opacity-75"
-      fill="none"
-      aria-hidden="true"
-    >
-      <defs>
-        <linearGradient id="arch-flow-line" x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="rgba(255,255,255,0.08)" />
-          <stop offset="50%" stopColor="rgba(59,142,244,0.45)" />
-          <stop offset="100%" stopColor="rgba(255,255,255,0.08)" />
-        </linearGradient>
-      </defs>
-
-      <path
-        id="arch-flow-a"
-        d="M 165 268 C 292 268, 308 166, 430 166 C 544 166, 650 166, 770 166 C 895 166, 912 268, 1035 268"
-        stroke="url(#arch-flow-line)"
-        strokeWidth="1.4"
-        strokeDasharray="6 8"
-      />
-
-      <path
-        id="arch-flow-b"
-        d="M 165 338 C 300 338, 318 370, 430 370 C 544 370, 650 370, 770 370 C 885 370, 902 338, 1035 338"
-        stroke="rgba(255,255,255,0.18)"
-        strokeWidth="1.2"
-        strokeDasharray="5 8"
-      />
-
-      <circle r="3.4" fill="rgba(59,142,244,0.95)">
-        <animateMotion
-          dur="6.5s"
-          repeatCount="indefinite"
-          path="M 165 268 C 292 268, 308 166, 430 166 C 544 166, 650 166, 770 166 C 895 166, 912 268, 1035 268"
-        />
-      </circle>
-
-      <circle r="3" fill="rgba(255,255,255,0.8)">
-        <animateMotion
-          dur="7.2s"
-          begin="1.2s"
-          repeatCount="indefinite"
-          path="M 165 338 C 300 338, 318 370, 430 370 C 544 370, 650 370, 770 370 C 885 370, 902 338, 1035 338"
-        />
-      </circle>
-    </svg>
-  );
-}
-
 function CardTopline({ index, tag }: { index: string; tag: string }) {
   return (
     <div className="mb-4 flex items-center justify-between text-[11px] font-mono">
-      <span className="rounded-md border border-zinc-700 bg-zinc-900 px-2 py-0.5 text-zinc-400">
+      <span className="rounded-md border border-[#182438] bg-[#070d19] px-2 py-0.5 text-zinc-400">
         {index}
       </span>
       <span className="uppercase tracking-[0.14em] text-zinc-500">{tag}</span>
@@ -188,8 +143,7 @@ function CardTopline({ index, tag }: { index: string; tag: string }) {
 
 function SystemActionPill({ label }: { label: string }) {
   return (
-    <span className="inline-flex h-8 w-[112px] items-center justify-center gap-1 rounded-full border border-zinc-700/85 bg-zinc-900/90 px-2.5 font-mono text-[10px] font-medium whitespace-nowrap text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-      <span className="size-1.5 rounded-full bg-[#3b8ef4]" />
+    <span className="inline-flex h-8 min-w-[98px] items-center justify-center rounded-lg border border-[#182438] bg-[#070d19] px-2.5 font-mono text-[10px] font-medium whitespace-nowrap text-zinc-300">
       {label}
     </span>
   );
@@ -198,10 +152,19 @@ function SystemActionPill({ label }: { label: string }) {
 export function Intelligence() {
   const sectionRef = useRef<HTMLElement>(null);
   const [buttonMode, setButtonMode] = useState<'dedup' | 'ack'>('dedup');
-  const [mergedCount, setMergedCount] = useState(14);
   const [activeHypIdx, setActiveHypIdx] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
 
   const activeHyp = HYPOTHESES[activeHypIdx] ?? HYPOTHESES[0]!;
+
+  // Smooth automatic cycling through the 3 hypotheses when not hovered
+  useEffect(() => {
+    if (isPaused) return;
+    const interval = window.setInterval(() => {
+      setActiveHypIdx((prev) => (prev + 1) % HYPOTHESES.length);
+    }, 3600);
+    return () => window.clearInterval(interval);
+  }, [isPaused]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -234,23 +197,26 @@ export function Intelligence() {
     <section
       id="intelligence"
       ref={sectionRef}
-      className="relative border-b border-[#222] bg-[#050608] overflow-hidden"
+      className="relative border-b border-[#182438] bg-[#04070e] overflow-hidden"
     >
       <div id="library-map" className="scroll-mt-20" />
       <Container>
-        <div className="md:border-x border-[#222]">
+        <div className="md:border-x border-[#182438]">
           {/* ================================================================
-              IntroBand (Exact Vengeance UI LandingPageGrid IntroBand)
+              IntroBand
              ================================================================ */}
-          <div className="relative overflow-hidden border-b border-[#222] px-5 py-8 md:px-8 lg:px-10">
+          <div className="relative overflow-hidden border-b border-[#182438] px-5 py-8 md:px-8 lg:px-10">
             <div className="relative grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
               <div>
-                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3 py-1 text-[11px] font-medium text-zinc-400">
-                  <span className="text-[#3b8ef4]">✦</span>
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#182438] bg-[#070d19] px-3 py-1 text-[11px] font-medium text-zinc-400">
+                  <span className="font-mono text-[#3b8ef4]">ARCH</span>
                   <span className="font-mono">Workflow preview · illustrative data</span>
                 </div>
 
-                <GsapTextReveal as="h2" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight text-left">
+                <GsapTextReveal
+                  as="h2"
+                  className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight text-left"
+                >
                   Build with ARCH Intelligence
                 </GsapTextReveal>
 
@@ -260,11 +226,11 @@ export function Intelligence() {
               </div>
 
               <div className="grid grid-cols-2 gap-2.5">
-                <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                <div className="rounded-xl border border-[#182438] bg-[#070d19] p-3.5">
                   <div className="font-orbitron text-lg font-bold text-zinc-100 tnum">CPU-only</div>
                   <div className="font-mono text-[11px] text-zinc-500">Native model inference</div>
                 </div>
-                <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
+                <div className="rounded-xl border border-[#182438] bg-[#070d19] p-3.5">
                   <div className="font-orbitron text-lg font-bold text-[#3b8ef4] tnum">Human-led</div>
                   <div className="font-mono text-[11px] text-zinc-500">Review every suggestion</div>
                 </div>
@@ -273,34 +239,32 @@ export function Intelligence() {
           </div>
 
           {/* ================================================================
-              PreviewMatrix (Exact Vengeance UI 3-Column 01/03 · 02/03 · 03/03)
+              PreviewMatrix (3-Column 01/03 · 02/03 · 03/03)
              ================================================================ */}
-          <div className="relative overflow-hidden border-b border-[#222]">
-            <FlowLayer />
-
-            <div className="relative z-10 grid grid-cols-1 divide-y divide-[#222] lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+          <div className="relative overflow-hidden border-b border-[#182438]">
+            <div className="relative z-10 grid grid-cols-1 divide-y divide-[#182438] lg:grid-cols-3 lg:divide-x lg:divide-y-0">
               {/* COLUMN 01/03: Alert Ingest Forge */}
-              <div className="vui-matrix-card relative flex min-h-[390px] flex-col justify-between p-5 md:p-6">
+              <div className="vui-matrix-card relative flex min-h-[410px] flex-col justify-between p-5 md:p-6">
                 <div>
                   <CardTopline index="01/03" tag="Alert Ingest Forge" />
-                  <h3 className="text-xl font-semibold tracking-tight text-zinc-100">
+                  <h3 className="text-xl font-semibold tracking-tight text-zinc-100 leading-snug">
                     Interactive Deduplication Controls
                   </h3>
-                  <p className="mt-1.5 font-mono text-xs text-zinc-400">
+                  <p className="mt-1.5 font-mono text-xs text-zinc-400 leading-relaxed">
                     HMAC-SHA256 verified webhook intake that collapses alert storms into a single fingerprinted incident.
                   </p>
                 </div>
 
-                <div className="my-5 rounded-2xl border border-zinc-800/90 bg-zinc-950/90 p-3.5 shadow-[0_24px_72px_-48px_rgba(0,0,0,1),inset_0_1px_0_rgba(255,255,255,0.06)]">
+                <div className="my-5 rounded-2xl border border-[#182438] bg-[#060a14] p-3.5">
                   <div className="flex items-center justify-between gap-2">
-                    <div className="inline-flex rounded-lg border border-zinc-700/80 bg-zinc-900/90 p-0.5 text-[11px]">
+                    <div className="inline-flex rounded-lg border border-[#182438] bg-[#0a1120] p-0.5 text-[11px]">
                       <button
                         type="button"
                         onClick={() => setButtonMode('dedup')}
                         className={cn(
                           'rounded-md px-2.5 py-1 font-mono font-medium transition-colors cursor-pointer',
                           buttonMode === 'dedup'
-                            ? 'bg-zinc-200 text-zinc-900'
+                            ? 'bg-[#3b8ef4] text-[#04070e] font-semibold'
                             : 'text-zinc-400 hover:text-zinc-200'
                         )}
                       >
@@ -312,7 +276,7 @@ export function Intelligence() {
                         className={cn(
                           'rounded-md px-2.5 py-1 font-mono font-medium transition-colors cursor-pointer',
                           buttonMode === 'ack'
-                            ? 'bg-zinc-200 text-zinc-900'
+                            ? 'bg-[#3b8ef4] text-[#04070e] font-semibold'
                             : 'text-zinc-400 hover:text-zinc-200'
                         )}
                       >
@@ -320,27 +284,27 @@ export function Intelligence() {
                       </button>
                     </div>
 
-                    <span className="rounded-md border border-zinc-700/80 bg-zinc-900/90 px-2 py-0.5 font-mono text-[10px] text-[#3b8ef4]">
-                      +{mergedCount} merged
+                    <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+                      SHA-256 INTAKE
                     </span>
                   </div>
 
-                  <div className="mt-3 flex min-h-[142px] flex-col items-center justify-center gap-3 rounded-xl border border-zinc-800/90 bg-zinc-900/75 px-3 py-4">
+                  <div className="mt-3 flex min-h-[142px] flex-col items-center justify-center gap-3 rounded-xl border border-[#182438] bg-[#080e1b] px-3 py-4">
                     {buttonMode === 'dedup' ? (
                       <>
                         <button
                           type="button"
-                          onClick={() => setMergedCount((c) => c + 1)}
-                          className="rounded-xl border border-zinc-700/85 bg-zinc-950/90 px-4 py-2.5 transition-colors hover:border-[#3b8ef4]/60 cursor-pointer"
+                          onClick={() => setButtonMode('ack')}
+                          className="rounded-xl border border-[#1e3454] bg-[#04070e] px-4 py-2.5 transition-colors hover:border-[#3b8ef4] cursor-pointer"
                         >
                           <FlipTextWord text="DEDUPLICATE" />
                         </button>
-                        <span className="font-mono text-[10px] text-zinc-500">
+                        <span className="font-mono text-[10px] text-zinc-500 text-center">
                           fingerprint: sha256(service + alert_rule + region)
                         </span>
                       </>
                     ) : (
-                      <CreepyAckButton onTrigger={() => setMergedCount((c) => c + 1)} />
+                      <CreepyAckButton onTrigger={() => setButtonMode('dedup')} />
                     )}
                   </div>
 
@@ -356,146 +320,167 @@ export function Intelligence() {
                 </div>
 
                 <div className="flex flex-wrap gap-1.5 font-mono text-[11px]">
-                  <span className="rounded-md border border-zinc-800 bg-zinc-900 px-2 py-1 text-zinc-400">
+                  <span className="rounded-md border border-[#182438] bg-[#070d19] px-2.5 py-1 text-zinc-400">
                     Alertmanager
                   </span>
-                  <span className="rounded-md border border-zinc-800 bg-zinc-900 px-2 py-1 text-zinc-400">
+                  <span className="rounded-md border border-[#182438] bg-[#070d19] px-2.5 py-1 text-zinc-400">
                     Datadog
                   </span>
-                  <span className="rounded-md border border-zinc-800 bg-zinc-900 px-2 py-1 text-zinc-400">
+                  <span className="rounded-md border border-[#182438] bg-[#070d19] px-2.5 py-1 text-zinc-400">
                     Sentry HMAC
                   </span>
                 </div>
               </div>
 
-              {/* COLUMN 02/03: Motion Kernel / ARCH V1.1 Native Engine */}
-              <div className="vui-matrix-card relative flex min-h-[390px] flex-col justify-between bg-[radial-gradient(circle_at_50%_20%,rgba(59,142,244,0.06),transparent_62%)] p-5 md:p-6">
+              {/* COLUMN 02/03: Clean Minimal Animated ARCH V1 Engine Classifier */}
+              <div
+                className="vui-matrix-card relative flex min-h-[410px] flex-col justify-between p-5 md:p-6"
+                onMouseEnter={() => setIsPaused(true)}
+                onMouseLeave={() => setIsPaused(false)}
+              >
                 <div>
                   <CardTopline index="02/03" tag="Native assistant" />
-                  <h3 className="text-xl font-semibold tracking-tight text-zinc-100">
+                  <h3 className="text-xl font-semibold tracking-tight text-zinc-100 leading-snug">
                     ARCH V1 Incident Assistant
                   </h3>
-                  <p className="mt-1.5 font-mono text-xs text-zinc-400">
+                  <p className="mt-1.5 font-mono text-xs text-zinc-400 leading-relaxed">
                     Classifies supplied incident context and retrieves similar examples using small local models, rules and templates. Suggestions can be wrong.
                   </p>
                 </div>
 
-                <div className="my-5 flex items-center justify-center">
-                  <div className="relative flex h-56 w-full max-w-[330px] items-center justify-center">
-                    <svg
-                      viewBox="0 0 320 220"
-                      className="pointer-events-none absolute inset-0 h-full w-full"
-                      fill="none"
-                      aria-hidden="true"
-                    >
-                      <path d="M 160 110 L 66 44" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" strokeDasharray="3 5" />
-                      <path d="M 160 110 L 254 44" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" strokeDasharray="3 5" />
-                      <path d="M 160 110 L 52 170" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" strokeDasharray="3 5" />
-                      <path d="M 160 110 L 268 170" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" strokeDasharray="3 5" />
-                      <path d="M 160 110 L 160 22" stroke="rgba(59,142,244,0.45)" strokeWidth="1.2" strokeDasharray="3 5" />
-                    </svg>
-
-                    <div className="absolute h-44 w-44 rounded-full border border-zinc-800/90" />
-                    <div className="absolute h-32 w-32 rounded-full border border-dashed border-zinc-700/80" />
-
-                    {/* Vengeance UI motion-core-ring */}
-                    <div className="motion-core-ring relative flex h-24 w-40 flex-col items-center justify-center rounded-2xl border border-zinc-600/85 bg-zinc-900/90 px-3 text-center shadow-[0_20px_50px_-30px_rgba(0,0,0,1)]">
-                      <span className="font-mono text-[10px] tracking-[0.18em] uppercase text-zinc-500">
+                {/* Clean Minimal Animated Engine Pipeline (Replaces the orbital ring) */}
+                <div className="my-5 rounded-2xl border border-[#182438] bg-[#060a14] p-3.5">
+                  {/* Engine Header Bar with Animated Signal Sweep */}
+                  <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-[#182438]">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded border border-[#3b8ef4]/40 bg-[#3b8ef4]/10 px-2 py-0.5 font-mono text-[10px] font-semibold tracking-wider uppercase text-[#3b8ef4]">
                         Engine
                       </span>
-                      <span className="mt-1 font-mono text-xs font-semibold text-zinc-100">
+                      <span className="font-mono text-xs font-semibold text-zinc-100">
                         ARCH V1
-                        <span className="motion-caret" />
-                      </span>
-                      <span className="mt-1 font-mono text-[10px] text-[#3b8ef4]">
-                        Illustrative example
                       </span>
                     </div>
+                    <div className="flex items-center gap-1 font-mono text-[10px] text-zinc-500">
+                      <span>TF-IDF · BAYES</span>
+                    </div>
+                  </div>
 
-                    <button
-                      type="button"
-                      onClick={() => setActiveHypIdx(0)}
-                      className={cn(
-                        'absolute top-4 left-3 rounded-full border px-2.5 py-1 font-mono text-[10px] transition-colors cursor-pointer',
-                        activeHypIdx === 0
-                          ? 'border-[#3b8ef4] bg-[#3b8ef4]/15 text-[#3b8ef4]'
-                          : 'border-zinc-700/80 bg-zinc-900/90 text-zinc-300'
-                      )}
-                    >
-                      pg-primary
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveHypIdx(1)}
-                      className={cn(
-                        'absolute top-4 right-3 rounded-full border px-2.5 py-1 font-mono text-[10px] transition-colors cursor-pointer',
-                        activeHypIdx === 1
-                          ? 'border-[#3b8ef4] bg-[#3b8ef4]/15 text-[#3b8ef4]'
-                          : 'border-zinc-700/80 bg-zinc-900/90 text-zinc-300'
-                      )}
-                    >
-                      webhooks
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setActiveHypIdx(2)}
-                      className={cn(
-                        'absolute bottom-4 left-1.5 rounded-full border px-2.5 py-1 font-mono text-[10px] transition-colors cursor-pointer',
-                        activeHypIdx === 2
-                          ? 'border-[#3b8ef4] bg-[#3b8ef4]/15 text-[#3b8ef4]'
-                          : 'border-zinc-700/80 bg-zinc-900/90 text-zinc-300'
-                      )}
-                    >
-                      auth-svc
-                    </button>
-                    <span className="absolute right-1.5 bottom-4 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-2.5 py-1 font-mono text-[10px] text-zinc-300">
-                      checkout
-                    </span>
-                    <span className="absolute top-0.5 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-2.5 py-1 font-mono text-[10px] text-[#3b8ef4]">
-                      v2.18.4
-                    </span>
+                  {/* Minimal Animated Scan Track */}
+                  <div className="relative my-2.5 h-1 w-full overflow-hidden rounded-full bg-[#0a1222]">
+                    <motion.div
+                      key={activeHyp.id}
+                      initial={{ x: '-100%' }}
+                      animate={{ x: '0%' }}
+                      transition={{ duration: 0.65, ease: [0.22, 1, 0.36, 1] }}
+                      className="h-full w-full rounded-full bg-gradient-to-r from-[#1e3a5f] via-[#3b8ef4] to-[#1e3a5f]"
+                    />
+                  </div>
+
+                  {/* 3 Clean Interactive Signal Rows */}
+                  <div className="space-y-1.5">
+                    {HYPOTHESES.map((hyp, idx) => {
+                      const isSelected = idx === activeHypIdx;
+                      return (
+                        <button
+                          key={hyp.id}
+                          type="button"
+                          onClick={() => setActiveHypIdx(idx)}
+                          className={cn(
+                            'w-full rounded-xl border px-3 py-2 text-left transition-all duration-200 cursor-pointer',
+                            isSelected
+                              ? 'border-[#3b8ef4]/60 bg-[#0b1528]'
+                              : 'border-[#141f33] bg-[#080d18] hover:border-[#1e3454]'
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-2 font-mono text-[11px]">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={cn(
+                                  'text-[10px] font-semibold tnum',
+                                  isSelected ? 'text-[#3b8ef4]' : 'text-zinc-500'
+                                )}
+                              >
+                                {hyp.rank}
+                              </span>
+                              <span
+                                className={cn(
+                                  'font-medium',
+                                  isSelected ? 'text-white' : 'text-zinc-300'
+                                )}
+                              >
+                                {hyp.node}
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] text-zinc-500">{hyp.tag}</span>
+                              <span
+                                className={cn(
+                                  'w-8 text-right text-[10px] font-semibold tnum',
+                                  isSelected ? 'text-[#3b8ef4]' : 'text-zinc-500'
+                                )}
+                              >
+                                {hyp.score}%
+                              </span>
+                            </div>
+                          </div>
+                          <div className="mt-1.5 h-1 w-full overflow-hidden rounded-full bg-[#050811]">
+                            <motion.div
+                              initial={false}
+                              animate={{
+                                width: `${hyp.score}%`,
+                                opacity: isSelected ? 1 : 0.35,
+                              }}
+                              transition={{ type: 'spring', stiffness: 220, damping: 24 }}
+                              className="h-full rounded-full bg-[#3b8ef4]"
+                            />
+                          </div>
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
 
                 {/* Selected Hypothesis Bar */}
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950/90 p-3 font-mono text-[11px]">
+                <div className="rounded-xl border border-[#182438] bg-[#060a14] p-3 font-mono text-[11px]">
                   <div className="flex items-center justify-between text-zinc-400">
                     <span>SAMPLE #{activeHyp.rank}</span>
                     <span className="text-[#3b8ef4]">EXAMPLE ONLY</span>
                   </div>
-                  <div className="mt-1 text-zinc-200 font-sans text-xs font-medium">
+                  <div className="mt-1 text-zinc-200 font-sans text-xs font-medium leading-snug">
                     {activeHyp.title}
                   </div>
-                  <div className="mt-1 text-[10px] text-zinc-500 truncate">{activeHyp.evidence}</div>
+                  <div className="mt-1 text-[10px] text-zinc-400 leading-relaxed break-words">
+                    {activeHyp.evidence}
+                  </div>
                 </div>
               </div>
 
               {/* COLUMN 03/03: Runbook & Audit Composer */}
-              <div className="vui-matrix-card relative flex min-h-[390px] flex-col justify-between p-5 md:p-6">
+              <div className="vui-matrix-card relative flex min-h-[410px] flex-col justify-between p-5 md:p-6">
                 <div>
                   <CardTopline index="03/03" tag="Incident Composer" />
-                  <h3 className="text-xl font-semibold tracking-tight text-zinc-100">
+                  <h3 className="text-xl font-semibold tracking-tight text-zinc-100 leading-snug">
                     From Alert to Signed Audit Ledger
                   </h3>
-                  <p className="mt-1.5 font-mono text-xs text-zinc-400">
+                  <p className="mt-1.5 font-mono text-xs text-zinc-400 leading-relaxed">
                     State-machine transitions, Slack/Status broadcasts, and postmortem synthesis wired into one bus.
                   </p>
                 </div>
 
-                <div className="my-5 rounded-2xl border border-zinc-800/90 bg-zinc-950/90 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-                  <div className="relative h-48 overflow-hidden rounded-xl border border-zinc-800/80 bg-zinc-950/80 p-3">
+                <div className="my-5 rounded-2xl border border-[#182438] bg-[#060a14] p-4">
+                  <div className="relative h-48 overflow-hidden rounded-xl border border-[#182438] bg-[#080e1b] p-3">
                     <svg
                       viewBox="0 0 360 190"
                       className="pointer-events-none absolute inset-0 h-full w-full"
                       fill="none"
                       aria-hidden="true"
                     >
-                      <line x1="112" y1="32" x2="146" y2="74" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" />
-                      <line x1="112" y1="95" x2="132" y2="95" stroke="rgba(59,142,244,0.45)" strokeWidth="1.2" />
-                      <line x1="112" y1="158" x2="146" y2="116" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" />
-                      <line x1="248" y1="32" x2="214" y2="74" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" />
-                      <line x1="248" y1="95" x2="228" y2="95" stroke="rgba(59,142,244,0.45)" strokeWidth="1.2" />
-                      <line x1="248" y1="158" x2="214" y2="116" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" />
+                      <line x1="112" y1="32" x2="146" y2="74" stroke="rgba(59,142,244,0.28)" strokeWidth="1.2" />
+                      <line x1="112" y1="95" x2="132" y2="95" stroke="rgba(59,142,244,0.5)" strokeWidth="1.2" />
+                      <line x1="112" y1="158" x2="146" y2="116" stroke="rgba(59,142,244,0.28)" strokeWidth="1.2" />
+                      <line x1="248" y1="32" x2="214" y2="74" stroke="rgba(59,142,244,0.28)" strokeWidth="1.2" />
+                      <line x1="248" y1="95" x2="228" y2="95" stroke="rgba(59,142,244,0.5)" strokeWidth="1.2" />
+                      <line x1="248" y1="158" x2="214" y2="116" stroke="rgba(59,142,244,0.28)" strokeWidth="1.2" />
                     </svg>
 
                     <div className="relative z-10 flex h-full items-center justify-between gap-2">
@@ -505,7 +490,7 @@ export function Intelligence() {
                         <SystemActionPill label="Status 90d" />
                       </div>
 
-                      <div className="flex h-16 w-28 flex-col items-center justify-center rounded-2xl border border-zinc-700 bg-zinc-900/90 text-center shadow-[0_16px_34px_-22px_rgba(0,0,0,1)]">
+                      <div className="flex h-16 w-24 shrink-0 flex-col items-center justify-center rounded-2xl border border-[#1e3454] bg-[#04070e] px-2 text-center">
                         <span className="font-mono text-[10px] tracking-[0.15em] uppercase text-zinc-500">
                           Core
                         </span>
@@ -535,7 +520,6 @@ export function Intelligence() {
               </div>
             </div>
           </div>
-
         </div>
       </Container>
     </section>
