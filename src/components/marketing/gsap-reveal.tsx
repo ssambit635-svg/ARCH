@@ -11,13 +11,13 @@ interface GsapTextRevealProps {
   delay?: number;
   stagger?: number;
   duration?: number;
-  threshold?: string; // e.g. "top 85%"
+  threshold?: string;
 }
 
 /**
  * High-end cinematic GSAP text reveal.
- * Splits text into words wrapped in overflow-hidden containers,
- * revealing each word with a smooth vertical slide, subtle skew, and opacity fade.
+ * Splits text into words wrapped in padded overflow-hidden containers so descenders
+ * (g, y, p, q) and geometric display serifs are never clipped.
  */
 export function GsapTextReveal({
   children,
@@ -73,9 +73,12 @@ export function GsapTextReveal({
   const words = children.split(' ');
 
   return (
-    <Component ref={containerRef as any} className={`gsap-text-reveal-container ${className}`}>
+    <Component ref={containerRef as any} className={`gsap-text-reveal-container leading-[1.18] ${className}`}>
       {words.map((word, i) => (
-        <span key={`${word}-${i}`} className="inline-block overflow-hidden align-top mr-[0.26em] last:mr-0">
+        <span
+          key={`${word}-${i}`}
+          className="inline-block overflow-hidden align-top py-[0.14em] -my-[0.14em] px-[0.03em] -mx-[0.03em] mr-[0.26em] last:mr-0"
+        >
           <span className="gsap-reveal-word inline-block will-change-transform">
             {word}
           </span>

@@ -8,7 +8,7 @@ import { Container } from './vui-primitives';
 import { GsapTextReveal } from './gsap-reveal';
 import { AmbientVideo } from './ambient-video';
 
-/** A single-play, borderless showcase for the ARCH mark — fixed for clipped / stuttering playback. */
+/** A single-play, borderless showcase for the ARCH mark. */
 function DragonLogoVideo() {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoWrapRef = useRef<HTMLDivElement>(null);
@@ -21,7 +21,6 @@ function DragonLogoVideo() {
     gsap.registerPlugin(ScrollTrigger);
 
     const ctx = gsap.context(() => {
-      // Reveal the wrapper (not the video element itself) so the video's aspect is never clipped.
       gsap.fromTo(
         videoWrapRef.current,
         { y: 14, opacity: 0, scale: 0.98 },
@@ -48,11 +47,6 @@ function DragonLogoVideo() {
       ref={containerRef}
       className="relative flex size-full items-center justify-center p-6 sm:p-8"
     >
-      {/* Soft dragon-blue glow behind the mark so the thin strokes read on ink */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[280px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#3b8ef4]/[0.07] blur-3xl"
-      />
       <div
         ref={videoWrapRef}
         className="relative w-full max-w-[520px] overflow-visible"
@@ -63,7 +57,7 @@ function DragonLogoVideo() {
           poster="/arch-dragon-poster.jpg"
           defer
           playOnce
-          className="h-full w-full object-contain object-center drop-shadow-[0_12px_40px_rgba(59,142,244,0.18)] [image-rendering:-webkit-optimize-contrast]"
+          className="h-full w-full object-contain object-center [image-rendering:-webkit-optimize-contrast]"
         />
       </div>
     </div>
@@ -105,17 +99,19 @@ export function Closing() {
       {/* ====================================================================
           CTA section with a clean, minimal layout
          ==================================================================== */}
-      <section ref={ctaRef} className="relative border-b border-[#222] bg-[#050608] overflow-hidden">
+      <section ref={ctaRef} className="relative border-b border-[#182438] bg-[#04070e] overflow-hidden">
         <Container>
-          <div className="grid grid-cols-1 md:grid-cols-2 md:min-h-[360px] overflow-hidden">
+          <div className="grid grid-cols-1 md:grid-cols-2 md:min-h-[360px] md:border-x border-[#182438] overflow-hidden">
             {/* Left Column: Heading, Subheading & CTAs */}
             <div className="flex flex-col justify-center gap-5 p-8 md:p-12 lg:p-14">
-              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#3b8ef4]/25 bg-[#3b8ef4]/[0.06] px-3 py-1 font-mono text-[11px] font-medium text-[#3b8ef4]">
-                <span className="size-1.5 rounded-full bg-[#3b8ef4]" />
+              <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#182438] bg-[#070d19] px-3 py-1 font-mono text-[11px] font-medium text-[#3b8ef4]">
                 <span>INCIDENT RESPONSE</span>
               </div>
 
-              <GsapTextReveal as="h2" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight">
+              <GsapTextReveal
+                as="h2"
+                className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight"
+              >
                 Ready for calmer incident response?
               </GsapTextReveal>
 
@@ -126,13 +122,13 @@ export function Closing() {
               <div className="cta-btn-group mt-2 flex flex-wrap gap-3">
                 <Link
                   href="/register"
-                  className="inline-flex h-10 items-center justify-center rounded-lg bg-white px-5 text-xs font-semibold text-black transition-all hover:bg-zinc-200 hover:scale-[1.02] active:scale-[0.98]"
+                  className="inline-flex h-10 items-center justify-center rounded-lg bg-[#3b8ef4] px-5 text-xs font-semibold text-[#04070e] transition-all hover:bg-[#64a8ff] hover:scale-[1.02] active:scale-[0.98]"
                 >
                   Get Started →
                 </Link>
                 <Link
                   href="/status/arch"
-                  className="inline-flex h-10 items-center justify-center rounded-lg border border-[#222] bg-[#111216] px-5 font-mono text-xs font-medium text-zinc-200 transition-all hover:border-zinc-700 hover:text-white"
+                  className="inline-flex h-10 items-center justify-center rounded-lg border border-[#182438] bg-[#070d19] px-5 font-mono text-xs font-medium text-zinc-200 transition-all hover:border-[#3b8ef4]/60 hover:text-white"
                 >
                   View Status
                 </Link>
@@ -140,7 +136,7 @@ export function Closing() {
             </div>
 
             {/* One-shot logo animation */}
-            <div className="flex items-center justify-center min-h-[340px] md:h-full bg-[#08090d]/60">
+            <div className="mk-dragon-stage flex items-center justify-center min-h-[340px] md:h-full bg-[#060a14] border-t md:border-t-0 md:border-l border-[#182438]">
               <DragonLogoVideo />
             </div>
           </div>
@@ -150,9 +146,9 @@ export function Closing() {
       {/* ====================================================================
           Footer
          ==================================================================== */}
-      <footer className="relative border-t border-[#222] bg-[#050608] pt-16 pb-12 overflow-hidden">
+      <footer className="relative border-t border-[#182438] bg-[#04070e] pt-16 pb-12 overflow-hidden">
         <div className="mx-auto max-w-[1440px] px-4 md:px-8 xl:px-20 relative z-10">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-10 mb-16">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-10 mb-14">
             {/* Brand Column — Dragon Logo + Orbitron Wordmark */}
             <div className="md:col-span-5 space-y-5">
               <Link
@@ -162,7 +158,7 @@ export function Closing() {
                 <img
                   src="/dragon-mark.webp"
                   alt="ARCH Dragon Logo"
-                  className="h-8 w-auto object-contain drop-shadow-[0_0_12px_rgba(59,142,244,0.28)]"
+                  className="h-8 w-auto object-contain"
                 />
                 <span>
                   ARCH<span className="text-[#3b8ef4]">.</span>
@@ -264,9 +260,9 @@ export function Closing() {
             </div>
           </div>
 
-          {/* Watermark Text */}
-          <div className="w-full flex justify-center items-center overflow-hidden select-none pointer-events-none mt-8">
-            <span className="font-orbitron text-[20vw] font-black tracking-tighter leading-none bg-gradient-to-b from-neutral-800/60 via-neutral-900/40 to-transparent bg-clip-text text-transparent">
+          {/* Watermark Text — sized and padded so letters never cut off */}
+          <div className="w-full flex justify-center items-center overflow-visible select-none pointer-events-none mt-4 py-2">
+            <span className="mk-watermark font-orbitron text-[clamp(3.25rem,13vw,11.5rem)] font-black tracking-tight leading-[1.15] px-4 bg-gradient-to-b from-[#162238]/80 via-[#0d1626]/50 to-transparent bg-clip-text text-transparent">
               ARCH.
             </span>
           </div>

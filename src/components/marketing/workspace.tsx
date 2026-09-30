@@ -7,12 +7,8 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Container, cn } from './vui-primitives';
 import { GsapTextReveal } from './gsap-reveal';
 
-/**
- * Slimmed-down live-console preview. One incident, one timeline, one AI hypothesis — the full
- * interactive demo moved out to keep the page light.
- */
 const TIMELINE = [
-  { time: '03:12:04', kind: 'alert', text: '14 alerts fingerprinted into INC-204 (SEV-1)' },
+  { time: '03:12:04', kind: 'alert', text: 'Alerts fingerprinted into INC-204 (SEV-1)' },
   { time: '03:12:06', kind: 'action', text: 'lead-sre paged · acknowledged in 01m 14s' },
   { time: '03:12:19', kind: 'ai', text: 'ARCH V1: possible database lock — review the evidence' },
   { time: '03:18:19', kind: 'status', text: 'IDENTIFIED → rollback suggested, blast radius 3 services' },
@@ -48,20 +44,19 @@ export function Workspace() {
     <section
       id="workspace"
       ref={sectionRef}
-      className="relative border-b border-[#222] bg-[#050608] overflow-hidden"
+      className="relative border-b border-[#182438] bg-[#04070e] overflow-hidden"
     >
       <Container>
-        <div className="md:border-x border-[#222]">
+        <div className="md:border-x border-[#182438]">
           {/* Header */}
-          <div className="workspace-reveal flex flex-col gap-4 border-b border-[#222] px-5 py-10 md:px-8 lg:flex-row lg:items-end lg:justify-between lg:px-10">
+          <div className="workspace-reveal flex flex-col gap-4 border-b border-[#182438] px-5 py-10 md:px-8 lg:flex-row lg:items-end lg:justify-between lg:px-10">
             <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3 py-1 font-mono text-[11px] font-medium text-zinc-300">
-                <span className="size-1.5 rounded-full bg-[#3b8ef4]" />
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#182438] bg-[#070d19] px-3 py-1 font-mono text-[11px] font-medium text-[#3b8ef4]">
                 <span>INCIDENT CONSOLE PREVIEW</span>
               </div>
               <GsapTextReveal
                 as="h2"
-                className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight text-left"
+                className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight text-left"
               >
                 One console for every incident
               </GsapTextReveal>
@@ -73,7 +68,7 @@ export function Workspace() {
             <div className="flex items-center gap-2.5">
               <Link
                 href="/login"
-                className="inline-flex h-9 items-center gap-2 rounded-lg bg-white px-4 text-xs font-semibold text-black transition-colors hover:bg-zinc-200"
+                className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#3b8ef4] px-4 text-xs font-semibold text-[#04070e] transition-colors hover:bg-[#64a8ff]"
               >
                 <span>Open Console</span>
                 <span aria-hidden>→</span>
@@ -82,38 +77,36 @@ export function Workspace() {
           </div>
 
           {/* Console shell */}
-          <div className="workspace-reveal bg-[#08090c]">
-            <div className="flex items-center justify-between gap-2 border-b border-[#222] bg-[#0b0c10] px-4 py-2.5 font-mono text-[11px] text-zinc-400">
+          <div className="workspace-reveal bg-[#060a14]">
+            <div className="flex items-center justify-between gap-2 border-b border-[#182438] bg-[#070d19] px-4 py-2.5 font-mono text-[11px] text-zinc-400">
               <span className="flex items-center gap-2">
-                <span className="size-2.5 rounded-full bg-zinc-700" />
-                <span className="size-2.5 rounded-full bg-zinc-700" />
-                <span className="size-2.5 rounded-full bg-zinc-700" />
-                <span className="ml-2 text-zinc-300">
+                <span className="text-[#3b8ef4]">//</span>
+                <span className="text-zinc-300">
                   arch.internal / incidents / <strong className="text-white">INC-204</strong>
                 </span>
               </span>
-              <span className="hidden rounded border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-[10px] text-[#3b8ef4] sm:inline">
+              <span className="hidden rounded border border-[#182438] bg-[#04070e] px-2 py-0.5 text-[10px] text-[#3b8ef4] sm:inline">
                 ARCH V1.1 READY
               </span>
             </div>
 
-            <div className="grid grid-cols-1 divide-y divide-[#222] lg:grid-cols-2 lg:divide-x lg:divide-y-0">
+            <div className="grid grid-cols-1 divide-y divide-[#182438] lg:grid-cols-2 lg:divide-x lg:divide-y-0">
               {/* Incident card */}
               <div className="p-5 md:p-6">
                 <div className="flex items-center justify-between gap-2">
                   <span className="font-mono text-sm font-semibold text-white">INC-204</span>
-                  <span className="rounded border border-crit-500/30 bg-crit-500/15 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-crit-400">
+                  <span className="rounded border border-[#3b8ef4]/35 bg-[#3b8ef4]/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-[#3b8ef4]">
                     SEV-1 · IDENTIFIED
                   </span>
                 </div>
-                <p className="mt-2 text-sm font-medium text-zinc-100">
+                <p className="mt-2 text-sm font-medium text-zinc-100 leading-snug">
                   Checkout API p99 latency &gt; 4.2s across eu-central-1
                 </p>
                 <p className="mt-2 font-mono text-[11px] leading-relaxed text-zinc-400">
-                  Pool saturation on pg-primary-02 after deploy v2.18.4 · commander: Alex Mercer · MTTA 01m 14s · 14 deduped
+                  Pool saturation on pg-primary-02 after deploy v2.18.4 · commander: Alex Mercer · MTTA 01m 14s
                 </p>
 
-                <div className="mt-4 rounded-xl border border-[#3b8ef4]/25 bg-[#3b8ef4]/[0.05] p-3">
+                <div className="mt-4 rounded-xl border border-[#3b8ef4]/30 bg-[#3b8ef4]/[0.06] p-3">
                   <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#3b8ef4]">
                     Suggested cause · example
                   </div>
@@ -136,14 +129,10 @@ export function Workspace() {
                       </span>
                       <span
                         className={cn(
-                          'mt-1 size-1.5 shrink-0 rounded-full',
-                          event.kind === 'ai'
+                          'mt-1 h-3 w-0.5 shrink-0 rounded-full',
+                          event.kind === 'ai' || event.kind === 'status'
                             ? 'bg-[#3b8ef4]'
-                            : event.kind === 'alert'
-                              ? 'bg-crit-400'
-                              : event.kind === 'status'
-                                ? 'bg-ok-400'
-                                : 'bg-zinc-500'
+                            : 'bg-zinc-600'
                         )}
                       />
                       <span className="text-xs leading-relaxed text-zinc-300">{event.text}</span>
@@ -154,8 +143,7 @@ export function Workspace() {
                   href="/status/arch"
                   className="mt-5 inline-flex items-center gap-1.5 font-mono text-[11px] text-zinc-400 transition-colors hover:text-[#3b8ef4]"
                 >
-                  <span className="size-1.5 rounded-full bg-ok-400 animate-pulse-dot" />
-                  Public ledger: /status/arch
+                  <span>Public ledger: /status/arch →</span>
                 </Link>
               </div>
             </div>

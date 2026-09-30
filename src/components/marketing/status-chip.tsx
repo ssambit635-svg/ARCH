@@ -5,17 +5,16 @@ import { cn } from './vui-primitives';
 
 type Overall = 'OPERATIONAL' | 'MAINTENANCE' | 'DEGRADED' | 'OUTAGE';
 
-const STATUS_META: Record<Overall, { label: string; dot: string; text: string }> = {
-  OPERATIONAL: { label: 'All systems operational', dot: 'bg-ok-400', text: 'text-emerald-200' },
-  MAINTENANCE: { label: 'Scheduled maintenance', dot: 'bg-[#3b8ef4]', text: 'text-blue-200' },
-  DEGRADED: { label: 'Partial degradation', dot: 'bg-warn-400', text: 'text-amber-200' },
-  OUTAGE: { label: 'Active incident', dot: 'bg-crit-400', text: 'text-rose-200' },
+const STATUS_META: Record<Overall, { label: string; text: string }> = {
+  OPERATIONAL: { label: 'All systems operational', text: 'text-[#8ec2ff]' },
+  MAINTENANCE: { label: 'Scheduled maintenance', text: 'text-[#8ec2ff]' },
+  DEGRADED: { label: 'Partial degradation', text: 'text-zinc-200' },
+  OUTAGE: { label: 'Active incident', text: 'text-zinc-200' },
 };
 
 /**
- * Live status display for the hero: reads the anonymous public status API for the
- * demo page and links to it. Falls back to a neutral pill when the API is
- * unreachable (offline preview, self-hosted instance without the demo tenant).
+ * Status display for the hero: reads the anonymous public status API for the
+ * demo page and links to it. Clean architectural badge without pulsing live dots.
  */
 export function StatusChip({ slug = 'arch' }: { slug?: string }) {
   const [overall, setOverall] = useState<Overall | null>(null);
@@ -51,16 +50,9 @@ export function StatusChip({ slug = 'arch' }: { slug?: string }) {
   return (
     <a
       href={`/status/${slug}`}
-      className="hero-rise group inline-flex w-fit items-center gap-2 rounded-full border border-white/15 bg-[#050a13]/60 px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] backdrop-blur-sm transition-colors hover:border-white/35"
+      className="hero-rise mk-hero-pill group inline-flex w-fit items-center gap-2 rounded-full border border-[#1e3454]/70 bg-[#050b16]/75 px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.16em] backdrop-blur-sm transition-colors hover:border-[#3b8ef4]/60"
       title="Public status page"
     >
-      <span
-        className={cn(
-          'size-1.5 rounded-full',
-          meta ? meta.dot : failed ? 'bg-zinc-400' : 'bg-[#3b8ef4] animate-pulse-dot',
-          overall === 'OPERATIONAL' && 'animate-pulse-dot'
-        )}
-      />
       <span className={cn('transition-colors group-hover:text-white', meta ? meta.text : 'text-zinc-300')}>
         {meta ? meta.label : failed ? 'Status page' : 'Checking status'}
       </span>

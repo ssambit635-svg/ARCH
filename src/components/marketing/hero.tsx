@@ -37,8 +37,6 @@ export function Hero() {
       );
 
       // Sticky pin + subtle parallax: the mountain stays stuck while the page keeps scrolling.
-      // Reduced scale (1.16 → 1.04) keeps the 1080p source razor-sharp — large upscales
-      // soften the mountain ridgeline and the ARCH wordmark.
       gsap
         .timeline({
           scrollTrigger: {
@@ -63,8 +61,7 @@ export function Hero() {
     <section
       ref={sectionRef}
       id="top"
-      className="mk-hero relative h-screen overflow-hidden bg-[#050608]"
-      // svh keeps mobile URL-bar shrinkage from clipping the frame; h-screen above is the fallback.
+      className="mk-hero relative h-screen overflow-hidden bg-[#04070e]"
       style={{ height: '100svh' }}
     >
       {/* Film layer — one-shot play, frozen final frame acts as the resting visual. */}
@@ -77,40 +74,40 @@ export function Hero() {
         />
       </div>
 
-      {/* Legibility gradients + vignette — lightened so the 1080p mountain stays crisp. */}
-      <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#050608]/85 via-[#050608]/12 to-[#050608]/18" />
-      <div aria-hidden className="pointer-events-none absolute inset-0 mk-hero-vignette opacity-60" />
+      {/* Legibility gradients + vignette — keeps the enhanced mountain reveal crisp. */}
+      <div aria-hidden className="mk-hero-grad pointer-events-none absolute inset-0 bg-gradient-to-t from-[#04070e]/85 via-[#04070e]/10 to-[#04070e]/18" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 mk-hero-vignette opacity-55" />
 
-      {/* Scrub veil — the hero settles to ink before the next section scrolls across it. */}
-      <div ref={veilRef} aria-hidden className="pointer-events-none absolute inset-0 bg-[#050608] opacity-0" />
+      {/* Scrub veil — the hero settles before the next section scrolls across it. */}
+      <div ref={veilRef} aria-hidden className="mk-hero-veil pointer-events-none absolute inset-0 bg-[#04070e] opacity-0" />
 
-      {/* Badge + live status display. */}
+      {/* Badge + status display. */}
       <div className="absolute left-4 top-20 z-10 flex flex-col items-start gap-2 sm:left-8 sm:top-24">
-        <span className="hero-rise rounded-full border border-white/20 bg-[#050a13]/60 px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-blue-100 backdrop-blur-sm">
+        <span className="hero-rise mk-hero-pill rounded-full border border-[#1e3454]/70 bg-[#050b16]/75 px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-[#b8d6ff] backdrop-blur-sm">
           ARCH / Incident operations
         </span>
         <StatusChip />
       </div>
 
-      {/* Copy — deliberately minimal: one line, one sub-line, two actions. */}
+      {/* Copy — minimal: one line, one sub-line, two actions. */}
       <div ref={contentRef} className="absolute inset-x-0 bottom-0 z-10 px-5 pb-16 sm:px-8 sm:pb-20 lg:px-12">
         <div className="mx-auto max-w-[1440px]">
-          <h1 className="hero-rise max-w-3xl font-orbitron text-3xl font-bold leading-[1.08] tracking-tight text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.65)] sm:text-4xl lg:text-5xl">
+          <h1 className="hero-rise max-w-3xl font-orbitron text-3xl font-bold leading-[1.15] py-0.5 tracking-tight text-white sm:text-4xl lg:text-5xl">
             Incident response, under control.
           </h1>
-          <p className="hero-rise mt-3 max-w-xl text-sm leading-relaxed text-zinc-300 drop-shadow-[0_1px_12px_rgba(0,0,0,0.7)] sm:text-base">
+          <p className="hero-rise mt-3 max-w-xl text-sm leading-relaxed text-zinc-300 sm:text-base">
             Alerts, responders, impact, and status — one self-hosted workspace.
           </p>
           <div className="hero-rise mt-6 flex flex-wrap items-center gap-3">
             <Link
               href="/register"
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#3b8ef4] px-5 text-sm font-semibold text-[#04101e] transition-colors hover:bg-[#75b3ff]"
+              className="mk-hero-cta-primary inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#3b8ef4] px-5 text-sm font-semibold text-[#040811] transition-colors hover:bg-[#64a8ff]"
             >
               Get Started <span aria-hidden>→</span>
             </Link>
             <a
               href="#intelligence"
-              className="inline-flex h-11 items-center justify-center rounded-lg border border-white/25 bg-white/[0.04] px-5 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:border-[#75b3ff] hover:bg-white/10"
+              className="mk-hero-cta-secondary inline-flex h-11 items-center justify-center rounded-lg border border-white/25 bg-[#050b16]/60 px-5 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:border-[#3b8ef4] hover:bg-[#0a1528]/80"
             >
               Explore the platform
             </a>

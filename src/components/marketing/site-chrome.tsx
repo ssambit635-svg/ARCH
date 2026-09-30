@@ -2,13 +2,18 @@
 
 import type { ReactNode } from 'react';
 import { useLenis } from './use-lenis';
+import { MarketingThemeProvider } from './theme-context';
 
 /**
- * Small marketing shell: native-looking dark surfaces, restrained smooth wheel scrolling, and no
- * blocking boot sequence or replacement cursor. The product demo itself carries the interaction.
+ * Small marketing shell: supports both Premium Blue Dark mode and Pure Cream + Beige + #c8b07d Light mode,
+ * restrained smooth wheel scrolling, and no blocking boot sequence or replacement cursor.
  */
 export function SiteChrome({ children }: { children: ReactNode }) {
   useLenis(true);
 
-  return <div className="arch-marketing-surface relative min-h-screen bg-ink-1000">{children}</div>;
+  return (
+    <MarketingThemeProvider>
+      <div className="arch-marketing-surface relative min-h-screen">{children}</div>
+    </MarketingThemeProvider>
+  );
 }
