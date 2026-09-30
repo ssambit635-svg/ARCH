@@ -15,6 +15,14 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Changed — the landing hero film
+
+- **The hero background was re-encoded from the newer source clip.** Same night-mountain
+  reveal, same 4-second one-shot, same silent 1920×1080 H.264 delivery and the same code
+  path (`Hero` → `AmbientVideo`) — the peaks are just crisper and the star field cleaner
+  than the previous master. Its poster frame was re-cut from the same clip, so the still
+  shown before autoplay now matches the first frame exactly.
+
 ### Changed — the landing page shows real data only
 
 - **Live GitHub star count.** The header's ★ pill no longer shows a typed-in number (`2.4k`). It reads
