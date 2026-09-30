@@ -51,36 +51,69 @@
 }
 
 /* ============================================================================
-   Full-frame cinematic hero
+   Full-frame cinematic hero - old smooth ARCH reveal optimized
    ============================================================================ */
+
+.mk-hero {
+  transform: translateZ(0);
+  will-change: auto;
+  contain: layout style paint;
+}
 
 .mk-hero-video {
   object-fit: cover;
-  object-position: center;
+  object-position: center 38%;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform, opacity;
+  image-rendering: -webkit-optimize-contrast;
+  -webkit-transform: translateZ(0);
+  perspective: 1000px;
+  /* Smooth like old reveal - no jank */
+  transition: opacity 680ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.mk-hero-video::-webkit-media-controls {
+  display: none !important;
 }
 
 @media (max-aspect-ratio: 4/5) {
   .mk-hero-video {
-    object-fit: contain;
+    object-fit: cover;
+    object-position: center 42%;
   }
 }
 
 .mk-hero-vignette {
   background: radial-gradient(120% 90% at 50% 42%, transparent 55%, rgba(4, 7, 14, 0.58) 100%);
+  will-change: opacity;
+}
+
+.mk-hero-grad {
+  will-change: opacity;
+  transform: translateZ(0);
+}
+
+.mk-hero-veil {
+  will-change: opacity;
+  transform: translateZ(0);
+  backdrop-filter: blur(0px);
+  transition: backdrop-filter 400ms ease;
 }
 
 .mk-scroll-cue-chevron {
-  animation: mk-cue-drop 1.6s ease-in-out infinite;
+  animation: mk-cue-drop 1.8s ease-in-out infinite;
+  will-change: transform, opacity;
 }
 
 @keyframes mk-cue-drop {
   0%,
   100% {
-    transform: translateY(0);
+    transform: translateY(0) translateZ(0);
     opacity: 0.55;
   }
   50% {
-    transform: translateY(5px);
+    transform: translateY(6px) translateZ(0);
     opacity: 1;
   }
 }
@@ -89,6 +122,66 @@
   .mk-scroll-cue-chevron {
     animation: none;
   }
+  .mk-hero-video,
+  .mk-hero-grad,
+  .mk-hero-vignette,
+  .mk-hero-veil {
+    will-change: auto;
+    transform: none !important;
+  }
+}
+
+/* Theme toggle polish - White Mode / Dark Mode */
+.mk-theme-toggle {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+}
+
+.mk-theme-toggle::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(120% 80% at 50% 0%, rgba(255, 255, 255, 0.08), transparent 60%);
+  opacity: 0;
+  transition: opacity 300ms ease;
+  pointer-events: none;
+}
+
+.mk-theme-toggle:hover::before {
+  opacity: 1;
+}
+
+.mk-light .mk-theme-toggle {
+  background-color: rgba(250, 246, 238, 0.95) !important;
+  border-color: #dfd3bc !important;
+  color: #2b241b !important;
+}
+
+.mk-light .mk-theme-toggle:hover {
+  background-color: #f1e8d6 !important;
+  border-color: #c8b07d !important;
+  color: #1c1813 !important;
+}
+
+/* Smooth theme transition for entire marketing surface */
+.mk-theme-root {
+  transition: background-color 420ms cubic-bezier(0.22, 1, 0.36, 1), color 420ms ease;
+}
+
+.mk-theme-root * {
+  transition-property: background-color, border-color, color;
+  transition-duration: 280ms;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Exclude video and canvas from theme transition to avoid jank */
+.mk-hero-video,
+.robot-stage canvas,
+.mk-dragon-stage video,
+.mk-dragon-stage img {
+  transition: opacity 680ms cubic-bezier(0.22, 1, 0.36, 1) !important;
 }
 
 /* Scroll Progress Bar */

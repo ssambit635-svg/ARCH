@@ -40,13 +40,15 @@ export function useLenis(enabled = true) {
     ready.current = true;
 
     const lenis = new Lenis({
-      lerp: 0.085,
-      wheelMultiplier: 1.05,
-      touchMultiplier: 1.6,
+      lerp: 0.11,
+      wheelMultiplier: 1.1,
+      touchMultiplier: 1.7,
       smoothWheel: true,
       // Momentum scroll on iOS makes pinned sections overshoot their scrub range.
       syncTouch: false,
       infinite: false,
+      // Smoother for video hero - less lag
+      gestureOrientation: 'vertical',
     });
 
     window.__archLenis = lenis;

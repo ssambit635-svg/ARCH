@@ -160,34 +160,42 @@ export function MarketingNav() {
             <button
               type="button"
               onClick={toggleTheme}
-              aria-label={theme === 'dark' ? 'Switch to Cream Light Mode' : 'Switch to Obsidian Dark Mode'}
-              title={theme === 'dark' ? 'Switch to Cream / Beige Mode' : 'Switch to Premium Blue Dark Mode'}
-              className="mk-theme-toggle inline-flex h-9 items-center gap-2 rounded-xl border border-[#182438] bg-[#070d19] px-3 font-mono text-[11px] font-medium text-zinc-300 transition-colors hover:border-[#3b8ef4]/60 hover:text-white cursor-pointer"
+              aria-label={theme === 'dark' ? 'Switch to White Mode' : 'Switch to Dark Mode'}
+              title={theme === 'dark' ? 'Switch to White Mode' : 'Switch to Dark Mode'}
+              className="mk-theme-toggle group inline-flex h-9 items-center gap-2 rounded-full border border-[#1e3454]/80 bg-[#070d19]/90 px-3.5 font-mono text-[11px] font-semibold tracking-wide text-zinc-300 backdrop-blur-md transition-all duration-300 hover:border-[#3b8ef4]/50 hover:bg-[#0b1426] hover:text-white hover:shadow-[0_4px_20px_-8px_rgba(59,142,244,0.3)] hover:scale-[1.02] active:scale-[0.97] cursor-pointer"
             >
               {theme === 'dark' ? (
                 <>
-                  <svg className="size-3.5 text-[#c8b07d]" viewBox="0 0 16 16" fill="none" aria-hidden>
-                    <circle cx="8" cy="8" r="3.2" stroke="currentColor" strokeWidth="1.4" />
-                    <path
-                      d="M8 1.5v1.8M8 12.7v1.8M1.5 8h1.8M12.7 8h1.8M3.4 3.4l1.3 1.3M11.3 11.3l1.3 1.3M12.6 3.4l-1.3 1.3M4.7 11.3l-1.3 1.3"
-                      stroke="currentColor"
-                      strokeWidth="1.4"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                  <span className="hidden sm:inline">Cream</span>
+                  <span className="relative flex size-4 items-center justify-center rounded-full bg-[#f5efe2] shadow-[inset_0_1px_2px_rgba(0,0,0,0.1)] transition-all duration-300 group-hover:rotate-12">
+                    <svg className="size-3 text-[#8a6d35]" viewBox="0 0 16 16" fill="none" aria-hidden>
+                      <circle cx="8" cy="8" r="3.3" stroke="currentColor" strokeWidth="1.5" />
+                      <path
+                        d="M8 1.4v1.6M8 13v1.6M1.4 8h1.6M13 8h1.6M3.2 3.2l1.1 1.1M11.7 11.7l1.1 1.1M12.8 3.2l-1.1 1.1M4.3 11.7l-1.1 1.1"
+                        stroke="currentColor"
+                        strokeWidth="1.3"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                  </span>
+                  <span className="hidden sm:inline tracking-[0.02em]">White Mode</span>
+                  <span className="sm:hidden">Light</span>
                 </>
               ) : (
                 <>
-                  <svg className="size-3.5 text-[#8a6f3b]" viewBox="0 0 16 16" fill="none" aria-hidden>
-                    <path
-                      d="M13.2 9.8A5.6 5.6 0 0 1 6.2 2.8a5.6 5.6 0 1 0 7 7Z"
-                      stroke="currentColor"
-                      strokeWidth="1.4"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                  <span className="hidden sm:inline">Dark</span>
+                  <span className="relative flex size-4 items-center justify-center rounded-full bg-[#0e1525] border border-[#1e3454] shadow-[inset_0_1px_3px_rgba(0,0,0,0.4)] transition-all duration-300 group-hover:-rotate-12">
+                    <svg className="size-3 text-[#3b8ef4]" viewBox="0 0 16 16" fill="none" aria-hidden>
+                      <path
+                        d="M13.4 9.9A5.7 5.7 0 0 1 6.1 2.6a5.7 5.7 0 1 0 7.3 7.3Z"
+                        fill="currentColor"
+                        fillOpacity="0.15"
+                        stroke="currentColor"
+                        strokeWidth="1.4"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </span>
+                  <span className="hidden sm:inline tracking-[0.02em]">Dark Mode</span>
+                  <span className="sm:hidden">Dark</span>
                 </>
               )}
             </button>
@@ -244,19 +252,49 @@ export function MarketingNav() {
         </div>
       </header>
 
-      {/* Floating quick theme switch pill so Dark / Cream mode is accessible even when navbar is tucked away */}
+      {/* Floating quick theme switch pill - polished White Mode / Dark Mode toggle */}
       <button
         type="button"
         onClick={toggleTheme}
-        aria-label={theme === 'dark' ? 'Switch to Cream Mode' : 'Switch to Dark Mode'}
-        className="fixed bottom-5 right-5 z-[190] inline-flex items-center gap-2 rounded-full border border-[#1e3454] bg-[#060a14]/90 px-3.5 py-2 font-mono text-[11px] font-medium text-zinc-200 shadow-lg backdrop-blur-md transition-all hover:border-[#3b8ef4] hover:scale-[1.03] active:scale-[0.98] cursor-pointer"
+        aria-label={theme === 'dark' ? 'Switch to White Mode' : 'Switch to Dark Mode'}
+        className="group fixed bottom-5 right-5 z-[190] inline-flex items-center gap-2.5 rounded-full border border-[#1e3454]/80 bg-[#060a14]/90 px-4 py-2.5 font-mono text-[11px] font-semibold tracking-wide text-zinc-200 shadow-[0_8px_32px_-12px_rgba(0,0,0,0.9),0_0_0_1px_rgba(255,255,255,0.04)] backdrop-blur-xl transition-all duration-300 hover:border-[#3b8ef4]/50 hover:bg-[#0a1426]/95 hover:shadow-[0_12px_40px_-12px_rgba(59,142,244,0.35)] hover:scale-[1.04] active:scale-[0.97] cursor-pointer"
       >
         <span
           aria-hidden
-          className="size-2.5 rounded-sm border border-current"
-          style={{ backgroundColor: theme === 'dark' ? '#c8b07d' : '#04070e' }}
+          className="relative flex size-5 items-center justify-center rounded-full border transition-all duration-300 group-hover:rotate-12"
+          style={{
+            backgroundColor: theme === 'dark' ? '#faf6ee' : '#04070e',
+            borderColor: theme === 'dark' ? '#c8b07d' : '#1e3454',
+          }}
+        >
+          {theme === 'dark' ? (
+            <svg className="size-3 text-[#8a6d35]" viewBox="0 0 16 16" fill="none" aria-hidden>
+              <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.4" />
+              <path
+                d="M8 1.5v1.2M8 13.3v1.2M1.5 8h1.2M13.3 8h1.2M3.3 3.3l0.9 0.9M11.8 11.8l0.9 0.9M12.7 3.3l-0.9 0.9M4.2 11.8l-0.9 0.9"
+                stroke="currentColor"
+                strokeWidth="1.2"
+                strokeLinecap="round"
+              />
+            </svg>
+          ) : (
+            <svg className="size-3 text-[#3b8ef4]" viewBox="0 0 16 16" fill="none" aria-hidden>
+              <path
+                d="M13.2 9.8A5.6 5.6 0 0 1 6.2 2.8a5.6 5.6 0 1 0 7 7Z"
+                fill="currentColor"
+                fillOpacity="0.2"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinejoin="round"
+              />
+            </svg>
+          )}
+        </span>
+        <span className="tracking-[0.02em]">{theme === 'dark' ? 'White Mode' : 'Dark Mode'}</span>
+        <span
+          aria-hidden
+          className="ml-0.5 size-1 rounded-full bg-[#3b8ef4] opacity-60 transition-opacity group-hover:opacity-100"
         />
-        <span>{theme === 'dark' ? 'Cream · #c8b07d' : 'Dark · Blue'}</span>
       </button>
 
       {/* Command K Modal */}
