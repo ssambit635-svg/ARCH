@@ -11,7 +11,6 @@ const HYPOTHESES = [
   {
     id: 'hyp-1',
     rank: '01',
-    confidence: 87,
     node: 'pg-primary',
     title: 'Pool saturation on postgres-primary after deploy v2.18.4',
     evidence: 'pg_stat_activity = 200/200 · migration #418 holds ACCESS EXCLUSIVE lock',
@@ -20,7 +19,6 @@ const HYPOTHESES = [
   {
     id: 'hyp-2',
     rank: '02',
-    confidence: 61,
     node: 'webhooks',
     title: 'Retry storm from payment gateway webhook workers',
     evidence: '3.4× inbound spike on /api/webhooks/alerts over 120s window',
@@ -29,7 +27,6 @@ const HYPOTHESES = [
   {
     id: 'hyp-3',
     rank: '03',
-    confidence: 24,
     node: 'auth-svc',
     title: 'Cross-AZ network jitter in eu-central-1b',
     evidence: 'inter-AZ RTT normal (0.8ms p95); packet loss < 0.01%',
@@ -250,7 +247,7 @@ export function Intelligence() {
               <div>
                 <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3 py-1 text-[11px] font-medium text-zinc-400">
                   <span className="text-[#3b8ef4]">✦</span>
-                  <span className="font-mono">Architecture Map · ARCH V1.1</span>
+                  <span className="font-mono">Workflow preview · illustrative data</span>
                 </div>
 
                 <GsapTextReveal as="h2" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight text-left">
@@ -258,18 +255,18 @@ export function Intelligence() {
                 </GsapTextReveal>
 
                 <p className="mt-2 max-w-2xl text-left font-mono text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                  Alert intake to signed resolution — one workspace.
+                  Alert intake, native assistance and human review — one workspace. All examples below are illustrative, not live results.
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-2.5">
                 <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-                  <div className="font-orbitron text-lg font-bold text-zinc-100 tnum">&lt;180ms</div>
-                  <div className="font-mono text-[11px] text-zinc-500">Webhook ingest p99</div>
+                  <div className="font-orbitron text-lg font-bold text-zinc-100 tnum">CPU-only</div>
+                  <div className="font-mono text-[11px] text-zinc-500">Native model inference</div>
                 </div>
                 <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-                  <div className="font-orbitron text-lg font-bold text-[#3b8ef4] tnum">87%</div>
-                  <div className="font-mono text-[11px] text-zinc-500">Top-1 RCA accuracy</div>
+                  <div className="font-orbitron text-lg font-bold text-[#3b8ef4] tnum">Human-led</div>
+                  <div className="font-mono text-[11px] text-zinc-500">Review every suggestion</div>
                 </div>
               </div>
             </div>
@@ -374,12 +371,12 @@ export function Intelligence() {
               {/* COLUMN 02/03: Motion Kernel / ARCH V1.1 Native Engine */}
               <div className="vui-matrix-card relative flex min-h-[390px] flex-col justify-between bg-[radial-gradient(circle_at_50%_20%,rgba(59,142,244,0.06),transparent_62%)] p-5 md:p-6">
                 <div>
-                  <CardTopline index="02/03" tag="Neural Kernel" />
+                  <CardTopline index="02/03" tag="Native assistant" />
                   <h3 className="text-xl font-semibold tracking-tight text-zinc-100">
-                    ARCH V1.1 Root-Cause Core
+                    ARCH V1 Incident Assistant
                   </h3>
                   <p className="mt-1.5 font-mono text-xs text-zinc-400">
-                    Correlates recent deploys, DB locks, and service topology inside your VPC — zero external LLM leaks.
+                    Classifies supplied incident context and retrieves similar examples using small local models, rules and templates. Suggestions can be wrong.
                   </p>
                 </div>
 
@@ -407,11 +404,11 @@ export function Intelligence() {
                         Engine
                       </span>
                       <span className="mt-1 font-mono text-xs font-semibold text-zinc-100">
-                        ARCH V1.1
+                        ARCH V1
                         <span className="motion-caret" />
                       </span>
                       <span className="mt-1 font-mono text-[10px] text-[#3b8ef4]">
-                        {activeHyp.confidence}% confidence
+                        Illustrative example
                       </span>
                     </div>
 
@@ -463,8 +460,8 @@ export function Intelligence() {
                 {/* Selected Hypothesis Bar */}
                 <div className="rounded-xl border border-zinc-800 bg-zinc-950/90 p-3 font-mono text-[11px]">
                   <div className="flex items-center justify-between text-zinc-400">
-                    <span>HYPOTHESIS #{activeHyp.rank}</span>
-                    <span className="text-[#3b8ef4]">{activeHyp.confidence}% MATCH</span>
+                    <span>SAMPLE #{activeHyp.rank}</span>
+                    <span className="text-[#3b8ef4]">EXAMPLE ONLY</span>
                   </div>
                   <div className="mt-1 text-zinc-200 font-sans text-xs font-medium">
                     {activeHyp.title}

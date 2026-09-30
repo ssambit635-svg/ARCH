@@ -7,14 +7,14 @@ import { GithubStarCount } from './github-star-count';
 
 const NAV_ITEMS = [
   { href: '#workspace', label: 'Workspace' },
-  { href: '#topology', label: 'Neural Brain' },
+  { href: '#topology', label: 'Meet the Robot' },
   { href: '#lifecycle', label: 'Lifecycle' },
   { href: '#capabilities', label: 'Why ARCH' },
   { href: '#deploy', label: 'Deploy' },
 ];
 
 const QUICK_COMMANDS = [
-  { title: 'Interactive Neural Brain', subtitle: '3D synaptic cortex & blast-radius inspector', href: '#topology', tag: 'NEURAL' },
+  { title: 'Meet the Robot', subtitle: 'Original 3D mascot & honest native model guide', href: '#topology', tag: 'NATIVE' },
   { title: 'Live Incident Workspace', subtitle: 'Interactive SEV-1 console with ARCH V1.1 triage', href: '#workspace', tag: 'CONSOLE' },
   { title: 'Architecture Library Map', subtitle: '01/03 Alert Forge · 02/03 Motion Kernel · 03/03 Composer', href: '#library-map', tag: 'BENTO' },
   { title: '4-Stage Incident Lifecycle', subtitle: 'Pinned GSAP scroll-scrub timeline (03:12:04 -> 03:18:19)', href: '#lifecycle', tag: 'GSAP' },
@@ -154,7 +154,7 @@ export function MarketingNav() {
                 autoFocus
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Jump to section, neural brain, or workspace..."
+                placeholder="Jump to section, robot, or workspace..."
                 className="w-full bg-transparent font-mono text-xs text-white placeholder:text-zinc-500 focus:outline-none"
               />
               <button

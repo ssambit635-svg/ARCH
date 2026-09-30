@@ -188,9 +188,9 @@ function FeatureCard1() {
 
             <div className="space-y-1.5 bg-neutral-950/80 p-2 rounded-xl border border-neutral-800/80">
               <div className="flex justify-between font-mono text-[8px] text-neutral-400">
-                <span>Confidence</span>
+                <span>Preview state</span>
                 <motion.span className="text-[#3b8ef4] font-medium">
-                  {isHovered ? '87%' : '45%'}
+                  {isHovered ? 'Expanded' : 'Resting'}
                 </motion.span>
               </div>
               <div className="w-full h-1 bg-neutral-800 rounded-full overflow-hidden">

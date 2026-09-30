@@ -14,7 +14,7 @@ import { GsapTextReveal } from './gsap-reveal';
 const TIMELINE = [
   { time: '03:12:04', kind: 'alert', text: '14 alerts fingerprinted into INC-204 (SEV-1)' },
   { time: '03:12:06', kind: 'action', text: 'lead-sre paged · acknowledged in 01m 14s' },
-  { time: '03:12:19', kind: 'ai', text: 'ARCH V1.1: 87% confidence — migration #418 lock' },
+  { time: '03:12:19', kind: 'ai', text: 'ARCH V1: possible database lock — review the evidence' },
   { time: '03:18:19', kind: 'status', text: 'IDENTIFIED → rollback suggested, blast radius 3 services' },
 ] as const;
 
@@ -57,7 +57,7 @@ export function Workspace() {
             <div>
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3 py-1 font-mono text-[11px] font-medium text-zinc-300">
                 <span className="size-1.5 rounded-full bg-[#3b8ef4]" />
-                <span>LIVE INCIDENT CONSOLE</span>
+                <span>INCIDENT CONSOLE PREVIEW</span>
               </div>
               <GsapTextReveal
                 as="h2"
@@ -115,7 +115,7 @@ export function Workspace() {
 
                 <div className="mt-4 rounded-xl border border-[#3b8ef4]/25 bg-[#3b8ef4]/[0.05] p-3">
                   <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#3b8ef4]">
-                    AI hypothesis · 87%
+                    Suggested cause · example
                   </div>
                   <p className="mt-1 font-mono text-[11px] leading-relaxed text-zinc-300">
                     Unindexed foreign-key scan on orders_ledger → rollback checkout-api to v2.18.3.
