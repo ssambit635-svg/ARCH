@@ -2,7 +2,7 @@ import { MarketingNav } from '@/components/marketing/nav';
 import { Hero } from '@/components/marketing/hero';
 import { Intelligence } from '@/components/marketing/intelligence';
 import { Topology } from '@/components/marketing/topology';
-import { IncidentPreview } from '@/components/marketing/incident-preview';
+import { Workspace } from '@/components/marketing/workspace';
 import { Lifecycle } from '@/components/marketing/lifecycle';
 import { Platform } from '@/components/marketing/platform';
 import { Deploy } from '@/components/marketing/deploy';
@@ -20,7 +20,7 @@ export default function LandingPage() {
         <Hero />
         <Intelligence />
         <Topology />
-        <IncidentPreview />
+        <Workspace />
         <Lifecycle />
         <Platform />
         <Deploy />

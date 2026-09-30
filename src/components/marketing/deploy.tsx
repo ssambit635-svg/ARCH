@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { Container, cn } from './vui-primitives';
-import { GsapTextReveal, GsapFadeUp } from './gsap-reveal';
+import { GsapTextReveal } from './gsap-reveal';
+import { TechStackTiles } from './tech-stack';
 
 const COMMANDS = [
   'git clone https://github.com/ssambit635-svg/ARCH.git && cd ARCH',
@@ -158,6 +159,17 @@ export function Deploy() {
                 <span>Zero third-party agents required</span>
                 <span className="text-zinc-300">100% tested in CI</span>
               </div>
+            </div>
+          </div>
+
+          {/* Compact tech-stack strip (moved from the old hero row) */}
+          <div className="flex flex-col items-center gap-4 border-t border-[#222] px-5 py-8 md:px-8 lg:flex-row lg:px-10">
+            <div className="shrink-0 lg:w-1/3">
+              <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#75b3ff]">Runs on</div>
+              <p className="mt-1 font-mono text-xs text-[#8e929f]">No external SaaS.</p>
+            </div>
+            <div className="min-w-0 flex-1">
+              <TechStackTiles />
             </div>
           </div>
         </div>

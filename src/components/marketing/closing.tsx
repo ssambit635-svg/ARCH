@@ -49,6 +49,7 @@ function DragonLogoVideo() {
         src="/arch-dragon-reveal.mp4"
         poster="/arch-dragon-poster.jpg"
         defer
+        playOnce
         className="aspect-[848/478] max-h-[320px] w-full max-w-[460px] object-contain"
       />
     </div>

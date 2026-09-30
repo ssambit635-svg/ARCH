@@ -270,12 +270,14 @@ async function main() {
   });
 
   // ---------- Status page ----------
+  // The landing page advertises /status/arch (hero chip, nav, footer), so the demo
+  // status page must live on that exact slug — /status/demo used to 404 on it.
   const statusPage = await createStatusPage({
     organizationId: acme.id,
     userId: owner.id,
-    name: 'Acme status',
-    slug: 'demo',
-    description: 'Current status of Acme customer-facing services.',
+    name: 'ARCH status',
+    slug: 'arch',
+    description: 'Current status of ARCH customer-facing services.',
     serviceIds: [apiGateway.id, checkout.id, webApp.id],
   });
 
