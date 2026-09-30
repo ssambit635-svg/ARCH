@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import { defineConfig } from 'prisma/config';
+import { verifiedPgUrl } from './src/lib/pg-connection.mjs';
 
 /**
  * ARCH — Prisma configuration (Prisma 7).
@@ -13,7 +14,7 @@ export default defineConfig({
     path: 'prisma/migrations',
   },
   datasource: {
-    url: process.env.DATABASE_URL ?? '',
-    shadowDatabaseUrl: process.env.SHADOW_DATABASE_URL,
+    url: verifiedPgUrl(process.env.DATABASE_URL ?? ''),
+    shadowDatabaseUrl: process.env.SHADOW_DATABASE_URL ? verifiedPgUrl(process.env.SHADOW_DATABASE_URL) : undefined,
   },
 });

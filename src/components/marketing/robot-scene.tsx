@@ -49,10 +49,11 @@ export function RobotScene() {
       setStatus('error');
       return;
     }
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Keep the 2K atlas legible on standard-density screens without unbounded Retina GPU cost.
+    renderer.setPixelRatio(Math.min(Math.max(window.devicePixelRatio || 1, 1.5), 2.5));
     renderer.outputColorSpace = THREE.SRGBColorSpace;
-    renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.15;
+    renderer.toneMapping = THREE.NeutralToneMapping;
+    renderer.toneMappingExposure = 1;
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFShadowMap;
     renderer.domElement.setAttribute('aria-hidden', 'true');
@@ -62,8 +63,10 @@ export function RobotScene() {
     const camera = new THREE.PerspectiveCamera(35, 1, 0.1, 30);
     camera.position.set(0, 0.25, 5.8);
     camera.lookAt(0, 0, 0);
-    scene.add(new THREE.HemisphereLight(0xe2eeff, 0x444a62, 2.2));
-    const key = new THREE.DirectionalLight(0xfff3df, 3.5);
+    // The old 10+ intensity light rig blew out the pale blue atlas and hid its panel lines.
+    // A restrained key/fill/rim keeps the original painted details visible on white armor.
+    scene.add(new THREE.HemisphereLight(0xe2eeff, 0x353e53, 0.9));
+    const key = new THREE.DirectionalLight(0xfff3e6, 2.2);
     key.position.set(3, 5, 4);
     key.castShadow = true;
     key.shadow.mapSize.set(1024, 1024);
@@ -72,21 +75,21 @@ export function RobotScene() {
     key.shadow.normalBias = 0.025;
     key.shadow.bias = -0.0003;
     scene.add(key);
-    const fill = new THREE.DirectionalLight(0x80b8ff, 2);
+    const fill = new THREE.DirectionalLight(0xa7caff, 0.7);
     fill.position.set(-4, 2, 1);
     scene.add(fill);
-    const rim = new THREE.DirectionalLight(0xb1cdff, 3);
+    const rim = new THREE.DirectionalLight(0xb1cdff, 1.2);
     rim.position.set(1, 3, -3);
     scene.add(rim);
 
     const floor = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.ShadowMaterial({ opacity: 0.24 }));
     floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -1.41;
+    floor.position.y = -1.54;
     floor.receiveShadow = true;
     scene.add(floor);
     const ring = new THREE.Mesh(new THREE.RingGeometry(1.1, 1.115, 80), new THREE.MeshBasicMaterial({ color: 0x456a9e, transparent: true, opacity: 0.3, side: THREE.DoubleSide }));
     ring.rotation.x = -Math.PI / 2;
-    ring.position.y = -1.4;
+    ring.position.y = -1.53;
     scene.add(ring);
 
     const textures = new Set<THREE.Texture>();
@@ -222,7 +225,8 @@ export function RobotScene() {
       const bounds = new THREE.Box3().setFromObject(model);
       const size = bounds.getSize(new THREE.Vector3());
       const center = bounds.getCenter(new THREE.Vector3());
-      const scale = 2.8 / size.y;
+      // Fill more of the stage: fine face/torso details were tiny at the old scale.
+      const scale = 3.05 / size.y;
       model.scale.setScalar(scale);
       model.position.set(-center.x * scale, -center.y * scale, -center.z * scale);
       model.traverse((child) => {
@@ -234,10 +238,11 @@ export function RobotScene() {
           const phong = material as THREE.MeshPhongMaterial;
           if (phong.map) {
             phong.map.colorSpace = THREE.SRGBColorSpace;
-            phong.map.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+            phong.map.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy());
           }
-          // Retain the original textured material and UVs, with a soft studio highlight.
-          if (phong.isMeshPhongMaterial) { phong.shininess = 24; phong.specular.set(0x333333); }
+          // Preserve the supplied UVs and diffuse map; subtle highlights, not a glossy
+          // white glare across the face, eyes and armor's painted seams.
+          if (phong.isMeshPhongMaterial) { phong.shininess = 48; phong.specular.set(0x192431); }
         }
       });
       scene.add(model);

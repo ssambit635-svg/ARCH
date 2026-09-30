@@ -259,7 +259,8 @@ export function createNativeTools(options: NativeToolOptions): Record<string, To
       if (!resolved.ok) throw new Error(resolved.error);
       let entries: string[];
       try {
-        const dirEntries = await fs.readdir(resolved.full, { withFileTypes: true });
+        // The agent workdir is runtime data, not a build-time asset to trace into deployments.
+        const dirEntries = await fs.readdir(/* turbopackIgnore: true */ resolved.full, { withFileTypes: true });
         entries = dirEntries
           .map((entry) => (entry.isDirectory() ? `${entry.name}/` : entry.name))
           .sort((a, b) => a.localeCompare(b));
@@ -294,7 +295,7 @@ export function createNativeTools(options: NativeToolOptions): Record<string, To
       const cap = Math.min(Math.max(typeof args.max_chars === 'number' && Number.isFinite(args.max_chars) ? Math.floor(args.max_chars) : 4000, 100), 8_000);
       let raw: string;
       try {
-        raw = await fs.readFile(resolved.full, 'utf8');
+        raw = await fs.readFile(/* turbopackIgnore: true */ resolved.full, 'utf8');
       } catch (error) {
         const code = (error as NodeJS.ErrnoException | undefined)?.code;
         if (code === 'ENOENT') throw new Error(`Could not read "${relative}": the file does not exist in the work directory.`);

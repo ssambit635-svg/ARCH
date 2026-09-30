@@ -19,6 +19,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import pg from 'pg';
 import { buildUrl, connectionFromEnv } from './lib/pg-embedded.mjs';
+import { verifiedPgUrl } from '../src/lib/pg-connection.mjs';
 
 const migrationsDir = path.join(process.cwd(), 'prisma', 'migrations');
 
@@ -28,12 +29,12 @@ function arg(name) {
 }
 
 const reset = process.argv.includes('--reset');
-const targetUrl = arg('--url') ?? process.env.DATABASE_URL ?? '';
+const targetUrl = verifiedPgUrl(arg('--url') ?? process.env.DATABASE_URL ?? '');
 
 async function ensureDatabase(url) {
   // Usual case — and the only one on managed Postgres (Neon, Supabase, Render, Railway, RDS…): the
-  // database already exists. Connect to it with the URL exactly as given, so query parameters such
-  // as ?sslmode=require are kept and no access to the `postgres` maintenance database is needed.
+  // database already exists. Keep URL parameters (apart from legacy SSL mode aliases, which
+  // are normalized to verify-full) and avoid the `postgres` maintenance database.
   const probe = new pg.Client({ connectionString: url });
   try {
     await probe.connect();
