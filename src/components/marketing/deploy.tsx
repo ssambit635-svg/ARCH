@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Container, cn } from './vui-primitives';
-import { GsapTextReveal, GsapFadeUp } from './gsap-reveal';
+import { GsapTextReveal } from './gsap-reveal';
 import { TechStackTiles } from './tech-stack';
 
 const COMMANDS = [

@@ -4,9 +4,8 @@ import Link from 'next/link';
 import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Container } from './vui-primitives';
+import { Container, cn } from './vui-primitives';
 import { GsapTextReveal } from './gsap-reveal';
-import { cn } from './vui-primitives';
 
 /**
  * Slimmed-down live-console preview. One incident, one timeline, one AI hypothesis — the full

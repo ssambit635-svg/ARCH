@@ -5,6 +5,7 @@ import { useEffect, useRef } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { AmbientVideo } from './ambient-video';
+import { StatusChip } from './status-chip';
 
 /**
  * Full-frame cinematic hero.
@@ -60,7 +61,9 @@ export function Hero() {
     <section
       ref={sectionRef}
       id="top"
-      className="mk-hero relative h-[100svh] overflow-hidden bg-[#050608]"
+      className="mk-hero relative h-screen overflow-hidden bg-[#050608]"
+      // svh keeps mobile URL-bar shrinkage from clipping the frame; h-screen above is the fallback.
+      style={{ height: '100svh' }}
     >
       {/* Film layer — one-shot play, frozen final frame acts as the resting visual. */}
       <div ref={mediaRef} className="absolute inset-0 will-change-transform">
@@ -79,10 +82,13 @@ export function Hero() {
       {/* Scrub veil — the hero settles to ink before the next section scrolls across it. */}
       <div ref={veilRef} aria-hidden className="pointer-events-none absolute inset-0 bg-[#050608] opacity-0" />
 
-      {/* Badge. */}
-      <span className="hero-rise absolute left-4 top-20 z-10 rounded-full border border-white/20 bg-[#050a13]/60 px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-blue-100 backdrop-blur-sm sm:left-8 sm:top-24">
-        ARCH / Incident operations
-      </span>
+      {/* Badge + live status display. */}
+      <div className="absolute left-4 top-20 z-10 flex flex-col items-start gap-2 sm:left-8 sm:top-24">
+        <span className="hero-rise rounded-full border border-white/20 bg-[#050a13]/60 px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-blue-100 backdrop-blur-sm">
+          ARCH / Incident operations
+        </span>
+        <StatusChip />
+      </div>
 
       {/* Copy — deliberately minimal: one line, one sub-line, two actions. */}
       <div ref={contentRef} className="absolute inset-x-0 bottom-0 z-10 px-5 pb-16 sm:px-8 sm:pb-20 lg:px-12">
