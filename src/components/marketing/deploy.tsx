@@ -162,13 +162,22 @@ export function Deploy() {
             </div>
           </div>
 
-          {/* Compact tech-stack strip (moved from the old hero row) */}
-          <div className="flex flex-col items-center gap-4 border-t border-[#222] px-5 py-8 md:px-8 lg:flex-row lg:px-10">
-            <div className="shrink-0 lg:w-1/3">
-              <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-[#75b3ff]">Runs on</div>
-              <p className="mt-1 font-mono text-xs text-[#8e929f]">No external SaaS.</p>
+          {/* Production stack — 15 verified technologies, every tile proven against package.json */}
+          <div className="border-t border-[#222] px-5 py-8 md:px-8 lg:px-10">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <div className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#75b3ff]">
+                  <span className="size-1.5 rounded-full bg-[#3b8ef4]" />
+                  Production stack · 15 verified tiles
+                </div>
+                <p className="mt-1.5 max-w-2xl font-mono text-xs leading-relaxed text-zinc-400">
+                  Everything ARCH runs on — Next.js 16 to Python — proven in CI against
+                  <span className="text-zinc-200"> package.json &amp; docker-compose.yml</span>. No external SaaS.
+                </p>
+              </div>
+              <span className="hidden shrink-0 font-mono text-[11px] text-zinc-500 sm:inline">Hover a tile for proof</span>
             </div>
-            <div className="min-w-0 flex-1">
+            <div className="mt-5">
               <TechStackTiles />
             </div>
           </div>

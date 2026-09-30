@@ -8,9 +8,10 @@ import { Container } from './vui-primitives';
 import { GsapTextReveal } from './gsap-reveal';
 import { AmbientVideo } from './ambient-video';
 
-/** A single-play, borderless showcase for the ARCH mark. */
+/** A single-play, borderless showcase for the ARCH mark — fixed for clipped / stuttering playback. */
 function DragonLogoVideo() {
   const containerRef = useRef<HTMLDivElement>(null);
+  const videoWrapRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -20,18 +21,20 @@ function DragonLogoVideo() {
     gsap.registerPlugin(ScrollTrigger);
 
     const ctx = gsap.context(() => {
+      // Reveal the wrapper (not the video element itself) so the video's aspect is never clipped.
       gsap.fromTo(
-        containerRef.current,
-        { scale: 0.96, opacity: 0, y: 18 },
+        videoWrapRef.current,
+        { y: 14, opacity: 0, scale: 0.98 },
         {
-          scale: 1,
-          opacity: 1,
           y: 0,
-          duration: 0.8,
+          opacity: 1,
+          scale: 1,
+          duration: 0.7,
           ease: 'power3.out',
           scrollTrigger: {
             trigger: containerRef.current,
-            start: 'top 85%',
+            start: 'top 88%',
+            once: true,
           },
         }
       );
@@ -43,15 +46,26 @@ function DragonLogoVideo() {
   return (
     <div
       ref={containerRef}
-      className="relative flex size-full items-center justify-center overflow-hidden p-4 sm:p-6"
+      className="relative flex size-full items-center justify-center p-6 sm:p-8"
     >
-      <AmbientVideo
-        src="/arch-dragon-reveal.mp4"
-        poster="/arch-dragon-poster.jpg"
-        defer
-        playOnce
-        className="aspect-[848/478] max-h-[320px] w-full max-w-[460px] object-contain"
+      {/* Soft dragon-blue glow behind the mark so the thin strokes read on ink */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[280px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#3b8ef4]/[0.07] blur-3xl"
       />
+      <div
+        ref={videoWrapRef}
+        className="relative w-full max-w-[520px] overflow-visible"
+        style={{ aspectRatio: '848 / 478' }}
+      >
+        <AmbientVideo
+          src="/arch-dragon-reveal.mp4"
+          poster="/arch-dragon-poster.jpg"
+          defer
+          playOnce
+          className="h-full w-full object-contain object-center drop-shadow-[0_12px_40px_rgba(59,142,244,0.18)] [image-rendering:-webkit-optimize-contrast]"
+        />
+      </div>
     </div>
   );
 }

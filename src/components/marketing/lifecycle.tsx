@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Container, Heading, SubHeading, cn } from './vui-primitives';
+import { Container, cn } from './vui-primitives';
 import { GsapTextReveal } from './gsap-reveal';
 
 interface Stage {
@@ -77,40 +77,37 @@ const STAGES: Stage[] = [
 
 export function Lifecycle() {
   const [activeIdx, setActiveIdx] = useState(0);
-  const [progress, setProgress] = useState(0);
-  const activeIdxRef = useRef(0);
   const sectionRef = useRef<HTMLElement>(null);
 
+  // Light entrance animation only — no pin / no scrub. The former pinned scrub
+  // felt “sticky” and blocked normal scrolling, so we keep the section as a
+  // regular, responsive split-pane with click-driven stage selection.
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const isDesktop = window.matchMedia('(min-width: 1024px)').matches;
-    if (prefersReduced || !isDesktop || !sectionRef.current) return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!sectionRef.current) return;
 
     gsap.registerPlugin(ScrollTrigger);
-    const el = sectionRef.current;
-
-    const trigger = ScrollTrigger.create({
-      trigger: el,
-      start: 'top top+=64',
-      end: '+=180%',
-      pin: true,
-      scrub: 0.35,
-      anticipatePin: 1,
-      onUpdate: (self) => {
-        const p = self.progress;
-        setProgress(p);
-        const nextIdx = Math.min(STAGES.length - 1, Math.floor(p * STAGES.length));
-        if (nextIdx !== activeIdxRef.current) {
-          activeIdxRef.current = nextIdx;
-          setActiveIdx(nextIdx);
+    const ctx = gsap.context(() => {
+      gsap.fromTo(
+        '.lifecycle-card',
+        { y: 16, opacity: 0 },
+        {
+          y: 0,
+          opacity: 1,
+          duration: 0.55,
+          stagger: 0.07,
+          ease: 'power3.out',
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: 'top 82%',
+            once: true,
+          },
         }
-      },
-    });
+      );
+    }, sectionRef);
 
-    return () => {
-      trigger.kill();
-    };
+    return () => ctx.revert();
   }, []);
 
   const current = STAGES[activeIdx] ?? STAGES[0]!;
@@ -138,14 +135,14 @@ export function Lifecycle() {
               </p>
             </div>
 
-            {/* Progress Bar */}
+            {/* Progress indicator — now purely click-driven, no scroll scrub */}
             <div className="flex items-center gap-3 font-mono text-xs text-zinc-400">
               <span>STAGE {current.step} / 04</span>
               <div className="h-1.5 w-36 overflow-hidden rounded-full bg-zinc-900 border border-zinc-800">
                 <div
-                  className="h-full bg-[#3b8ef4] transition-all duration-150"
+                  className="h-full bg-[#3b8ef4] transition-all duration-400 ease-out"
                   style={{
-                    width: `${Math.max((activeIdx + 1) * 25, Math.round(progress * 100))}%`,
+                    width: `${(activeIdx + 1) * 25}%`,
                   }}
                 />
               </div>
@@ -162,13 +159,12 @@ export function Lifecycle() {
                   <button
                     key={stage.step}
                     type="button"
-                    onClick={() => {
-                      activeIdxRef.current = idx;
-                      setActiveIdx(idx);
-                    }}
+                    onClick={() => setActiveIdx(idx)}
                     className={cn(
-                      'w-full text-left p-5 md:p-6 transition-colors cursor-pointer flex items-start gap-4',
-                      isActive ? 'bg-[#0e1016]' : 'bg-[#050608] hover:bg-[#090a0e]'
+                      'lifecycle-card w-full text-left p-5 md:p-6 transition-all duration-200 cursor-pointer flex items-start gap-4 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#3b8ef4]/50',
+                      isActive
+                        ? 'bg-[#0e1016] border-l-2 border-l-[#3b8ef4]'
+                        : 'bg-[#050608] hover:bg-[#090a0e] border-l-2 border-l-transparent'
                     )}
                   >
                     <span
