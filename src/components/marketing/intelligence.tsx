@@ -7,17 +7,6 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { Container, Heading, SubHeading, cn } from './vui-primitives';
 import { GsapTextReveal } from './gsap-reveal';
 
-const INSTALL_COMMAND = 'docker compose up -d && npm run db:migrate && npm run db:seed';
-
-const QUICK_PICKS = [
-  { name: 'SEV-1 War Room', href: '#workspace' },
-  { name: 'Neural Brain', href: '#topology' },
-  { name: '4-Stage Lifecycle', href: '#lifecycle' },
-  { name: 'Status Ledger', href: '/status/arch' },
-  { name: 'Capabilities', href: '#capabilities' },
-  { name: 'Deploy Stack', href: '#deploy' },
-];
-
 const HYPOTHESES = [
   {
     id: 'hyp-1',
@@ -47,37 +36,6 @@ const HYPOTHESES = [
     remediation: 'Ruled out — keep traffic balanced across all 3 availability zones.',
   },
 ];
-
-function CopyCliField() {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(INSTALL_COMMAND);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1600);
-    } catch {
-      setCopied(false);
-    }
-  };
-
-  return (
-    <div className="mt-5 flex w-full max-w-xl items-center justify-between gap-2 rounded-xl border border-zinc-800 bg-zinc-900/85 px-3 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-      <div className="flex min-w-0 items-center gap-2 font-mono text-xs text-zinc-300">
-        <span className="size-3.5 shrink-0 text-zinc-500">&gt;_</span>
-        <span className="truncate">{INSTALL_COMMAND}</span>
-      </div>
-
-      <button
-        type="button"
-        onClick={handleCopy}
-        className="inline-flex shrink-0 items-center gap-1 rounded-md border border-zinc-700 bg-zinc-800/90 px-2.5 py-1 text-[11px] font-medium text-zinc-200 transition-colors hover:border-zinc-600 hover:bg-zinc-800 cursor-pointer"
-      >
-        <span>{copied ? '✓ Copied' : 'Copy CLI'}</span>
-      </button>
-    </div>
-  );
-}
 
 function FlipTextWord({ text }: { text: string }) {
   const chars = text.split('');
@@ -300,13 +258,11 @@ export function Intelligence() {
                 </GsapTextReveal>
 
                 <p className="mt-2 max-w-2xl text-left font-mono text-xs sm:text-sm text-zinc-400 leading-relaxed">
-                  Alert intake, root-cause insights, and audited incident response — in one workspace.
+                  Alert intake to signed resolution — one workspace.
                 </p>
-
-                <CopyCliField />
               </div>
 
-              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4 lg:grid-cols-2">
+              <div className="grid grid-cols-2 gap-2.5">
                 <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                   <div className="font-orbitron text-lg font-bold text-zinc-100 tnum">&lt;180ms</div>
                   <div className="font-mono text-[11px] text-zinc-500">Webhook ingest p99</div>
@@ -314,14 +270,6 @@ export function Intelligence() {
                 <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                   <div className="font-orbitron text-lg font-bold text-[#3b8ef4] tnum">87%</div>
                   <div className="font-mono text-[11px] text-zinc-500">Top-1 RCA accuracy</div>
-                </div>
-                <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-                  <div className="font-orbitron text-lg font-bold text-zinc-100">Self-Hosted</div>
-                  <div className="font-mono text-[11px] text-zinc-500">Postgres 16 + Prisma</div>
-                </div>
-                <div className="rounded-xl border border-zinc-800 bg-zinc-900/80 p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-                  <div className="font-orbitron text-lg font-bold text-zinc-100">SHA-256</div>
-                  <div className="font-mono text-[11px] text-zinc-500">Append-only audit</div>
                 </div>
               </div>
             </div>
@@ -591,28 +539,6 @@ export function Intelligence() {
             </div>
           </div>
 
-          {/* ================================================================
-              QuickPicks Bar (Exact Vengeance UI QuickPicks)
-             ================================================================ */}
-          <div className="flex flex-col gap-3 px-5 py-4 md:flex-row md:items-center md:justify-between md:px-8">
-            <div className="flex items-center gap-2 font-mono text-xs text-zinc-400">
-              <span className="size-1.5 rounded-full bg-[#3b8ef4]" />
-              <span>Registry picks: jump directly into a live subsystem</span>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              {QUICK_PICKS.map((item) => (
-                <a
-                  key={item.name}
-                  href={item.href}
-                  className="inline-flex items-center gap-1 rounded-full border border-zinc-800 bg-zinc-900 px-3 py-1 font-mono text-xs text-zinc-300 transition-colors hover:border-zinc-600 hover:text-white"
-                >
-                  <span>{item.name}</span>
-                  <span className="text-zinc-500">↗</span>
-                </a>
-              ))}
-            </div>
-          </div>
         </div>
       </Container>
     </section>

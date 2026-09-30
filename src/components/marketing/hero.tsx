@@ -1,122 +1,124 @@
+'use client';
+
 import Link from 'next/link';
-import { BorderBeam, Container, Heading, IsometricHeroBox } from './vui-primitives';
-import { TechStackTiles } from './tech-stack';
-import { GsapTextReveal } from './gsap-reveal';
+import { useEffect, useRef } from 'react';
+import gsap from 'gsap';
+import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { AmbientVideo } from './ambient-video';
 
-/** The film is the hero wordmark: don't overlay a second ARCH logo on its reveal. */
+/**
+ * Full-frame cinematic hero.
+ *
+ * The mountain reveal film IS the hero: it fills the viewport, autoplays exactly once and
+ * freezes on its final frame until refresh. While the film holds the frame, GSAP pins the
+ * whole section so the peak stays stuck to the viewport and the scroll drives a parallax
+ * scrub — the footage drifts and darkens while the copy lifts away, and the next section
+ * glides over the settled frame.
+ */
 export function Hero() {
+  const sectionRef = useRef<HTMLElement>(null);
+  const mediaRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const veilRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+
+    gsap.registerPlugin(ScrollTrigger);
+
+    const ctx = gsap.context(() => {
+      // Entrance — the copy rises over the film as it starts playing.
+      gsap.fromTo(
+        '.hero-rise',
+        { y: 34, opacity: 0 },
+        { y: 0, opacity: 1, duration: 1.1, stagger: 0.12, ease: 'power3.out', delay: 0.3 }
+      );
+
+      // Sticky pin + parallax scrub: the mountain stays stuck while the page keeps scrolling.
+      gsap
+        .timeline({
+          scrollTrigger: {
+            trigger: sectionRef.current,
+            start: 'top top',
+            end: '+=130%',
+            scrub: 0.6,
+            pin: true,
+            anticipatePin: 1,
+          },
+        })
+        .to(mediaRef.current, { scale: 1.16, yPercent: -6, ease: 'none' }, 0)
+        .to(contentRef.current, { yPercent: -46, opacity: 0, ease: 'power1.in' }, 0)
+        .to('.mk-scroll-cue', { opacity: 0, ease: 'none', duration: 0.25 }, 0)
+        .to(veilRef.current, { opacity: 1, ease: 'none' }, 0);
+    }, sectionRef);
+
+    return () => ctx.revert();
+  }, []);
+
   return (
-    <section className="relative overflow-hidden border-b border-[#222] bg-[#050608]">
-      <Container>
-        <div className="border-x border-b border-[#222] bg-[#06101e]">
-          <div className="relative aspect-[848/478] w-full overflow-hidden bg-[#06101e]" style={{ backgroundImage: 'url(/arch-mountain-poster.jpg)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-            <AmbientVideo
-              src="/arch-mountain-reveal.mp4"
-              poster="/arch-mountain-poster.jpg"
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-            <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#050a13]/50 via-transparent to-transparent" />
-            <span className="absolute left-4 top-4 sm:left-8 sm:top-8 rounded-full border border-white/20 bg-[#050a13]/65 px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-blue-100 backdrop-blur-sm">
-              ARCH / Incident operations
-            </span>
-          </div>
-          <div className="grid gap-7 border-t border-white/10 bg-[#080c14] px-5 py-8 sm:px-8 sm:py-10 lg:grid-cols-[1fr_auto] lg:items-end lg:px-12">
-            <div className="max-w-2xl">
-              <p className="mb-3 font-mono text-[11px] font-medium uppercase tracking-[0.18em] text-[#75b3ff]">Built for the moments that matter</p>
-              <h1 className="font-orbitron text-2xl font-bold leading-tight tracking-tight text-white sm:text-3xl lg:text-4xl">
-                Incident response, under control.
-              </h1>
-              <p className="mt-3 max-w-xl text-sm leading-relaxed text-zinc-300 sm:text-base">
-                Bring alerts, responders, impact, and updates into one self-hosted workspace.
-              </p>
-            </div>
-            <div className="flex flex-wrap items-center gap-3">
-              <Link href="/register" className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#3b8ef4] px-5 text-sm font-semibold text-[#04101e] transition-colors hover:bg-[#75b3ff]">
-                Get Started <span aria-hidden>→</span>
-              </Link>
-              <a href="#workspace" className="inline-flex h-11 items-center justify-center rounded-lg border border-white/20 px-5 text-sm font-medium text-white transition-colors hover:border-[#75b3ff] hover:bg-white/5">
-                Explore the platform
-              </a>
-            </div>
-          </div>
-        </div>
+    <section
+      ref={sectionRef}
+      id="top"
+      className="mk-hero relative h-[100svh] overflow-hidden bg-[#050608]"
+    >
+      {/* Film layer — one-shot play, frozen final frame acts as the resting visual. */}
+      <div ref={mediaRef} className="absolute inset-0 will-change-transform">
+        <AmbientVideo
+          src="/arch-mountain-reveal.mp4"
+          poster="/arch-mountain-poster.jpg"
+          playOnce
+          className="mk-hero-video absolute inset-0 h-full w-full"
+        />
+      </div>
 
-        {/* Product details follow the cinematic introduction. */}
-        <div>
-          <div className="flex flex-col md:flex-row md:divide-x divide-[#222] md:border-x border-b border-[#222]">
-            {/* Left Column: Vengeance UI Badge + Orbitron Heading + Mono SubHeading + Dual CTAs */}
-            <div className="vui-reveal-block flex-1 flex flex-col justify-center gap-5 px-5 py-12 md:px-8 lg:px-12">
-              <a
-                href="#topology"
-                className="group relative inline-flex w-fit items-center gap-1.5 overflow-hidden rounded-full border border-zinc-600/90 bg-zinc-900/85 px-3 py-1 text-[11px] font-medium text-zinc-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] backdrop-blur-sm transition-colors hover:border-zinc-500 hover:bg-zinc-900"
-              >
-                <BorderBeam
-                  size={68}
-                  duration={4.2}
-                  borderWidth={1.5}
-                  colorFrom="#3b8ef4"
-                  colorTo="#71717a"
-                />
-                <span className="text-zinc-400">Backed by</span>
-                <span className="inline-flex items-center gap-1 font-semibold text-white">
-                  <span className="text-[9px] leading-none text-[#3b8ef4]">▲</span>
-                  <span>ARCH Native Engine</span>
-                </span>
-              </a>
+      {/* Legibility gradients + vignette. */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#050608] via-[#050608]/20 to-[#050608]/35" />
+      <div aria-hidden className="pointer-events-none absolute inset-0 mk-hero-vignette" />
 
-              <GsapTextReveal as="h2" className="text-3xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight text-left">
-                Clarity from alert to resolution
-              </GsapTextReveal>
+      {/* Scrub veil — the hero settles to ink before the next section scrolls across it. */}
+      <div ref={veilRef} aria-hidden className="pointer-events-none absolute inset-0 bg-[#050608] opacity-0" />
 
-              <p className="font-mono text-xs sm:text-sm text-zinc-400 leading-relaxed text-left max-w-xl">
-                Dedupe alerts, trace impact, and resolve incidents — all self-hosted.
-              </p>
+      {/* Badge. */}
+      <span className="hero-rise absolute left-4 top-20 z-10 rounded-full border border-white/20 bg-[#050a13]/60 px-3 py-1.5 font-mono text-[10px] font-medium uppercase tracking-[0.2em] text-blue-100 backdrop-blur-sm sm:left-8 sm:top-24">
+        ARCH / Incident operations
+      </span>
 
-              <div className="mt-2 flex flex-wrap items-center gap-3">
-                <Link
-                  href="/login"
-                  className="inline-flex h-10 items-center justify-center rounded-lg bg-white px-5 text-xs font-semibold text-[#050608] shadow-[inset_0_1px_0_rgba(255,255,255,0.8),0_10px_26px_-18px_rgba(0,0,0,0.75)] transition-all hover:bg-zinc-200"
-                >
-                  Open Live Console
-                </Link>
-                <a
-                  href="#topology"
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#222] bg-[#111216] px-5 text-xs font-medium text-zinc-200 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] transition-colors hover:border-zinc-700 hover:text-white"
-                >
-                  <span className="size-1.5 rounded-full bg-[#3b8ef4]" />
-                  <span>Explore Neural Brain</span>
-                </a>
-                <Link
-                  href="/status/arch"
-                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-[#222] bg-transparent px-4 font-mono text-xs text-zinc-400 transition-colors hover:border-zinc-700 hover:text-white"
-                >
-                  <span className="size-1.5 rounded-full bg-ok-400 animate-pulse-dot" />
-                  <span>/status/arch</span>
-                </Link>
-              </div>
-            </div>
-
-            {/* Right Column: Vengeance UI IsometricHeroBox & IsometricGrid */}
-            <div className="vui-reveal-block flex-1 flex items-center justify-center overflow-hidden">
-              <IsometricHeroBox />
-            </div>
-          </div>
-
-          {/* Vengeance UI TechStack Row — tiles come from tech-stack-data.ts (every entry has proof in the repo) */}
-          <div className="vui-reveal-block flex flex-col lg:flex-row items-center justify-between md:border-x border-[#222]">
-            <div className="w-full lg:w-1/3 p-6 md:p-8 lg:p-10 text-center lg:text-left">
-              <Heading as="h2" className="text-center lg:text-left">
-                Tech Stack
-              </Heading>
-              <p className="mt-2 font-mono text-xs text-[#8e929f]">
-                Next.js, TypeScript, and PostgreSQL. No external SaaS.
-              </p>
-            </div>
-            <TechStackTiles />
+      {/* Copy — deliberately minimal: one line, one sub-line, two actions. */}
+      <div ref={contentRef} className="absolute inset-x-0 bottom-0 z-10 px-5 pb-16 sm:px-8 sm:pb-20 lg:px-12">
+        <div className="mx-auto max-w-[1440px]">
+          <h1 className="hero-rise max-w-3xl font-orbitron text-3xl font-bold leading-[1.08] tracking-tight text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.65)] sm:text-4xl lg:text-5xl">
+            Incident response, under control.
+          </h1>
+          <p className="hero-rise mt-3 max-w-xl text-sm leading-relaxed text-zinc-300 drop-shadow-[0_1px_12px_rgba(0,0,0,0.7)] sm:text-base">
+            Alerts, responders, impact, and status — one self-hosted workspace.
+          </p>
+          <div className="hero-rise mt-6 flex flex-wrap items-center gap-3">
+            <Link
+              href="/register"
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-[#3b8ef4] px-5 text-sm font-semibold text-[#04101e] transition-colors hover:bg-[#75b3ff]"
+            >
+              Get Started <span aria-hidden>→</span>
+            </Link>
+            <a
+              href="#intelligence"
+              className="inline-flex h-11 items-center justify-center rounded-lg border border-white/25 bg-white/[0.04] px-5 text-sm font-medium text-white backdrop-blur-sm transition-colors hover:border-[#75b3ff] hover:bg-white/10"
+            >
+              Explore the platform
+            </a>
           </div>
         </div>
-      </Container>
+      </div>
+
+      {/* Scroll cue. */}
+      <a
+        href="#intelligence"
+        aria-label="Scroll to explore"
+        className="hero-rise mk-scroll-cue absolute bottom-5 left-1/2 z-10 hidden -translate-x-1/2 flex-col items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.28em] text-zinc-400 transition-colors hover:text-white sm:flex"
+      >
+        <span>Scroll</span>
+        <span aria-hidden className="mk-scroll-cue-chevron text-[#3b8ef4]">▾</span>
+      </a>
     </section>
   );
 }

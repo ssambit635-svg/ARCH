@@ -2,18 +2,26 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-/** Load decorative video only when it can be seen. Posters remain visible on slow connections,
- * with reduced motion, or when the browser cannot play the clip. Never fetch the audio track. */
+/**
+ * Decorative video that only loads when it can be seen. Posters remain visible on slow
+ * connections, with reduced motion, or when the browser cannot play the clip. Never fetch
+ * the audio track.
+ *
+ * `playOnce` — the hero/closing films are one-shot reveals: they autoplay a single time and
+ * freeze on their final frame. They never loop; only a full page refresh replays them.
+ */
 export function AmbientVideo({
   src,
   poster,
   className,
   defer = false,
+  playOnce = false,
 }: {
   src: string;
   poster: string;
   className: string;
   defer?: boolean;
+  playOnce?: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [enabled, setEnabled] = useState(false);
@@ -50,7 +58,7 @@ export function AmbientVideo({
       poster={poster}
       autoPlay
       muted
-      loop
+      loop={!playOnce}
       playsInline
       preload="none"
       aria-hidden="true"

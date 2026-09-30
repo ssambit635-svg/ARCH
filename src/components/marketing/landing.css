@@ -52,6 +52,49 @@
   transform: translateY(0);
 }
 
+/* ============================================================================
+   Full-frame cinematic hero
+   ============================================================================ */
+
+.mk-hero-video {
+  object-fit: cover;
+  object-position: center;
+}
+
+/* Portrait phones would crop the ARCH wordmark badly under `cover`, so letterbox the film
+   instead — the black stage + gradients keep it feeling like a cinema frame. */
+@media (max-aspect-ratio: 4/5) {
+  .mk-hero-video {
+    object-fit: contain;
+  }
+}
+
+.mk-hero-vignette {
+  background: radial-gradient(120% 90% at 50% 42%, transparent 55%, rgba(5, 6, 8, 0.55) 100%);
+}
+
+.mk-scroll-cue-chevron {
+  animation: mk-cue-drop 1.6s ease-in-out infinite;
+}
+
+@keyframes mk-cue-drop {
+  0%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.55;
+  }
+  50% {
+    transform: translateY(5px);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mk-scroll-cue-chevron {
+    animation: none;
+  }
+}
+
 /* Scroll Progress Bar (ARCH blue accent) */
 .mk-progress {
   position: fixed;

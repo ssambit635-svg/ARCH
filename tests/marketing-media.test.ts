@@ -12,7 +12,9 @@ describe('marketing video delivery', () => {
       expect(media.toString('ascii', 4, 8)).toBe('ftyp');
       expect(media.includes(Buffer.from('avc1'))).toBe(true);
       expect(media.includes(Buffer.from('soun'))).toBe(false);
-      expect(media.length).toBeLessThan(400_000);
+      // The hero film now renders full-frame (100svh cover), so the clips ship at 1080p
+      // instead of 848×478 — the cap follows the new delivery budget, still "light".
+      expect(media.length).toBeLessThan(3_500_000);
       expect(statSync(join(root, `public/arch-${name}-poster.jpg`)).size).toBeGreaterThan(4_000);
     }
   });

@@ -7,7 +7,6 @@ import { GithubStarCount } from './github-star-count';
 
 const NAV_ITEMS = [
   { href: '#workspace', label: 'Workspace' },
-  { href: '#library-map', label: 'Library Map' },
   { href: '#topology', label: 'Neural Brain' },
   { href: '#lifecycle', label: 'Lifecycle' },
   { href: '#capabilities', label: 'Why ARCH' },
