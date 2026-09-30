@@ -8,7 +8,7 @@ import { Container } from './vui-primitives';
 import { GsapTextReveal } from './gsap-reveal';
 import { AmbientVideo } from './ambient-video';
 
-/** A single-play, borderless showcase for the ARCH mark. */
+/** A single-play, borderless showcase for the ARCH mark - old smooth reveal restored */
 function DragonLogoVideo() {
   const containerRef = useRef<HTMLDivElement>(null);
   const videoWrapRef = useRef<HTMLDivElement>(null);
@@ -23,12 +23,13 @@ function DragonLogoVideo() {
     const ctx = gsap.context(() => {
       gsap.fromTo(
         videoWrapRef.current,
-        { y: 14, opacity: 0, scale: 0.98 },
+        { y: 18, opacity: 0, scale: 0.97, filter: 'blur(8px)' },
         {
           y: 0,
           opacity: 1,
           scale: 1,
-          duration: 0.7,
+          filter: 'blur(0px)',
+          duration: 0.85,
           ease: 'power3.out',
           scrollTrigger: {
             trigger: containerRef.current,
@@ -45,19 +46,19 @@ function DragonLogoVideo() {
   return (
     <div
       ref={containerRef}
-      className="relative flex size-full items-center justify-center p-6 sm:p-8"
+      className="relative flex size-full items-center justify-center p-6 sm:p-8 [perspective:1000px]"
     >
       <div
         ref={videoWrapRef}
-        className="relative w-full max-w-[520px] overflow-visible"
-        style={{ aspectRatio: '848 / 478' }}
+        className="relative w-full max-w-[560px] overflow-visible will-change-transform [transform:translateZ(0)]"
+        style={{ aspectRatio: '848 / 478', transform: 'translateZ(0)' }}
       >
         <AmbientVideo
           src="/arch-dragon-reveal.mp4"
           poster="/arch-dragon-poster.jpg"
           defer
           playOnce
-          className="h-full w-full object-contain object-center [image-rendering:-webkit-optimize-contrast]"
+          className="h-full w-full object-contain object-center [image-rendering:-webkit-optimize-contrast] [transform:translateZ(0)] will-change-[transform,opacity] [backface-visibility:hidden]"
         />
       </div>
     </div>

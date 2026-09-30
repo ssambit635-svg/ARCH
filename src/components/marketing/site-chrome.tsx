@@ -5,8 +5,9 @@ import { useLenis } from './use-lenis';
 import { MarketingThemeProvider } from './theme-context';
 
 /**
- * Small marketing shell: supports both Premium Blue Dark mode and Pure Cream + Beige + #c8b07d Light mode,
+ * Small marketing shell: supports both Premium Blue Dark Mode and White / Cream Light Mode,
  * restrained smooth wheel scrolling, and no blocking boot sequence or replacement cursor.
+ * Optimized for buttery smooth video playback like old ARCH reveal.
  */
 export function SiteChrome({ children }: { children: ReactNode }) {
   useLenis(true);
