@@ -127,7 +127,7 @@ export function Deploy() {
                       className={cn(
                         'rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer',
                         sdkTab === 'python'
-                          ? 'bg-[#3b8ef4] text-black font-semibold'
+                          ? 'bg-[#3b8ef4] text-white font-semibold'
                           : 'text-zinc-400 hover:text-white'
                       )}
                     >
@@ -139,7 +139,7 @@ export function Deploy() {
                       className={cn(
                         'rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer',
                         sdkTab === 'curl'
-                          ? 'bg-[#3b8ef4] text-black font-semibold'
+                          ? 'bg-[#3b8ef4] text-white font-semibold'
                           : 'text-zinc-400 hover:text-white'
                       )}
                     >

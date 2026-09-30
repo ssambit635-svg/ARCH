@@ -129,7 +129,7 @@ export function MarketingNav() {
 
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/[0.08] px-3.5 py-2 text-xs font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition-all hover:border-[#3b8ef4]/60 hover:bg-[#3b8ef4] hover:text-black"
+              className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/[0.08] px-3.5 py-2 text-xs font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition-all hover:border-[#3b8ef4]/60 hover:bg-[#3b8ef4] hover:text-white"
             >
               <span>Get Started</span>
               <span aria-hidden>→</span>

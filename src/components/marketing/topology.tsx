@@ -4,7 +4,16 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { TopologyScene, type BrainNode, type ServiceStatus } from './topology-scene';
+import type { BrainNode, ServiceStatus } from './topology-scene';
+import dynamic from 'next/dynamic';
+const TopologyScene = dynamic(() => import('./topology-scene').then((m) => ({ default: m.TopologyScene })), {
+  ssr: false,
+  loading: () => (
+    <div className="relative aspect-[16/10] w-full bg-[#040812]">
+      <div aria-hidden className="absolute inset-0" style={{ background: 'radial-gradient(60% 60% at 50% 50%, rgba(59,142,244,0.18) 0%, transparent 70%)' }} />
+    </div>
+  ),
+});
 import { Container, Heading, SubHeading, cn } from './vui-primitives';
 import { GsapTextReveal } from './gsap-reveal';
 
@@ -346,7 +355,7 @@ export function Topology() {
                 type="button"
                 onClick={triggerSynapticCascade}
                 disabled={isCascading}
-                className="inline-flex items-center gap-2 rounded-xl border border-[#3b8ef4]/60 bg-[#3b8ef4] px-3.5 py-2 font-mono text-xs font-semibold text-black shadow-[0_10px_28px_rgba(59,142,244,0.2)] transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                className="inline-flex items-center gap-2 rounded-xl border border-[#3b8ef4]/60 bg-[#3b8ef4] px-3.5 py-2 font-mono text-xs font-semibold text-white shadow-[0_10px_28px_rgba(59,142,244,0.2)] transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 cursor-pointer"
               >
                 <span>⚡</span>
                 <span>{isCascading ? 'Cascading Synapse...' : 'Pulse Map'}</span>
@@ -570,7 +579,7 @@ export function Topology() {
                         />
                         <span>{s.name}</span>
                         {isSel && (
-                          <span className="rounded bg-[#3b8ef4] px-1.5 py-0.2 font-mono text-[9px] font-bold text-black">
+                          <span className="rounded bg-[#3b8ef4] px-1.5 py-0.2 font-mono text-[9px] font-bold text-white">
                             ACTIVE
                           </span>
                         )}

@@ -397,7 +397,7 @@ export function IncidentPreview() {
                             className={cn(
                               'rounded-lg px-2.5 py-1 font-mono text-[10px] font-semibold transition-all cursor-pointer',
                               isCurrent
-                                ? 'bg-[#3b8ef4] text-black shadow-[0_0_16px_rgba(59,142,244,0.25)]'
+                                ? 'bg-[#3b8ef4] text-white shadow-[0_0_16px_rgba(59,142,244,0.25)]'
                                 : 'border border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-white'
                             )}
                           >
@@ -473,7 +473,7 @@ export function IncidentPreview() {
                           <span className="text-[#3b8ef4] font-semibold">
                             ✦ ARCH V1.1 · ROOT-CAUSE HYPOTHESIS
                           </span>
-                          <span className="rounded bg-[#3b8ef4] px-2 py-0.5 text-[10px] font-bold text-black">
+                          <span className="rounded bg-[#3b8ef4] px-2 py-0.5 text-[10px] font-bold text-white">
                             {active.hypothesis.confidence}% CONFIDENCE
                           </span>
                         </div>
