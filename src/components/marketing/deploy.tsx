@@ -60,7 +60,7 @@ export function Deploy() {
         <div className="md:border-x border-[#222]">
           <div className="flex flex-col gap-4 border-b border-[#222] px-5 py-10 md:px-8 lg:px-10">
             <div className="inline-flex w-fit items-center gap-2 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3 py-1 font-mono text-[11px] font-medium text-zinc-300">
-              <span className="size-1.5 rounded-full bg-[#FEF62A]" />
+              <span className="size-1.5 rounded-full bg-[#3b8ef4]" />
               <span>SELF-HOSTED · DOCKER + POSTGRES</span>
             </div>
             <GsapTextReveal as="h2" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight text-left">
@@ -80,7 +80,7 @@ export function Deploy() {
                   <button
                     type="button"
                     onClick={copyAll}
-                    className="rounded-md border border-zinc-700 bg-zinc-900 px-2.5 py-1 font-mono text-[11px] text-zinc-200 transition-colors hover:border-[#FEF62A] hover:text-[#FEF62A] cursor-pointer"
+                    className="rounded-md border border-zinc-700 bg-zinc-900 px-2.5 py-1 font-mono text-[11px] text-zinc-200 transition-colors hover:border-[#3b8ef4] hover:text-[#3b8ef4] cursor-pointer"
                   >
                     {copied ? '✓ Copied' : 'Copy commands'}
                   </button>
@@ -89,7 +89,7 @@ export function Deploy() {
                 <pre className="mt-4 space-y-2.5 overflow-x-auto rounded-xl border border-[#222] bg-[#050608] p-4 font-mono text-xs text-zinc-200">
                   {COMMANDS.map((line, i) => (
                     <div key={i} className="flex items-start gap-3">
-                      <span className="select-none text-[#FEF62A] tnum">$</span>
+                      <span className="select-none text-[#3b8ef4] tnum">$</span>
                       <code>{line}</code>
                     </div>
                   ))}
@@ -111,7 +111,7 @@ export function Deploy() {
                 </div>
                 <div className="rounded-xl border border-[#222] bg-[#0b0c10] p-3">
                   <div className="font-mono text-[10px] uppercase text-zinc-500">License</div>
-                  <div className="mt-1 font-mono text-xs font-semibold text-[#FEF62A]">Self-Hosted</div>
+                  <div className="mt-1 font-mono text-xs font-semibold text-[#3b8ef4]">Self-Hosted</div>
                 </div>
               </div>
             </div>
@@ -127,7 +127,7 @@ export function Deploy() {
                       className={cn(
                         'rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer',
                         sdkTab === 'python'
-                          ? 'bg-[#FEF62A] text-black font-semibold'
+                          ? 'bg-[#3b8ef4] text-black font-semibold'
                           : 'text-zinc-400 hover:text-white'
                       )}
                     >
@@ -139,7 +139,7 @@ export function Deploy() {
                       className={cn(
                         'rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer',
                         sdkTab === 'curl'
-                          ? 'bg-[#FEF62A] text-black font-semibold'
+                          ? 'bg-[#3b8ef4] text-black font-semibold'
                           : 'text-zinc-400 hover:text-white'
                       )}
                     >

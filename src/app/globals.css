@@ -4,7 +4,7 @@
    ARCH — Vengeance UI Design System (DESIGN.md & SKILL.md)
    Palette:
      color-1: #050608 (Dark Background) / #000000 (Deepest Dark)
-     color-2: #FEF62A (Signature Yellow-Lime Highlight)
+     color-2: #3b8ef4 (Dragon Blue Highlight)
      color-3: #FFFFFF (Text Light)
    Typography:
      Heading: Orbitron (--font-orbitron / --font-display)
@@ -38,27 +38,27 @@
   --color-ash-700: #3f3f46;
   --color-ash-800: #27272a;
 
-  /* Vengeance UI Primary Accent (#FEF62A + Crisp Monochrome) — No Blue AI Slop */
-  --color-vui-yellow: #FEF62A;
-  --color-signal-300: #FEF62A;
+  /* ARCH primary accent — dragon blue on carbon */
+  --color-vui-blue: #3b8ef4;
+  --color-signal-300: #3b8ef4;
   --color-signal-400: #ffffff;
   --color-signal-500: #e4e4e7;
   --color-signal-600: #d4d4d8;
 
-  /* ARCH Native AI Accent — Crisp Yellow-Lime (#FEF62A) & Zinc instead of Violet */
-  --color-arch-300: #FEF62A;
-  --color-arch-400: #FEF62A;
-  --color-arch-500: #e4dc24;
-  --color-arch-600: #c7bf1b;
+  /* ARCH Native AI Accent — Dragon blue (#3b8ef4) & zinc */
+  --color-arch-300: #3b8ef4;
+  --color-arch-400: #3b8ef4;
+  --color-arch-500: #2875d5;
+  --color-arch-600: #1b5bad;
 
-  /* Remap legacy indigo/violet utility tokens to crisp neutral zinc/yellow so no component glows purple/blue */
+  /* Remap legacy indigo/violet utility tokens to blue/zinc for brand accents; status colors remain semantic */
   --color-indigo-300: #e4e4e7;
   --color-indigo-400: #d4d4d8;
   --color-indigo-500: #a1a1aa;
   --color-indigo-600: #71717a;
-  --color-violet-200: #fef9c3;
-  --color-violet-300: #FEF62A;
-  --color-violet-400: #FEF62A;
+  --color-violet-200: #dbeafe;
+  --color-violet-300: #3b8ef4;
+  --color-violet-400: #3b8ef4;
   --color-violet-500: #d4d4d8;
 
   /* Operational Status Semantics */
@@ -103,7 +103,7 @@
   --fg-subtle: #71717a;
   --border-hairline: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.14);
-  --ring: rgba(254, 246, 42, 0.45);
+  --ring: rgba(59, 142, 244, 0.45);
   --background: #050608;
   --foreground: #ffffff;
   --border: #222222;
@@ -128,7 +128,7 @@ body {
 }
 
 ::selection {
-  background: #FEF62A;
+  background: #3b8ef4;
   color: #050608;
 }
 
@@ -203,11 +203,11 @@ body {
 }
 
 .bg-radial-spot {
-  background: radial-gradient(70% 45% at 50% 0%, rgba(255, 255, 255, 0.05) 0%, rgba(254, 246, 42, 0.02) 45%, transparent 75%);
+  background: radial-gradient(70% 45% at 50% 0%, rgba(255, 255, 255, 0.05) 0%, rgba(59, 142, 244, 0.02) 45%, transparent 75%);
 }
 
 .bg-radial-arch {
-  background: radial-gradient(60% 50% at 50% 0%, rgba(254, 246, 42, 0.05) 0%, transparent 70%);
+  background: radial-gradient(60% 50% at 50% 0%, rgba(59, 142, 244, 0.05) 0%, transparent 70%);
 }
 
 /* Focus Ring */
@@ -352,7 +352,7 @@ body {
     transparent 0deg,
     transparent 240deg,
     rgba(255, 255, 255, 0.24) 286deg,
-    rgba(254, 246, 42, 0.95) 326deg,
+    rgba(59, 142, 244, 0.95) 326deg,
     rgba(255, 255, 255, 0.24) 352deg,
     transparent 360deg
   );

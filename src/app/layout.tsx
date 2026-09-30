@@ -35,6 +35,7 @@ const geistMono = localFont({
 
 const spaceGrotesk = localFont({
   src: './fonts/space-grotesk-latin-wght-normal.woff2',
+  preload: false,
   weight: '300 700',
   display: 'swap',
   variable: '--font-space-grotesk',
@@ -43,6 +44,7 @@ const spaceGrotesk = localFont({
 
 const jetbrainsMono = localFont({
   src: './fonts/jetbrains-mono-latin-wght-normal.woff2',
+  preload: false,
   weight: '100 800',
   display: 'swap',
   variable: '--font-jetbrains-mono',
@@ -94,7 +96,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`dark ${orbitron.variable} ${inter.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen flex flex-col bg-[#050608] text-white antialiased selection:bg-[#FEF62A] selection:text-black">
+      <body className="min-h-screen flex flex-col bg-[#050608] text-white antialiased selection:bg-[#3b8ef4] selection:text-black">
         {children}
       </body>
     </html>

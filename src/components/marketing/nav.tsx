@@ -59,12 +59,12 @@ export function MarketingNav() {
               aria-label="ARCH home"
             >
               <img
-                src="/dragon-mark-yellow.png"
+                src="/dragon-mark.webp"
                 alt="ARCH"
-                className="h-7 w-auto object-contain drop-shadow-[0_0_12px_rgba(254,246,42,0.28)]"
+                className="h-7 w-auto object-contain drop-shadow-[0_0_12px_rgba(59,142,244,0.28)]"
               />
               <span>
-                ARCH<span className="text-[#FEF62A]">.</span>
+                ARCH<span className="text-[#3b8ef4]">.</span>
               </span>
             </Link>
 
@@ -115,7 +115,7 @@ export function MarketingNav() {
                 </svg>
               </span>
               <span className="inline-flex items-center gap-1 rounded-md border border-zinc-700/90 bg-zinc-900/95 px-2 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-zinc-100">
-                <span aria-hidden className="text-[#FEF62A]">★</span>
+                <span aria-hidden className="text-[#3b8ef4]">★</span>
                 <GithubStarCount />
               </span>
             </a>
@@ -129,7 +129,7 @@ export function MarketingNav() {
 
             <Link
               href="/register"
-              className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/[0.08] px-3.5 py-2 text-xs font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition-all hover:border-[#FEF62A]/60 hover:bg-[#FEF62A] hover:text-black"
+              className="inline-flex items-center gap-2 rounded-lg border border-white/15 bg-white/[0.08] px-3.5 py-2 text-xs font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition-all hover:border-[#3b8ef4]/60 hover:bg-[#3b8ef4] hover:text-black"
             >
               <span>Get Started</span>
               <span aria-hidden>→</span>
@@ -149,7 +149,7 @@ export function MarketingNav() {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-3 border-b border-[#222] px-4 py-3">
-              <span className="font-mono text-xs text-[#FEF62A]">⌘</span>
+              <span className="font-mono text-xs text-[#3b8ef4]">⌘</span>
               <input
                 type="text"
                 autoFocus
@@ -178,7 +178,7 @@ export function MarketingNav() {
                     <div className="text-xs font-medium text-white">{item.title}</div>
                     <div className="mt-0.5 font-mono text-[11px] text-zinc-500">{item.subtitle}</div>
                   </div>
-                  <span className="rounded border border-[#222] bg-[#111216] px-2 py-0.5 font-mono text-[10px] text-[#FEF62A]">
+                  <span className="rounded border border-[#222] bg-[#111216] px-2 py-0.5 font-mono text-[10px] text-[#3b8ef4]">
                     {item.tag}
                   </span>
                 </a>

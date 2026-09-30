@@ -16,7 +16,7 @@ const variantStyles: Record<Variant, string> = {
   danger:
     'bg-crit-500/15 hover:bg-crit-500/25 text-crit-400 border border-crit-500/35 hover:border-crit-500/55',
   ai:
-    'bg-[#FEF62A] text-[#050608] hover:bg-[#f5ec1f] border border-[#FEF62A] font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_10px_26px_-18px_rgba(254,246,42,0.35)]',
+    'bg-[#3b8ef4] text-[#050608] hover:bg-[#75b3ff] border border-[#3b8ef4] font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.6),0_10px_26px_-18px_rgba(59,142,244,0.35)]',
 };
 
 const sizeStyles: Record<Size, string> = {

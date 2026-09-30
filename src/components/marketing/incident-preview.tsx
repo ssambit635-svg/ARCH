@@ -232,7 +232,7 @@ export function IncidentPreview() {
           <div className="workspace-reveal flex flex-col gap-4 border-b border-[#222] px-5 py-10 md:px-8 lg:flex-row lg:items-end lg:justify-between lg:px-10">
             <div>
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3 py-1 font-mono text-[11px] font-medium text-zinc-300">
-                <span className="size-1.5 rounded-full bg-[#FEF62A]" />
+                <span className="size-1.5 rounded-full bg-[#3b8ef4]" />
                 <span>LIVE INCIDENT CONSOLE</span>
               </div>
               <GsapTextReveal as="h2" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight text-left">
@@ -274,7 +274,7 @@ export function IncidentPreview() {
                 </span>
               </div>
               <div className="flex items-center gap-2 text-[10px]">
-                <span className="rounded border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-[#FEF62A]">
+                <span className="rounded border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-[#3b8ef4]">
                   ARCH V1.1 READY
                 </span>
                 <span className="rounded border border-zinc-800 bg-zinc-900 px-2 py-0.5 text-zinc-400">
@@ -304,7 +304,7 @@ export function IncidentPreview() {
                           className={cn(
                             'w-full text-left rounded-xl border p-3.5 transition-all cursor-pointer',
                             isSel
-                              ? 'border-[#FEF62A]/70 bg-[#111319] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
+                              ? 'border-[#3b8ef4]/70 bg-[#111319] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]'
                               : 'border-[#222] bg-[#0a0b0f] hover:border-zinc-700'
                           )}
                         >
@@ -356,7 +356,7 @@ export function IncidentPreview() {
                   <div className="flex flex-wrap items-start justify-between gap-4 border-b border-[#222] pb-4">
                     <div>
                       <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
-                        <span className="rounded border border-[#FEF62A]/50 bg-[#FEF62A]/10 px-2 py-0.5 text-[11px] font-semibold text-[#FEF62A]">
+                        <span className="rounded border border-[#3b8ef4]/50 bg-[#3b8ef4]/10 px-2 py-0.5 text-[11px] font-semibold text-[#3b8ef4]">
                           {active.code}
                         </span>
                         <span className="text-zinc-400">{active.service}</span>
@@ -397,7 +397,7 @@ export function IncidentPreview() {
                             className={cn(
                               'rounded-lg px-2.5 py-1 font-mono text-[10px] font-semibold transition-all cursor-pointer',
                               isCurrent
-                                ? 'bg-[#FEF62A] text-black shadow-[0_0_16px_rgba(254,246,42,0.25)]'
+                                ? 'bg-[#3b8ef4] text-black shadow-[0_0_16px_rgba(59,142,244,0.25)]'
                                 : 'border border-zinc-800 bg-zinc-900 text-zinc-400 hover:border-zinc-700 hover:text-white'
                             )}
                           >
@@ -451,7 +451,7 @@ export function IncidentPreview() {
                                   className={cn(
                                     'rounded px-1.5 py-0.5 font-mono text-[10px] font-medium',
                                     item.kind === 'ai'
-                                      ? 'bg-[#FEF62A]/15 text-[#FEF62A] border border-[#FEF62A]/30'
+                                      ? 'bg-[#3b8ef4]/15 text-[#3b8ef4] border border-[#3b8ef4]/30'
                                       : item.kind === 'alert'
                                       ? 'bg-crit-500/15 text-crit-400 border border-crit-500/30'
                                       : 'bg-zinc-800 text-zinc-200 border border-zinc-700'
@@ -470,10 +470,10 @@ export function IncidentPreview() {
                     {tab === 'hypothesis' && (
                       <div className="rounded-xl border border-[#222] bg-[#0b0c10] p-4 space-y-3">
                         <div className="flex items-center justify-between font-mono text-xs">
-                          <span className="text-[#FEF62A] font-semibold">
+                          <span className="text-[#3b8ef4] font-semibold">
                             ✦ ARCH V1.1 · ROOT-CAUSE HYPOTHESIS
                           </span>
-                          <span className="rounded bg-[#FEF62A] px-2 py-0.5 text-[10px] font-bold text-black">
+                          <span className="rounded bg-[#3b8ef4] px-2 py-0.5 text-[10px] font-bold text-black">
                             {active.hypothesis.confidence}% CONFIDENCE
                           </span>
                         </div>
@@ -483,7 +483,7 @@ export function IncidentPreview() {
                         <ul className="space-y-1.5 font-mono text-xs text-zinc-300">
                           {active.hypothesis.evidence.map((ev, i) => (
                             <li key={i} className="flex items-start gap-2">
-                              <span className="text-[#FEF62A]">→</span>
+                              <span className="text-[#3b8ef4]">→</span>
                               <span>{ev}</span>
                             </li>
                           ))}
@@ -497,7 +497,7 @@ export function IncidentPreview() {
 
                     {tab === 'postmortem' && (
                       <div className="rounded-xl border border-[#222] bg-[#0b0c10] p-4 font-mono text-xs space-y-2.5 text-zinc-300">
-                        <div className="text-[11px] uppercase tracking-wider text-[#FEF62A]">
+                        <div className="text-[11px] uppercase tracking-wider text-[#3b8ef4]">
                           # Postmortem — {active.code}: {active.title}
                         </div>
                         <p className="font-sans text-xs text-zinc-300 leading-relaxed">
@@ -513,7 +513,7 @@ export function IncidentPreview() {
 
                 <div className="mt-5 flex flex-wrap items-center justify-between gap-2 border-t border-[#222] pt-4 font-mono text-[11px] text-zinc-500">
                   <span>All transitions logged to append-only SHA-256 audit ledger</span>
-                  <Link href="/login" className="text-zinc-200 hover:text-[#FEF62A]">
+                  <Link href="/login" className="text-zinc-200 hover:text-[#3b8ef4]">
                     Sign in to run full workflow →
                   </Link>
                 </div>

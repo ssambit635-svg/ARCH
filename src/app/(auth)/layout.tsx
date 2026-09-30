@@ -28,7 +28,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <aside className="hidden lg:flex lg:col-span-6 flex-col justify-between p-12 border-r border-[#222] bg-[#08090c]">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-[#222] bg-[#0d0e12] px-3 py-1 font-mono text-[11px] font-medium text-zinc-300 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-              <span className="h-1.5 w-1.5 rounded-full bg-[#FEF62A]" />
+              <span className="h-1.5 w-1.5 rounded-full bg-[#3b8ef4]" />
               ARCH Platform · Native Intelligence V1.1
             </div>
             <h1 className="mt-6 font-orbitron text-3xl font-bold tracking-tight text-white leading-[1.15]">
@@ -62,7 +62,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
                 <div className="flex items-start gap-2.5">
                   <span className="mt-0.5 font-mono text-[10px] text-zinc-500 tnum">03:12:19</span>
                   <div className="rounded-lg border border-[#222] bg-[#0d0e13] px-3 py-2 text-zinc-200 flex-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-                    <div className="flex items-center justify-between text-[10px] font-mono text-[#FEF62A] uppercase tracking-wider">
+                    <div className="flex items-center justify-between text-[10px] font-mono text-[#3b8ef4] uppercase tracking-wider">
                       <span>ARCH V1.1 · Root-Cause Hypothesis</span>
                       <span>87% confidence</span>
                     </div>
@@ -92,7 +92,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               <div className="font-mono text-zinc-500 text-[11px] mt-0.5">90-day uptime ledger</div>
             </div>
             <div>
-              <div className="font-orbitron text-lg font-bold text-[#FEF62A] tnum">SHA-256</div>
+              <div className="font-orbitron text-lg font-bold text-[#3b8ef4] tnum">SHA-256</div>
               <div className="font-mono text-zinc-500 text-[11px] mt-0.5">Append-only audit log</div>
             </div>
           </div>

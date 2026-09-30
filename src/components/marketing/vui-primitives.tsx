@@ -159,7 +159,7 @@ export function TypeScriptIcon({ className }: React.SVGProps<SVGSVGElement>) {
 
 export function MotionIcon({ className }: React.SVGProps<SVGSVGElement>) {
   return (
-    <svg viewBox="0 0 34 12" className={cn('h-full w-full bg-[#FEF62A] p-0.5 rounded-sm', className)}>
+    <svg viewBox="0 0 34 12" className={cn('h-full w-full bg-[#3b8ef4] p-0.5 rounded-sm', className)}>
       <path
         d="M 12.838 0 L 6.12 11.989 L 0 11.989 L 5.245 2.628 C 6.059 1.176 8.088 0 9.778 0 Z M 27.846 2.997 C 27.846 1.342 29.216 0 30.906 0 C 32.596 0 33.966 1.342 33.966 2.997 C 33.966 4.653 32.596 5.995 30.906 5.995 C 29.216 5.995 27.846 4.653 27.846 2.997 Z M 13.985 0 L 20.105 0 L 13.387 11.989 L 7.267 11.989 Z M 21.214 0 L 27.334 0 L 22.088 9.362 C 21.275 10.813 19.246 11.989 17.556 11.989 L 14.496 11.989 Z"
         fill="#0b1012"
@@ -339,7 +339,7 @@ export function IsometricBox({
         <defs>
           <linearGradient id={`bottom-wall-gradient-${uid}`} x1="69.2236" y1="40" x2="69.2236" y2="92.6569" gradientUnits="userSpaceOnUse">
             <stop stopColor="#ffffff" stopOpacity="0.4" />
-            <stop offset="0.53" stopColor="#FEF62A" stopOpacity="0.85" />
+            <stop offset="0.53" stopColor="#3b8ef4" stopOpacity="0.85" />
             <stop offset="1" stopColor="#ffffff" stopOpacity="0.4" />
           </linearGradient>
         </defs>
@@ -452,7 +452,7 @@ const HERO_FACE_COMPONENTS = [
       type="button"
       className="relative overflow-hidden rounded-md border border-zinc-700 bg-neutral-950 px-4 py-2 text-[11px] font-semibold text-zinc-100 shadow-[0_8px_20px_rgba(0,0,0,0.45)]"
     >
-      <span className="pointer-events-none absolute inset-x-2 top-0 h-px bg-gradient-to-r from-transparent via-[#FEF62A] to-transparent" />
+      <span className="pointer-events-none absolute inset-x-2 top-0 h-px bg-gradient-to-r from-transparent via-[#3b8ef4] to-transparent" />
       <span>Hover</span>
     </button>
   </div>,
@@ -467,10 +467,10 @@ const HERO_FACE_COMPONENTS = [
       type="button"
       className="relative rounded-md border border-zinc-700 bg-zinc-900/90 px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] text-zinc-100"
     >
-      <span className="pointer-events-none absolute -top-0.5 -left-0.5 h-2 w-2 border-t-2 border-l-2 border-[#FEF62A]" />
-      <span className="pointer-events-none absolute -top-0.5 -right-0.5 h-2 w-2 border-t-2 border-r-2 border-[#FEF62A]" />
-      <span className="pointer-events-none absolute -bottom-0.5 -left-0.5 h-2 w-2 border-b-2 border-l-2 border-[#FEF62A]" />
-      <span className="pointer-events-none absolute -bottom-0.5 -right-0.5 h-2 w-2 border-b-2 border-r-2 border-[#FEF62A]" />
+      <span className="pointer-events-none absolute -top-0.5 -left-0.5 h-2 w-2 border-t-2 border-l-2 border-[#3b8ef4]" />
+      <span className="pointer-events-none absolute -top-0.5 -right-0.5 h-2 w-2 border-t-2 border-r-2 border-[#3b8ef4]" />
+      <span className="pointer-events-none absolute -bottom-0.5 -left-0.5 h-2 w-2 border-b-2 border-l-2 border-[#3b8ef4]" />
+      <span className="pointer-events-none absolute -bottom-0.5 -right-0.5 h-2 w-2 border-b-2 border-r-2 border-[#3b8ef4]" />
       <span>Corner</span>
     </button>
   </div>,
@@ -487,7 +487,7 @@ const HERO_FACE_COMPONENTS = [
       type="button"
       className="rounded-full border border-zinc-700 bg-zinc-900/95 px-4 py-2 text-xs font-semibold text-zinc-100"
     >
-      <span className="text-[#FEF62A] mr-1">✦</span>ARCH V1.1
+      <span className="text-[#3b8ef4] mr-1">✦</span>ARCH V1.1
     </button>
   </div>,
 ];
@@ -640,7 +640,7 @@ export function IsometricHeroBox() {
                 <foreignObject width="160" height="160">
                   <div className="w-[160px] h-[160px] flex flex-col items-center justify-center select-none">
                     <span className="font-orbitron text-xl font-black tracking-tight text-white">
-                      ARCH<span className="text-[#FEF62A]">.</span>
+                      ARCH<span className="text-[#3b8ef4]">.</span>
                     </span>
                     <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-400 mt-1">
                       V1.1 CORE
@@ -758,7 +758,7 @@ export function ConnectorLine({
             }}
           >
             <stop offset="0%" stopColor="transparent" />
-            <stop offset="50%" stopColor="#FEF62A" />
+            <stop offset="50%" stopColor="#3b8ef4" />
             <stop offset="100%" stopColor="transparent" />
           </motion.linearGradient>
         </defs>
@@ -834,7 +834,7 @@ export function CornerConnector({
             }}
           >
             <stop offset="0%" stopColor="transparent" />
-            <stop offset="50%" stopColor="#FEF62A" />
+            <stop offset="50%" stopColor="#3b8ef4" />
             <stop offset="100%" stopColor="transparent" />
           </motion.linearGradient>
         </defs>

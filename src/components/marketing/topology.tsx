@@ -50,7 +50,7 @@ const BRAIN_NODES: BrainNode[] = [
     owner: 'team-identity',
     x: 32,
     y: 53,
-    color: '#FEF62A',
+    color: '#3b8ef4',
     deps: ['postgres-primary', 'redis-cache'],
     summary: 'Session issuance, PBKDF2-SHA256 verification, and RBAC policy evaluation.',
   },
@@ -65,7 +65,7 @@ const BRAIN_NODES: BrainNode[] = [
     owner: 'team-commerce',
     x: 43,
     y: 23,
-    color: '#FEF62A',
+    color: '#3b8ef4',
     deps: ['payments-svc', 'postgres-primary', 'redis-cache', 'arch-v1.1'],
     summary: 'Order orchestration experiencing p99 latency spike due to upstream DB lock contention.',
   },
@@ -80,7 +80,7 @@ const BRAIN_NODES: BrainNode[] = [
     owner: 'team-sre',
     x: 54,
     y: 35,
-    color: '#FEF62A',
+    color: '#3b8ef4',
     deps: ['postgres-primary', 'audit-ledger', 'status-page'],
     summary: 'Native incident intelligence engine correlating deploy diffs, SQL locks, and blast radius.',
   },
@@ -170,7 +170,7 @@ const BRAIN_NODES: BrainNode[] = [
     owner: 'team-security',
     x: 74,
     y: 58,
-    color: '#FEF62A',
+    color: '#3b8ef4',
     deps: [],
     summary: 'Append-only cryptographic audit log recording every state transition and actor signature.',
   },
@@ -311,7 +311,7 @@ export function Topology() {
           <div className="neural-reveal flex flex-col gap-5 border-b border-[#222] px-5 py-10 md:px-8 lg:flex-row lg:items-end lg:justify-between lg:px-10">
             <div>
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-zinc-700/80 bg-zinc-900/90 px-3 py-1 font-mono text-[11px] font-medium text-zinc-300">
-                <span className="size-1.5 rounded-full bg-[#FEF62A]" />
+                <span className="size-1.5 rounded-full bg-[#3b8ef4]" />
                 <span>SERVICE DEPENDENCY MAP</span>
               </div>
               <GsapTextReveal as="h2" className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight leading-tight text-left">
@@ -346,7 +346,7 @@ export function Topology() {
                 type="button"
                 onClick={triggerSynapticCascade}
                 disabled={isCascading}
-                className="inline-flex items-center gap-2 rounded-xl border border-[#FEF62A]/60 bg-[#FEF62A] px-3.5 py-2 font-mono text-xs font-semibold text-black shadow-[0_10px_28px_rgba(254,246,42,0.2)] transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 cursor-pointer"
+                className="inline-flex items-center gap-2 rounded-xl border border-[#3b8ef4]/60 bg-[#3b8ef4] px-3.5 py-2 font-mono text-xs font-semibold text-black shadow-[0_10px_28px_rgba(59,142,244,0.2)] transition-transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-60 cursor-pointer"
               >
                 <span>⚡</span>
                 <span>{isCascading ? 'Cascading Synapse...' : 'Pulse Map'}</span>
@@ -363,7 +363,7 @@ export function Topology() {
               {/* Top Overlay Telemetry Bar */}
               <div className="relative z-30 flex flex-wrap items-center justify-between gap-2 border-b border-[#222] bg-[#050608]/90 px-4 py-2.5 font-mono text-[11px]">
                 <div className="flex items-center gap-2 text-zinc-300">
-                  <span className="size-2 rounded-full bg-[#FEF62A] animate-pulse-dot" />
+                  <span className="size-2 rounded-full bg-[#3b8ef4] animate-pulse-dot" />
                   <span>CORTEX LOCK:</span>
                   <span className="font-semibold text-white">{selected.name}</span>
                   <span className="text-zinc-500">({selected.lobe})</span>
@@ -379,7 +379,7 @@ export function Topology() {
                     <span className="size-2 rounded-full bg-[#f43f5e]" /> Major Outage
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    <span className="size-2 rounded-full bg-[#FEF62A]" /> Selected Focus
+                    <span className="size-2 rounded-full bg-[#3b8ef4]" /> Selected Focus
                   </span>
                 </div>
               </div>
@@ -399,7 +399,7 @@ export function Topology() {
                   Move pointer across the brain to excite local cortical filaments · Click any node to isolate blast radius
                 </span>
                 <span className="text-zinc-300 tnum">
-                  Active synaptic path: <strong className="text-[#FEF62A]">{activeSet.size}</strong> / {BRAIN_NODES.length} nodes
+                  Active synaptic path: <strong className="text-[#3b8ef4]">{activeSet.size}</strong> / {BRAIN_NODES.length} nodes
                 </span>
               </div>
             </div>
@@ -412,7 +412,7 @@ export function Topology() {
               <div>
                 <div className="flex items-start justify-between gap-3 border-b border-[#222] pb-4">
                   <div>
-                    <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#FEF62A]">
+                    <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#3b8ef4]">
                       {selected.tier} Tier · {selected.lobe}
                     </div>
                     <h3 className="mt-1 font-orbitron text-xl font-bold text-white">
@@ -453,7 +453,7 @@ export function Topology() {
                         selected.status === 'MAJOR_OUTAGE'
                           ? 'text-crit-400'
                           : selected.status === 'DEGRADED'
-                          ? 'text-[#FEF62A]'
+                          ? 'text-[#3b8ef4]'
                           : 'text-white'
                       }`}
                     >
@@ -478,7 +478,7 @@ export function Topology() {
                           key={id}
                           type="button"
                           onClick={() => setSelectedId(id)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-1 font-mono text-xs text-zinc-200 transition-colors hover:border-[#FEF62A] hover:text-[#FEF62A] cursor-pointer"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-1 font-mono text-xs text-zinc-200 transition-colors hover:border-[#3b8ef4] hover:text-[#3b8ef4] cursor-pointer"
                         >
                           <span>←</span>
                           <span>{id}</span>
@@ -504,7 +504,7 @@ export function Topology() {
                           key={id}
                           type="button"
                           onClick={() => setSelectedId(id)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-1 font-mono text-xs text-zinc-200 transition-colors hover:border-[#FEF62A] hover:text-[#FEF62A] cursor-pointer"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900 px-2.5 py-1 font-mono text-xs text-zinc-200 transition-colors hover:border-[#3b8ef4] hover:text-[#3b8ef4] cursor-pointer"
                         >
                           <span>→</span>
                           <span>{id}</span>
@@ -519,7 +519,7 @@ export function Topology() {
               <div className="mt-6 border-t border-[#222] pt-4 flex items-center justify-between gap-2">
                 <Link
                   href="/status/arch"
-                  className="font-mono text-xs text-zinc-300 hover:text-[#FEF62A] transition-colors"
+                  className="font-mono text-xs text-zinc-300 hover:text-[#3b8ef4] transition-colors"
                 >
                   Open public status ledger →
                 </Link>
@@ -557,7 +557,7 @@ export function Topology() {
                       className={cn(
                         'cursor-pointer transition-colors',
                         isSel
-                          ? 'bg-[#FEF62A]/[0.07]'
+                          ? 'bg-[#3b8ef4]/[0.07]'
                           : inBlast
                           ? 'bg-white/[0.02] hover:bg-white/[0.04]'
                           : 'opacity-60 hover:opacity-100 hover:bg-white/[0.03]'
@@ -566,11 +566,11 @@ export function Topology() {
                       <td className="py-2.5 px-5 font-mono font-medium text-white flex items-center gap-2">
                         <span
                           className="size-2 rounded-full"
-                          style={{ backgroundColor: isSel ? '#FEF62A' : s.color }}
+                          style={{ backgroundColor: isSel ? '#3b8ef4' : s.color }}
                         />
                         <span>{s.name}</span>
                         {isSel && (
-                          <span className="rounded bg-[#FEF62A] px-1.5 py-0.2 font-mono text-[9px] font-bold text-black">
+                          <span className="rounded bg-[#3b8ef4] px-1.5 py-0.2 font-mono text-[9px] font-bold text-black">
                             ACTIVE
                           </span>
                         )}
