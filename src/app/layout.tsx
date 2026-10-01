@@ -53,11 +53,11 @@ const jetbrainsMono = localFont({
 
 export const metadata: Metadata = {
   title: {
-    default: 'ARCH — Next-Gen Incident Response & On-Call Intelligence',
+    default: 'ARCH — Clarity when things break',
     template: '%s | ARCH',
   },
   description:
-    'Self-hosted incident management, native incident assistance, service dependencies, and public status pages for engineering teams.',
+    'A focused response workspace for engineering teams. Alerts, context, and human-reviewed assistance on your own infrastructure.',
   applicationName: 'ARCH',
   keywords: [
     'incident response',
@@ -71,16 +71,16 @@ export const metadata: Metadata = {
     'native AI',
   ],
   openGraph: {
-    title: 'ARCH — Next-Gen Incident Response & On-Call Intelligence',
+    title: 'ARCH — Clarity when things break',
     description:
-      'Alert intake, on-call coordination, status updates and audit history in one self-hosted workspace.',
+      'Bring alerts, context, and your team together in one focused, self-hosted workspace.',
     type: 'website',
     siteName: 'ARCH',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ARCH — Next-Gen Incident Response & On-Call Intelligence',
-    description: 'A single workspace for alert intake, on-call coordination, status updates and audit history.',
+    title: 'ARCH — Clarity when things break',
+    description: 'Bring alerts, context, and your team together in one focused, self-hosted workspace.',
   },
 };
 

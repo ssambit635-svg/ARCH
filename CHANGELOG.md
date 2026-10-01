@@ -15,6 +15,14 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Changed — a quieter product surface
+
+- Replaced the disappearing, pill-heavy marketing navbar with persistent navigation, a single theme control, and an accessible mobile menu.
+- Removed blue glows, decorative grid borders, nested feature-card effects, hero incident/status badges, and hard-coded demo status links. The original mountain reveal and robot mascot remain.
+- Added a focused, interactive incident preview and simplified the workflow to the four states the application actually supports. Marketing themes stay isolated from the authenticated console.
+- Corrected setup and terminal examples to match the real development command and Python CLI. Videos retain poster fallbacks and do not autoplay for reduced-motion or save-data users.
+- Rebuilt the README around product capabilities, a labeled preview, accurate setup, architecture, verification, and the proprietary license. Detailed local setup and legacy secret rotation now live in `docs/DEVELOPMENT.md`.
+
 ### Changed — the landing hero film
 
 - **The hero background was re-encoded from the newer source clip.** Same night-mountain

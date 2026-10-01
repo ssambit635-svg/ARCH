@@ -87,10 +87,7 @@ export function RobotScene() {
     floor.position.y = -1.54;
     floor.receiveShadow = true;
     scene.add(floor);
-    const ring = new THREE.Mesh(new THREE.RingGeometry(1.1, 1.115, 80), new THREE.MeshBasicMaterial({ color: 0x456a9e, transparent: true, opacity: 0.3, side: THREE.DoubleSide }));
-    ring.rotation.x = -Math.PI / 2;
-    ring.position.y = -1.53;
-    scene.add(ring);
+
 
     const textures = new Set<THREE.Texture>();
     const disposeObject = (object: THREE.Object3D) => {
@@ -285,18 +282,18 @@ export function RobotScene() {
       <div className="robot-stage relative" role="img" aria-label="The original textured robot mascot. Its head follows your pointer across the page when motion is enabled.">
         <div ref={hostRef} className={`absolute inset-0 transition-opacity duration-500 ${status === 'ready' ? 'opacity-100' : 'opacity-0'}`} />
         {status === 'loading' && <div className="absolute inset-0 flex flex-col items-center justify-center gap-4" role="status">
-          <span className="size-8 rounded-full border border-blue-300/20 border-t-blue-300 motion-safe:animate-spin" aria-hidden />
-          <span className="font-mono text-xs text-zinc-400">{progress === 100 ? 'Preparing textures…' : `Loading the original robot${progress ? ` · ${progress}%` : '…'}`}</span>
+          <span className="mk-robot-loader" aria-hidden />
+          <span className="mk-robot-status">{progress === 100 ? 'Preparing textures…' : `Loading the original robot${progress ? ` · ${progress}%` : '…'}`}</span>
         </div>}
         {status === 'error' && <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 px-8 text-center">
-          <p className="text-sm text-zinc-300" role="status">The 3D robot couldn’t load.</p>
-          <p className="max-w-xs text-xs leading-6 text-zinc-500">Check your connection and WebGL support. The model information is still available beside this view.</p>
-          <button type="button" onClick={() => setAttempt((n) => n + 1)} className="rounded-lg border border-zinc-700 px-4 py-2 text-xs text-zinc-300 hover:border-blue-300 focus-visible:outline-2 focus-visible:outline-blue-300">Try again</button>
+          <p className="mk-robot-status" role="status">The 3D robot couldn’t load.</p>
+          <p className="mk-footnote max-w-xs">Check your connection and WebGL support. The model information is still available beside this view.</p>
+          <button type="button" onClick={() => setAttempt((n) => n + 1)} className="mk-robot-retry">Try again</button>
         </div>}
       </div>
-      <div className="relative flex min-h-16 flex-wrap items-center justify-center gap-3 px-4 pb-5 font-mono text-[10px] text-zinc-400">
+      <div className="mk-robot-controls">
         <span aria-live="polite">{reduced ? 'Reduced motion · a still hello' : paused ? 'Taking a little break' : 'Move your cursor anywhere · tap on touch'}</span>
-        <button type="button" disabled={reduced || status !== 'ready'} aria-pressed={paused || reduced} onClick={() => setPaused((p) => !p)} className="rounded-full border border-zinc-700 px-3 py-1.5 transition-colors hover:border-zinc-400 hover:text-white focus-visible:outline-2 focus-visible:outline-blue-300 disabled:opacity-40">
+        <button type="button" disabled={reduced || status !== 'ready'} aria-pressed={paused || reduced} onClick={() => setPaused((p) => !p)} className="mk-robot-pause">
           {paused ? 'Resume tracking' : 'Pause tracking'}
         </button>
       </div>

@@ -1,191 +1,80 @@
 'use client';
 
-import { useState } from 'react';
-import { Container, cn } from './vui-primitives';
-import { GsapTextReveal } from './gsap-reveal';
+import { LinkArrow } from './link-arrow';
+import { useEffect, useRef, useState } from 'react';
+import { GITHUB_REPO_URL } from '@/lib/brand';
 import { TechStackTiles } from './tech-stack';
 
 const COMMANDS = [
-  'git clone https://github.com/ssambit635-svg/ARCH.git && cd ARCH',
-  'cp .env.example .env && docker compose up -d',
-  'npm ci && npm run db:migrate && npm run db:seed',
-  'npm run dev   # → http://localhost:3000',
+  'git clone https://github.com/ssambit635-svg/ARCH.git',
+  'cd ARCH && npm ci',
+  'cp .env.example .env && chmod 600 .env',
+  '# Set distinct AUTH_SECRET and AUTH_SECRET_WEBHOOK in .env',
+  'npm run dev',
 ];
 
-const PYTHON_SNIPPET = `from arch_client import ArchClient
-
-client = ArchClient(
-    base_url="https://arch.internal",
-    webhook_secret="whsec_9f2c...8a10",  # HMAC-SHA256 signed
-)
-
-# Emit a fingerprinted alert from any Python worker or healthcheck
-receipt = client.alerts.send(
-    source="prometheus",
-    service="checkout-api",
-    severity="critical",
-    title="Checkout p99 > 4.2s in eu-central-1",
-    fingerprint="checkout-api:p99-latency:eu-central-1",
-    labels={"region": "eu-central-1", "deploy": "v2.18.4"},
-)
-print(receipt.incident_id, receipt.deduplicated)`;
-
-const CURL_SNIPPET = `BODY='{"source":"prometheus","service":"checkout-api","severity":"critical","title":"Checkout p99 > 4.2s"}'
-SIG=$(printf "%s" "$BODY" | openssl dgst -sha256 -hmac "$AUTH_SECRET_WEBHOOK" -hex | awk '{print $2}')
-
-curl -X POST https://arch.internal/api/webhooks/alerts \\
-  -H "Content-Type: application/json" \\
-  -H "X-Arch-Signature: sha256=$SIG" \\
-  -d "$BODY"`;
-
 export function Deploy() {
-  const [copied, setCopied] = useState(false);
-  const [sdkTab, setSdkTab] = useState<'python' | 'curl'>('python');
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
+  const resetRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const copyAll = async () => {
+  useEffect(() => () => {
+    if (resetRef.current) clearTimeout(resetRef.current);
+  }, []);
+
+  const copyCommands = async () => {
+    if (resetRef.current) clearTimeout(resetRef.current);
     try {
       await navigator.clipboard.writeText(COMMANDS.join('\n'));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
+      setCopyState('copied');
     } catch {
-      /* ignore */
+      setCopyState('error');
     }
+    resetRef.current = setTimeout(() => setCopyState('idle'), 3000);
   };
 
   return (
-    <section
-      id="deploy"
-      className="relative border-b border-[#182438] bg-[#04070e] overflow-hidden"
-    >
-      <Container>
-        <div className="md:border-x border-[#182438]">
-          <div className="flex flex-col gap-4 border-b border-[#182438] px-5 py-10 md:px-8 lg:px-10">
-            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#182438] bg-[#070d19] px-3 py-1 font-mono text-[11px] font-medium text-[#3b8ef4]">
-              <span>SELF-HOSTED · DOCKER + POSTGRES</span>
+    <section id="deploy" className="mk-section" aria-labelledby="deploy-title">
+      <div className="mk-container">
+        <div className="mk-section-heading">
+          <div>
+            <p className="mk-eyebrow">Run it your way</p>
+            <h2 id="deploy-title" className="mk-title">Your infrastructure. Your pace.</h2>
+            <p className="mk-description">Start locally, then deploy with your own PostgreSQL database.</p>
+          </div>
+          <a href={`${GITHUB_REPO_URL}#quick-start`} className="mk-text-link">Read the setup guide <LinkArrow /></a>
+        </div>
+
+        <div className="mk-deploy-grid">
+          <div className="mk-terminal">
+            <div className="mk-terminal-header">
+              <span>Local development</span>
+              <button type="button" onClick={copyCommands} className="mk-copy-button">{copyState === 'copied' ? 'Copied' : 'Copy commands'}</button>
             </div>
-            <GsapTextReveal
-              as="h2"
-              className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight text-left"
-            >
-              Deploy in Four Commands
-            </GsapTextReveal>
-            <p className="max-w-2xl font-mono text-xs sm:text-sm text-zinc-400 text-left leading-relaxed">
-              Run on your VM or Kubernetes. Send alerts with the Python SDK or signed webhooks.
-            </p>
+            <pre><code>{COMMANDS.join('\n')}</code></pre>
+            <p className="mk-terminal-note">Node.js 20.19+ · PostgreSQL via Docker or the local embedded fallback</p>
+            <span className="mk-sr-only" role="status">{copyState === 'copied' ? 'Commands copied to clipboard.' : copyState === 'error' ? 'Copy failed. Select and copy the commands manually.' : ''}</span>
+            {copyState === 'error' && <p className="mk-copy-error">Couldn’t access your clipboard. You can select and copy the commands above.</p>}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 divide-y lg:divide-y-0 lg:divide-x divide-[#182438]">
-            {/* Left 6 Columns: 4-Command Bootstrap + Runtime Specs */}
-            <div className="lg:col-span-6 p-5 md:p-8 flex flex-col justify-between bg-[#060a14]">
-              <div>
-                <div className="flex items-center justify-between border-b border-[#182438] pb-3 font-mono text-xs">
-                  <span className="text-zinc-300">shell · quickstart</span>
-                  <button
-                    type="button"
-                    onClick={copyAll}
-                    className="rounded-md border border-[#182438] bg-[#070d19] px-2.5 py-1 font-mono text-[11px] text-zinc-200 transition-colors hover:border-[#3b8ef4] hover:text-[#3b8ef4] cursor-pointer"
-                  >
-                    {copied ? '✓ Copied' : 'Copy commands'}
-                  </button>
-                </div>
-
-                <pre className="mt-4 space-y-2.5 overflow-x-auto rounded-xl border border-[#182438] bg-[#04070e] p-4 font-mono text-xs text-zinc-200">
-                  {COMMANDS.map((line, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <span className="select-none text-[#3b8ef4] tnum">$</span>
-                      <code>{line}</code>
-                    </div>
-                  ))}
-                </pre>
-              </div>
-
-              <div className="mt-6 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-                <div className="rounded-xl border border-[#182438] bg-[#070d19] p-3">
-                  <div className="font-mono text-[10px] uppercase text-zinc-500">Runtime</div>
-                  <div className="mt-1 font-mono text-xs font-semibold text-white">Node 22 LTS</div>
-                </div>
-                <div className="rounded-xl border border-[#182438] bg-[#070d19] p-3">
-                  <div className="font-mono text-[10px] uppercase text-zinc-500">Database</div>
-                  <div className="mt-1 font-mono text-xs font-semibold text-white">Postgres 16</div>
-                </div>
-                <div className="rounded-xl border border-[#182438] bg-[#070d19] p-3">
-                  <div className="font-mono text-[10px] uppercase text-zinc-500">Auth</div>
-                  <div className="mt-1 font-mono text-xs font-semibold text-white">PBKDF2 + JWT</div>
-                </div>
-                <div className="rounded-xl border border-[#182438] bg-[#070d19] p-3">
-                  <div className="font-mono text-[10px] uppercase text-zinc-500">License</div>
-                  <div className="mt-1 font-mono text-xs font-semibold text-[#3b8ef4]">Self-Hosted</div>
-                </div>
-              </div>
-            </div>
-
-            {/* Right 6 Columns: Python SDK / HMAC Webhook Code Preview */}
-            <div className="lg:col-span-6 p-5 md:p-8 flex flex-col justify-between bg-[#050811]">
-              <div>
-                <div className="flex items-center justify-between border-b border-[#182438] pb-3 font-mono text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setSdkTab('python')}
-                      className={cn(
-                        'rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer',
-                        sdkTab === 'python'
-                          ? 'bg-[#3b8ef4] text-[#04070e] font-semibold'
-                          : 'text-zinc-400 hover:text-white'
-                      )}
-                    >
-                      clients/python · arch_client
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSdkTab('curl')}
-                      className={cn(
-                        'rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors cursor-pointer',
-                        sdkTab === 'curl'
-                          ? 'bg-[#3b8ef4] text-[#04070e] font-semibold'
-                          : 'text-zinc-400 hover:text-white'
-                      )}
-                    >
-                      curl · HMAC-SHA256
-                    </button>
-                  </div>
-                  <span className="text-[11px] text-zinc-500">pip install -e clients/python</span>
-                </div>
-
-                <pre className="mt-4 overflow-x-auto rounded-xl border border-[#182438] bg-[#04070e] p-4 font-mono text-[11.5px] leading-relaxed text-zinc-300">
-                  <code>{sdkTab === 'python' ? PYTHON_SNIPPET : CURL_SNIPPET}</code>
-                </pre>
-              </div>
-
-              <div className="mt-4 font-mono text-[11px] text-zinc-500 flex items-center justify-between">
-                <span>Zero third-party agents required</span>
-                <span className="text-zinc-300">100% tested in CI</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Production stack — 15 verified technologies */}
-          <div className="border-t border-[#182438] px-5 py-8 md:px-8 lg:px-10">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <div className="inline-flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.18em] text-[#3b8ef4]">
-                  <span>Production stack · 15 verified tiles</span>
-                </div>
-                <p className="mt-1.5 max-w-2xl font-mono text-xs leading-relaxed text-zinc-400">
-                  Everything ARCH runs on — Next.js 16 to Python — proven in CI against
-                  <span className="text-zinc-200"> package.json &amp; docker-compose.yml</span>. No external SaaS.
-                </p>
-              </div>
-              <span className="hidden shrink-0 font-mono text-[11px] text-zinc-500 sm:inline">
-                Hover a tile for proof
-              </span>
-            </div>
-            <div className="mt-5">
-              <TechStackTiles />
+          <div className="mk-deploy-copy">
+            <h3>A straightforward starting point.</h3>
+            <p>Generate two unique secrets with <code>openssl rand -base64 32</code> and update your local <code>.env</code>. The dev command prepares the database, applies migrations, and starts ARCH.</p>
+            <p>No demo account is created automatically. Register your own workspace at <code>/register</code>.</p>
+            <a href={`${GITHUB_REPO_URL}/blob/main/docs/engineering/OPERATIONS-RUNBOOK.md`} className="mk-muted-link">Production deployment notes <LinkArrow /></a>
+            <div className="mk-cli-note">
+              <h4>Prefer the terminal?</h4>
+              <p>The Python CLI connects to your ARCH instance.</p>
+              <pre><code>{'pip install ./clients/python\narch login --url https://your-arch-host\narch incidents list'}</code></pre>
+              <a href={`${GITHUB_REPO_URL}/tree/main/clients/python`} className="mk-muted-link">CLI documentation <LinkArrow /></a>
             </div>
           </div>
         </div>
-      </Container>
+
+        <div className="mk-stack">
+          <p className="mk-eyebrow">Built with tools you already know</p>
+          <TechStackTiles />
+        </div>
+      </div>
     </section>
   );
 }
