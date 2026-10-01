@@ -31,16 +31,20 @@ describe('minimal marketing surface', () => {
     expect(nav).toContain('aria-controls="marketing-mobile-nav"');
   });
 
-  it('removes redundant hero labels without removing the supplied alpine film or primary actions', () => {
+  it('lets the supplied alpine film own a clean, accessible hero without copy or shade overlays', () => {
     const hero = render(Hero);
+    const heroSource = source('src/components/marketing/hero.tsx');
     expect(hero).toContain('id="hero-title"');
+    expect(hero).toContain('ARCH incident operations');
     expect(hero).toContain('/arch-alpine-poster.jpg');
-    expect(hero).toContain('href="/register"');
-    expect(hero).toContain('href="#workspace"');
-    expect(hero).not.toContain('Incident operations');
+    expect(hero).not.toContain('href="/register"');
+    expect(hero).not.toContain('href="#workspace"');
+    expect(hero).not.toContain('When things break');
     expect(hero).not.toContain('StatusChip');
     expect(hero).not.toContain('status/arch');
-    expect(source('src/components/marketing/hero.tsx')).not.toContain('ScrollTrigger');
+    expect(heroSource).not.toContain('mk-hero-shade');
+    expect(heroSource).not.toContain('mk-hero-copy');
+    expect(heroSource).not.toContain('ScrollTrigger');
   });
 
   it('labels the preview honestly and gives its selections an accessible state', () => {

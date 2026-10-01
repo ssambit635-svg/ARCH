@@ -121,28 +121,16 @@
 .mk-menu-button, .mk-nav-mobile { display: none; }
 .mk-nav-mobile[hidden] { display: none; }
 
-/* Original film, with only a neutral shade for copy legibility. */
+/* The film is the hero: no copy, gradient, or control overlays obscure the reveal. */
 .mk-hero {
-  --mk-primary: #f0f0ed;
-  --mk-on-primary: #191a1c;
-  --mk-fg: #f2f2f0;
-  --mk-focus: #bcc5d1;
   position: relative;
   min-height: 650px;
   height: 100svh;
   overflow: hidden;
   background: #05070d;
-  color: #f2f2f0;
 }
 .mk-hero-media { position: absolute; inset: 0; }
-.mk-hero-video { object-position: center 38%; }
-.mk-hero-shade { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgb(5 7 13 / 12%) 0%, rgb(5 7 13 / 5%) 35%, rgb(5 7 13 / 45%) 65%, #05070d 100%); }
-.mk-hero-copy { position: absolute; inset: auto 0 78px; animation: mk-copy-in 700ms ease both; }
-.mk-hero-copy h1 { max-width: 860px; margin: 0; font-family: var(--mk-display); font-size: clamp(29px, 3.5vw, 46px); font-weight: 600; letter-spacing: 0.005em; line-height: 1.2; text-wrap: balance; }
-.mk-hero-copy p { max-width: 550px; margin-top: 24px; color: #c0c2c6; font-size: 15px; line-height: 1.75; }
-.mk-scroll-cue { position: absolute; right: max(40px, calc((100vw - 1200px) / 2)); bottom: 30px; display: inline-flex; align-items: center; gap: 18px; color: #c0c2c6; font-size: 11px; transition: color 160ms ease; }
-.mk-scroll-cue:hover { color: var(--mk-accent); }
-@keyframes mk-copy-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.mk-hero-video { object-position: center; }
 
 /* Feature columns breathe without being boxed into ruled cells. */
 .mk-intro { padding-block: 76px; }
@@ -367,14 +355,9 @@
   .mk-brand { gap: 8px; font-size: 17px; }
   .mk-brand-mark { width: 23px; height: 23px; }
   .mk-nav .mk-button { padding-inline: 11px; font-size: 11px; }
-  .mk-hero { min-height: 670px; }
-  .mk-hero-copy { bottom: 78px; }
-  .mk-hero-copy h1 { font-size: clamp(26px, 7vw, 34px); }
-  .mk-hero-copy p { font-size: 13px; }
-  .mk-hero-copy .mk-actions { gap: 20px; }
-  .mk-scroll-cue { right: 22px; }
-  .mk-hero-media { top: 64px; bottom: auto; height: 54%; }
-  .mk-hero-video { object-fit: contain; object-position: center; }
+  .mk-hero { min-height: 100svh; }
+  .mk-hero-media { inset: 0; }
+  .mk-hero-video { object-fit: cover; object-position: center; }
   .mk-section { padding-block: 60px; }
   .mk-title { font-size: 23px; }
   .mk-description { font-size: 13px; }
