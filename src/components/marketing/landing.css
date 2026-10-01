@@ -2,6 +2,7 @@
    Keep all tokens and selectors scoped to this surface, not the app console. */
 
 .mk {
+  --mk-nav-height: 72px;
   --mk-bg: #05070d;
   --mk-bg-soft: #080b13;
   --mk-surface: #0b0f18;
@@ -59,17 +60,19 @@
 
 .mk ::selection { background: var(--mk-accent); color: var(--mk-bg); }
 .mk a { text-decoration: none; }
+.mk-main { padding-top: var(--mk-nav-height); }
 .mk button { cursor: pointer; }
 .mk a:focus-visible,
 .mk button:focus-visible,
-.mk summary:focus-visible {
+.mk summary:focus-visible,
+.mk [tabindex="0"]:focus-visible {
   outline: 2px solid var(--mk-focus);
   outline-offset: 5px;
 }
 .mk-container { width: 100%; max-width: 1280px; margin-inline: auto; padding-inline: 40px; }
 .mk-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
-.mk-skip { position: fixed; top: 12px; left: 12px; z-index: 300; padding: 10px 16px; background: var(--mk-primary); color: var(--mk-on-primary); border-radius: 5px; font-size: 13px; transform: translateY(-180%); }
-.mk-skip:focus { transform: translateY(0); }
+.mk-skip { position: fixed; top: 12px; left: 12px; z-index: 300; padding: 10px 16px; background: var(--mk-primary); color: var(--mk-on-primary); border-radius: 5px; font-size: 13px; opacity: 0; transform: translateY(-180%); }
+.mk-skip:focus { opacity: 1; transform: translateY(0); }
 .mk-anchor, .mk-section { scroll-margin-top: 100px; }
 
 /* Keep the landing page open and spacious—sections are separated by rhythm, not rigid rulers. */
@@ -81,8 +84,8 @@
 .mk-section-heading > a { flex-shrink: 0; margin-bottom: 5px; }
 .mk-eyebrow { display: flex; align-items: center; gap: 12px; margin: 0 0 20px; color: var(--mk-subtle); font-family: var(--font-mono); font-size: 10px; font-weight: 500; line-height: 1.6; letter-spacing: 0.15em; text-transform: uppercase; }
 .mk-eyebrow::before { content: ''; width: 20px; height: 1px; flex-shrink: 0; background: var(--mk-accent); }
-.mk-title { margin: 0; font-family: var(--mk-display); font-size: clamp(25px, 2.9vw, 38px); font-weight: 600; letter-spacing: 0.005em; line-height: 1.22; text-wrap: balance; }
-.mk-description { max-width: 650px; margin-top: 20px; font-size: 15px; line-height: 1.75; color: var(--mk-muted); text-wrap: pretty; }
+.mk-title { margin: 0; font-family: var(--mk-display); font-size: clamp(28px, 3.55vw, 48px); font-weight: 500; letter-spacing: -0.025em; line-height: 1.2; text-wrap: balance; }
+.mk-description { max-width: 570px; margin-top: 24px; font-size: 16px; line-height: 1.75; color: var(--mk-muted); text-wrap: pretty; }
 .mk-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 26px; margin-top: 30px; }
 .mk-button { display: inline-flex; align-items: center; justify-content: center; gap: 14px; min-height: 44px; padding: 12px 20px; border: 0; border-radius: 5px; background: var(--mk-primary); color: var(--mk-on-primary); font-size: 13px; font-weight: 600; line-height: 1.2; transition: background-color 180ms ease, color 180ms ease, transform 120ms ease; }
 .mk-button:hover { background: var(--mk-accent); color: var(--mk-on-primary); }
@@ -124,13 +127,21 @@
 /* The film is the hero: no copy, gradient, or control overlays obscure the reveal. */
 .mk-hero {
   position: relative;
-  min-height: 650px;
-  height: 100svh;
+  width: 100%;
+  aspect-ratio: 848 / 478;
+  max-height: calc(100svh - var(--mk-nav-height));
   overflow: hidden;
   background: #05070d;
 }
 .mk-hero-media { position: absolute; inset: 0; }
-.mk-hero-video { object-position: center; }
+.mk-hero-video { object-fit: contain; object-position: center; }
+
+/* SplitText measures the real lines, including after fonts load or the screen rotates.
+   The mask padding protects descenders without changing the authored line spacing. */
+.mk-split-line-mask { padding-block: 0.12em 0.16em; margin-block: -0.12em -0.16em; }
+.mk-split-word { transform-origin: 50% 100%; }
+/* A keyboard user must never land on an invisible, waiting-to-reveal control. */
+.mk [data-mk-reveal]:focus-within { opacity: 1 !important; transform: none !important; }
 
 /* Feature columns breathe without being boxed into ruled cells. */
 .mk-intro { padding-block: 76px; }
@@ -138,8 +149,8 @@
 .mk-feature-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 48px; }
 .mk-feature-grid > article { padding: 0; }
 .mk-feature-number { color: var(--mk-subtle); font-family: var(--font-mono); font-size: 11px; }
-.mk-feature-grid h3 { margin: 16px 0 12px; font-family: var(--mk-display); font-size: 16px; font-weight: 600; letter-spacing: 0.01em; line-height: 1.4; }
-.mk-feature-grid p { max-width: 350px; color: var(--mk-muted); font-size: 13px; line-height: 1.85; }
+.mk-feature-grid h3 { margin: 18px 0 14px; font-family: var(--mk-display); font-size: 18px; font-weight: 500; letter-spacing: -0.015em; line-height: 1.45; }
+.mk-feature-grid p { max-width: 350px; color: var(--mk-muted); font-size: 14px; line-height: 1.85; }
 
 /* Interactive product preview, kept soft and open rather than framed in hard rules. */
 .mk-console { overflow: hidden; border: 0; border-radius: 16px; background: var(--mk-surface); }
@@ -163,7 +174,7 @@
 .mk-status-dot--investigating { background: var(--mk-negative); }
 .mk-status-dot--resolved { background: var(--mk-positive); }
 .mk-console-hint { margin: 24px 12px 0; color: var(--mk-subtle); font-size: 10px; line-height: 1.7; }
-.mk-console-detail { min-width: 0; padding: 30px 32px 36px; }
+.mk-console-detail { min-width: 0; min-height: 375px; padding: 30px 32px 36px; }
 .mk-incident-heading { display: flex; justify-content: space-between; align-items: center; gap: 20px; }
 .mk-console-id { color: var(--mk-muted); font-family: var(--font-mono); font-size: 10px; }
 .mk-state { padding: 5px 9px; border: 0; border-radius: 999px; background: var(--mk-surface-alt); color: var(--mk-muted); font-size: 10px; font-weight: 500; }
@@ -186,16 +197,18 @@
 
 /* Four real states, set out as soft, touch-friendly choices rather than outlined rows. */
 .mk-lifecycle-grid { display: grid; grid-template-columns: 0.85fr 1.3fr; gap: 80px; align-items: start; }
-.mk-stage-list { display: grid; gap: 8px; }
+.mk-stage-list { position: relative; display: grid; gap: 8px; align-self: start; padding-left: 18px; }
+.mk-stage-track { position: absolute; top: 24px; bottom: 24px; left: 0; width: 2px; overflow: hidden; background: var(--mk-line); pointer-events: none; }
+.mk-stage-track-fill { display: block; width: 100%; height: 100%; background: var(--mk-accent); transform-origin: center top; }
 .mk-stage-button { display: flex; align-items: center; gap: 22px; width: 100%; padding: 18px 20px; border: 0; border-radius: 9px; background: transparent; color: var(--mk-muted); text-align: left; font-size: 14px; transition: background-color 160ms ease, color 160ms ease; }
 .mk-stage-button:hover { background: var(--mk-surface); color: var(--mk-fg); }
 .mk-stage-button.is-active { background: var(--mk-surface-alt); color: var(--mk-fg); }
 .mk-stage-button:active { transform: translateY(1px); }
 .mk-stage-number { color: var(--mk-subtle); font-family: var(--font-mono); font-size: 10px; }
 .mk-stage-button > span:last-child { margin-left: auto; }
-.mk-stage-detail { padding-block: 18px; }
+.mk-stage-detail { min-height: 260px; padding-block: 18px; }
 .mk-stage-detail .mk-eyebrow { margin-bottom: 18px; }
-.mk-stage-detail h3 { font-family: var(--mk-display); font-size: 21px; font-weight: 600; letter-spacing: 0.01em; line-height: 1.4; }
+.mk-stage-detail h3 { font-family: var(--mk-display); font-size: 23px; font-weight: 500; letter-spacing: -0.02em; line-height: 1.4; }
 .mk-stage-detail > p:not(.mk-eyebrow) { max-width: 580px; margin-top: 20px; color: var(--mk-muted); font-size: 14px; line-height: 1.9; }
 .mk-stage-detail > p.mk-stage-trace { margin-top: 28px; color: var(--mk-subtle); font-family: var(--font-mono); font-size: 10px; line-height: 2; }
 
@@ -232,7 +245,7 @@
 .mk-terminal pre { overflow-x: auto; margin-top: 24px; padding-bottom: 8px; color: var(--mk-fg); font-family: var(--font-mono); font-size: 11px; line-height: 2.3; }
 .mk-terminal-note { margin-top: 24px; padding-top: 16px; color: var(--mk-subtle); font-size: 10px; line-height: 1.8; }
 .mk-copy-error { margin-top: 14px; color: var(--mk-negative); font-size: 11px; line-height: 1.8; }
-.mk-deploy-copy h3 { font-family: var(--mk-display); font-size: 18px; font-weight: 600; letter-spacing: 0.01em; line-height: 1.4; }
+.mk-deploy-copy h3 { font-family: var(--mk-display); font-size: 20px; font-weight: 500; letter-spacing: -0.015em; line-height: 1.4; }
 .mk-deploy-copy > p { margin-block: 16px; color: var(--mk-muted); font-size: 13px; line-height: 1.85; }
 .mk-deploy-copy code { font-size: 0.9em; }
 .mk-cli-note { margin-top: 30px; padding-top: 24px; }
@@ -250,11 +263,11 @@
   padding: 0;
   list-style: none;
 }
-.mk-tech-grid li { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; margin: 0; padding: 22px 8px; border: 0; border-radius: 9px; background: var(--mk-tile); color: var(--mk-muted); font-family: var(--font-mono); font-size: 11px; line-height: 1.5; text-align: center; transition: background-color 180ms ease, color 180ms ease; }
+.mk-tech-grid li { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; margin: 0; padding: 18px 8px; border: 0; border-radius: 9px; background: var(--mk-tile); color: var(--mk-muted); font-family: var(--font-mono); font-size: 11px; line-height: 1.5; text-align: center; transition: background-color 180ms ease, color 180ms ease; }
 .mk-tech-grid li:hover { background: var(--mk-surface); color: var(--mk-fg); }
 .mk-tech-grid li:active { background: var(--mk-surface-alt); }
 .mk-tech-icon { display: flex; align-items: center; justify-content: center; }
-.mk-iso { width: 72px; height: auto; cursor: pointer; }
+.mk-iso { width: 60px; height: auto; cursor: pointer; }
 .mk-iso-back { fill: var(--mk-surface-alt); stroke: var(--mk-line); }
 .mk-iso-front { fill: var(--mk-tile); stroke: var(--mk-line); }
 .mk-iso-line { stroke: var(--mk-line); }
@@ -306,7 +319,6 @@
   .mk-console-content { grid-template-columns: 1fr; gap: 26px; }
   .mk-model-grid, .mk-lifecycle-grid, .mk-closing-grid { gap: 48px; }
   .mk-deploy-grid { gap: 40px; }
-  .mk-feature-grid > article { padding-inline: 24px; }
   .mk-tech-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
@@ -323,7 +335,6 @@
   .mk-section-heading { flex-direction: column; align-items: flex-start; gap: 24px; }
   .mk-model-grid { grid-template-columns: 0.9fr 1.1fr; gap: 32px; }
   .mk-lifecycle-grid { gap: 40px; }
-  .mk-feature-grid > article { padding-inline: 20px; }
   .mk-tech-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .mk-deploy-grid { grid-template-columns: 1fr; }
   .mk-deploy-copy { max-width: 660px; }
@@ -338,7 +349,8 @@
   .mk-console-detail { padding: 26px 24px; }
   .mk-console-content { grid-template-columns: 1fr 1fr; gap: 24px; }
   .mk-lifecycle-grid { grid-template-columns: 1fr; gap: 28px; }
-  .mk-stage-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mk-stage-list { grid-template-columns: repeat(2, minmax(0, 1fr)); padding-left: 0; }
+  .mk-stage-track { display: none; }
   .mk-stage-button { gap: 14px; padding: 16px; font-size: 12px; }
   .mk-model-grid { grid-template-columns: 1fr; gap: 44px; }
   .mk-model-visual { order: 2; }
@@ -346,46 +358,47 @@
   .mk-model-copy { max-width: 620px; }
   .mk-closing-grid { grid-template-columns: 1fr; gap: 48px; }
   .mk-dragon-stage { max-width: 450px; }
+  /* Fifteen technologies should not become eight rows of decoration on a phone. */
+  .mk-tech-grid { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 120px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; padding-block: 8px 14px; }
+  .mk-tech-grid li { scroll-snap-align: start; }
 }
 
 @media (max-width: 579px) {
+  .mk { --mk-nav-height: 64px; }
   .mk-container { padding-inline: 22px; }
   .mk-nav-row { min-height: 64px; gap: 12px; }
   .mk-nav-actions { gap: 6px; }
   .mk-brand { gap: 8px; font-size: 17px; }
   .mk-brand-mark { width: 23px; height: 23px; }
   .mk-nav .mk-button { padding-inline: 11px; font-size: 11px; }
-  .mk-hero { min-height: 100svh; }
-  .mk-hero-media { inset: 0; }
-  .mk-hero-video { object-fit: cover; object-position: center; }
   .mk-section { padding-block: 60px; }
-  .mk-title { font-size: 23px; }
-  .mk-description { font-size: 13px; }
+  .mk-title { font-size: clamp(23px, 6.6vw, 30px); }
+  .mk-description { font-size: 14px; }
   .mk-section-heading { margin-bottom: 32px; }
-  .mk-feature-grid { grid-template-columns: 1fr; }
+  .mk-feature-grid { grid-template-columns: 1fr; gap: 32px; }
   .mk-feature-grid > article { padding: 0; }
-  .mk-feature-grid h3 { margin-top: 12px; font-size: 15px; }
+  .mk-feature-grid h3 { margin-top: 12px; font-size: 17px; }
   .mk-feature-grid p { max-width: 100%; }
   .mk-feature-number { display: none; }
   .mk-feature-grid h3 { margin-top: 0; }
   .mk-console-bar { gap: 12px; padding-inline: 18px; font-size: 10px; }
   .mk-console-path { padding-left: 6px; }
   .mk-console-demo { display: none; }
-  .mk-console-detail { padding-inline: 20px; }
+  .mk-console-detail { min-height: 590px; padding-inline: 20px; }
   .mk-console-detail h3 { font-size: 16px; }
   .mk-incident-metadata { gap: 20px 24px; }
   .mk-console-content { grid-template-columns: 1fr; }
   .mk-stage-list { grid-template-columns: 1fr; }
   .mk-stage-button { gap: 10px; padding: 14px 10px; font-size: 12px; }
   .mk-stage-button > span:last-child { display: none; }
-  .mk-stage-detail h3 { font-size: 18px; }
+  .mk-stage-detail h3 { font-size: 20px; }
   .mk-stage-detail > p:not(.mk-eyebrow) { font-size: 13px; }
   .mk-model-facts { gap: 14px; font-size: 9px; }
   .mk-terminal { padding-inline: 18px; }
   .mk-terminal pre { font-size: 10px; }
-  .mk-tech-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .mk-tech-grid { grid-auto-columns: 108px; }
   .mk-tech-grid li { gap: 10px; padding: 18px 6px; font-size: 10px; }
-  .mk-iso { width: 60px; }
+  .mk-iso { width: 52px; }
   .mk-footer-row { gap: 20px; }
   .mk-footer nav { width: 100%; gap: 22px; margin-left: 0; }
   .mk-watermark { padding-inline: 0; letter-spacing: 0.01em; }

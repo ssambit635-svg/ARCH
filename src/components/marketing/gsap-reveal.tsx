@@ -1,149 +1,175 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
-import gsap from 'gsap';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
+import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-interface GsapTextRevealProps {
-  children: string;
-  as?: 'h1' | 'h2' | 'h3' | 'h4' | 'p' | 'span' | 'div';
-  className?: string;
-  delay?: number;
-  stagger?: number;
-  duration?: number;
-  threshold?: string;
-}
+import { SplitText } from 'gsap/SplitText';
 
 /**
- * High-end cinematic GSAP text reveal.
- * Splits text into words wrapped in padded overflow-hidden containers so descenders
- * (g, y, p, q) and geometric display serifs are never clipped.
+ * One motion owner for the landing page, not one scroll listener per component.
+ * The film is deliberately excluded. All content is readable in SSR/no-JS mode;
+ * GSAP only enhances it after mount. matchMedia reverts every tween, split and
+ * trigger on preference/breakpoint changes, and the context cleans up on navigation.
  */
-export function GsapTextReveal({
-  children,
-  as: Component = 'div',
-  className = '',
-  delay = 0,
-  stagger = 0.04,
-  duration = 0.8,
-  threshold = 'top 88%',
-}: GsapTextRevealProps) {
-  const containerRef = useRef<HTMLElement>(null);
+export function MarketingMotion({ children }: { children: ReactNode }) {
+  const rootRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced || !containerRef.current) return;
+  useLayoutEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    gsap.registerPlugin(ScrollTrigger, SplitText);
 
-    gsap.registerPlugin(ScrollTrigger);
+    let disposed = false;
+    let refreshFrame = 0;
+    const revealedElements = new WeakSet<HTMLElement>();
+    const refreshLayout = () => {
+      cancelAnimationFrame(refreshFrame);
+      refreshFrame = requestAnimationFrame(() => {
+        if (!disposed) ScrollTrigger.refresh();
+      });
+    };
 
-    const words = containerRef.current.querySelectorAll('.gsap-reveal-word');
-    if (!words.length) return;
-
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        words,
-        {
-          yPercent: 110,
-          opacity: 0,
-          rotateX: -20,
-          skewY: 3,
-        },
-        {
-          yPercent: 0,
-          opacity: 1,
-          rotateX: 0,
-          skewY: 0,
-          duration,
-          stagger,
-          delay,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: containerRef.current,
-            start: threshold,
-            once: true,
-          },
+    const context = gsap.context(() => {
+      const media = gsap.matchMedia();
+      media.add({
+        animate: '(prefers-reduced-motion: no-preference)',
+        reduced: '(prefers-reduced-motion: reduce)',
+        compact: '(max-width: 759px)',
+      }, (match) => {
+        if (!match.conditions?.animate) {
+          root.dataset.mkMotion = 'reduced';
+          return;
         }
-      );
-    }, containerRef);
 
-    return () => ctx.revert();
-  }, [delay, duration, stagger, threshold]);
+        const compact = Boolean(match.conditions.compact);
+        const select = <T extends HTMLElement>(selector: string) => Array.from(root.querySelectorAll<T>(selector));
+        const upcoming = (element: HTMLElement) => element.getBoundingClientRect().bottom > 0;
 
-  const words = children.split(' ');
-
-  return (
-    <Component ref={containerRef as any} className={`gsap-text-reveal-container leading-[1.18] ${className}`}>
-      {words.map((word, i) => (
-        <span
-          key={`${word}-${i}`}
-          className="inline-block overflow-hidden align-top py-[0.14em] -my-[0.14em] px-[0.03em] -mx-[0.03em] mr-[0.26em] last:mr-0"
-        >
-          <span className="gsap-reveal-word inline-block will-change-transform">
-            {word}
-          </span>
-        </span>
-      ))}
-    </Component>
-  );
-}
-
-interface GsapFadeUpProps {
-  children: React.ReactNode;
-  as?: 'div' | 'section' | 'article' | 'p' | 'span';
-  className?: string;
-  delay?: number;
-  duration?: number;
-  y?: number;
-  threshold?: string;
-}
-
-export function GsapFadeUp({
-  children,
-  as: Component = 'div',
-  className = '',
-  delay = 0,
-  duration = 0.7,
-  y = 30,
-  threshold = 'top 88%',
-}: GsapFadeUpProps) {
-  const ref = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReduced || !ref.current) return;
-
-    gsap.registerPlugin(ScrollTrigger);
-
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        ref.current,
-        {
-          y,
-          opacity: 0,
-        },
-        {
-          y: 0,
-          opacity: 1,
-          duration,
-          delay,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: ref.current,
-            start: threshold,
-            once: true,
-          },
+        for (const heading of select('[data-mk-heading]').filter(upcoming)) {
+          if (revealedElements.has(heading)) continue;
+          let revealed = false;
+          SplitText.create(heading, {
+            type: 'lines,words',
+            mask: 'lines',
+            linesClass: 'mk-split-line',
+            wordsClass: 'mk-split-word',
+            autoSplit: true,
+            aria: 'auto',
+            onSplit: (split) => {
+              // Font loading/resizing must never replay a heading the visitor has read.
+              if (revealed) return gsap.set(split.words, { clearProps: 'transform,opacity' });
+              return gsap.fromTo(split.words, {
+                yPercent: 115,
+                rotation: compact ? 0 : 1.5,
+                opacity: 0,
+              }, {
+                yPercent: 0,
+                rotation: 0,
+                opacity: 1,
+                duration: 0.85,
+                stagger: { amount: 0.22 },
+                ease: 'power4.out',
+                clearProps: 'transform,opacity',
+                onComplete: () => {
+                  revealed = true;
+                  revealedElements.add(heading);
+                },
+                scrollTrigger: { trigger: heading, start: 'top 90%', once: true },
+              });
+            },
+          });
         }
-      );
-    }, ref);
 
-    return () => ctx.revert();
-  }, [delay, duration, threshold, y]);
+        const reveal = (targets: HTMLElement[], trigger: HTMLElement) => {
+          const unread = targets.filter((element) => !revealedElements.has(element));
+          if (!unread.length || !upcoming(trigger)) return;
+          gsap.fromTo(unread, { y: compact ? 18 : 28, opacity: 0 }, {
+            y: 0,
+            opacity: 1,
+            duration: 0.75,
+            stagger: { amount: Math.min(0.36, unread.length * 0.07) },
+            ease: 'power3.out',
+            clearProps: 'transform,opacity',
+            onComplete: () => unread.forEach((element) => revealedElements.add(element)),
+            scrollTrigger: { trigger, start: 'top 90%', once: true },
+          });
+        };
 
-  return (
-    <Component ref={ref as any} className={className}>
-      {children}
-    </Component>
-  );
+        for (const element of select('[data-mk-reveal]')) reveal([element], element);
+        for (const group of select('[data-mk-stagger]')) {
+          const items = Array.from(group.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
+          // Stacked mobile articles reveal individually, not before they enter view.
+          if (compact && group.dataset.mkStagger === 'rows') {
+            for (const item of items) reveal([item], item);
+          } else {
+            reveal(items, group);
+          }
+        }
+
+        for (const panel of select('[data-mk-panel]').filter(upcoming)) {
+          // No opacity hiding: interactive previews remain usable throughout the scrub.
+          gsap.fromTo(panel, { y: compact ? 18 : 44, scale: compact ? 1 : 0.985 }, {
+            y: 0,
+            scale: 1,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: panel,
+              start: 'top 96%',
+              end: 'top 56%',
+              scrub: 0.45,
+              invalidateOnRefresh: true,
+            },
+          });
+        }
+
+        for (const track of select('[data-mk-progress]')) {
+          const workflow = track.closest<HTMLElement>('.mk-lifecycle-grid');
+          if (!workflow) continue;
+          gsap.fromTo(track, { scaleY: 0 }, {
+            scaleY: 1,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: workflow,
+              start: 'top 76%',
+              end: 'bottom 48%',
+              scrub: 0.35,
+              invalidateOnRefresh: true,
+            },
+          });
+        }
+
+        for (const wordmark of select('[data-mk-wordmark]')) {
+          gsap.fromTo(wordmark, { yPercent: 28, opacity: 0.45 }, {
+            yPercent: 0,
+            opacity: 1,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: wordmark.parentElement,
+              start: 'top bottom',
+              end: 'bottom bottom',
+              scrub: 0.4,
+              invalidateOnRefresh: true,
+            },
+          });
+        }
+
+        root.dataset.mkMotion = 'ready';
+        refreshLayout();
+      });
+      return () => media.revert();
+    }, root);
+
+    // Native disclosure changes and late font metrics must not leave stale scroll bounds.
+    root.addEventListener('toggle', refreshLayout, true);
+    void document.fonts?.ready.then(refreshLayout);
+    return () => {
+      disposed = true;
+      cancelAnimationFrame(refreshFrame);
+      root.removeEventListener('toggle', refreshLayout, true);
+      context.revert();
+      delete root.dataset.mkMotion;
+    };
+  }, []);
+
+  return <div ref={rootRef} className="mk">{children}</div>;
 }

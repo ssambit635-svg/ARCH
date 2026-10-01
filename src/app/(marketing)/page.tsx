@@ -1,3 +1,4 @@
+import { MarketingMotion } from '@/components/marketing/gsap-reveal';
 import { MarketingNav } from '@/components/marketing/nav';
 import { Hero } from '@/components/marketing/hero';
 import { Intelligence } from '@/components/marketing/intelligence';
@@ -10,12 +11,12 @@ import { Closing } from '@/components/marketing/closing';
 
 export default function LandingPage() {
   return (
-    <div className="mk">
+    <MarketingMotion>
       <a href="#main" className="mk-skip">
         Skip to content
       </a>
       <MarketingNav />
-      <main id="main" className="relative z-10">
+      <main id="main" className="mk-main relative z-10" tabIndex={-1}>
         <Hero />
         <Intelligence />
         <Workspace />
@@ -25,6 +26,6 @@ export default function LandingPage() {
         <Deploy />
       </main>
       <Closing />
-    </div>
+    </MarketingMotion>
   );
 }

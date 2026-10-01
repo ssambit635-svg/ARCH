@@ -18,8 +18,8 @@ export function Intelligence() {
     <section id="intelligence" className="mk-section mk-intro" aria-labelledby="intelligence-title">
       <div id="library-map" className="mk-anchor" />
       <div className="mk-container">
-        <h2 id="intelligence-title" className="mk-eyebrow">A clearer way to work</h2>
-        <div className="mk-feature-grid">
+        <h2 id="intelligence-title" className="mk-eyebrow" data-mk-reveal>A clearer way to work</h2>
+        <div className="mk-feature-grid" data-mk-stagger="rows">
           {FEATURES.map((feature, index) => (
             <article key={feature.title}>
               <span className="mk-feature-number" aria-hidden="true">0{index + 1}</span>

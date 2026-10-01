@@ -39,13 +39,14 @@ export function Lifecycle() {
       <div className="mk-container">
         <div className="mk-section-heading">
           <div>
-            <p className="mk-eyebrow">The workflow</p>
-            <h2 id="lifecycle-title" className="mk-title">A clear path from first alert<br />to the next lesson.</h2>
-            <p className="mk-description">Four explicit states. One continuous record.</p>
+            <p className="mk-eyebrow" data-mk-reveal>The workflow</p>
+            <h2 id="lifecycle-title" className="mk-title" data-mk-heading aria-label="From the first alert. To the next lesson.">From the first alert.<br /> To the next lesson.</h2>
+            <p className="mk-description" data-mk-reveal>Four explicit states. One continuous record.</p>
           </div>
         </div>
         <div className="mk-lifecycle-grid">
-          <div className="mk-stage-list" aria-label="Explore the incident lifecycle">
+          <div className="mk-stage-list" data-mk-reveal aria-label="Explore the incident lifecycle">
+            <span className="mk-stage-track" aria-hidden="true"><span className="mk-stage-track-fill" data-mk-progress /></span>
             {STAGES.map((item, index) => (
               <button
                 key={item.name}
@@ -59,7 +60,7 @@ export function Lifecycle() {
               </button>
             ))}
           </div>
-          <div id="lifecycle-detail" className="mk-stage-detail" aria-live="polite" aria-atomic="true">
+          <div id="lifecycle-detail" className="mk-stage-detail" data-mk-reveal aria-live="polite" aria-atomic="true">
             <p className="mk-eyebrow">0{activeIndex + 1} / 04</p>
             <h3>{stage.title}</h3>
             <p>{stage.body}</p>

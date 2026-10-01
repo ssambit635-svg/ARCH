@@ -34,21 +34,21 @@ export function Topology() {
   return (
     <section ref={sectionRef} id="topology" className="mk-section" aria-labelledby="native-model-title">
       <div className="mk-container mk-model-grid">
-        <div className="mk-model-visual">
+        <div className="mk-model-visual" data-mk-reveal>
           {nearViewport ? <RobotScene /> : <div className="robot-stage" aria-hidden="true" />}
           <p className="mk-model-caption">A little personality. Not a measure of intelligence.</p>
         </div>
 
         <div id="model-facts" className="mk-model-copy mk-anchor">
-          <p className="mk-eyebrow">The native engine</p>
-          <h2 id="native-model-title" className="mk-title">Small model.<br />Useful by design.</h2>
-          <p className="mk-description">Practical help with incidents. A human still in charge.</p>
-          <p className="mk-model-intro">ARCH uses small classifiers, similarity search, rules, and templates. It runs on your server’s CPU—without an external LLM API or AI API key.</p>
-          <div className="mk-model-facts" aria-label="Native engine facts">
+          <p className="mk-eyebrow" data-mk-reveal>The native engine</p>
+          <h2 id="native-model-title" className="mk-title" data-mk-heading aria-label="Small model. Useful by design.">Small model.<br /> Useful by design.</h2>
+          <p className="mk-description" data-mk-reveal>Practical help with incidents. A human still in charge.</p>
+          <p className="mk-model-intro" data-mk-reveal>ARCH uses small classifiers, similarity search, rules, and templates. It runs on your server’s CPU—without an external LLM API or AI API key.</p>
+          <div className="mk-model-facts" data-mk-stagger aria-label="Native engine facts">
             <span>CPU-only</span><span>Organization-scoped</span><span>Human-reviewed</span>
           </div>
 
-          <div className="mk-disclosures">
+          <div className="mk-disclosures" data-mk-reveal>
             <details open>
               <summary>What it helps with</summary>
               <p>Suggesting category and severity, finding similar incidents and runbooks, and drafting summaries and postmortems from supplied context. Code Assist adds heuristic checks and small template-based snippets.</p>
@@ -63,7 +63,7 @@ export function Topology() {
             </details>
           </div>
           <p className="mk-footnote">Native inference does not call an AI vendor. Optional document fetching and configured integrations can still use the network.</p>
-          <div className="mk-actions">
+          <div className="mk-actions" data-mk-reveal>
             <Link href="/dashboard/model" className="mk-text-link">Inspect your model <LinkArrow /></Link>
             <a href={`${GITHUB_REPO_URL}/blob/main/docs/engineering/ARCH-MODEL.md`} target="_blank" rel="noopener noreferrer" className="mk-muted-link">Technical notes <LinkArrow /></a>
           </div>

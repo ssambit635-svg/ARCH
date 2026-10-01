@@ -21,13 +21,23 @@ export function MarketingNav() {
   const [visible, setVisible] = useState(true);
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
+  const [touchNavigation, setTouchNavigation] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const { theme, toggleTheme } = useMarketingTheme();
   const themeLabel = `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`;
 
-  const pinned = hovered || focused || menuOpen;
+  const pinned = hovered || focused || menuOpen || touchNavigation;
   const shown = visible || pinned;
+
+  // A touch visitor cannot hover the top edge to recover a hidden navigation bar.
+  useEffect(() => {
+    const touch = window.matchMedia('(hover: none), (pointer: coarse)');
+    const sync = () => setTouchNavigation(touch.matches);
+    sync();
+    touch.addEventListener('change', sync);
+    return () => touch.removeEventListener('change', sync);
+  }, []);
 
   // Visible for ten seconds, then hidden — the cycle repeats for as long as the page is open.
   useEffect(() => {
