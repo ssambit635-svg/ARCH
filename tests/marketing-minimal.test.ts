@@ -31,16 +31,20 @@ describe('minimal marketing surface', () => {
     expect(nav).toContain('aria-controls="marketing-mobile-nav"');
   });
 
-  it('removes redundant hero labels without removing the original film or primary actions', () => {
+  it('lets the supplied alpine film own a clean, accessible hero without copy or shade overlays', () => {
     const hero = render(Hero);
+    const heroSource = source('src/components/marketing/hero.tsx');
     expect(hero).toContain('id="hero-title"');
-    expect(hero).toContain('/arch-mountain-poster.jpg');
-    expect(hero).toContain('href="/register"');
-    expect(hero).toContain('href="#workspace"');
-    expect(hero).not.toContain('Incident operations');
+    expect(hero).toContain('ARCH incident operations');
+    expect(hero).toContain('/arch-alpine-poster.jpg');
+    expect(hero).not.toContain('href="/register"');
+    expect(hero).not.toContain('href="#workspace"');
+    expect(hero).not.toContain('When things break');
     expect(hero).not.toContain('StatusChip');
     expect(hero).not.toContain('status/arch');
-    expect(source('src/components/marketing/hero.tsx')).not.toContain('ScrollTrigger');
+    expect(heroSource).not.toContain('mk-hero-shade');
+    expect(heroSource).not.toContain('mk-hero-copy');
+    expect(heroSource).not.toContain('ScrollTrigger');
   });
 
   it('labels the preview honestly and gives its selections an accessible state', () => {
@@ -101,9 +105,9 @@ describe('minimal marketing surface', () => {
     expect(contrast(tokens['--mk-on-primary']!, tokens['--mk-primary']!)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it('keeps the blue flat — ruled surfaces, no glow — and preserves keyboard and reduced-motion affordances', () => {
+  it('keeps the blue flat — open surfaces, no glow — and preserves keyboard and reduced-motion affordances', () => {
     const css = source('src/components/marketing/landing.css');
-    // Blue is allowed as a hairline and a flat accent, never as a bloom or a glow.
+    // Blue stays a flat accent, never a bloom or a glow.
     expect(css).toContain('--mk-accent: #3b8ef4');
     expect(css).not.toMatch(/box-shadow|radial-gradient|text-shadow|drop-shadow/);
     expect(css).toContain('--mk-line: #182438');
@@ -113,13 +117,13 @@ describe('minimal marketing surface', () => {
     expect(source('src/components/marketing/site-chrome.tsx')).not.toContain('useLenis');
   });
 
-  it('rules every section so the page keeps its borders', () => {
+  it('keeps the landing page clear of rigid section and tile borders', () => {
     const css = source('src/components/marketing/landing.css');
-    expect(css).toMatch(/\.mk-section \{[^}]*border-bottom: 1px solid var\(--mk-line\)/);
-    expect(css).toContain('.mk-section::before');
-    // Tile cells carry their own borders, so a short final row cannot leave a coloured gap.
-    expect(css).toMatch(/\.mk-tech-grid li \{[^}]*border-top: 1px solid var\(--mk-line\)/);
-    expect(css).not.toMatch(/\.mk-tech-grid \{[^}]*background: var\(--mk-line\)/);
+    expect(css).toMatch(/\.mk-section \{[^}]*padding-block: 96px/);
+    expect(css).not.toMatch(/\.mk-section \{[^}]*border-bottom/);
+    expect(css).not.toContain('.mk-section::before');
+    expect(css).toMatch(/\.mk-tech-grid \{[^}]*gap: 10px/);
+    expect(css).toMatch(/\.mk-tech-grid li \{[^}]*border: 0/);
   });
 
   it('steps the navigation away after ten seconds and brings it back on hover, again and again', () => {
