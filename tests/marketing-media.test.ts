@@ -7,7 +7,7 @@ const source = (path: string) => readFileSync(join(root, path), 'utf8');
 
 describe('marketing video delivery', () => {
   it('ships short browser-compatible, silent clips and real fallback posters', () => {
-    for (const name of ['mountain', 'dragon']) {
+    for (const name of ['alpine', 'dragon']) {
       const media = readFileSync(join(root, `public/arch-${name}-reveal.mp4`));
       expect(media.toString('ascii', 4, 8)).toBe('ftyp');
       expect(media.includes(Buffer.from('avc1'))).toBe(true);
@@ -19,14 +19,15 @@ describe('marketing video delivery', () => {
     }
   });
 
-  it('keeps the original navigation while the mountain film owns the hero wordmark', () => {
+  it('keeps the original navigation while the supplied alpine film owns the hero wordmark', () => {
     const page = source('src/app/(marketing)/page.tsx');
     const hero = source('src/components/marketing/hero.tsx');
     expect(page).toContain('<MarketingNav />');
     expect(page).toContain('<Hero />');
     // The layout already mounts SiteChrome; mounting it twice also starts Lenis twice.
     expect(page).not.toContain('<SiteChrome>');
-    expect(hero).toContain('/arch-mountain-reveal.mp4');
+    expect(hero).toContain('/arch-alpine-reveal.mp4');
+    expect(hero).toContain('playOnce');
     expect(hero).not.toContain('hero-wordmark-char');
     expect(source('src/components/marketing/closing.tsx')).toContain('/arch-dragon-reveal.mp4');
   });

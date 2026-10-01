@@ -2,14 +2,14 @@ import { LinkArrow } from './link-arrow';
 import Link from 'next/link';
 import { AmbientVideo } from './ambient-video';
 
-/** The original mountain reveal, without badges, glowing buttons or scroll pinning. */
+/** The supplied alpine illustration reveals once, then deliberately holds its final frame. */
 export function Hero() {
   return (
     <section id="top" className="mk-hero" aria-labelledby="hero-title">
       <div className="mk-hero-media" aria-hidden="true">
         <AmbientVideo
-          src="/arch-mountain-reveal.mp4"
-          poster="/arch-mountain-poster.jpg"
+          src="/arch-alpine-reveal.mp4"
+          poster="/arch-alpine-poster.jpg"
           playOnce
           className="mk-hero-video absolute inset-0 h-full w-full object-cover"
         />
