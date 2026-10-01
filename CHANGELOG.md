@@ -15,6 +15,12 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Changed — supplied home-page video
+
+- The home-page hero now plays the supplied `wwm.mp4` with a matching poster frame. The
+  browser copy keeps the original video quality, removes audio and uses fast-start delivery;
+  the original upload is unchanged. One-shot playback and reduced-motion/save-data fallbacks remain.
+
 ### Changed — blue and ruled, with a navigation that gets out of the way
 
 - Brought the deep blue accent back as a flat, unglowing detail: blue hairlines between sections and

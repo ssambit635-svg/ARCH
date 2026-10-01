@@ -31,12 +31,12 @@ describe('minimal marketing surface', () => {
     expect(nav).toContain('aria-controls="marketing-mobile-nav"');
   });
 
-  it('lets the supplied alpine film own a clean, accessible hero without copy or shade overlays', () => {
+  it('lets the supplied wwm film own a clean, accessible hero without copy or shade overlays', () => {
     const hero = render(Hero);
     const heroSource = source('src/components/marketing/hero.tsx');
     expect(hero).toContain('id="hero-title"');
     expect(hero).toContain('ARCH incident operations');
-    expect(hero).toContain('/arch-alpine-poster.jpg');
+    expect(hero).toContain('/wwm-poster.jpg');
     expect(hero).not.toContain('href="/register"');
     expect(hero).not.toContain('href="#workspace"');
     expect(hero).not.toContain('When things break');

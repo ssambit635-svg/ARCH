@@ -39,7 +39,7 @@ const ICONS: Record<TechId, ReactNode> = {
  */
 export function TechStackTiles() {
   return (
-    <ul className="mk-tech-grid" aria-label="ARCH technology stack">
+    <ul className="mk-tech-grid" data-mk-stagger tabIndex={0} aria-label="ARCH technology stack">
       {TECH_STACK.map((tech) => (
         <li
           key={tech.id}

@@ -19,11 +19,11 @@ export function Platform() {
       <div className="mk-container">
         <div className="mk-section-heading">
           <div>
-            <p className="mk-eyebrow">By design</p>
-            <h2 id="principles-title" className="mk-title">Built to stay in your control.</h2>
+            <p className="mk-eyebrow" data-mk-reveal>By design</p>
+            <h2 id="principles-title" className="mk-title" data-mk-heading aria-label="Built to stay in your control.">Built to stay<br /> in your control.</h2>
           </div>
         </div>
-        <div className="mk-feature-grid">
+        <div className="mk-feature-grid" data-mk-stagger="rows">
           {PRINCIPLES.map((principle) => (
             <article key={principle.title}>
               <h3>{principle.title}</h3>

@@ -71,14 +71,14 @@ export function Workspace() {
       <div className="mk-container">
         <div className="mk-section-heading">
           <div>
-            <p className="mk-eyebrow">The workspace</p>
-            <h2 id="workspace-title" className="mk-title">The whole picture.<br />One place to work.</h2>
-            <p className="mk-description">A shared queue, a clear timeline, and the context to take the next step.</p>
+            <p className="mk-eyebrow" data-mk-reveal>The workspace</p>
+            <h2 id="workspace-title" className="mk-title" data-mk-heading aria-label="The whole picture. One place to work.">The whole picture.<br /> One place to work.</h2>
+            <p className="mk-description" data-mk-reveal>A shared queue, a clear timeline, and the context to take the next step.</p>
           </div>
-          <Link href="/login" className="mk-text-link">Open your workspace <LinkArrow /></Link>
+          <Link href="/login" className="mk-text-link" data-mk-reveal>Open your workspace <LinkArrow /></Link>
         </div>
 
-        <div className="mk-console" role="region" aria-label="Interactive workspace preview with illustrative data">
+        <div className="mk-console" data-mk-panel role="region" aria-label="Interactive workspace preview with illustrative data">
           <div className="mk-console-bar">
             <span><strong>ARCH</strong><span className="mk-console-path"> / Workspace / Incidents</span></span>
             <span className="mk-console-demo">Sample workspace</span>

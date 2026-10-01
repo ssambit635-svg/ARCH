@@ -18,6 +18,8 @@ const memorySafeDev = process.env.NODE_ENV === 'development' && !devSourceMaps;
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Keep the development badge off the film and out of the customer-facing preview.
+  devIndicators: false,
   serverExternalPackages: ['@prisma/client', '@prisma/adapter-pg', 'pg'],
   allowedDevOrigins: ['*.e2b.app', '*.e2b.dev', '*.vercel.app', 'localhost', '127.0.0.1'],
   experimental: {

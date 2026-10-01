@@ -37,15 +37,15 @@ export function Deploy() {
       <div className="mk-container">
         <div className="mk-section-heading">
           <div>
-            <p className="mk-eyebrow">Run it your way</p>
-            <h2 id="deploy-title" className="mk-title">Your infrastructure. Your pace.</h2>
-            <p className="mk-description">Start locally, then deploy with your own PostgreSQL database.</p>
+            <p className="mk-eyebrow" data-mk-reveal>Run it your way</p>
+            <h2 id="deploy-title" className="mk-title" data-mk-heading aria-label="Your infrastructure. Your pace.">Your infrastructure.<br /> Your pace.</h2>
+            <p className="mk-description" data-mk-reveal>Start locally, then deploy with your own PostgreSQL database.</p>
           </div>
-          <a href={`${GITHUB_REPO_URL}#quick-start`} className="mk-text-link">Read the setup guide <LinkArrow /></a>
+          <a href={`${GITHUB_REPO_URL}#quick-start`} className="mk-text-link" data-mk-reveal>Read the setup guide <LinkArrow /></a>
         </div>
 
         <div className="mk-deploy-grid">
-          <div className="mk-terminal">
+          <div className="mk-terminal" data-mk-panel>
             <div className="mk-terminal-header">
               <span>Local development</span>
               <button type="button" onClick={copyCommands} className="mk-copy-button">{copyState === 'copied' ? 'Copied' : 'Copy commands'}</button>
@@ -57,7 +57,7 @@ export function Deploy() {
             {copyState === 'error' && <p className="mk-copy-error">Couldn’t access your clipboard. You can select and copy the commands above.</p>}
           </div>
 
-          <div className="mk-deploy-copy">
+          <div className="mk-deploy-copy" data-mk-reveal>
             <h3>A straightforward starting point.</h3>
             <p>Generate two unique secrets with <code>openssl rand -base64 32</code> and update your local <code>.env</code>. The dev command prepares the database, applies migrations, and starts ARCH.</p>
             <p>No demo account is created automatically. Register your own workspace at <code>/register</code>.</p>
@@ -72,7 +72,7 @@ export function Deploy() {
         </div>
 
         <div className="mk-stack">
-          <p className="mk-eyebrow">Built with tools you already know</p>
+          <p className="mk-eyebrow" data-mk-reveal>Built with tools you already know</p>
           <TechStackTiles />
         </div>
       </div>
