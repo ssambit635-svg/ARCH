@@ -15,6 +15,20 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Changed — blue and ruled, with a navigation that gets out of the way
+
+- Brought the deep blue accent back as a flat, unglowing detail: blue hairlines between sections and
+  the container rails, a blue eyebrow marker, blue-tinted iconography, selection, focus ring, link
+  hover, and the half-faded `ARCH.` wordmark closing the footer.
+- Restored the bordered structure: every section closes on a rule and carries vertical container
+  rails, the console preview, lifecycle rows, terminal, CLI note and disclosure list are ruled, and
+  the technology row is the classic ruled tile grid again with the Vengeance UI isometric stack that
+  presses down when it is clicked.
+- Display headings and the wordmark now use the Orbitron typeface the rest of the product uses.
+- The navigation bar hides itself ten seconds after it appears, returns when the pointer reaches the
+  top edge, on hover or on keyboard focus, and repeats as long as the page is open. Footer link
+  `Top` jumps back to the hero.
+
 ### Changed — a quieter product surface
 
 - Replaced the disappearing, pill-heavy marketing navbar with persistent navigation, a single theme control, and an accessible mobile menu.

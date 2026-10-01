@@ -101,13 +101,42 @@ describe('minimal marketing surface', () => {
     expect(contrast(tokens['--mk-on-primary']!, tokens['--mk-primary']!)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it('uses neutral surfaces and preserves keyboard and reduced-motion affordances', () => {
+  it('keeps the blue flat — ruled surfaces, no glow — and preserves keyboard and reduced-motion affordances', () => {
     const css = source('src/components/marketing/landing.css');
-    expect(css).not.toMatch(/box-shadow|radial-gradient|#3b8ef4|rgba\(59,\s*142,\s*244/i);
+    // Blue is allowed as a hairline and a flat accent, never as a bloom or a glow.
+    expect(css).toContain('--mk-accent: #3b8ef4');
+    expect(css).not.toMatch(/box-shadow|radial-gradient|text-shadow|drop-shadow/);
+    expect(css).toContain('--mk-line: #182438');
     expect(css).toContain('.mk-light .mk');
     expect(css).toContain(':focus-visible');
     expect(css).toContain('prefers-reduced-motion: reduce');
     expect(source('src/components/marketing/site-chrome.tsx')).not.toContain('useLenis');
+  });
+
+  it('rules every section so the page keeps its borders', () => {
+    const css = source('src/components/marketing/landing.css');
+    expect(css).toMatch(/\.mk-section \{[^}]*border-bottom: 1px solid var\(--mk-line\)/);
+    expect(css).toContain('.mk-section::before');
+    expect(css).toMatch(/\.mk-tech-grid \{[^}]*background: var\(--mk-line\)/);
+  });
+
+  it('steps the navigation away after ten seconds and brings it back on hover, again and again', () => {
+    const nav = source('src/components/marketing/nav.tsx');
+    expect(nav).toContain('AUTO_HIDE_MS = 10_000');
+    expect(nav).toContain('mk-nav--hidden');
+    expect(nav).toContain('event.clientY <= 24');
+    // It starts visible on first paint.
+    expect(render(MarketingNav)).not.toContain('mk-nav--hidden');
+  });
+
+  it('keeps the classic isometric tech tiles and the half-faded footer wordmark', () => {
+    const css = source('src/components/marketing/landing.css');
+    const tiles = source('src/components/marketing/tech-stack.tsx');
+    expect(tiles).toContain('IsometricStack');
+    expect(tiles).toContain('mk-tech-grid');
+    expect(css).toContain('.mk-iso-front');
+    expect(css).toMatch(/\.mk-watermark \{[^}]*background-clip: text/);
+    expect(source('src/components/marketing/closing.tsx')).toContain('ARCH.');
   });
 });
 
