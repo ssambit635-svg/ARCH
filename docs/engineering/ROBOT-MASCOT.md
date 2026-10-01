@@ -4,14 +4,14 @@ The `#topology` anchor now introduces the native model with the original robot m
 
 ## Asset provenance
 
-Both public assets are **byte-for-byte extractions** of `ai-kitchen-just-a-bit-fun.zip` already in this repository. No generated replacement, model conversion, geometry decimation or texture downsampling is used.
+Both public assets are **byte-for-byte extractions** of `ai-kitchen-just-a-bit-fun.zip`, an archive that held exactly these two files. The archive itself is no longer tracked in this repository, so the SHA-256 values below are the provenance record. No generated replacement, model conversion, geometry decimation or texture downsampling is used.
 
 | File | SHA-256 |
 |---|---|
 | `public/robot/source/Animation_Walking_withSkin.fbx` | `62fc973f9c81841653f1f92deb74dbb66eb482183415695b99f9cf248ed1d361` |
 | `public/robot/textures/texture_0.png` | `05a7e6877ea0533fd0a8e653c6bed6a98ee867d61d7745d4ca17cd5c96d1fadd` |
 
-The archive contains no creator/license document. No new ownership or licensing claim is made; retain the creator's required attribution/license if supplied separately.
+The archive contained no creator/license document. No new ownership or licensing claim is made; retain the creator's required attribution/license if supplied separately.
 
 The model has one skinned mesh (`char1`, 9,998 triangles), a 2048 × 2048 texture, a `Head` bone beneath `neck`, and one walking clip. Three.js's FBXLoader warns about vertices with more than four skin influences and retains the four strongest weights for WebGL skinning. The source file itself is unmodified.
 

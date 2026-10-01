@@ -3,10 +3,10 @@ import { AppError } from './errors';
 /**
  * Fixed-window rate limiting.
  *
- * Deliberately in-process and dependency-free for v1 (see features.md — no Redis until volume
- * demands it). It protects login, registration, webhook ingestion and public endpoints from
- * casual abuse. With more than one web process, limits become per-process; that limitation is
- * documented in docs/engineering/ARCHITECTURE.md.
+ * Deliberately in-process and dependency-free for v1 (no Redis until volume demands it). It
+ * protects login, registration, webhook ingestion and public endpoints from casual abuse. With
+ * more than one web process, limits become per-process; that limitation is documented in
+ * docs/engineering/ARCHITECTURE.md.
  */
 
 type Bucket = { count: number; resetAt: number };
