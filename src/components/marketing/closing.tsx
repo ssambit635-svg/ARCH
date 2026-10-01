@@ -31,13 +31,22 @@ export function Closing() {
 
       <footer className="mk-footer">
         <div className="mk-container mk-footer-row">
-          <Link href="/" className="mk-brand" aria-label="ARCH home"><span>ARCH</span></Link>
+          <Link href="/" className="mk-brand" aria-label="ARCH home">
+            <span>ARCH<span className="mk-brand-dot">.</span></span>
+          </Link>
           <p>© 2026 ARCH. All rights reserved.</p>
           <nav aria-label="Footer">
             <a href={`${GITHUB_REPO_URL}/tree/main/docs`}>Documentation</a>
             <a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer">GitHub <LinkArrow /></a>
             <a href={`${GITHUB_REPO_URL}/blob/main/SECURITY.md`}>Security</a>
+            {/* From the bottom of the page, this is how the auto-hiding bar comes back. */}
+            <a href="#top">Top <LinkArrow /></a>
           </nav>
+        </div>
+
+        {/* The original half-faded wordmark, sitting on the bottom edge of the page. */}
+        <div className="mk-container mk-watermark-wrap" aria-hidden="true">
+          <span className="mk-watermark">ARCH.</span>
         </div>
       </footer>
     </>

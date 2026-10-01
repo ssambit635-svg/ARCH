@@ -50,7 +50,8 @@ export function Deploy() {
               <span>Local development</span>
               <button type="button" onClick={copyCommands} className="mk-copy-button">{copyState === 'copied' ? 'Copied' : 'Copy commands'}</button>
             </div>
-            <pre><code>{COMMANDS.join('\n')}</code></pre>
+            {/* The command block scrolls sideways on small screens, so it must be reachable by keyboard. */}
+            <pre tabIndex={0} role="region" aria-label="Local development commands"><code>{COMMANDS.join('\n')}</code></pre>
             <p className="mk-terminal-note">Node.js 20.19+ · PostgreSQL via Docker or the local embedded fallback</p>
             <span className="mk-sr-only" role="status">{copyState === 'copied' ? 'Commands copied to clipboard.' : copyState === 'error' ? 'Copy failed. Select and copy the commands manually.' : ''}</span>
             {copyState === 'error' && <p className="mk-copy-error">Couldn’t access your clipboard. You can select and copy the commands above.</p>}
@@ -64,7 +65,7 @@ export function Deploy() {
             <div className="mk-cli-note">
               <h4>Prefer the terminal?</h4>
               <p>The Python CLI connects to your ARCH instance.</p>
-              <pre><code>{'pip install ./clients/python\narch login --url https://your-arch-host\narch incidents list'}</code></pre>
+              <pre tabIndex={0} role="region" aria-label="Python CLI commands"><code>{'pip install ./clients/python\narch login --url https://your-arch-host\narch incidents list'}</code></pre>
               <a href={`${GITHUB_REPO_URL}/tree/main/clients/python`} className="mk-muted-link">CLI documentation <LinkArrow /></a>
             </div>
           </div>
