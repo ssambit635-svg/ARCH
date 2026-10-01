@@ -10,7 +10,7 @@ export function Hero() {
           src="/wwm.mp4"
           poster="/wwm-poster.jpg"
           playOnce
-          className="mk-hero-video absolute inset-0 h-full w-full object-contain"
+          className="mk-hero-video absolute inset-0 h-full w-full object-cover"
         />
       </div>
     </section>
