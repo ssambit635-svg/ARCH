@@ -272,23 +272,29 @@
 .mk-tech-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 1px;
   margin: 26px 0 0;
-  padding: 1px;
+  padding: 0;
   list-style: none;
-  background: var(--mk-line);
   border: 1px solid var(--mk-line);
   border-radius: 12px;
   overflow: hidden;
 }
-.mk-tech-grid li { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 22px 8px; background: var(--mk-tile); color: var(--mk-muted); font-family: var(--font-mono); font-size: 11px; line-height: 1.5; text-align: center; transition: background-color 180ms ease, color 180ms ease; }
+/* Real cell borders, so a short final row never leaves an empty coloured cell behind. */
+.mk-tech-grid li { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; margin: -1px 0 0 -1px; padding: 22px 8px; border-top: 1px solid var(--mk-line); border-left: 1px solid var(--mk-line); background: var(--mk-tile); color: var(--mk-muted); font-family: var(--font-mono); font-size: 11px; line-height: 1.5; text-align: center; transition: background-color 180ms ease, color 180ms ease; }
 .mk-tech-grid li:hover { background: var(--mk-surface); color: var(--mk-fg); }
 .mk-tech-grid li:active { background: var(--mk-surface-alt); }
 .mk-tech-icon { display: flex; align-items: center; justify-content: center; }
-.mk-iso { width: 72px; height: auto; }
+.mk-iso { width: 72px; height: auto; cursor: pointer; }
 .mk-iso-back { fill: var(--mk-surface-alt); stroke: var(--mk-line); }
 .mk-iso-front { fill: var(--mk-tile); stroke: var(--mk-line); }
 .mk-iso-line { stroke: var(--mk-line); }
+/* The classic press: the stack flattens back and the top face drops into place. */
+.mk-iso .mk-iso-back { transition: opacity 100ms ease; }
+.mk-iso .mk-iso-front { transition: transform 150ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+.mk-iso:hover .mk-iso-back,
+.mk-iso:active .mk-iso-back { opacity: 0; }
+.mk-iso:hover .mk-iso-front,
+.mk-iso:active .mk-iso-front { transform: translate(3.5px, 3.5px); }
 
 /* A quiet closing, a useful footer and the half-faded wordmark. */
 .mk-closing-grid { display: grid; grid-template-columns: 1fr 0.9fr; gap: 80px; align-items: center; }

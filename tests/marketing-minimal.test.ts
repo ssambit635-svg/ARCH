@@ -117,7 +117,9 @@ describe('minimal marketing surface', () => {
     const css = source('src/components/marketing/landing.css');
     expect(css).toMatch(/\.mk-section \{[^}]*border-bottom: 1px solid var\(--mk-line\)/);
     expect(css).toContain('.mk-section::before');
-    expect(css).toMatch(/\.mk-tech-grid \{[^}]*background: var\(--mk-line\)/);
+    // Tile cells carry their own borders, so a short final row cannot leave a coloured gap.
+    expect(css).toMatch(/\.mk-tech-grid li \{[^}]*border-top: 1px solid var\(--mk-line\)/);
+    expect(css).not.toMatch(/\.mk-tech-grid \{[^}]*background: var\(--mk-line\)/);
   });
 
   it('steps the navigation away after ten seconds and brings it back on hover, again and again', () => {
