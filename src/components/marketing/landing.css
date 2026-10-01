@@ -60,7 +60,7 @@
 
 .mk ::selection { background: var(--mk-accent); color: var(--mk-bg); }
 .mk a { text-decoration: none; }
-.mk-main { padding-top: var(--mk-nav-height); }
+.mk-main { padding-top: 0; }
 .mk button { cursor: pointer; }
 .mk a:focus-visible,
 .mk button:focus-visible,
@@ -128,13 +128,13 @@
 .mk-hero {
   position: relative;
   width: 100%;
-  aspect-ratio: 848 / 478;
-  max-height: calc(100svh - var(--mk-nav-height));
+  height: 100vh;
+  height: 100svh;
   overflow: hidden;
   background: #05070d;
 }
 .mk-hero-media { position: absolute; inset: 0; }
-.mk-hero-video { object-fit: contain; object-position: center; }
+.mk-hero-video { object-fit: cover; object-position: center; }
 
 /* SplitText measures the real lines, including after fonts load or the screen rotates.
    The mask padding protects descenders without changing the authored line spacing. */
@@ -289,22 +289,26 @@
 .mk-footer nav { display: flex; flex-wrap: wrap; gap: 26px; margin-left: auto; color: var(--mk-muted); font-size: 11px; }
 .mk-footer nav a { display: inline-flex; align-items: center; gap: 6px; transition: color 160ms ease; }
 .mk-footer a:hover { color: var(--mk-accent); }
-.mk-watermark-wrap { display: flex; align-items: flex-end; justify-content: center; margin-top: 52px; padding-top: 40px; overflow: hidden; }
-.mk-watermark {
-  padding-inline: 16px;
-  font-family: var(--mk-display);
-  font-size: clamp(3.25rem, 12vw, 10rem);
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: 0.03em;
-  background-image: linear-gradient(180deg, rgb(59 142 244 / 62%) 0%, rgb(59 142 244 / 22%) 48%, rgb(59 142 244 / 0%) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-  user-select: none;
-  pointer-events: none;
+.mk-watermark-wrap { width: 100%; margin-top: 64px; overflow: hidden; }
+.mk-watermark { display: block; width: 100%; height: auto; user-select: none; pointer-events: none; }
+.mk-watermark text { font-family: var(--mk-display); font-size: 330px; font-weight: 900; }
+
+/* A full-screen depth interlude. Without JS it remains an ordinary readable section. */
+.mk-story { position: relative; background: var(--mk-bg); }
+.mk-story-stage { position: relative; display: grid; align-items: center; min-height: 100svh; overflow: hidden; isolation: isolate; padding-block: 110px; }
+.mk-story-copy { position: relative; z-index: 2; }
+.mk-story h2 { margin: 28px 0; font-family: var(--mk-display); font-size: clamp(40px, 6.6vw, 108px); font-weight: 600; line-height: 1.12; letter-spacing: -0.055em; }
+.mk-story h2 span { color: var(--mk-accent); }
+.mk-story-description { max-width: 390px; margin-bottom: 28px; color: var(--mk-muted); font-size: 16px; line-height: 1.8; }
+.mk-story-orbit { position: absolute; z-index: -1; pointer-events: none; border: 1px solid var(--mk-accent-soft); border-radius: 50%; }
+.mk-story-orbit-back { width: 90vw; height: 90vw; right: -35vw; top: -20vw; }
+.mk-story-orbit-front { width: 55vw; height: 55vw; right: -18vw; bottom: -28vw; border-color: var(--mk-accent); background: var(--mk-accent-soft); }
+.mk-story-coordinate { position: absolute; bottom: 32px; right: 5%; color: var(--mk-subtle); font: 10px var(--font-mono); letter-spacing: 0.16em; }
+@media (max-width: 759px) {
+  .mk-story-stage { min-height: 85svh; padding-block: 90px; }
+  .mk-story-orbit-back { width: 140vw; height: 140vw; right: -90vw; top: 0; }
+  .mk-story-description { max-width: 290px; font-size: 14px; }
 }
-.mk-light .mk-watermark { background-image: linear-gradient(180deg, rgb(26 99 189 / 52%) 0%, rgb(26 99 189 / 16%) 48%, rgb(26 99 189 / 0%) 100%); }
 
 /* The marks authored in near-white need a hand on cream surfaces. */
 .mk-light .mk-iso svg[fill="#F4F4F5"] { fill: #2b2d31; }

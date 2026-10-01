@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync, existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { MarketingNav } from '@/components/marketing/nav';
+import { ParallaxStory } from '@/components/marketing/parallax-story';
 import { Hero } from '@/components/marketing/hero';
 import { Workspace } from '@/components/marketing/workspace';
 import { Lifecycle } from '@/components/marketing/lifecycle';
@@ -45,6 +46,21 @@ describe('minimal marketing surface', () => {
     expect(heroSource).not.toContain('mk-hero-shade');
     expect(heroSource).not.toContain('mk-hero-copy');
     expect(heroSource).not.toContain('ScrollTrigger');
+  });
+
+  it('fills the viewport and adds a static-first, reduced-motion-safe parallax interlude', () => {
+    const css = source('src/components/marketing/landing.css');
+    const motion = source('src/components/marketing/gsap-reveal.tsx');
+    expect(css).toMatch(/\.mk-hero \{[^}]*height: 100svh/);
+    expect(css).toMatch(/\.mk-hero-video \{[^}]*object-fit: cover/);
+    expect(css).toContain('.mk-main { padding-top: 0; }');
+    const story = render(ParallaxStory);
+    expect(story).toContain('id="story-title"');
+    expect(story).toContain('href="#intelligence"');
+    expect(story.match(/data-mk-depth=/g)).toHaveLength(3);
+    expect(motion).toContain('pin: compact ? false : stage');
+    expect(motion.indexOf('if (!match.conditions?.animate)')).toBeLessThan(motion.indexOf("select('[data-mk-story]')"));
+    expect(motion).toContain('context.revert()');
   });
 
   it('labels the preview honestly and gives its selections an accessible state', () => {
@@ -135,13 +151,15 @@ describe('minimal marketing surface', () => {
     expect(render(MarketingNav)).not.toContain('mk-nav--hidden');
   });
 
-  it('keeps the classic isometric tech tiles and the half-faded footer wordmark', () => {
+  it('keeps the classic isometric tech tiles and the full-width fractured footer wordmark', () => {
     const css = source('src/components/marketing/landing.css');
     const tiles = source('src/components/marketing/tech-stack.tsx');
     expect(tiles).toContain('IsometricStack');
     expect(tiles).toContain('mk-tech-grid');
     expect(css).toContain('.mk-iso-front');
-    expect(css).toMatch(/\.mk-watermark \{[^}]*background-clip: text/);
+    expect(css).toMatch(/\.mk-watermark \{[^}]*width: 100%/);
+    expect(render(Closing)).toContain('clip-path="url(#mk-wordmark-cuts)"');
+    expect(render(Closing)).toContain('textLength="1400"');
     expect(source('src/components/marketing/closing.tsx')).toContain('ARCH.');
   });
 });

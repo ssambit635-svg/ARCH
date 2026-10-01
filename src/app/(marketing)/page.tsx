@@ -1,5 +1,6 @@
 import { MarketingMotion } from '@/components/marketing/gsap-reveal';
 import { MarketingNav } from '@/components/marketing/nav';
+import { ParallaxStory } from '@/components/marketing/parallax-story';
 import { Hero } from '@/components/marketing/hero';
 import { Intelligence } from '@/components/marketing/intelligence';
 import { Topology } from '@/components/marketing/topology';
@@ -18,6 +19,7 @@ export default function LandingPage() {
       <MarketingNav />
       <main id="main" className="mk-main relative z-10" tabIndex={-1}>
         <Hero />
+        <ParallaxStory />
         <Intelligence />
         <Workspace />
         <Lifecycle />

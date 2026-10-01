@@ -45,6 +45,29 @@ export function MarketingMotion({ children }: { children: ReactNode }) {
         const select = <T extends HTMLElement>(selector: string) => Array.from(root.querySelectorAll<T>(selector));
         const upcoming = (element: HTMLElement) => element.getBoundingClientRect().bottom > 0;
 
+        // Pin only the interlude, never the film or interactive product previews.
+        // Mobile keeps natural scrolling with smaller depth offsets.
+        for (const story of select('[data-mk-story]')) {
+          const stage = story.querySelector<HTMLElement>('.mk-story-stage');
+          if (!stage) continue;
+          const timeline = gsap.timeline({
+            scrollTrigger: {
+              trigger: story,
+              start: compact ? 'top bottom' : 'top top',
+              end: compact ? 'bottom top' : '+=110%',
+              pin: compact ? false : stage,
+              scrub: 0.8,
+              invalidateOnRefresh: true,
+            },
+          });
+          timeline.fromTo(story.querySelector('[data-mk-depth="back"]'),
+            { yPercent: -12, rotation: -15 }, { yPercent: 18, rotation: 20, ease: 'none' }, 0);
+          timeline.fromTo(story.querySelector('[data-mk-depth="front"]'),
+            { yPercent: 24, scale: 0.85 }, { yPercent: -30, scale: 1.15, ease: 'none' }, 0);
+          timeline.fromTo(story.querySelector('[data-mk-depth="copy"]'),
+            { y: compact ? 24 : 65 }, { y: compact ? -24 : -65, ease: 'none' }, 0);
+        }
+
         for (const heading of select('[data-mk-heading]').filter(upcoming)) {
           if (revealedElements.has(heading)) continue;
           let revealed = false;

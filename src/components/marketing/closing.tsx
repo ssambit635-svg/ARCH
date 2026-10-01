@@ -44,9 +44,20 @@ export function Closing() {
           </nav>
         </div>
 
-        {/* The original half-faded wordmark, sitting on the bottom edge of the page. */}
-        <div className="mk-container mk-watermark-wrap" aria-hidden="true">
-          <span className="mk-watermark" data-mk-wordmark>ARCH.</span>
+        {/* Full-bleed lettering, cut into three diagonal shards. Decorative only. */}
+        <div className="mk-watermark-wrap" aria-hidden="true">
+          <svg className="mk-watermark" data-mk-wordmark viewBox="0 0 1440 340" focusable="false">
+            <defs>
+              <linearGradient id="mk-wordmark-ink" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="var(--mk-accent)" stopOpacity="0.9" />
+                <stop offset="100%" stopColor="var(--mk-accent)" stopOpacity="0.12" />
+              </linearGradient>
+              <clipPath id="mk-wordmark-cuts">
+                <path d="M0 0H1440V95L0 145Z M0 155L1440 105V215L0 260Z M0 270L1440 225V340H0Z" />
+              </clipPath>
+            </defs>
+            <text x="20" y="300" textLength="1400" lengthAdjust="spacingAndGlyphs" clipPath="url(#mk-wordmark-cuts)" fill="url(#mk-wordmark-ink)">ARCH.</text>
+          </svg>
         </div>
       </footer>
     </>
