@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 
 export type MarketingTheme = 'dark' | 'light';
 
@@ -18,76 +18,31 @@ const ThemeContext = createContext<ThemeContextValue>({
 
 const STORAGE_KEY = 'arch-marketing-theme';
 
-export function MarketingThemeProvider({ children }: { children: React.ReactNode }) {
+/** Theme tokens are scoped to marketing, so navigating into the console cannot restyle it. */
+export function MarketingThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<MarketingTheme>('dark');
-  const [isTransitioning, setIsTransitioning] = useState(false);
 
   useEffect(() => {
     try {
-      const saved = window.localStorage.getItem(STORAGE_KEY) as MarketingTheme | null;
-      if (saved === 'light' || saved === 'dark') {
-        setThemeState(saved);
-        document.documentElement.setAttribute('data-mk-theme', saved);
-        document.documentElement.setAttribute('data-theme', saved);
-      } else {
-        document.documentElement.setAttribute('data-mk-theme', 'dark');
-        document.documentElement.setAttribute('data-theme', 'dark');
-      }
+      const saved = window.localStorage.getItem(STORAGE_KEY);
+      if (saved === 'light' || saved === 'dark') setThemeState(saved);
     } catch {
-      document.documentElement.setAttribute('data-mk-theme', 'dark');
-      document.documentElement.setAttribute('data-theme', 'dark');
+      // The default remains usable when browser storage is unavailable.
     }
   }, []);
 
   const setTheme = (next: MarketingTheme) => {
-    if (next === theme) return;
-    setIsTransitioning(true);
-
-    // Smooth theme transition with View Transitions API if available
-    const applyTheme = () => {
-      setThemeState(next);
-      try {
-        window.localStorage.setItem(STORAGE_KEY, next);
-      } catch {
-        /* ignore */
-      }
-      if (typeof document !== 'undefined') {
-        document.documentElement.setAttribute('data-mk-theme', next);
-        document.documentElement.setAttribute('data-theme', next);
-        // Add class for CSS transitions
-        document.documentElement.classList.add('mk-theme-transitioning');
-        setTimeout(() => {
-          document.documentElement.classList.remove('mk-theme-transitioning');
-          setIsTransitioning(false);
-        }, 420);
-      }
-    };
-
-    // @ts-ignore - View Transition API
-    if (typeof document !== 'undefined' && (document as any).startViewTransition) {
-      // @ts-ignore
-      (document as any).startViewTransition(() => {
-        applyTheme();
-      });
-    } else {
-      applyTheme();
+    setThemeState(next);
+    try {
+      window.localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // Theme switching still works without persistence.
     }
   };
 
-  const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
-  };
-
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
-      <div
-        data-theme={theme}
-        className={`mk-theme-root ${theme === 'light' ? 'mk-light' : 'mk-dark'} ${isTransitioning ? 'mk-transitioning' : ''}`}
-        style={{
-          // Smooth theme transition
-          transition: 'background-color 420ms cubic-bezier(0.22,1,0.36,1), color 420ms ease',
-        }}
-      >
+    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme: () => setTheme(theme === 'dark' ? 'light' : 'dark') }}>
+      <div data-theme={theme} className={`mk-theme-root ${theme === 'light' ? 'mk-light' : 'mk-dark'}`}>
         {children}
       </div>
     </ThemeContext.Provider>

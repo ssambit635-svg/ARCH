@@ -2,21 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-/**
- * Decorative video that only loads when it can be seen. Posters remain visible on slow
- * connections, with reduced motion, or when the browser cannot play the clip.
- * Never fetch the audio track.
- *
- * `playOnce` — the hero/closing films are one-shot reveals: they autoplay a single time and
- * freeze on their final frame. They never loop; only a full page refresh replays them.
- *
- * Smoothness improvements:
- * - GPU-accelerated compositing via translateZ(0) + will-change
- * - Poster fade crossfade instead of abrupt pop
- * - High fetch priority for hero, metadata for deferred
- * - Reduced GSAP conflict by avoiding layout thrash
- * - Old smooth ARCH reveal style: freeze on final frame with opacity hold
- */
+/** Decorative, silent media with a real poster. Reduced-motion/save-data users never autoplay. */
 export function AmbientVideo({
   src,
   poster,
@@ -31,173 +17,88 @@ export function AmbientVideo({
   playOnce?: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [enabled, setEnabled] = useState(!defer);
-  const [isReady, setIsReady] = useState(false);
-  const [isVisible, setIsVisible] = useState(false);
+  const [enabled, setEnabled] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      setIsReady(true);
-      setIsVisible(true);
-      return;
-    }
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const connection = (navigator as Navigator & { connection?: { saveData?: boolean } }).connection;
-    if (connection?.saveData) {
-      setIsReady(true);
-      return;
-    }
+    let observer: IntersectionObserver | undefined;
 
-    if (!defer || !('IntersectionObserver' in window)) {
-      setEnabled(true);
-      return;
-    }
-    const observer = new IntersectionObserver(
-      ([entry]) => {
+    const sync = () => {
+      observer?.disconnect();
+      if (motion.matches || connection?.saveData) {
+        video.pause();
+        setEnabled(false);
+        setReady(false);
+        return;
+      }
+      if (!defer || !('IntersectionObserver' in window)) {
+        setEnabled(true);
+        return;
+      }
+      observer = new IntersectionObserver(([entry]) => {
         if (entry?.isIntersecting) {
           setEnabled(true);
-          observer.disconnect();
+          observer?.disconnect();
         }
-      },
-      { rootMargin: '600px', threshold: 0.01 }
-    );
-    observer.observe(video);
-    return () => observer.disconnect();
-  }, [defer]);
-
-  // Smooth autoplay with retry - handles autoplay policy gracefully
-  useEffect(() => {
-    const v = videoRef.current;
-    if (!v || !enabled) return;
-
-    let cancelled = false;
-    const tryPlay = async () => {
-      if (cancelled) return;
-      try {
-        v.muted = true;
-        v.defaultMuted = true;
-        // Force GPU layer
-        v.style.transform = 'translateZ(0)';
-        await v.play();
-        setIsVisible(true);
-      } catch {
-        // Autoplay blocked, still show poster and try again on interaction
-        setIsVisible(true);
-        const onInteraction = () => {
-          v.play().catch(() => {});
-          window.removeEventListener('pointerdown', onInteraction);
-          window.removeEventListener('keydown', onInteraction);
-        };
-        window.addEventListener('pointerdown', onInteraction, { once: true });
-        window.addEventListener('keydown', onInteraction, { once: true });
-      }
+      }, { rootMargin: '400px' });
+      observer.observe(video);
     };
-
-    const handleCanPlay = () => {
-      setIsReady(true);
-      tryPlay();
-    };
-
-    const handleLoadedData = () => {
-      setIsReady(true);
-      // Small delay for smoother fade like old reveal
-      requestAnimationFrame(() => {
-        setIsVisible(true);
-      });
-    };
-
-    if (v.readyState >= 3) {
-      handleCanPlay();
-    } else {
-      v.addEventListener('canplay', handleCanPlay, { once: true });
-      v.addEventListener('loadeddata', handleLoadedData, { once: true });
-    }
-
-    // Immediate attempt if already enough data
-    if (v.readyState >= 2) {
-      tryPlay();
-    }
-
+    sync();
+    motion.addEventListener('change', sync);
     return () => {
-      cancelled = true;
-      v.removeEventListener('canplay', handleCanPlay);
-      v.removeEventListener('loadeddata', handleLoadedData);
+      observer?.disconnect();
+      motion.removeEventListener('change', sync);
+      video.pause();
     };
+  }, [defer, src]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !enabled) return;
+    video.muted = true;
+    // Autoplay may be denied. The poster (or the loaded first frame) remains usable either way.
+    void video.play().catch(() => {});
+    return () => video.pause();
   }, [enabled, src]);
 
   return (
     <>
-      {/* Poster layer - always visible until video is ready for smooth crossfade */}
-      {!isReady && (
-        <img
-          src={poster}
-          alt=""
-          aria-hidden="true"
-          className={`${className} pointer-events-none select-none`}
-          style={{
-            transform: 'translateZ(0)',
-            backfaceVisibility: 'hidden',
-            willChange: 'opacity',
-            objectFit: className.includes('object-contain') ? 'contain' : 'cover',
-          }}
-          loading={defer ? 'lazy' : 'eager'}
-          decoding="async"
-        />
-      )}
-
+      <img
+        src={poster}
+        alt=""
+        aria-hidden="true"
+        className={`${className} pointer-events-none select-none`}
+        loading={defer ? 'lazy' : 'eager'}
+        fetchPriority={defer ? 'low' : 'high'}
+        decoding="async"
+      />
       <video
         ref={videoRef}
         src={enabled ? src : undefined}
-        poster={poster}
-        autoPlay
+        autoPlay={enabled}
         muted
-        // @ts-ignore
-        defaultMuted
         loop={!playOnce}
         playsInline
-        // @ts-ignore webkit specific
-        webkit-playsinline="true"
-        // @ts-ignore
-        x-webkit-airplay="deny"
-        preload={defer ? 'metadata' : 'auto'}
-        // @ts-ignore — disablePictureInPicture is valid but not in React's video prop types yet
+        preload={enabled ? (defer ? 'metadata' : 'auto') : 'none'}
         disablePictureInPicture
-        // @ts-ignore fetchPriority for hero LCP
-        fetchPriority={defer ? 'low' : 'high'}
         aria-hidden="true"
         tabIndex={-1}
-        onLoadedData={() => {
-          setIsReady(true);
-          setIsVisible(true);
-        }}
-        onCanPlayThrough={() => {
-          setIsReady(true);
-          setIsVisible(true);
-        }}
-        style={{
-          transform: 'translateZ(0)',
-          backfaceVisibility: 'hidden',
-          willChange: 'transform, opacity',
-          opacity: isVisible ? 1 : 0,
-          transition: 'opacity 650ms cubic-bezier(0.22,1,0.36,1)',
-          // Force GPU compositing for smooth reveal like old ARCH video
-          WebkitTransform: 'translateZ(0)',
-          perspective: '1000px',
-        }}
-        onEnded={(e) => {
-          if (playOnce) {
-            const v = e.currentTarget;
-            v.pause();
-            if (v.duration && isFinite(v.duration)) {
-              try {
-                // Freeze on final frame - old smooth reveal behavior
-                v.currentTime = Math.max(0, v.duration - 0.08);
-              } catch {}
-            }
+        onLoadedData={() => setReady(true)}
+        onError={() => setReady(false)}
+        onEnded={(event) => {
+          if (!playOnce) return;
+          const video = event.currentTarget;
+          video.pause();
+          if (Number.isFinite(video.duration)) {
+            video.currentTime = Math.max(0, video.duration - 0.08);
           }
         }}
-        className={`${className} [transform:translateZ(0)] will-change-[transform,opacity] [backface-visibility:hidden]`}
+        className={className}
+        style={{ opacity: enabled && ready ? 1 : 0, transition: 'opacity 500ms ease' }}
       />
     </>
   );

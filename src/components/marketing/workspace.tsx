@@ -1,155 +1,141 @@
 'use client';
 
+import { LinkArrow } from './link-arrow';
+import { useState } from 'react';
 import Link from 'next/link';
-import { useEffect, useRef } from 'react';
-import gsap from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Container, cn } from './vui-primitives';
-import { GsapTextReveal } from './gsap-reveal';
 
-const TIMELINE = [
-  { time: '03:12:04', kind: 'alert', text: 'Alerts fingerprinted into INC-204 (SEV-1)' },
-  { time: '03:12:06', kind: 'action', text: 'lead-sre paged · acknowledged in 01m 14s' },
-  { time: '03:12:19', kind: 'ai', text: 'ARCH V1: possible database lock — review the evidence' },
-  { time: '03:18:19', kind: 'status', text: 'IDENTIFIED → rollback suggested, blast radius 3 services' },
-] as const;
+interface PreviewIncident {
+  id: string;
+  title: string;
+  service: string;
+  severity: string;
+  status: 'Investigating' | 'Identified' | 'Resolved';
+  assignee: string;
+  suggestion: string;
+  timeline: Array<{ time: string; text: string }>;
+}
+
+const INCIDENTS: PreviewIncident[] = [
+  {
+    id: 'INC-204',
+    title: 'Checkout API latency is elevated',
+    service: 'checkout-api',
+    severity: 'High',
+    status: 'Identified',
+    assignee: 'Alex Mercer',
+    suggestion: 'A database lock appeared after the latest deploy. Review the migration and compare it with previous pool-saturation incidents before choosing a rollback.',
+    timeline: [
+      { time: '03:12', text: 'Latency alert received. Incident opened.' },
+      { time: '03:13', text: 'Alex joined the response and began investigating.' },
+      { time: '03:15', text: 'Related deployment and runbook added to the timeline.' },
+      { time: '03:18', text: 'Database lock identified. Rollback under review.' },
+    ],
+  },
+  {
+    id: 'INC-203',
+    title: 'Webhook deliveries are delayed',
+    service: 'webhook-worker',
+    severity: 'Medium',
+    status: 'Investigating',
+    assignee: 'Sam Patel',
+    suggestion: 'Delivery retries increased alongside queue depth. Check worker throughput and the downstream rate limit; the available evidence does not yet confirm a root cause.',
+    timeline: [
+      { time: '02:46', text: 'Queue-depth alert received. Incident opened.' },
+      { time: '02:48', text: 'Sam joined the response.' },
+      { time: '02:52', text: 'Retry metrics added for investigation.' },
+    ],
+  },
+  {
+    id: 'INC-201',
+    title: 'Database connection spike',
+    service: 'postgres-primary',
+    severity: 'Low',
+    status: 'Resolved',
+    assignee: 'Taylor Chen',
+    suggestion: 'The timeline records a pool-limit adjustment and recovery. Use those notes to prepare a postmortem draft, then have the responder verify the impact and follow-up actions.',
+    timeline: [
+      { time: '01:20', text: 'Connection-limit alert received.' },
+      { time: '01:24', text: 'Pool configuration identified as the cause.' },
+      { time: '01:31', text: 'Configuration adjusted. Service monitored.' },
+      { time: '01:42', text: 'Service recovered. Incident resolved.' },
+    ],
+  },
+];
 
 export function Workspace() {
-  const sectionRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-    gsap.registerPlugin(ScrollTrigger);
-    const ctx = gsap.context(() => {
-      gsap.fromTo(
-        '.workspace-reveal',
-        { y: 24, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 0.75,
-          stagger: 0.1,
-          ease: 'power3.out',
-          scrollTrigger: { trigger: sectionRef.current, start: 'top 80%' },
-        }
-      );
-    }, sectionRef);
-
-    return () => ctx.revert();
-  }, []);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const incident = INCIDENTS[activeIndex]!;
 
   return (
-    <section
-      id="workspace"
-      ref={sectionRef}
-      className="relative border-b border-[#182438] bg-[#04070e] overflow-hidden"
-    >
-      <Container>
-        <div className="md:border-x border-[#182438]">
-          {/* Header */}
-          <div className="workspace-reveal flex flex-col gap-4 border-b border-[#182438] px-5 py-10 md:px-8 lg:flex-row lg:items-end lg:justify-between lg:px-10">
-            <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#182438] bg-[#070d19] px-3 py-1 font-mono text-[11px] font-medium text-[#3b8ef4]">
-                <span>INCIDENT CONSOLE PREVIEW</span>
-              </div>
-              <GsapTextReveal
-                as="h2"
-                className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-white tracking-tight text-left"
-              >
-                One console for every incident
-              </GsapTextReveal>
-              <p className="mt-2 max-w-xl font-mono text-xs sm:text-sm text-zinc-400">
-                Queue, timeline, and root cause — sample data below.
-              </p>
-            </div>
-
-            <div className="flex items-center gap-2.5">
-              <Link
-                href="/login"
-                className="inline-flex h-9 items-center gap-2 rounded-lg bg-[#3b8ef4] px-4 text-xs font-semibold text-[#04070e] transition-colors hover:bg-[#64a8ff]"
-              >
-                <span>Open Console</span>
-                <span aria-hidden>→</span>
-              </Link>
-            </div>
+    <section id="workspace" className="mk-section" aria-labelledby="workspace-title">
+      <div className="mk-container">
+        <div className="mk-section-heading">
+          <div>
+            <p className="mk-eyebrow">The workspace</p>
+            <h2 id="workspace-title" className="mk-title">The whole picture.<br />One place to work.</h2>
+            <p className="mk-description">A shared queue, a clear timeline, and the context to take the next step.</p>
           </div>
+          <Link href="/login" className="mk-text-link">Open your workspace <LinkArrow /></Link>
+        </div>
 
-          {/* Console shell */}
-          <div className="workspace-reveal bg-[#060a14]">
-            <div className="flex items-center justify-between gap-2 border-b border-[#182438] bg-[#070d19] px-4 py-2.5 font-mono text-[11px] text-zinc-400">
-              <span className="flex items-center gap-2">
-                <span className="text-[#3b8ef4]">//</span>
-                <span className="text-zinc-300">
-                  arch.internal / incidents / <strong className="text-white">INC-204</strong>
-                </span>
-              </span>
-              <span className="hidden rounded border border-[#182438] bg-[#04070e] px-2 py-0.5 text-[10px] text-[#3b8ef4] sm:inline">
-                ARCH V1.1 READY
-              </span>
+        <div className="mk-console" role="region" aria-label="Interactive workspace preview with illustrative data">
+          <div className="mk-console-bar">
+            <span><strong>ARCH</strong><span className="mk-console-path"> / Workspace / Incidents</span></span>
+            <span className="mk-console-demo">Sample workspace</span>
+          </div>
+          <div className="mk-console-body">
+            <div className="mk-console-sidebar">
+              <p className="mk-console-label">Incidents <span>{INCIDENTS.length}</span></p>
+              <div className="mk-incident-list" aria-label="Sample incidents">
+                {INCIDENTS.map((item, index) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    className={`mk-incident-option${index === activeIndex ? ' is-active' : ''}`}
+                    aria-pressed={index === activeIndex}
+                    aria-controls="preview-incident-detail"
+                    onClick={() => setActiveIndex(index)}
+                  >
+                    <span className="mk-incident-option-meta"><span>{item.id}</span><span>{item.severity}</span></span>
+                    <span className="mk-incident-option-title">{item.title}</span>
+                    <span className="mk-incident-option-status"><span className={`mk-status-dot mk-status-dot--${item.status.toLowerCase()}`} aria-hidden="true" />{item.status}</span>
+                  </button>
+                ))}
+              </div>
+              <p className="mk-console-hint">Choose an incident to explore.</p>
             </div>
 
-            <div className="grid grid-cols-1 divide-y divide-[#182438] lg:grid-cols-2 lg:divide-x lg:divide-y-0">
-              {/* Incident card */}
-              <div className="p-5 md:p-6">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-mono text-sm font-semibold text-white">INC-204</span>
-                  <span className="rounded border border-[#3b8ef4]/35 bg-[#3b8ef4]/10 px-2 py-0.5 font-mono text-[10px] font-semibold text-[#3b8ef4]">
-                    SEV-1 · IDENTIFIED
-                  </span>
-                </div>
-                <p className="mt-2 text-sm font-medium text-zinc-100 leading-snug">
-                  Checkout API p99 latency &gt; 4.2s across eu-central-1
-                </p>
-                <p className="mt-2 font-mono text-[11px] leading-relaxed text-zinc-400">
-                  Pool saturation on pg-primary-02 after deploy v2.18.4 · commander: Alex Mercer · MTTA 01m 14s
-                </p>
-
-                <div className="mt-4 rounded-xl border border-[#3b8ef4]/30 bg-[#3b8ef4]/[0.06] p-3">
-                  <div className="font-mono text-[10px] uppercase tracking-[0.16em] text-[#3b8ef4]">
-                    Suggested cause · example
-                  </div>
-                  <p className="mt-1 font-mono text-[11px] leading-relaxed text-zinc-300">
-                    Unindexed foreign-key scan on orders_ledger → rollback checkout-api to v2.18.3.
-                  </p>
-                </div>
+            <div id="preview-incident-detail" className="mk-console-detail" aria-live="polite" aria-atomic="true">
+              <div className="mk-incident-heading">
+                <span className="mk-console-id">{incident.id}</span>
+                <span className={`mk-state mk-state--${incident.status.toLowerCase()}`}>{incident.status}</span>
               </div>
-
-              {/* Timeline */}
-              <div className="p-5 md:p-6">
-                <div className="pb-3 font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500">
-                  Timeline
+              <h3>{incident.title}</h3>
+              <dl className="mk-incident-metadata">
+                <div><dt>Service</dt><dd>{incident.service}</dd></div>
+                <div><dt>Severity</dt><dd>{incident.severity}</dd></div>
+                <div><dt>Assigned to</dt><dd>{incident.assignee}</dd></div>
+              </dl>
+              <div className="mk-console-content">
+                <div className="mk-suggestion">
+                  <h4>Suggested next step</h4>
+                  <p>{incident.suggestion}</p>
+                  <span>Draft · responder review required</span>
                 </div>
-                <ol className="space-y-3">
-                  {TIMELINE.map((event) => (
-                    <li key={event.time} className="flex items-start gap-3">
-                      <span className="mt-0.5 font-mono text-[10px] tabular-nums text-zinc-500">
-                        {event.time}
-                      </span>
-                      <span
-                        className={cn(
-                          'mt-1 h-3 w-0.5 shrink-0 rounded-full',
-                          event.kind === 'ai' || event.kind === 'status'
-                            ? 'bg-[#3b8ef4]'
-                            : 'bg-zinc-600'
-                        )}
-                      />
-                      <span className="text-xs leading-relaxed text-zinc-300">{event.text}</span>
-                    </li>
-                  ))}
-                </ol>
-                <Link
-                  href="/status/arch"
-                  className="mt-5 inline-flex items-center gap-1.5 font-mono text-[11px] text-zinc-400 transition-colors hover:text-[#3b8ef4]"
-                >
-                  <span>Public ledger: /status/arch →</span>
-                </Link>
+                <div className="mk-timeline">
+                  <h4>Timeline</h4>
+                  <ol>
+                    {incident.timeline.map((event) => (
+                      <li key={event.time}><time>{event.time}</time><span>{event.text}</span></li>
+                    ))}
+                  </ol>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </Container>
+        <p className="mk-preview-caption">Interactive preview · illustrative data, not a live incident feed.</p>
+      </div>
     </section>
   );
 }

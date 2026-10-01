@@ -207,7 +207,7 @@ one answer per question; the audit log records the retry without the text.
 ### P2 — "It learns from you" *(T1 · first slice shipped as V9)*
 
 **Shipped:** persistent per-member memory with a panel to read, edit and wipe it — see
-[`../README.md`](../../README.md#chat-with-arch-v8-a-real-chat-on-your-own-model) and the V9 entry in
+[`README.md`](../../README.md#native-does-not-mean-autonomous) and the V9 entry in
 `CHANGELOG.md`. **Still open:** thumbs up/down with reasons, edit-and-resend, and message-body search.
 
 Thumbs up/down + a three-chip reason ("wrong", "outdated", "missed my incident") on every answer,

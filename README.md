@@ -1,383 +1,235 @@
-# ARCH
+<div align="center">
+  <img src="public/dragon-mark.webp" alt="" width="64" />
+  <h1>ARCH</h1>
+  <p><strong>Less noise. More clarity.</strong></p>
+  <p>A focused response workspace for engineering teams.<br />Bring alerts, context, and decisions together—on your own infrastructure.</p>
+  <p>
+    <a href="https://github.com/ssambit635-svg/ARCH/actions/workflows/ci.yml"><img src="https://github.com/ssambit635-svg/ARCH/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
+    <img src="https://img.shields.io/badge/version-0.3.0-444444" alt="Version 0.3.0" />
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-proprietary-444444" alt="Proprietary license" /></a>
+  </p>
+  <p>
+    <a href="#why-arch">Overview</a> ·
+    <a href="#quick-start">Quick start</a> ·
+    <a href="docs/README.md">Documentation</a> ·
+    <a href="docs/api.md">API &amp; CLI</a> ·
+    <a href="CONTRIBUTING.md">Contributing</a>
+  </p>
+</div>
 
-**"ARCH is where your team goes when your application breaks."**
+<br />
 
-ARCH is a multi-tenant **incident management + public status page** SaaS for developer teams.
-One alert comes in, and ARCH carries it all the way through: incident created → assigned to a
-responder → timeline collaboration → resolution → public status page updated → audit trail preserved.
+![Interactive ARCH workspace preview with a sample incident queue, suggested next step, and response timeline](docs/assets/workspace-preview.png)
 
-| | |
-|---|---|
-| **Category** | Incident management / status page SaaS (DevOps tooling) |
-| **Buyer** | CTO, VP Engineering, SRE lead, on-call lead at a 10–200 engineer company |
-| **User** | On-call engineer, SRE, support lead, engineering manager |
-| **Wedge** | Fast to set up, honest pricing, audit-ready trail — without the enterprise bloat |
-| **Status** | Pre-launch · v0.1.0 · P0 feature-complete (milestones 1–10 of AGENTS.md) |
-| **Model** | B2B SaaS subscription, per organization, tiered by seats + monitored services |
+<p align="center"><sub>Interactive landing-page preview. Illustrative data—not a live incident feed.</sub></p>
 
----
+## Why ARCH
 
-## What it does in five lines
+Production problems create enough noise. Your response tools shouldn’t add to it.
 
-1. **Ingests alerts** from your existing tools (webhook → HMAC-verified → incident).
-2. **Runs the response** as a real state machine: `INVESTIGATING → IDENTIFIED → MONITORING → RESOLVED`.
-3. **Keeps a timeline** of every comment, assignment and status change, with an audit log underneath.
-4. **Publishes a status page** your customers can read, so you stop answering "is it down?" by hand.
-5. **Keeps tenants separate** — every query is scoped to one organization, enforced on the server.
+ARCH gives your team one place to understand what happened, coordinate the response, and keep a trustworthy record of the decisions that follow. It works alongside your monitoring tools and GitHub rather than replacing them.
 
-ARCH is explicitly **not**: a general-purpose chatbot, a code generator, an IDE, a debugger, a
-hosting platform, a CI/CD system, a Kubernetes manager, a billing system, or a replacement for
-GitHub / Slack / AWS.
+- **A shared response.** Track incidents, assign responders, and collaborate through a continuous timeline.
+- **Context close to the work.** Connect services, dependencies, changes, and runbooks to the investigation.
+- **Assistance with boundaries.** Generate triage suggestions and drafts locally, then review them before they affect the incident.
+- **Infrastructure you control.** Run the app, database, worker, and native inference in your own environment.
 
----
+> **Release status:** Early access, **v0.3.0**. Evaluate ARCH in a private environment before relying on it for production response. Roadmap and pricing documents describe plans, not delivery or service-level guarantees.
 
-## Stack
+## From first alert to the next lesson
+
+```text
+Investigating  →  Identified  →  Monitoring  →  Resolved
+       shared context · responder decisions · continuous timeline
+```
+
+Forward transitions may skip ahead when appropriate. A resolved incident can be explicitly reopened; invalid transitions are rejected on the server.
+
+| Capability | What you can do |
+| :--- | :--- |
+| **Incident workspace** | Search and filter incidents, manage severity and ownership, record comments and state changes. |
+| **Alert intake** | Receive HMAC-signed webhooks, deduplicate deliveries, fingerprint incidents, and inspect delivery history. |
+| **Native assistance** | Draft summaries, triage suggestions, customer updates, and postmortems using organization-scoped context. |
+| **Knowledge & learning** | Retrieve relevant runbooks and similar incidents; train and evaluate per-organization classifiers. |
+| **Service context** | Track dependencies, change events, and SLOs to support investigation. |
+| **Code Assist & fix verification** | Review supplied code, inspect reproduction evidence, and review supported patch workflows before approving GitHub actions. |
+| **Workspace chat** | Ask about your organization’s incidents and knowledge; manage your own conversations and memory. |
+| **Customer communication** | Publish service health and incident history through public pages when enabled. |
+| **Access & accountability** | Use organization-scoped workspaces, four server-enforced roles, audit logs, and scoped API tokens. |
+
+### Native does not mean autonomous
+
+ARCH’s engine uses small classifiers, TF-IDF similarity search, retrieval, rules, and templates. It is **not a general-purpose LLM**, and it does not need an external AI API key. Suggestions can be incomplete or wrong; useful results depend on the context and incident history you supply.
+
+Copilot output is stored as a draft. A permitted responder reviews and approves it before it updates an incident or posts to its timeline. Native inference does not contact an AI vendor. Optional document fetching, GitHub, email, and other configured integrations can still use the network.
+
+Read the [native engine guide](docs/engineering/ARCH-MODEL.md), [agent implementation notes](docs/engineering/ARCH-AGENT.md), and [AI guardrails](docs/engineering/AI-GUARDRAILS.md).
+
+## Quick start
+
+For authorized local development, use **Node.js 20.19+** and npm. Node.js 22 is used in CI. PostgreSQL can run through Docker or the embedded development fallback.
+
+### 1. Get the code
+
+```bash
+git clone https://github.com/ssambit635-svg/ARCH.git
+cd ARCH
+npm ci
+cp .env.example .env
+chmod 600 .env
+```
+
+### 2. Configure your environment
+
+Generate **two different secrets** and set them as `AUTH_SECRET` and `AUTH_SECRET_WEBHOOK` in your local `.env`:
+
+```bash
+openssl rand -base64 32
+openssl rand -base64 32
+```
+
+The example already contains a local `DATABASE_URL` and `APP_URL`. Leave GitHub OAuth credentials blank unless you are enabling that integration. Do not commit `.env` or reuse production secrets locally.
+
+### 3. Start ARCH
+
+```bash
+npm run dev
+```
+
+Open **[localhost:3000](http://localhost:3000)** and create an account at **`/register`**.
+
+The development command generates the Prisma client, connects to PostgreSQL (or starts the local fallback), applies migrations, and starts Next.js. **No shared demo account is created.** Start `npm run worker` in another terminal if you want notification processing and scheduled model training.
+
+The embedded database is for development and testing only. Its default data directory is under `/tmp`, and its process stops with the dev command. Use persistent, managed PostgreSQL for staging and production.
+
+For Docker, custom database URLs, demo seeding, browser previews, and troubleshooting, see the [development guide](docs/DEVELOPMENT.md).
+
+## Configuration
+
+The full configuration contract is in [`.env.example`](.env.example).
+
+| Variable | Purpose |
+| :--- | :--- |
+| `DATABASE_URL` | PostgreSQL connection URL. Use verified TLS for hosted databases. |
+| `AUTH_SECRET` | Signs authentication sessions. Set a unique value for each environment. |
+| `AUTH_SECRET_WEBHOOK` | Protects webhook endpoint credentials. Must differ from `AUTH_SECRET`. |
+| `APP_URL` | Public app origin used for callbacks, invitations, and email links. |
+| `AI_PROVIDER` | `arch` for native inference; `mock` for tests. No external provider adapter ships. |
+| `ARCH_OFFLINE_ONLY` | Defaults to `true`; blocks public-URL knowledge fetching. It is not a firewall for all integrations. |
+| `GITHUB_MODE` | `auto`, `mock`, or `real`. Real mode requires configured GitHub access. |
+
+GitHub sign-in is optional. Follow the [OAuth setup guide](docs/GITHUB-OAUTH-SETUP.md) when enabling it. GitHub sign-in and repository write access are separate integrations.
+
+## Built for a clear operating model
+
+ARCH is a **modular monolith**: one Next.js application, one PostgreSQL database, and a separate worker for background processing. No Redis, vector service, or external AI runtime is required for native inference.
+
+```text
+Browser / CLI / signed webhook
+              │
+      Next.js App Router
+              │
+     Validation & permissions
+              │
+       Business services
+              │
+ Organization-scoped repositories
+              │
+          PostgreSQL
+              ↕
+    Notification & training worker
+```
 
 | Layer | Technology |
-|---|---|
-| Language | TypeScript (strict) |
-| Framework | Next.js 14+ App Router |
-| Styling | Tailwind CSS |
-| Database | PostgreSQL 16 |
-| ORM | Prisma |
-| Validation | Zod |
-| Auth | Auth.js (NextAuth v5) |
-| Email | Adapter-based (console in dev, Resend in prod) |
-| Jobs | Postgres-backed outbox + `npm run worker` (no Redis) |
+| :--- | :--- |
+| Application | Next.js 16 · React 19 · strict TypeScript |
+| UI | Tailwind CSS 4 · self-hosted fonts |
+| Data | PostgreSQL · Prisma 7 · Zod |
+| Authentication | Auth.js 5 · credentials and optional GitHub OAuth |
+| Jobs | PostgreSQL-backed outbox and worker |
+| Testing | Vitest · real, separate PostgreSQL test database |
+| Terminal client | Python CLI in `clients/python` |
 
----
+### Repository guide
 
-## Repository map
-
-The written spec and the implementation live side by side: documents in `docs/`, code in `src/`.
-
-```
-ARCH/
-├── AGENTS.md                     # Engineering contract for coding agents (stack, schema, rules)
-├── AGENTS-V2.md                  # V2 contract: ARCH Copilot + Slack/status-page improvements
-├── README.md                     # You are here
-├── CHANGELOG.md                  # Version history, Keep-a-Changelog format
-├── CONTRIBUTING.md               # How to work in this repo
-├── CODE_OF_CONDUCT.md            # Contributor Covenant 2.1
-├── SECURITY.md                   # Vulnerability disclosure policy
-├── LICENSE                       # Proprietary — all rights reserved
-├── prisma/
-│   ├── schema.prisma             # Data model (AGENTS.md §4)
-│   └── migrations/               # SQL migrations, applied by scripts/db-migrate.mjs
-├── scripts/                      # setup, dev orchestrator, embedded Postgres, migration runner
-├── src/
-│   ├── app/                      # App Router: (marketing) (auth) dashboard status/[slug] api/
-│   ├── components/               # UI primitives, forms, dashboard + incident widgets
-│   ├── lib/                      # env, db, errors, permissions, validation, audit, api, session
-│   ├── server/
-│   │   ├── repositories/         # one per aggregate; every query is organization-scoped
-│   │   └── services/             # business rules (RBAC, state machine, tenancy)
-│   └── worker/                   # notification outbox drain loop
-├── tests/                        # vitest: permission matrix, transitions, tenancy, webhooks
-└── docs/
-    ├── README.md                 # Documentation map — start here
-    ├── EXPLAINED-SIMPLY.md       # The whole product in plain English
-    ├── product/                  # What we build and why
-    │   ├── PRD.md                # Product requirements
-    │   ├── FEATURES.md           # Feature list with priorities
-    │   ├── USER-STORIES.md       # Stories + acceptance criteria
-    │   ├── ROADMAP.md            # v0.1 → v1.0 → beyond
-    │   ├── PRICING.md            # Plans, limits, rationale
-    │   └── METRICS.md            # North-star and KPI tree
-    ├── engineering/              # How it is built and run
-    │   ├── ARCHITECTURE.md       # Layers, requests, tenancy, failure modes
-    │   ├── SECURITY-AND-COMPLIANCE.md
-    │   └── OPERATIONS-RUNBOOK.md # Deploy, backup, on-call, our own incidents
-    ├── go-to-market/             # How it reaches customers
-    │   ├── GTM-PLAN.md
-    │   ├── COMPETITIVE-ANALYSIS.md
-    │   └── BRAND-GUIDE.md
-    ├── legal/                    # Customer-facing legal set
-    │   ├── PRIVACY-POLICY.md
-    │   ├── TERMS-OF-SERVICE.md
-    │   ├── DATA-PROCESSING-ADDENDUM.md
-    │   ├── SERVICE-LEVEL-AGREEMENT.md
-    │   ├── COOKIE-POLICY.md
-    │   └── ACCEPTABLE-USE-POLICY.md
-    └── support/                  # Customer-facing help
-        ├── FAQ.md
-        ├── SUPPORT-POLICY.md
-        └── CUSTOMER-ONBOARDING.md
+```text
+src/app/                    Pages, route handlers, and server actions
+src/components/             Marketing, workspace, and shared UI
+src/lib/                    Auth, configuration, permissions, validation
+src/server/services/        Business rules and orchestration
+src/server/repositories/    Organization-scoped database access
+src/server/ai/              Native inference, retrieval, and guardrails
+src/worker/                 Notification processing and model training
+prisma/                     Schema and SQL migrations
+clients/python/             Python CLI and its tests
+scripts/                    Setup, database lifecycle, smoke tests, model tools
+tests/                      Unit and database-backed integration tests
+docs/                       Product, engineering, operations, and support guides
 ```
 
----
-
-## Getting started (reading order)
-
-**If you are a new engineer or AI agent:** read `AGENTS.md` first (it is the build contract), then
-`docs/engineering/ARCHITECTURE.md`, then `docs/product/FEATURES.md`. Then start Milestone 1 of
-`docs/product/ROADMAP.md`.
-
-**If you are a founder, designer or marketer:** read `docs/EXPLAINED-SIMPLY.md`, then
-`docs/product/PRD.md`, `docs/product/PRICING.md` and `docs/go-to-market/GTM-PLAN.md`.
-
-**If you are a customer or evaluating ARCH:** read `docs/support/FAQ.md`,
-`docs/legal/TERMS-OF-SERVICE.md` and `docs/legal/SERVICE-LEVEL-AGREEMENT.md`.
-
----
-
-## Local development
+## Development & verification
 
 ```bash
-cp .env.example .env && chmod 600 .env  # set distinct random AUTH_SECRET / AUTH_SECRET_WEBHOOK
-npm ci
-npm run dev                             # Postgres + migrations + Next.js; register at /register
-npm run worker                          # optional second terminal: notification outbox
+npm run db:generate
+npm run typecheck
+npm test
+npm run build
 ```
 
-`npm run dev` is the one command that has to work on a fresh machine: it generates the Prisma client,
-makes sure a database is reachable, applies migrations, and then starts Next.js. It uses a **Docker**
-Postgres when one is already running; otherwise it starts a local embedded PostgreSQL (data in
-`ARCH_DEV_DB_DIR`, default under `/tmp`). The database runs **only while the process is alive**, and
-`/tmp` can be lost when the sandbox resets; use managed PostgreSQL and a stable URL for durable
-staging/production. No demo users are created automatically — sign up at `/register`. (`npm run
-dev:all` is an alias kept for existing scripts; `npm run dev:next` starts Next.js alone, assuming the
-database is up.) `npm run setup` prepares the database and then stops embedded Postgres. For
-disposable demo data, set `ARCH_SEED_DEMO="true"` and a unique 12+ character `SEED_PASSWORD` in your
-ignored `.env` before `npm run dev`, or run `npm run db:seed` with `SEED_PASSWORD` set. Never seed
-public/production databases.
+Tests provision their own PostgreSQL database on port `55433`, separate from development. CI also checks the production build, dependency audit, and Python CLI tests.
 
-Two environment-independent details worth knowing:
+| Command | Use it for |
+| :--- | :--- |
+| `npm run dev` | Database preparation and local app development. |
+| `npm run dev:next` | Next.js only, with an already running and migrated database. |
+| `npm run db:migrate` | Apply SQL migrations to the configured database. |
+| `npm run worker` | Drain notification jobs and run scheduled model training. |
+| `npm run smoke:api` | Exercise the backend against a running app using disposable `smoke-*` data. |
+| `npm run model:eval` | Evaluate the native model offline. |
+| `npm run build` / `npm start` | Build and serve the production app; neither command migrates the database. |
 
-- **Fonts are self-hosted** (`src/app/fonts/`, OFL-1.1). `next build` never calls
-  fonts.googleapis.com, so an air-gapped or egress-restricted machine can build and run ARCH.
-- **The dev server runs in a memory-safe mode** (no Turbopack source maps). Extracting source maps
-  for every lazily compiled route is what makes a 4 GB container run out of memory after a few dozen
-  routes. Set `ARCH_DEV_SOURCE_MAPS="true"` when you have the headroom and want full stack traces.
+Before deploying, configure durable PostgreSQL and unique secrets, set `APP_URL` to your public HTTPS origin, apply migrations, and run the app and worker as separately supervised processes. Review backups, mail delivery, TLS, and monitoring in the [operations runbook](docs/engineering/OPERATIONS-RUNBOOK.md).
 
-Day-to-day:
+## API & CLI
 
-| Command | What it does |
-|---|---|
-| `npm run dev` | Postgres (Docker or embedded) + migrations + Next.js |
-| `npm run dev:next` | Next.js only (assumes the database is already up **and migrated**) |
-| `npm run build` / `npm start` | Production build / production server (does **not** migrate — run `npm run db:migrate` first) |
-| `npm run db:up` / `db:down` / `db:status` | Embedded Postgres lifecycle |
-| `npm run db:migrate` / `db:reset` | Apply migrations — `/` `--reset` drops and rebuilds |
-| `npm run db:seed` | Idempotent demo data (only with a private, unique `SEED_PASSWORD`) |
-| `npm run smoke:api` | End-to-end backend check against a running server (see below) |
-| `npm run typecheck` | `tsc --noEmit` |
-| `npm test` | Vitest against a real, separate test database |
-| `npm run worker` | Outbox drain (add `-- --once` for a single pass) |
-
-### Sign-up or sign-in says the database tables are missing
-
-`npm run dev:next`, `npm start` and a fresh hosted PostgreSQL do not apply migrations. The database
-then answers connections but has no `users` table, and `/register` / `/login` say that ARCH's tables
-are missing or out of date. Run `npm run db:migrate` against the same `DATABASE_URL` (or start with
-`npm run dev`, which migrates automatically). On a hosting platform, either make the build command
-`npm run db:migrate && npm run build`, or run `DATABASE_URL="<production url>" npm run db:migrate`
-once from your own machine after each release that adds a migration. Managed databases that
-require SSL work with `?sslmode=verify-full` (and `sslrootcert` if your provider uses a custom CA).
-For compatibility, ARCH normalizes legacy `prefer` / `require` / `verify-ca` URL modes to
-`verify-full` in both the app and migrator. This preserves pg's current verified TLS behavior
-without its security warning; it does **not** bypass certificate or hostname checks. Use your
-provider's certificate-matching hostname. The migrator never needs the `postgres` maintenance
-database on a hosted instance. Any other unexpected sign-up/sign-in failure shows an
-**Error ID**; the server log has a matching `[register] failed` / `[login] failed` line with the
-Prisma/PostgreSQL error codes and the table involved (never passwords, form data or connection
-strings).
-
-### Backend smoke test
-
-`npm run smoke:api` exercises every API surface against a server you are already running
-(`SMOKE_BASE_URL` overrides `http://localhost:3000`): it registers a throwaway account, signs in
-through the real credentials callback, then walks projects, services, incidents (+ timeline,
-correlation, similar, blast radius), the whole Copilot surface, status pages, HMAC-signed webhook
-ingestion, dependencies, changes, SLOs, knowledge sources, repo connections, the v1 bearer API,
-invitations and the negative paths (anonymous 401s, cross-tenant 404s, duplicate email 409, weak
-password 422, bad signature 401). It creates only `smoke-*` rows and exits non-zero if anything
-fails. `SMOKE_VERBOSE=1` prints each check as it runs; `SMOKE_RSS=1` also reports the server's
-resident memory per request, which is how a leaking route shows up.
-
-Environment variables are documented in `AGENTS.md` §2. Never commit secrets — `.env` stays local.
-A previously committed `.env` was removed from tracking, but it remains in Git history: rotate
-anything copied to a hosted environment. New webhook endpoint envelopes use `AUTH_SECRET_WEBHOOK`;
-legacy v1 envelopes use `AUTH_SECRET`. If a live DB has legacy endpoints, back it up, set a NEW
-`AUTH_SECRET_WEBHOOK`, then run `npm run webhooks:rekey` (dry run) and
-`npm run webhooks:rekey -- --apply` while the OLD `AUTH_SECRET` is still available. Verify a signed
-webhook, then rotate `AUTH_SECRET` (this signs users out). If the old key is lost, rotate/reissue
-the affected endpoint credentials instead. Never log or commit either key.
-Production requires `AUTH_SECRET` and `AUTH_SECRET_WEBHOOK`; the app refuses to boot with the
-placeholder values. GitHub OAuth setup without a local checkout: [`docs/GITHUB-OAUTH-SETUP.md`](docs/GITHUB-OAUTH-SETUP.md).
-
-### API in one table
-
-Everything is JSON under `/api`. Success is `{ "data": ... }`; failures are
-`{ "error": { "code", "message", "issues?" } }` with `401` unauthenticated, `403` wrong role,
-`404` cross-tenant or missing, `409` illegal transition, `422` validation, `429` rate limited.
-
-| Area | Routes |
-|---|---|
-| Health | `GET /api/health` (database + GitHub mode, no token) |
-| Auth | `/api/auth/*` (Auth.js), `POST /api/auth/register` |
-| Organizations | `/api/organizations`, `/api/organizations/{id}`, `/members`, `/invitations` |
-| Invitations | `GET /api/invitations/{token}`, `POST /api/invitations/{token}/accept` |
-| Projects & services | `/api/projects`, `/api/services` (+ `/{id}`), `?organizationId=` |
-| Incidents | `/api/incidents` (+ `/{id}`, `/{id}/events`) — filters `q`, `status`, `severity`, `open`, `projectId`, `page`, `pageSize` |
-| Status pages | `/api/status-pages` (+ `/{id}`, `/{id}/publish`), public `GET /api/status-pages/public/{slug}`, page `/status/{slug}` |
-| Webhooks | `POST /api/webhooks/{provider}?endpoint={externalId}` (HMAC only), `/api/webhook-endpoints` (+ `/{id}/rotate`, `/{id}/deliveries`) |
-| Audit | `GET /api/audit` (OWNER/ADMIN, paginated, `?summary=true`) |
-| Copilot (V2) | `POST /api/incidents/{id}/copilot/{summary,triage,status-draft,postmortem}`, `GET /api/incidents/{id}/copilot/suggestions?status=`, `POST /api/copilot/suggestions/{id}/{approve,dismiss}` |
-| ARCH Model + Code Assist (V3) | `POST /api/incidents/{id}/copilot/code-fix` (`{attachment?}`), `POST /api/copilot/code-review` (`{code, mode?, language?}`), `GET /api/copilot/model`, `POST /api/copilot/model/train` (OWNER/ADMIN) |
-| Chat with ARCH (V8/V9/V10.4) | `GET/POST/DELETE /api/copilot/chat/sessions`, `GET/PATCH/DELETE /api/copilot/chat/sessions/{id}`, `POST /api/copilot/chat/sessions/{id}/messages`, `POST /api/copilot/chat/sessions/{id}/regenerate`, `PATCH /api/copilot/chat/sessions/{id}/messages/{messageId}/feedback`, `GET/PATCH/DELETE /api/copilot/chat/memory` — page `/dashboard/chat` |
-
-Webhook senders sign `"{timestamp}.{rawBody}"` with the endpoint secret and send
-`X-Arch-Signature: t=<unix>,v1=<hex>`; GitHub-style `X-Hub-Signature-256` is also accepted.
-Requests older than `WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS` are rejected, repeat deliveries are
-recorded once, and every attempt (accepted, duplicate, rejected, failed) lands in the delivery log.
-
-### Roles
-
-| Action | OWNER | ADMIN | RESPONDER | VIEWER |
-|---|---|---|---|---|
-| Read incidents, projects, services, status pages, members | ✅ | ✅ | ✅ | ✅ |
-| Change incidents, comment, assign | ✅ | ✅ | ✅ | — |
-| Manage projects/services, members, webhooks, publish status pages | ✅ | ✅ | — | — |
-| Organization settings, delete organization | ✅ | — | — | — |
-| Read audit log | ✅ | ✅ | — | — |
-| Read ARCH Copilot drafts | ✅ | ✅ | ✅ | ✅ |
-| Request, approve or dismiss ARCH Copilot drafts | ✅ | ✅ | ✅ | — |
-| Use Code Assist | ✅ | ✅ | ✅ | — |
-| Retrain the ARCH model | ✅ | ✅ | — | — |
-
-Enforced server-side on every request (`src/lib/permissions.ts`); the UI only hides what the API
-would refuse anyway. Cross-tenant ids answer `404`, never `403`.
-
-### ARCH Copilot (V2)
-
-AI assistance inside the incident workspace — spec in [`AGENTS-V2.md`](AGENTS-V2.md). From an
-incident page a responder can ask for a **summary** (≤ 5 bullets), a **triage** suggestion
-(severity + assignee), a customer-safe **status-update draft**, or a **postmortem** draft
-(Timeline / Impact / Root cause / Action items).
-
-- **Always a draft.** Output is stored as a `PENDING` `AiSuggestion`. Nothing touches the incident,
-  the status page or notifications until a RESPONDER+ approves it (text can be edited first).
-  Approving posts to the timeline — or, for triage, applies severity/assignee through the normal
-  incident service. Dismissed drafts are kept for the audit trail.
-- **Minimal, redacted context.** Only the incident title, severity, status, times, affected service
-  name and timeline entries are sent — after credentials, emails and long hex tokens are redacted.
-  No ids, names or other tenants' data; triage candidates are opaque refs mapped back server-side.
-- **Guardrails.** 15 s timeout per attempt, one retry, schema-validated output, then a friendly
-  `503`. Status drafts are scrubbed of hostnames/IPs/URLs after generation. 20 calls/min per org.
-  Every generate, failure, approve and dismiss writes an audit entry with token usage.
-- **Providers.** ARCH ships exactly two engines: **ARCH's own model** (`AI_PROVIDER="arch"`, the
-  default) and `"mock"` for tests. There is no OpenAI/Anthropic adapter, no Ollama client and no
-  hybrid mode in the binary — any other `AI_PROVIDER` value fails at boot. Code lives in
-  `src/server/ai/`; prompts only in `src/server/ai/prompts.ts`.
-
-### ARCH Model + Code Assist (V3): no external AI
-
-Copilot runs on **ARCH's own AI**, on your server: free, CPU-only, no API key. Incident data and
-code never go to OpenAI or Anthropic. Full guide: [`docs/engineering/ARCH-MODEL.md`](docs/engineering/ARCH-MODEL.md).
-
-- **ARCH native model (default).** Classifiers and similar-incident retrieval trained on *your*
-  resolved incidents, a built-in library of 44 failure patterns, and optionally about 340 public
-  postmortems. It retrains automatically (worker) or on demand (`/dashboard/model`, OWNER/ADMIN).
-  Drafts cite what fixed similar incidents before.
-- **ARCH Agent (built in).** Complex prompts are intercepted by a chain-of-thought planner
-  (`<thinking>` / `<plan>` tags are scanned and managed server-side; only the final answer is
-  shown), requests can call native tools from a plain function registry (calculator, clock, scoped
-  file read/list), and a requested Python script is written to a temp `.py` file, run in a
-  sandboxed subprocess, and sent back to the engine with its exact error until it passes — all on
-  your CPU, no second model. Guide: [`docs/engineering/ARCH-AGENT.md`](docs/engineering/ARCH-AGENT.md).
-- **Code fix in the incident panel.** Paste a stack trace or snippet to get a diagnosis, the first
-  frame in your code, fixes and a patch.
-- **Code Assist** (`/dashboard/code`). Paste code to get a review, a safer version, or a
-  stack-trace explanation. Secrets are detected and never echoed, and code is not stored.
+The beta bearer-token API lives under `/api/v1`. Tokens are organization-scoped and permission-scoped. Browser endpoints use the authenticated session; webhook ingestion uses a signature instead of a session.
 
 ```bash
-npm run model:fetch-public     # optional: download public postmortems (git-ignored, check licences)
-npm run model:train            # train every workspace now (the worker also does this hourly)
-npm run model:eval             # offline accuracy report, no database needed
-npm run model:export-finetune -- --org <slug>   # JSONL training set for a derivative model of your own
+pip install ./clients/python
+arch login --url https://your-arch-host
+arch incidents list
 ```
 
-### Knowledge base + learning (V6): Copilot cites your own runbooks
+`arch login` prompts for the token without echoing it. Create a token as an owner or administrator and store it privately; do not pass credentials on a shared shell command line.
 
-Guardrails and their enforcement points: [`docs/engineering/AI-GUARDRAILS.md`](docs/engineering/AI-GUARDRAILS.md).
+See the [API reference](docs/api.md), [CLI guide](clients/python/README.md), and [backend testing guide](docs/BACKEND-TESTING.md).
 
-- **Knowledge page** (`/dashboard/knowledge`). Paste a runbook, a doc or a note — or fetch a public
-  documentation page — and ARCH chunks it, embeds it on your server, and retrieves the relevant
-  passages when Copilot answers. Drafts cite the source by name and only once it clears a relevance
-  floor. No external vector database, no embedding API, no tenant data leaving the boundary.
-- **No fetching at inference time.** Fetching is a human action, SSRF-guarded (private/loopback/
-  link-local addresses refused on every DNS record, ≤3 re-checked redirects, 10s timeout, 2MB cap),
-  rate-limited, audited, and disabled by `ARCH_OFFLINE_ONLY`.
-- **Calibrated confidence** (temperature fitted on your holdout), **learning from corrections**
-  (approve / edit / dismiss / a manual severity change, corrections at 3× weight), and **drift
-  detection** that flags a regressing model instead of promoting it.
-- **"Have we seen this before?"** on each incident and **change-risk ranking** on the declare-incident
-  page — both context for the responder, never an automated action.
-- **Verified fixes prove themselves:** a generated test must fail before the patch and pass after
-  it, and the panel shows both runs. When it cannot reproduce, it says so.
+## Documentation
 
-```bash
-npm run knowledge:fetch -- --org <organizationId> --user <userId>   # seed from public docs
-npm run model:eval                                                  # golden-set accuracy, no database
-```
+| You want to… | Start here |
+| :--- | :--- |
+| Understand the product | [Product overview](docs/EXPLAINED-SIMPLY.md) |
+| Develop locally | [Development guide](docs/DEVELOPMENT.md) |
+| Understand the architecture | [Architecture](docs/engineering/ARCHITECTURE.md) |
+| Run and recover the service | [Operations runbook](docs/engineering/OPERATIONS-RUNBOOK.md) |
+| Evaluate the native engine | [Model guide](docs/engineering/ARCH-MODEL.md) · [Guardrails](docs/engineering/AI-GUARDRAILS.md) |
+| Test an early-access deployment | [Alpha testing](docs/ALPHA-TESTING.md) |
+| Explore what is planned | [Roadmap](docs/product/ROADMAP.md) · [Changelog](CHANGELOG.md) |
 
-### Chat with ARCH (V8/V9/V10.4): a private, conversational workspace assistant
+The [documentation index](docs/README.md) covers the full library.
 
-`/dashboard/chat` is a free workspace assistant powered by ARCH's deterministic native engine:
-no vendor, no API key, no model download, and every workspace fact comes from tenant-scoped data.
-Complex prompts additionally go through the built-in agent loop — a plan is forced and parsed
-server-side, native tools execute exactly, and requested scripts are run and verified in a
-sandboxed subprocess before the answer is presented.
+## Contributing & security
 
-- **A real chat.** Conversations persist: previous sessions in the sidebar (grouped by recency,
-  searchable), rename inline, delete one or clear all. Follow-ups keep the thread. Sessions are
-  private to the member who created them — even inside the same organization.
-- **Answers with evidence.** "What is open right now?" lists the live queue; "what did we learn
-  from <incident>?" pulls the root cause and fix the model extracted; "have we seen this before?"
-  searches your incidents first, then the pattern library, and each source appears as a clickable
-  citation. Ask about the roster, services, runbooks, or an ops problem in plain English or
-  Hinglish.
-- **No code generation, by design.** Ask for a function and ARCH refuses, explains why, and points
-  at Code Assist (Review / Fix / Thinker) instead. A wrong snippet pasted into production is worse
-  than no snippet, and code needs the repo, not a chat window.
-- **Honest when it does not know.** An empty workspace gets "I have nothing to ground this on"
-  plus how to fix that — never an invented incident. Chat answers from a 30-day resolve-time
-  window and the open queue only.
-- **General knowledge, still free.** The native engine keeps its 161-topic, offline tech pack and
-  honest unknown-answer fallback, tailored with member memory plus retrieved runbooks, past
-  incidents and reference patterns — all deterministic, all on this server.
-- **Planning, not leaked reasoning.** For complex asks the agent loop forces a `<thinking>` /
-  `<plan>` protocol and manages the steps internally; hidden chain-of-thought is never shown. Each
-  answer also has private thumbs-up/down feedback for evaluation; ratings do not silently fine-tune
-  the model or enter incident-training data.
-- **Free tier stays the default.** Native answers are deterministic and typically land in tens of
-  milliseconds. Hybrid inference has no API/token charge but uses your machine's RAM/CPU and is
-  slower; it remains private-only and rate-limited per organization. Both modes work with
-  `ARCH_OFFLINE_ONLY="true"`.
-- **The mechanics every chat has.** Copy one answer, copy the conversation, or export it as
-  Markdown; **Try again** re-asks the last question against the workspace as it is now and rewrites
-  the stored answer in place (`POST /api/copilot/chat/sessions/{id}/regenerate`, audited with shape
-  only); the newest answer reveals itself like a reply rather than appearing fully formed; and
-  `⌘/Ctrl+Shift+O` / `⌘/Ctrl+K` / `Esc` do what they do everywhere else. The full plan for closing
-  the rest of the ChatGPT-shaped surface — and what ₹0 can never buy — is
-  [`docs/product/AI-GAP-ANALYSIS.md`](docs/product/AI-GAP-ANALYSIS.md).
-- **Memory that is really saved, and yours to delete.** Tell ARCH something once ("mera naam Vikram
-  hai, hum Postgres use karte hain") and every later chat knows it — and so does advice about your
-  stack. The `Memory` panel in the chat header lists exactly what was stored (name, role, stack,
-  notes) with a delete button per item and a **Forget everything** wipe; "clear memory" in chat does
-  the same. Personal to the member, never shared with the team, never used for training, and every
-  change audited as shape only.
+Read [CONTRIBUTING.md](CONTRIBUTING.md) and [AGENTS.md](AGENTS.md) before changing the code. Keep tenant authorization on the server, scope repository queries to the organization, validate external input, and test the failure paths as well as the happy path.
 
-Permission: reading your own chats needs `copilot.read`; sending messages, renaming and deleting
-need `copilot.generate` (RESPONDER or above). Every session write is audited with metadata only —
-the conversation itself is never written to the audit log. Testing guide: [`docs/ALPHA-TESTING.md`](docs/ALPHA-TESTING.md).
+Report vulnerabilities through the private process in [SECURITY.md](SECURITY.md), not a public issue. Never include secrets, customer data, or private incident logs in bug reports.
+
+## License
+
+ARCH is **proprietary software**, not MIT-licensed or generally open source. Access to this repository does not grant permission to use, distribute, or commercialize it; see [LICENSE](LICENSE) for the current terms. Third-party assets retain their own licenses.
+
+Legal documents in `docs/legal` are drafts and contain entity placeholders. They are not published customer commitments and require completion and legal review.
 
 ---
 
-## Document conventions
-
-- Legal documents use placeholders in `[SQUARE BRACKETS]` for entity details, addresses, dates and
-  jurisdiction. Replace them before publishing to customers — see `docs/legal/README-NOTES.md`.
-- Pricing figures are working hypotheses, not commitments.
-- Every document lists an owner and a "last reviewed" date; review cadence is 90 days.
+<p align="center"><sub>ARCH · A little less noise. A little more headspace.</sub></p>

@@ -5,7 +5,7 @@ Start with the row that matches who you are.
 | I am… | Read this | Then |
 |---|---|---|
 | Curious / non-technical | [`EXPLAINED-SIMPLY.md`](EXPLAINED-SIMPLY.md) | [`support/FAQ.md`](support/FAQ.md) |
-| Building the product | [`../AGENTS.md`](../AGENTS.md) | [`engineering/ARCHITECTURE.md`](engineering/ARCHITECTURE.md) → [`product/ROADMAP.md`](product/ROADMAP.md) |
+| Developing locally | [`DEVELOPMENT.md`](DEVELOPMENT.md) | [`../AGENTS.md`](../AGENTS.md) → [`engineering/ARCHITECTURE.md`](engineering/ARCHITECTURE.md) |
 | Deciding what to build | [`product/PRD.md`](product/PRD.md) | [`product/FEATURES.md`](product/FEATURES.md) → [`product/USER-STORIES.md`](product/USER-STORIES.md) |
 | Selling / marketing | [`go-to-market/GTM-PLAN.md`](go-to-market/GTM-PLAN.md) | [`product/PRICING.md`](product/PRICING.md) → [`go-to-market/COMPETITIVE-ANALYSIS.md`](go-to-market/COMPETITIVE-ANALYSIS.md) |
 | Buying / security-reviewing | [`legal/TERMS-OF-SERVICE.md`](legal/TERMS-OF-SERVICE.md) | [`legal/PRIVACY-POLICY.md`](legal/PRIVACY-POLICY.md) → [`engineering/SECURITY-AND-COMPLIANCE.md`](engineering/SECURITY-AND-COMPLIANCE.md) |
