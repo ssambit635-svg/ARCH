@@ -9,7 +9,7 @@ import { env } from '@/lib/env';
  * Notification worker.
  *
  * ARCH writes notifications into a Postgres-backed outbox inside the same transaction as the
- * incident change (features.md: "no Redis yet"). This process drains that outbox:
+ * incident change (no Redis yet). This process drains that outbox:
  *
  *   npm run worker              # poll every 5s
  *   npm run worker -- --once    # single pass (cron / one-shot deploy step)
