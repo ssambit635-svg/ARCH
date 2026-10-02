@@ -23,58 +23,41 @@ export function UserMenu({ user, role, statusSlug }: { user: { email: string; na
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
     };
-  }, [open ]);
+  }, [open]);
 
   return (
-    <div ref={ref} className="relative">
+    <div ref={ref} className="arch-user-menu">
       <button
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label="Account menu"
-        className="rounded-full ring-2 ring-transparent transition hover:ring-indigo-500/50"
+        className="arch-user-menu-trigger"
       >
         <Avatar name={user.name} email={user.email} />
       </button>
 
       {open ? (
-        <div role="menu" className="layer-shadow absolute right-0 top-full z-50 mt-2 w-60 animate-scale-in rounded-xl border border-white/10 bg-abyss-850 p-1.5">
-          <div className="flex items-center gap-3 px-2.5 py-2.5">
+        <div role="menu" className="arch-popover arch-user-popover">
+          <div className="arch-user-card">
             <Avatar name={user.name} email={user.email} size="lg" />
-            <div className="min-w-0 leading-tight">
-              <p className="truncate text-sm font-semibold text-slate-100">{user.name ?? 'On-call'}</p>
-              <p className="truncate text-xs text-slate-500">{user.email}</p>
-              <p className="mt-1 inline-block rounded-md bg-white/[0.07] px-1.5 py-px text-[10px] font-bold uppercase tracking-wider text-slate-300">
-                {role}
-              </p>
+            <div className="arch-user-copy">
+              <p className="arch-user-name">{user.name ?? 'On-call'}</p>
+              <p className="arch-user-email">{user.email}</p>
+              <span className="arch-user-role">{role}</span>
             </div>
           </div>
-          <div className="my-1 h-px bg-white/[0.07]" />
-          <Link
-            href="/dashboard/settings"
-            onClick={() => setOpen(false)}
-            role="menuitem"
-            className="block rounded-lg px-2.5 py-2 text-[13px] text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
-          >
-            Organization settings
+          <div className="arch-popover-divider" />
+          <Link href="/dashboard/settings" onClick={() => setOpen(false)} role="menuitem" className="arch-popover-link">
+            Workspace settings
           </Link>
-          <Link
-            href={`/status/${statusSlug}`}
-            prefetch={false}
-            onClick={() => setOpen(false)}
-            role="menuitem"
-            className="block rounded-lg px-2.5 py-2 text-[13px] text-slate-300 transition hover:bg-white/[0.06] hover:text-white"
-          >
-            View public status page
+          <Link href={`/status/${statusSlug}`} prefetch={false} onClick={() => setOpen(false)} role="menuitem" className="arch-popover-link">
+            Public status page
           </Link>
-          <div className="my-1 h-px bg-white/[0.07]" />
+          <div className="arch-popover-divider" />
           <form action={logoutAction}>
-            <button
-              type="submit"
-              role="menuitem"
-              className="block w-full rounded-lg px-2.5 py-2 text-left text-[13px] text-rose-300 transition hover:bg-rose-500/10"
-            >
+            <button type="submit" role="menuitem" className="arch-popover-link arch-popover-link--danger">
               Sign out
             </button>
           </form>

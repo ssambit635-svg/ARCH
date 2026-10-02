@@ -6,9 +6,7 @@ import type { IncidentSeverity, IncidentStatus, ServiceStatus } from '@/generate
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <div
-      className={`rounded-2xl border border-white/[0.07] bg-gradient-to-b from-abyss-800/90 to-abyss-850/90 shadow-[0_8px_32px_-16px_rgb(0_0_0/0.8)] ${className}`}
-    >
+    <div className={`arch-ui-card ${className}`}>
       {children}
     </div>
   );
@@ -16,10 +14,10 @@ export function Card({ children, className = '' }: { children: ReactNode; classN
 
 export function CardHeader({ title, description, action }: { title: ReactNode; description?: ReactNode; action?: ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-white/[0.06] px-5 py-4">
+    <div className="arch-ui-card-header">
       <div className="min-w-0">
-        <h2 className="text-sm font-semibold tracking-tight text-slate-100">{title}</h2>
-        {description ? <p className="mt-0.5 text-[13px] leading-relaxed text-slate-400">{description}</p> : null}
+        <h2 className="arch-ui-card-title">{title}</h2>
+        {description ? <p className="arch-ui-card-description">{description}</p> : null}
       </div>
       {action ? <div className="shrink-0">{action}</div> : null}
     </div>
@@ -27,7 +25,7 @@ export function CardHeader({ title, description, action }: { title: ReactNode; d
 }
 
 export function CardBody({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`px-5 py-4 ${className}`}>{children}</div>;
+  return <div className={`arch-ui-card-body ${className}`}>{children}</div>;
 }
 
 export function PageHeader({
@@ -42,13 +40,13 @@ export function PageHeader({
   eyebrow?: ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
+    <div className="arch-page-header">
       <div className="min-w-0">
-        {eyebrow ? <p className="mb-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-indigo-400">{eyebrow}</p> : null}
-        <h1 className="text-balance text-2xl font-semibold tracking-tight text-white sm:text-[28px] sm:leading-tight">{title}</h1>
-        {description ? <p className="mt-1.5 max-w-2xl text-sm leading-relaxed text-slate-400">{description}</p> : null}
+        {eyebrow ? <p className="arch-page-eyebrow">{eyebrow}</p> : null}
+        <h1 className="arch-page-title">{title}</h1>
+        {description ? <p className="arch-page-description">{description}</p> : null}
       </div>
-      {action ? <div className="flex shrink-0 flex-wrap items-center gap-2.5">{action}</div> : null}
+      {action ? <div className="arch-page-actions">{action}</div> : null}
     </div>
   );
 }
@@ -136,10 +134,10 @@ export function EmptyState({
   icon?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-white/10 bg-white/[0.015] px-6 py-12 text-center">
-      {icon ? <div className="mb-3 text-slate-600">{icon}</div> : null}
-      <p className="text-sm font-medium text-slate-200">{title}</p>
-      {description ? <p className="mt-1 max-w-md text-[13px] leading-relaxed text-slate-400">{description}</p> : null}
+    <div className="arch-ui-empty">
+      {icon ? <div className="arch-ui-empty-icon">{icon}</div> : null}
+      <p className="arch-ui-empty-title">{title}</p>
+      {description ? <p className="arch-ui-empty-description">{description}</p> : null}
       {action ? <div className="mt-4">{action}</div> : null}
     </div>
   );

@@ -96,7 +96,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`dark ${orbitron.variable} ${inter.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
-      <body className="min-h-screen flex flex-col bg-[#050608] text-white antialiased selection:bg-[#3b8ef4] selection:text-white">
+      <body className="min-h-screen flex flex-col bg-[#050608] text-[#f4f4f5] antialiased selection:bg-[#c7c7c7] selection:text-[#050608]">
         {children}
       </body>
     </html>
