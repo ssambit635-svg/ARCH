@@ -14,6 +14,7 @@ export function Dialog({
   description,
   children,
   wide = false,
+  className = '',
 }: {
   open: boolean;
   onClose: () => void;
@@ -21,6 +22,7 @@ export function Dialog({
   description?: ReactNode;
   children: ReactNode;
   wide?: boolean;
+  className?: string;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
 
@@ -54,7 +56,7 @@ export function Dialog({
         role="dialog"
         aria-modal="true"
         aria-label={typeof title === 'string' ? title : 'Dialog'}
-        className={`layer-shadow w-full animate-scale-in rounded-2xl border border-white/10 bg-abyss-850 outline-none ${wide ? 'max-w-2xl' : 'max-w-md'}`}
+        className={`layer-shadow w-full animate-scale-in rounded-2xl border border-white/10 bg-abyss-850 outline-none ${wide ? 'max-w-2xl' : 'max-w-md'} ${className}`}
       >
         <div className="flex items-start justify-between gap-4 border-b border-white/[0.07] px-5 py-4">
           <div>

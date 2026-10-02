@@ -22,7 +22,7 @@ export function LogoMark({
         width={size}
         height={size}
         style={{ width: `${size}px`, height: `${size}px` }}
-        className="object-contain drop-shadow-[0_0_10px_rgba(59,142,244,0.28)] shrink-0"
+        className="object-contain shrink-0"
       />
     </span>
   );
@@ -47,23 +47,21 @@ export function Logo({
         width={iconSize}
         height={iconSize}
         style={{ width: `${iconSize}px`, height: `${iconSize}px` }}
-        className="object-contain drop-shadow-[0_0_12px_rgba(59,142,244,0.28)] shrink-0 transition-transform duration-300 hover:scale-105"
+        className="arch-brand-mark shrink-0 object-contain transition-transform duration-300 hover:scale-[1.03]"
       />
       <span className="flex flex-col leading-none">
         <span className="inline-flex items-baseline gap-2">
           <span
-            className={`font-orbitron font-bold tracking-[-0.03em] text-white ${
-              compact ? 'text-[15px]' : 'text-[18px]'
-            }`}
+            className={`arch-brand-name ${compact ? 'is-compact' : ''}`}
           >
-            ARCH<span className="text-[#3b8ef4]">.</span>
+            ARCH<span className="arch-brand-dot">.</span>
           </span>
-          <span className="rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 font-mono text-[10px] font-medium tracking-[0.06em] text-zinc-400">
+          <span className="arch-brand-version">
             v1.1
           </span>
         </span>
         {subtitle && !compact && (
-          <span className="mt-1 font-mono text-[10px] uppercase tracking-[0.14em] text-zinc-500">
+          <span className="arch-brand-subtitle">
             {subtitle}
           </span>
         )}

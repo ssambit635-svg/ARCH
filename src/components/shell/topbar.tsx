@@ -13,6 +13,7 @@ const titles: Record<string, string> = {
   projects: 'Projects & services',
   services: 'Service',
   status: 'Status pages',
+  chat: 'Chat with ARCH',
   model: 'ARCH V1.1',
   code: 'Code Assist',
   knowledge: 'Knowledge',
@@ -31,8 +32,8 @@ function Breadcrumbs() {
   const trail = segments.slice(1);
 
   return (
-    <nav aria-label="Breadcrumb" className="hidden min-w-0 items-center gap-1.5 text-[13px] md:flex">
-      <Link href="/dashboard" className="shrink-0 text-slate-500 transition hover:text-slate-200">
+    <nav aria-label="Breadcrumb" className="arch-breadcrumb">
+      <Link href="/dashboard" className="arch-breadcrumb-link">
         Overview
       </Link>
       {trail.slice(0, 2).map((segment, i) => {
@@ -40,18 +41,12 @@ function Breadcrumbs() {
         const href = `/dashboard/${trail.slice(0, i + 1).join('/')}`;
         const last = i === Math.min(trail.length, 2) - 1 && trail.length <= 2;
         return (
-          <span key={`${segment}-${i}`} className="flex min-w-0 items-center gap-1.5">
-            <span className="text-slate-700" aria-hidden>
-              /
-            </span>
+          <span key={`${segment}-${i}`} className="arch-breadcrumb-step">
+            <span className="arch-breadcrumb-slash" aria-hidden> / </span>
             {last ? (
-              <span className="truncate font-medium text-slate-200" aria-current="page">
-                {label}
-              </span>
+              <span className="arch-breadcrumb-current" aria-current="page">{label}</span>
             ) : (
-              <Link href={href} className="shrink-0 text-slate-500 transition hover:text-slate-200">
-                {label}
-              </Link>
+              <Link href={href} className="arch-breadcrumb-link">{label}</Link>
             )}
           </span>
         );
@@ -78,61 +73,36 @@ export function Topbar({
   onSearch: () => void;
 }) {
   return (
-    <header className="glass sticky top-0 z-40 border-b border-white/[0.06]">
-      <div className="flex items-center gap-3 px-4 py-2.5 sm:px-6">
-        <button
-          type="button"
-          onClick={onMenu}
-          aria-label="Open navigation"
-          className="rounded-lg p-2 text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-100 lg:hidden"
-        >
-          <svg viewBox="0 0 20 20" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+    <header className="arch-product-topbar">
+      <div className="arch-product-topbar-row">
+        <button type="button" onClick={onMenu} aria-label="Open navigation" className="arch-mobile-menu-button">
+          <svg viewBox="0 0 20 20" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden>
             <path d="M3 5.5h14M3 10h14M3 14.5h14" />
           </svg>
         </button>
 
         <OrgSelector organizations={organizations} current={currentOrg} />
-        <div className="hidden h-5 w-px bg-white/[0.08] xl:block" aria-hidden />
+        <div className="arch-topbar-divider" aria-hidden />
         <Breadcrumbs />
 
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            type="button"
-            onClick={onSearch}
-            className="hidden items-center gap-2.5 rounded-xl border border-white/[0.08] bg-white/[0.03] py-2 pl-3 pr-2 text-[13px] text-slate-500 transition hover:border-white/15 hover:text-slate-300 sm:flex sm:w-52 lg:w-64"
-          >
+        <div className="arch-topbar-actions">
+          <button type="button" onClick={onSearch} aria-label="Open command search" className="arch-topbar-search">
             <IconSearch className="size-4" />
-            <span className="flex-1 truncate text-left">Search…</span>
-            <span className="flex items-center gap-1">
-              <Kbd>⌘</Kbd>
-              <Kbd>K</Kbd>
-            </span>
+            <span>Search anything…</span>
+            <span className="arch-topbar-search-keys"><Kbd>⌘</Kbd><Kbd>K</Kbd></span>
           </button>
-          <button
-            type="button"
-            onClick={onSearch}
-            aria-label="Search"
-            className="rounded-xl border border-white/[0.08] bg-white/[0.03] p-2 text-slate-400 transition hover:text-slate-200 sm:hidden"
-          >
+          <button type="button" onClick={onSearch} aria-label="Search" className="arch-topbar-search-icon">
             <IconSearch className="size-4" />
           </button>
 
-          <Link
-            href={`/status/${statusSlug}`}
-            prefetch={false}
-            title="Open public status page"
-            className="hidden items-center gap-1.5 rounded-xl px-2.5 py-2 text-[13px] font-medium text-slate-400 transition hover:bg-white/[0.05] hover:text-slate-100 md:flex"
-          >
+          <Link href={`/status/${statusSlug}`} prefetch={false} title="Open public status page" className="arch-topbar-status-link">
             <IconExternal className="size-4" />
-            Status page
+            <span>Status page</span>
           </Link>
 
-          <Link
-            href="/dashboard/incidents/new"
-            className="hidden items-center gap-1.5 rounded-xl bg-gradient-to-b from-rose-500 to-rose-600 px-3.5 py-2 text-[13px] font-semibold text-white shadow-[0_4px_16px_-4px_rgb(244_63_94/0.6)] ring-1 ring-inset ring-ink-1000/10 transition hover:from-rose-400 hover:to-rose-500 active:scale-[0.98] sm:inline-flex"
-          >
+          <Link href="/dashboard/incidents/new" className="arch-topbar-declare-link">
             <IconPlus className="size-4" />
-            Declare incident
+            <span>Declare incident</span>
           </Link>
 
           <UserMenu user={user} role={role} statusSlug={statusSlug} />

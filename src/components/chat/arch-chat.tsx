@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AI_NAME } from '@/lib/brand';
 import { Dialog } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/toast';
-import { IconChat, IconCopy, IconDownload, IconMemory, IconPencil, IconPlus, IconRetry, IconSearch, IconSpark, IconTrash } from '@/components/shell/icons';
+import { IconBook, IconChat, IconCopy, IconDownload, IconIncident, IconMemory, IconPencil, IconPlus, IconRetry, IconSearch, IconServices, IconSpark, IconTrash } from '@/components/shell/icons';
 
 /**
  * Chat with ARCH — the conversational surface.
@@ -130,13 +130,13 @@ function inline(text: string, keyPrefix: string): React.ReactNode[] {
     const token = match[0];
     if (token.startsWith('**')) {
       parts.push(
-        <strong key={`${keyPrefix}-b${index}`} className="font-semibold text-white">
+        <strong key={`${keyPrefix}-b${index}`} className="arch-chat-strong">
           {token.slice(2, -2)}
         </strong>,
       );
     } else {
       parts.push(
-        <code key={`${keyPrefix}-c${index}`} className="arch-mono rounded bg-white/[0.07] px-1 py-0.5 text-[11.5px] text-violet-200">
+        <code key={`${keyPrefix}-c${index}`} className="arch-chat-inline-code">
           {token.slice(1, -1)}
         </code>,
       );
@@ -151,16 +151,14 @@ function inline(text: string, keyPrefix: string): React.ReactNode[] {
 function RichText({ text }: { text: string }) {
   const lines = text.split('\n');
   return (
-    <div className="space-y-1.5">
+    <div className="arch-chat-rich-text">
       {lines.map((line, lineIndex) => {
         const trimmed = line.trim();
         if (!trimmed) return null;
         if (/^[•\-*]\s/.test(trimmed)) {
           return (
             <div key={lineIndex} className="flex gap-2 pl-0.5">
-              <span aria-hidden className="mt-[3px] text-indigo-400">
-                •
-              </span>
+              <span aria-hidden className="arch-chat-list-marker">•</span>
               <p className="flex-1">{inline(trimmed.replace(/^[•\-*]\s/, ''), `l${lineIndex}`)}</p>
             </div>
           );
@@ -169,9 +167,7 @@ function RichText({ text }: { text: string }) {
           const [number, ...rest] = trimmed.split(/\.\s/);
           return (
             <div key={lineIndex} className="flex gap-2 pl-0.5">
-              <span aria-hidden className="mt-[1px] tabular-nums text-indigo-400">
-                {number}.
-              </span>
+              <span aria-hidden className="arch-chat-list-marker tnum">{number}.</span>
               <p className="flex-1">{inline(rest.join('. '), `n${lineIndex}`)}</p>
             </div>
           );
@@ -299,17 +295,25 @@ export function ArchChat({
   initialMemory,
   canChat,
   engineLabel,
+  engineProvider,
   workspaceName,
   modelVersion,
+  modelTrained,
   incidentsTracked,
+  knowledgeChunks,
+  servicesTracked,
 }: {
   initialSessions: Session[];
   initialMemory: MemoryView;
   canChat: boolean;
   engineLabel: string;
+  engineProvider: string;
   workspaceName: string;
   modelVersion: number | null;
+  modelTrained: boolean;
   incidentsTracked: number;
+  knowledgeChunks: number;
+  servicesTracked: number;
 }) {
   const [sessions, setSessions] = useState<Session[]>(initialSessions);
   const [activeId, setActiveId] = useState<string | null>(initialSessions[0]?.id ?? null);
@@ -320,6 +324,7 @@ export function ArchChat({
   const [input, setInput] = useState('');
   const [filter, setFilter] = useState('');
   const [listOpen, setListOpen] = useState(false);
+  const [contextOpen, setContextOpen] = useState(false);
   const [renaming, setRenaming] = useState<{ id: string; value: string } | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<Session | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -367,6 +372,10 @@ export function ArchChat({
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end', behavior: messages.length > 2 ? 'smooth' : 'auto' });
   }, [messages, sending]);
+
+  useEffect(() => {
+    if (listOpen) searchRef.current?.focus({ preventScroll: true });
+  }, [listOpen]);
 
   const openSession = useCallback(
     async (id: string) => {
@@ -543,6 +552,7 @@ export function ArchChat({
       }
       if (event.key === 'Escape') {
         setListOpen(false);
+        setContextOpen(false);
         setRenaming(null);
         setConfirmDelete(null);
         setConfirmClear(false);
@@ -672,59 +682,67 @@ export function ArchChat({
   }, [filtered]);
 
   const lastSuggestions = [...messages].reverse().find((message) => message.role === 'ARCH' && message.suggestions.length)?.suggestions ?? [];
+  const hasWorkspaceContext = incidentsTracked + knowledgeChunks + servicesTracked > 0;
+  const providerLabel = engineProvider === 'mock' ? 'Mock provider' : 'ARCH native engine';
 
   return (
-    <div className="relative flex h-[calc(100dvh-9.5rem)] min-h-[32rem] gap-4 overflow-hidden">
-      {/* ---------------- recents ---------------- */}
-      <aside
-        className={`${
-          listOpen ? 'absolute inset-y-0 left-0 z-30 w-[19rem] rounded-2xl border border-white/[0.07] bg-abyss-900/95 backdrop-blur-lg' : 'hidden'
-        } shrink-0 flex-col border-white/[0.07] lg:relative lg:flex lg:w-[16.5rem] lg:rounded-2xl lg:border lg:bg-abyss-900/40`}
-      >
-        <div className="flex items-center gap-2 border-b border-white/[0.06] p-3">
+    <div className="arch-ai-workspace">
+      {/* Conversation history */}
+      <aside className={`arch-chat-history${listOpen ? ' is-open' : ''}`} aria-label="Conversation history">
+        <div className="arch-chat-history-header">
+          <div className="arch-chat-history-heading">
+            <p className="arch-chat-overline">ARCH AI</p>
+            <h2>Conversations</h2>
+          </div>
           <button
             type="button"
             onClick={() => void newChat()}
             disabled={!canChat}
-            className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-bone px-3 py-2 text-[13px] font-semibold text-ink-1000 transition hover:bg-white disabled:opacity-40"
+            className="arch-chat-new-button"
           >
-            <IconPlus className="size-4" /> New chat
+            <IconPlus className="size-4" />
+            <span>New chat</span>
           </button>
           <button
             type="button"
             onClick={() => setListOpen(false)}
-            className="rounded-lg p-1.5 text-slate-500 hover:bg-white/[0.06] hover:text-slate-200 lg:hidden"
-            aria-label="Close conversation list"
+            className="arch-chat-close-history"
+            aria-label="Close conversation history"
+            title="Close conversation history"
           >
-            ✕
+            <svg viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden>
+              <path d="M4 4l8 8M12 4l-8 8" />
+            </svg>
           </button>
         </div>
 
-        <label className="relative m-3 mb-1 block">
-          <IconSearch className="pointer-events-none absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-slate-500" />
+        <label className="arch-chat-search">
+          <IconSearch className="arch-chat-search-icon" />
           <input
             ref={searchRef}
             value={filter}
             onChange={(event) => setFilter(event.target.value)}
-            placeholder="Search chats  ⌘K"
-            aria-label="Search chats"
-            className="w-full rounded-lg border border-white/[0.07] bg-abyss-950/70 py-1.5 pl-8 pr-2 text-xs text-slate-200 placeholder:text-slate-600 focus:border-violet-500/50 focus:outline-none"
+            placeholder="Search conversations"
+            aria-label="Search conversations"
           />
+          <span className="arch-chat-search-shortcut" aria-hidden>⌘K</span>
         </label>
 
-        <div className="scroll-thin flex-1 overflow-y-auto px-2 pb-2">
+        <div className="arch-chat-history-list">
           {grouped.length === 0 ? (
-            <p className="px-2 py-6 text-center text-xs text-slate-600">{sessions.length === 0 ? 'No chats yet.' : 'Nothing matches that search.'}</p>
+            <p className="arch-chat-history-empty" aria-live="polite">
+              {sessions.length === 0 ? 'Your conversations will appear here.' : 'No conversations match that search.'}
+            </p>
           ) : (
             grouped.map((group) => (
-              <div key={group.label} className="mb-2">
-                <p className="px-2 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600">{group.label}</p>
-                <ul className="space-y-0.5">
+              <div key={group.label} className="arch-chat-history-group">
+                <p className="arch-chat-history-group-label">{group.label}</p>
+                <ul className="arch-chat-history-items">
                   {group.items.map((session) => {
                     const active = session.id === activeId;
                     const isRenaming = renaming?.id === session.id;
                     return (
-                      <li key={session.id} className="group/item relative">
+                      <li key={session.id} className="arch-chat-history-row">
                         {isRenaming ? (
                           <form
                             onSubmit={(event) => {
@@ -736,49 +754,47 @@ export function ArchChat({
                               autoFocus
                               value={renaming.value}
                               maxLength={60}
+                              aria-label={`Rename ${session.title}`}
                               onChange={(event) => setRenaming({ id: session.id, value: event.target.value })}
                               onBlur={() => void rename()}
                               onKeyDown={(event) => {
                                 if (event.key === 'Escape') setRenaming(null);
                               }}
-                              className="w-full rounded-lg border border-violet-500/50 bg-abyss-950 px-2 py-1.5 text-[13px] text-white focus:outline-none"
+                              className="arch-chat-rename-input"
                             />
                           </form>
                         ) : (
-                          <div
-                            className={`flex items-center gap-1 rounded-lg px-2 py-1.5 ${
-                              active ? 'bg-white/[0.07] ring-1 ring-inset ring-white/[0.08]' : 'hover:bg-white/[0.04]'
-                            }`}
-                          >
+                          <div className={`arch-chat-session${active ? ' is-active' : ''}`}>
                             <button
                               type="button"
                               onClick={() => void openSession(session.id)}
-                              className="flex min-w-0 flex-1 items-center gap-2 text-left"
+                              className="arch-chat-session-open"
                               title={session.title}
+                              aria-current={active ? 'page' : undefined}
                             >
-                              <IconChat className={`size-3.5 shrink-0 ${active ? 'text-indigo-300' : 'text-slate-600'}`} />
-                              <span className="min-w-0 flex-1">
-                                <span className={`block truncate text-[13px] ${active ? 'text-white' : 'text-slate-300'}`}>{session.title}</span>
-                                <span className="block truncate text-[11px] text-slate-600">{relativeTime(session.lastMessageAt)}</span>
+                              <IconChat className="arch-chat-session-icon" />
+                              <span className="arch-chat-session-copy">
+                                <span className="arch-chat-session-title">{session.title}</span>
+                                <span className="arch-chat-session-preview">{session.preview || relativeTime(session.lastMessageAt)}</span>
                               </span>
                             </button>
                             {canChat ? (
-                              <span className="flex shrink-0 items-center opacity-0 transition group-hover/item:opacity-100 focus-within:opacity-100">
+                              <span className="arch-chat-session-actions">
                                 <button
                                   type="button"
                                   onClick={() => setRenaming({ id: session.id, value: session.title })}
-                                  className="rounded p-1 text-slate-500 hover:bg-white/[0.08] hover:text-slate-200"
+                                  className="arch-chat-icon-button"
                                   aria-label={`Rename ${session.title}`}
-                                  title="Rename"
+                                  title="Rename conversation"
                                 >
                                   <IconPencil className="size-3.5" />
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => setConfirmDelete(session)}
-                                  className="rounded p-1 text-slate-500 hover:bg-rose-500/15 hover:text-rose-300"
+                                  className="arch-chat-icon-button is-danger"
                                   aria-label={`Delete ${session.title}`}
-                                  title="Delete"
+                                  title="Delete conversation"
                                 >
                                   <IconTrash className="size-3.5" />
                                 </button>
@@ -799,33 +815,67 @@ export function ArchChat({
           <button
             type="button"
             onClick={() => setConfirmClear(true)}
-            className="border-t border-white/[0.06] px-3 py-2.5 text-left text-[11px] text-slate-500 transition hover:text-rose-300"
+            className="arch-chat-clear-button"
           >
-            Clear all chats ({sessions.length})
+            <IconTrash className="size-3.5" />
+            <span>Clear all conversations</span>
+            <span className="arch-chat-clear-count">{sessions.length}</span>
           </button>
         ) : null}
       </aside>
 
-      {/* ---------------- transcript ---------------- */}
-      <section className="flex min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-white/[0.07] bg-abyss-900/40">
-        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-white/[0.06] px-4 py-3">
-          <div className="flex min-w-0 items-center gap-2">
+      {listOpen ? (
+        <button
+          type="button"
+          className="arch-chat-history-scrim"
+          onClick={() => setListOpen(false)}
+          aria-label="Close conversation history"
+        />
+      ) : null}
+
+      <section className="arch-chat-console" aria-label="Chat with ARCH">
+        <header className="arch-chat-toolbar">
+          <div className="arch-chat-toolbar-primary">
             <button
               type="button"
-              onClick={() => setListOpen(true)}
-              className="rounded-lg border border-white/[0.08] px-2 py-1 text-xs text-slate-300 hover:bg-white/[0.06] lg:hidden"
+              onClick={() => {
+                setContextOpen(false);
+                setListOpen(true);
+              }}
+              className="arch-chat-mobile-history-button"
+              aria-label="Open conversation history"
             >
-              Chats
+              <IconChat className="size-4" />
+              <span>Chats</span>
             </button>
-            <div className="min-w-0">
-              <h2 className="truncate text-sm font-semibold text-white">{activeSession?.title ?? 'New chat'}</h2>
-              <p className="truncate text-[11px] text-slate-500">
-                {workspaceName} · {incidentsTracked} incident{incidentsTracked === 1 ? '' : 's'} on record
-                {modelVersion ? ` · model v${modelVersion}` : ''}
-              </p>
+            <div className="arch-chat-toolbar-title">
+              <div className="arch-chat-toolbar-kicker">
+                <span className="arch-chat-live-dot" aria-hidden />
+                <span>AI workspace</span>
+                <span className="arch-chat-toolbar-separator" aria-hidden>·</span>
+                <span className="arch-chat-toolbar-workspace">{workspaceName}</span>
+              </div>
+              <h2 title={activeSession?.title ?? 'New conversation'}>{activeSession?.title ?? 'New conversation'}</h2>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+
+          <div className="arch-chat-toolbar-actions">
+            <span className="arch-chat-engine-badge" title={`${providerLabel} · ${engineLabel}`}>
+              <span className="arch-chat-engine-mark" aria-hidden />
+              <span>{AI_NAME}</span>
+              <span className="arch-chat-engine-model">{engineLabel}</span>
+            </span>
+            <button
+              type="button"
+              onClick={() => setContextOpen((value) => !value)}
+              className={`arch-chat-toolbar-button arch-chat-context-toggle${contextOpen ? ' is-active' : ''}`}
+              aria-expanded={contextOpen}
+              aria-label="Toggle workspace context"
+              title="Workspace context"
+            >
+              <IconBook className="size-4" />
+              <span>Context</span>
+            </button>
             <button
               type="button"
               onClick={() => {
@@ -833,153 +883,163 @@ export function ArchChat({
                 void refreshMemory();
               }}
               title="What ARCH remembers about you"
-              className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] px-2 py-1 text-[11px] text-slate-300 transition hover:bg-white/[0.06]"
+              aria-label="Open ARCH memory settings"
+              className="arch-chat-toolbar-button"
             >
-              <IconMemory className="size-3.5" /> Memory
-              {memory.hasFacts ? <span aria-hidden className="size-1.5 rounded-full bg-violet-400" /> : null}
+              <IconMemory className="size-4" />
+              <span>Memory</span>
+              {memory.hasFacts ? <span className="arch-chat-memory-indicator" aria-label="Memory has saved facts" /> : null}
             </button>
             {messages.length > 0 ? (
-              <button
-                type="button"
-                onClick={() => void copyChat()}
-                title="Copy this conversation as Markdown"
-                className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] px-2 py-1 text-[11px] text-slate-300 transition hover:bg-white/[0.06]"
-              >
-                <IconCopy className="size-3.5" /> Copy
+              <button type="button" onClick={() => void copyChat()} title="Copy this conversation as Markdown" aria-label="Copy conversation" className="arch-chat-toolbar-button arch-chat-toolbar-button--compact">
+                <IconCopy className="size-4" />
+                <span>Copy</span>
               </button>
             ) : null}
             {messages.length > 0 ? (
-              <button
-                type="button"
-                onClick={exportChat}
-                title="Download this conversation as a Markdown file"
-                className="inline-flex items-center gap-1 rounded-lg border border-white/[0.08] px-2 py-1 text-[11px] text-slate-300 transition hover:bg-white/[0.06]"
-              >
-                <IconDownload className="size-3.5" /> Export
+              <button type="button" onClick={exportChat} title="Download this conversation as a Markdown file" aria-label="Export conversation" className="arch-chat-toolbar-button arch-chat-toolbar-button--compact">
+                <IconDownload className="size-4" />
+                <span>Export</span>
               </button>
             ) : null}
             {activeSession && canChat ? (
               <button
                 type="button"
                 onClick={() => setRenaming({ id: activeSession.id, value: activeSession.title })}
-                className="rounded-lg border border-white/[0.08] px-2 py-1 text-[11px] text-slate-300 transition hover:bg-white/[0.06]"
+                className="arch-chat-toolbar-button arch-chat-toolbar-button--compact"
+                title="Rename conversation"
+                aria-label="Rename conversation"
               >
-                Rename
+                <IconPencil className="size-4" />
+                <span>Rename</span>
               </button>
             ) : null}
-            <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-violet-200">
-              {AI_NAME} · {engineLabel}
-            </span>
           </div>
         </header>
 
-        <div className="scroll-thin flex-1 overflow-y-auto px-4 py-5">
-          {messages.length === 0 && !loading ? (
-            <div className="mx-auto max-w-2xl space-y-5 py-6">
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-b from-indigo-500/30 to-violet-500/20 text-violet-200 ring-1 ring-inset ring-violet-500/30">
-                  <IconSpark className="size-4" />
-                </span>
-                <div className="space-y-1">
-                  <p className="text-[15px] font-semibold text-white">
-                    {activeSession ? 'This chat is empty — ask me anything.' : `Hello developer! I'm ${AI_NAME}.`}
-                  </p>
-                  <p className="text-sm leading-relaxed text-slate-400">
-                    I'm your operations copilot: I monitor active incidents, recall history & root causes, check runbooks,
-                    guide tech decisions, and track conversation context. Chat with me in English or Hindi / Hinglish.
-                  </p>
-                </div>
-              </div>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {EXAMPLES.map((example) => (
-                  <button
-                    key={example}
-                    type="button"
-                    disabled={!canChat}
-                    onClick={() => void send(example)}
-                    className="rounded-xl border border-white/[0.08] bg-abyss-950/50 px-3.5 py-2.5 text-left text-[13px] text-slate-300 transition hover:border-violet-500/40 hover:text-white disabled:opacity-40"
-                  >
-                    {example}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          {loading ? <p className="py-8 text-center text-xs text-slate-500">Loading conversation…</p> : null}
-
-          <div className="mx-auto max-w-3xl space-y-5">
-            {messages.map((message, index) => {
-              const isLastAnswer = message.role === 'ARCH' && index === messages.length - 1;
-              return message.role === 'USER' ? (
-                <div key={message.id} className="flex justify-end">
-                  <div className="max-w-[85%] rounded-2xl rounded-br-md border border-indigo-500/25 bg-indigo-500/15 px-3.5 py-2.5 text-[13.5px] leading-relaxed text-indigo-50">
-                    {message.content}
-                  </div>
-                </div>
-              ) : (
-                <div key={message.id} className="space-y-2">
-                  <div className="flex items-start gap-3">
-                    <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-indigo-500/25 to-violet-500/15 text-violet-200 ring-1 ring-inset ring-violet-500/25">
-                      <IconSpark className="size-3.5" />
+        <div className="arch-chat-body">
+          <main className="arch-chat-conversation">
+            <div className="arch-chat-transcript" aria-label="Conversation messages">
+              {messages.length === 0 && !loading ? (
+                <div className="arch-chat-empty">
+                  <div className="arch-chat-empty-brand">
+                    <span className="arch-chat-empty-mark"><img src="/dragon-mark.webp" alt="" /></span>
+                    <span className="arch-chat-empty-brand-copy">
+                      <span>{AI_NAME}</span>
+                      <span>Operations intelligence</span>
                     </span>
-                    <div className="min-w-0 flex-1 space-y-2">
-                      <div className="rounded-2xl rounded-tl-md border border-white/[0.07] bg-abyss-850/80 px-4 py-3 text-[13.5px] leading-relaxed text-slate-200">
+                  </div>
+                  <p className="arch-chat-empty-eyebrow">Your workspace, in context</p>
+                  <h1>What do you need to understand?</h1>
+                  <p className="arch-chat-empty-description">
+                    Ask about active incidents, earlier fixes, service health, or runbooks. ARCH grounds answers in this workspace and links to the records it uses.
+                  </p>
+                  <div className="arch-chat-empty-scope" aria-label="Available workspace records">
+                    <span><IconIncident className="size-3.5" /> {incidentsTracked} incidents</span>
+                    <span><IconBook className="size-3.5" /> {knowledgeChunks} knowledge records</span>
+                    <span><IconServices className="size-3.5" /> {servicesTracked} services</span>
+                  </div>
+                  <p className="arch-chat-prompts-label">Try one of these</p>
+                  <div className="arch-chat-prompt-grid">
+                    {EXAMPLES.map((example) => (
+                      <button
+                        key={example}
+                        type="button"
+                        disabled={!canChat}
+                        onClick={() => void send(example)}
+                        className="arch-chat-prompt"
+                      >
+                        <span className="arch-chat-prompt-icon"><IconChat className="size-4" /></span>
+                        <span>{example}</span>
+                        <span className="arch-chat-prompt-arrow" aria-hidden>↗</span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="arch-chat-empty-footnote">English and Hindi / Hinglish are welcome. ARCH advises; it never changes production on its own.</p>
+                </div>
+              ) : null}
+
+              {loading ? (
+                <p className="arch-chat-loading" role="status" aria-live="polite">
+                  <span className="arch-chat-loading-mark"><span /><span /><span /></span>
+                  Opening conversation…
+                </p>
+              ) : null}
+
+              <div className="arch-chat-thread">
+                {messages.map((message, index) => {
+                  const isLastAnswer = message.role === 'ARCH' && index === messages.length - 1;
+                  return message.role === 'USER' ? (
+                    <article key={message.id} className="arch-chat-message arch-chat-message--user">
+                      <div className="arch-chat-message-meta">
+                        <span>You</span>
+                        <time dateTime={message.createdAt}>{relativeTime(message.createdAt)}</time>
+                      </div>
+                      <div className="arch-chat-user-bubble">{message.content}</div>
+                    </article>
+                  ) : (
+                    <article key={message.id} className="arch-chat-message arch-chat-message--assistant">
+                      <div className="arch-chat-assistant-heading">
+                        <span className="arch-chat-assistant-avatar"><img src="/dragon-mark.webp" alt="" /></span>
+                        <span className="arch-chat-assistant-name">{AI_NAME}</span>
+                        <span className="arch-chat-assistant-label">Assistant</span>
+                        <time dateTime={message.createdAt}>{relativeTime(message.createdAt)}</time>
+                      </div>
+                      <div className="arch-chat-answer">
                         <RevealAnswer text={message.content} animate={message.id === animateId} />
                       </div>
 
                       {message.citations.length ? (
-                        <ul className="flex flex-wrap gap-1.5">
-                          {message.citations.map((citation, index) => {
-                            const body = (
-                              <>
-                                <span className="text-slate-500">
-                                  {SOURCE_ICON[citation.source]} {SOURCE_LABEL[citation.source]}
-                                </span>
-                                <span className="text-slate-300"> · {citation.label}</span>
-                                {typeof citation.similarity === 'number' ? (
-                                  <span className="text-slate-600"> · {Math.round(citation.similarity * 100)}% match</span>
-                                ) : null}
-                              </>
-                            );
-                            return (
-                              <li key={`${message.id}-c${index}`}>
-                                {citation.href ? (
-                                  <a
-                                    href={citation.href}
-                                    className="block rounded-lg border border-white/[0.08] bg-abyss-950/50 px-2.5 py-1 text-[11px] transition hover:border-violet-500/40 hover:text-white"
-                                    title={citation.detail}
-                                  >
-                                    {body}
-                                  </a>
-                                ) : (
-                                  <span className="block rounded-lg border border-white/[0.08] bg-abyss-950/50 px-2.5 py-1 text-[11px]" title={citation.detail}>
-                                    {body}
+                        <div className="arch-chat-sources-block">
+                          <p className="arch-chat-detail-label">Sources used</p>
+                          <ul className="arch-chat-source-list">
+                            {message.citations.map((citation, citationIndex) => {
+                              const source = (
+                                <>
+                                  <span className="arch-chat-source-icon" aria-hidden>{SOURCE_ICON[citation.source]}</span>
+                                  <span className="arch-chat-source-copy">
+                                    <span className="arch-chat-source-title">{citation.label}</span>
+                                    <span className="arch-chat-source-type">{SOURCE_LABEL[citation.source]}</span>
                                   </span>
-                                )}
-                              </li>
-                            );
-                          })}
-                        </ul>
+                                  {typeof citation.similarity === 'number' ? (
+                                    <span className="arch-chat-source-match">{Math.round(citation.similarity * 100)}%</span>
+                                  ) : null}
+                                </>
+                              );
+                              return (
+                                <li key={`${message.id}-c${citationIndex}`}>
+                                  {citation.href ? (
+                                    <a href={citation.href} className="arch-chat-source" title={citation.detail}>{source}</a>
+                                  ) : (
+                                    <span className="arch-chat-source" title={citation.detail}>{source}</span>
+                                  )}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
                       ) : null}
 
-                      <div className="flex flex-wrap items-center gap-2 text-[10.5px] text-slate-600">
-                        {message.intent ? <span className="uppercase tracking-wide">{INTENT_LABEL[message.intent] ?? message.intent.replace(/_/g, ' ')}</span> : null}
-                        {message.confidence ? <span>· {message.confidence} confidence</span> : null}
-                        {typeof message.latencyMs === 'number' ? <span>· {message.latencyMs} ms</span> : null}
-                        {message.model ? <span className="arch-mono">· {message.model}</span> : null}
-                      </div>
+                      {(message.intent || message.confidence || typeof message.latencyMs === 'number' || message.model) ? (
+                        <div className="arch-chat-answer-meta">
+                          {message.intent ? <span>{INTENT_LABEL[message.intent] ?? message.intent.replace(/_/g, ' ')}</span> : null}
+                          {message.confidence ? <span>{message.confidence} confidence</span> : null}
+                          {typeof message.latencyMs === 'number' ? <span>{message.latencyMs} ms</span> : null}
+                          {message.model ? <span className="arch-mono">{message.model}</span> : null}
+                        </div>
+                      ) : null}
 
-                      <div className="flex flex-wrap items-center gap-1.5">
+                      <div className="arch-chat-answer-actions">
                         <button
                           type="button"
                           onClick={async () => {
                             const copied = await copyText(message.content);
                             toast(copied ? 'Answer copied.' : 'Copy failed — select the text instead.', copied ? 'success' : 'error');
                           }}
-                          className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10.5px] text-slate-500 transition hover:bg-white/[0.06] hover:text-slate-200"
+                          className="arch-chat-message-action"
+                          aria-label="Copy answer"
                         >
-                          <IconCopy className="size-3" /> Copy
+                          <IconCopy className="size-3.5" /> Copy
                         </button>
                         {canChat ? (
                           <>
@@ -990,7 +1050,7 @@ export function ArchChat({
                               aria-label="This answer was helpful"
                               aria-pressed={message.feedbackRating === 'UP'}
                               title="Rate this answer as helpful"
-                              className={`rounded-md px-1.5 py-0.5 text-[10.5px] transition disabled:opacity-40 ${message.feedbackRating === 'UP' ? 'bg-emerald-500/15 text-emerald-300' : 'text-slate-500 hover:bg-white/[0.06] hover:text-slate-200'}`}
+                              className={`arch-chat-message-action${message.feedbackRating === 'UP' ? ' is-selected' : ''}`}
                             >
                               ↑ Helpful
                             </button>
@@ -1001,7 +1061,7 @@ export function ArchChat({
                               aria-label="This answer was not helpful"
                               aria-pressed={message.feedbackRating === 'DOWN'}
                               title="Rate this answer as not helpful"
-                              className={`rounded-md px-1.5 py-0.5 text-[10.5px] transition disabled:opacity-40 ${message.feedbackRating === 'DOWN' ? 'bg-rose-500/15 text-rose-300' : 'text-slate-500 hover:bg-white/[0.06] hover:text-slate-200'}`}
+                              className={`arch-chat-message-action${message.feedbackRating === 'DOWN' ? ' is-selected' : ''}`}
                             >
                               ↓ Not helpful
                             </button>
@@ -1012,104 +1072,191 @@ export function ArchChat({
                             type="button"
                             onClick={() => void regenerate()}
                             disabled={sending || retrying}
-                            title="Ask the same question again — the workspace may have changed since"
-                            className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10.5px] text-slate-500 transition hover:bg-white/[0.06] hover:text-slate-200 disabled:opacity-40"
+                            title="Ask the same question again using the current workspace data"
+                            className="arch-chat-message-action"
                           >
-                            <IconRetry className={`size-3 ${retrying ? 'animate-spin' : ''}`} /> {retrying ? 'Retrying…' : 'Try again'}
+                            <IconRetry className={`size-3.5${retrying ? ' animate-spin' : ''}`} />
+                            {retrying ? 'Retrying…' : 'Try again'}
                           </button>
                         ) : null}
                       </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                    </article>
+                  );
+                })}
 
-            {sending ? (
-              <div className="flex items-start gap-3">
-                <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-b from-indigo-500/25 to-violet-500/15 text-violet-200 ring-1 ring-inset ring-violet-500/25">
-                  <IconSpark className="size-3.5" />
-                </span>
-                <p className="flex items-center gap-2 rounded-2xl rounded-tl-md border border-white/[0.07] bg-abyss-850/80 px-4 py-3 text-xs text-violet-300">
-                  <span className="flex gap-1">
-                    <span className="size-1.5 animate-bounce rounded-full bg-violet-400" />
-                    <span className="size-1.5 animate-bounce rounded-full bg-violet-400 [animation-delay:150ms]" />
-                    <span className="size-1.5 animate-bounce rounded-full bg-violet-400 [animation-delay:300ms]" />
-                  </span>
-                  Reading context and preparing an answer…
-                </p>
+                {sending ? (
+                  <div className="arch-chat-generating" role="status" aria-live="polite">
+                    <span className="arch-chat-assistant-avatar"><img src="/dragon-mark.webp" alt="" /></span>
+                    <span className="arch-chat-generating-card">
+                      <span className="arch-chat-loading-mark"><span /><span /><span /></span>
+                      Reading workspace context…
+                    </span>
+                  </div>
+                ) : null}
+                <div ref={bottomRef} />
+              </div>
+            </div>
+
+            {error ? <div className="arch-chat-error" role="alert">{error}</div> : null}
+
+            {lastSuggestions.length > 0 && !sending ? (
+              <div className="arch-chat-followups" aria-label="Suggested follow-up questions">
+                <span className="arch-chat-followups-label">Next</span>
+                {lastSuggestions.map((suggestion) => (
+                  <button
+                    key={suggestion}
+                    type="button"
+                    disabled={!canChat}
+                    onClick={() => void send(suggestion)}
+                    className="arch-chat-followup"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
               </div>
             ) : null}
-            <div ref={bottomRef} />
-          </div>
-        </div>
 
-        {error ? (
-          <div className="mx-4 mb-2 rounded-lg border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs text-rose-200" role="alert">
-            {error}
-          </div>
-        ) : null}
-
-        {lastSuggestions.length && !sending ? (
-          <div className="flex flex-wrap gap-1.5 px-4 pb-2">
-            {lastSuggestions.map((suggestion) => (
-              <button
-                key={suggestion}
-                type="button"
-                disabled={!canChat}
-                onClick={() => void send(suggestion)}
-                className="rounded-full border border-white/10 px-2.5 py-1 text-[11px] text-slate-300 transition hover:border-violet-500/50 hover:text-violet-200 disabled:opacity-40"
-              >
-                {suggestion}
-              </button>
-            ))}
-          </div>
-        ) : null}
-
-        <form
-          className="border-t border-white/[0.06] p-3"
-          onSubmit={(event) => {
-            event.preventDefault();
-            void send(input);
-          }}
-        >
-          <div className="flex items-end gap-2 rounded-2xl border border-white/[0.08] bg-abyss-950/70 p-2 focus-within:border-violet-500/50">
-            <textarea
-              ref={inputRef}
-              value={input}
-              rows={1}
-              maxLength={1200}
-              disabled={!canChat || sending}
-              onChange={(event) => {
-                setInput(event.target.value);
-                const element = event.target;
-                element.style.height = 'auto';
-                element.style.height = `${Math.min(element.scrollHeight, 180)}px`;
+            <form
+              className="arch-chat-composer"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void send(input);
               }}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter' && !event.shiftKey) {
-                  event.preventDefault();
-                  void send(input);
-                }
-              }}
-              placeholder={canChat ? `Ask ${AI_NAME} anything about this workspace…  (Enter to send, Shift+Enter for a new line)` : 'You need RESPONDER or above to chat with ARCH.'}
-              className="max-h-[11rem] flex-1 resize-none bg-transparent px-2 py-1.5 text-[13.5px] text-slate-200 placeholder:text-slate-600 focus:outline-none disabled:opacity-50"
-            />
-            <button
-              type="submit"
-              disabled={!canChat || sending || input.trim().length < 2}
-              className="shrink-0 rounded-xl bg-bone px-3.5 py-2 text-xs font-semibold text-ink-1000 transition hover:bg-white disabled:opacity-40"
             >
-              Send
-            </button>
-          </div>
-          <p className="mt-1.5 flex flex-wrap items-center gap-x-2 px-1 text-[10.5px] text-slate-600">
-            <span>Workspace claims use retrieved context and citations; general answers may come from local model knowledge. ARCH advises — it never changes anything on its own, and it does not write code.</span>
-            <span className="text-slate-700">
-              ⌘/Ctrl+Shift+O new chat · ⌘/Ctrl+K search · {AI_NAME} keeps the last 12 turns in context
-            </span>
-          </p>
-        </form>
+              <div className="arch-chat-composer-frame">
+                <textarea
+                  ref={inputRef}
+                  value={input}
+                  rows={1}
+                  maxLength={1200}
+                  disabled={!canChat || sending}
+                  onChange={(event) => {
+                    setInput(event.target.value);
+                    const element = event.target;
+                    element.style.height = 'auto';
+                    element.style.height = `${Math.min(element.scrollHeight, 180)}px`;
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.shiftKey) {
+                      event.preventDefault();
+                      void send(input);
+                    }
+                  }}
+                  placeholder={canChat ? 'Ask about incidents, services, or runbooks…' : 'You need RESPONDER or above to chat with ARCH.'}
+                  aria-label={`Message ${AI_NAME}`}
+                  className="arch-chat-composer-input"
+                />
+                <div className="arch-chat-composer-footer">
+                  <span className="arch-chat-composer-hint">
+                    <span>{input.length}/1200</span>
+                    <span>Enter to send <span aria-hidden>·</span> Shift + Enter for a new line</span>
+                  </span>
+                  <button
+                    type="submit"
+                    disabled={!canChat || sending || input.trim().length < 2}
+                    className="arch-chat-send-button"
+                    aria-label="Send message"
+                  >
+                    <span>Send</span>
+                    <svg viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M3 8h9M8 3l5 5-5 5" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <p className="arch-chat-disclaimer">Workspace answers cite their sources when available. ARCH advises — it does not apply changes or write code in this chat.</p>
+            </form>
+          </main>
+
+          {contextOpen ? (
+            <button
+              type="button"
+              className="arch-chat-context-scrim"
+              onClick={() => setContextOpen(false)}
+              aria-label="Close workspace context"
+            />
+          ) : null}
+
+          <aside className={`arch-chat-context${contextOpen ? ' is-open' : ''}`} aria-label="Workspace context">
+            <div className="arch-chat-context-header">
+              <div>
+                <p className="arch-chat-overline">Workspace</p>
+                <h3>Context</h3>
+              </div>
+              <button
+                type="button"
+                className="arch-chat-close-context"
+                onClick={() => setContextOpen(false)}
+                aria-label="Close workspace context"
+              >
+                <svg viewBox="0 0 16 16" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden>
+                  <path d="M4 4l8 8M12 4l-8 8" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="arch-chat-context-content">
+              <section className="arch-chat-context-workspace">
+                <div className="arch-chat-context-workspace-mark"><img src="/dragon-mark.webp" alt="" /></div>
+                <div className="arch-chat-context-workspace-copy">
+                  <span>Current workspace</span>
+                  <strong title={workspaceName}>{workspaceName}</strong>
+                </div>
+                <span className={`arch-chat-context-state${hasWorkspaceContext ? ' is-ready' : ''}`}>
+                  <span aria-hidden />{hasWorkspaceContext ? 'Available' : 'Empty'}
+                </span>
+              </section>
+
+              <section className="arch-chat-context-section" aria-labelledby="arch-context-data-title">
+                <div className="arch-chat-context-section-heading">
+                  <h4 id="arch-context-data-title">Available data</h4>
+                  <span>IN SCOPE</span>
+                </div>
+                <dl className="arch-chat-context-stats">
+                  <div><dt><IconIncident className="size-3.5" /> Incidents</dt><dd>{incidentsTracked}</dd></div>
+                  <div><dt><IconBook className="size-3.5" /> Knowledge</dt><dd>{knowledgeChunks}</dd></div>
+                  <div><dt><IconServices className="size-3.5" /> Services</dt><dd>{servicesTracked}</dd></div>
+                </dl>
+              </section>
+
+              <section className="arch-chat-context-section arch-chat-model-card" aria-label="AI model details">
+                <div className="arch-chat-context-section-heading">
+                  <h4>Model</h4>
+                  <span className="arch-chat-model-version">v{modelVersion ?? 1}</span>
+                </div>
+                <div className="arch-chat-model-name-row">
+                  <span className="arch-chat-model-mark"><img src="/dragon-mark.webp" alt="" /></span>
+                  <span>
+                    <strong>{AI_NAME}</strong>
+                    <small>{providerLabel}</small>
+                  </span>
+                </div>
+                <div className="arch-chat-model-detail"><span>Engine</span><code>{engineLabel}</code></div>
+                <div className="arch-chat-model-detail"><span>Workspace training</span><span>{modelTrained ? 'Available' : 'Base model'}</span></div>
+              </section>
+
+              <section className="arch-chat-context-section arch-chat-memory-card" aria-label="Personal memory">
+                <div className="arch-chat-context-section-heading">
+                  <h4>Personal memory</h4>
+                  {memory.hasFacts ? <span className="arch-chat-memory-indicator" aria-label="Memory has saved facts" /> : null}
+                </div>
+                <p>{memory.hasFacts ? memory.summary : 'No personal context saved yet.'}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMemoryOpen(true);
+                    void refreshMemory();
+                  }}
+                  className="arch-chat-manage-memory"
+                >
+                  <IconMemory className="size-3.5" /> Manage memory <span aria-hidden>↗</span>
+                </button>
+              </section>
+
+              <p className="arch-chat-context-note">Personal memory is private to your account. Verify important guidance before acting.</p>
+            </div>
+          </aside>
+        </div>
       </section>
 
       <Dialog
@@ -1117,61 +1264,50 @@ export function ArchChat({
         onClose={() => setMemoryOpen(false)}
         title="What ARCH remembers about you"
         description="Only what you told it — never guessed, never shared with your team, and never used to train the model. Everything here is yours to delete."
+        className="arch-dialog--chat"
       >
-        <div className="space-y-4 text-sm">
-          <div className="rounded-xl border border-white/[0.07] bg-abyss-950/50 px-3 py-2.5">
-            <p className="text-[11px] uppercase tracking-wide text-slate-500">Saved</p>
-            <p className="mt-0.5 text-[13px] text-slate-200">{memory.summary}</p>
-            <p className="mt-1 text-[10.5px] text-slate-500">
-              {memory.clearedAt ? `Last wiped ${relativeTime(memory.clearedAt)} · ` : ''}
-              {memory.updatedAt ? `updated ${relativeTime(memory.updatedAt)}` : 'nothing stored yet'}
+        <div className="arch-chat-memory-dialog">
+          <div className="arch-chat-memory-summary">
+            <p className="arch-chat-modal-eyebrow">Saved profile</p>
+            <p className="arch-chat-memory-summary-text">{memory.summary}</p>
+            <p className="arch-chat-memory-updated">
+              {memory.clearedAt ? `Last cleared ${relativeTime(memory.clearedAt)} · ` : ''}
+              {memory.updatedAt ? `Updated ${relativeTime(memory.updatedAt)}` : 'Nothing stored yet'}
             </p>
           </div>
 
           {memory.userName || memory.userRole || memory.techStack.length ? (
-            <ul className="space-y-1.5">
+            <ul className="arch-chat-memory-list">
               {memory.userName ? (
-                <li className="flex items-center justify-between gap-2 rounded-lg border border-white/[0.07] px-3 py-2">
-                  <span className="text-slate-300">Name: <span className="text-white">{memory.userName}</span></span>
-                  <button type="button" disabled={!canChat || memoryBusy} onClick={() => void forgetMemoryItem({ userName: null })} className="text-[11px] text-slate-500 transition hover:text-rose-300 disabled:opacity-40">
-                    Forget
-                  </button>
+                <li><span>Name: <strong>{memory.userName}</strong></span>
+                  <button type="button" disabled={!canChat || memoryBusy} onClick={() => void forgetMemoryItem({ userName: null })}>Forget</button>
                 </li>
               ) : null}
               {memory.userRole ? (
-                <li className="flex items-center justify-between gap-2 rounded-lg border border-white/[0.07] px-3 py-2">
-                  <span className="text-slate-300">Role: <span className="text-white">{memory.userRole}</span></span>
-                  <button type="button" disabled={!canChat || memoryBusy} onClick={() => void forgetMemoryItem({ userRole: null })} className="text-[11px] text-slate-500 transition hover:text-rose-300 disabled:opacity-40">
-                    Forget
-                  </button>
+                <li><span>Role: <strong>{memory.userRole}</strong></span>
+                  <button type="button" disabled={!canChat || memoryBusy} onClick={() => void forgetMemoryItem({ userRole: null })}>Forget</button>
                 </li>
               ) : null}
               {memory.techStack.length ? (
-                <li className="flex items-center justify-between gap-2 rounded-lg border border-white/[0.07] px-3 py-2">
-                  <span className="min-w-0 text-slate-300">Stack: <span className="text-white">{memory.techStack.join(', ')}</span></span>
-                  <button type="button" disabled={!canChat || memoryBusy} onClick={() => void forgetMemoryItem({ clearStack: true })} className="shrink-0 text-[11px] text-slate-500 transition hover:text-rose-300 disabled:opacity-40">
-                    Forget
-                  </button>
+                <li><span>Stack: <strong>{memory.techStack.join(', ')}</strong></span>
+                  <button type="button" disabled={!canChat || memoryBusy} onClick={() => void forgetMemoryItem({ clearStack: true })}>Forget</button>
                 </li>
               ) : null}
             </ul>
           ) : null}
 
           {memory.notes.length ? (
-            <ul className="space-y-1.5">
+            <ul className="arch-chat-memory-list">
               {memory.notes.map((note) => (
-                <li key={note} className="flex items-start justify-between gap-2 rounded-lg border border-white/[0.07] px-3 py-2">
-                  <span className="min-w-0 text-slate-300">{note}</span>
-                  <button type="button" disabled={!canChat || memoryBusy} onClick={() => void forgetMemoryItem({ notes: { remove: note } })} className="shrink-0 text-[11px] text-slate-500 transition hover:text-rose-300 disabled:opacity-40">
-                    Forget
-                  </button>
+                <li key={note}><span>{note}</span>
+                  <button type="button" disabled={!canChat || memoryBusy} onClick={() => void forgetMemoryItem({ notes: { remove: note } })}>Forget</button>
                 </li>
               ))}
             </ul>
           ) : null}
 
           <form
-            className="flex items-center gap-2"
+            className="arch-chat-memory-form"
             onSubmit={(event) => {
               event.preventDefault();
               void saveMemoryNote();
@@ -1182,28 +1318,22 @@ export function ArchChat({
               onChange={(event) => setMemoryNote(event.target.value)}
               maxLength={memory.limits.maxNoteChars}
               disabled={!canChat || memoryBusy}
-              placeholder="Tell ARCH something to remember (e.g. we deploy on Thursdays)"
+              placeholder="Tell ARCH something to remember"
               aria-label="Add a memory"
-              className="flex-1 rounded-lg border border-white/[0.08] bg-abyss-950/70 px-3 py-2 text-[13px] text-slate-200 placeholder:text-slate-600 focus:border-violet-500/50 focus:outline-none disabled:opacity-50"
+              className="arch-chat-memory-input"
             />
-            <button
-              type="submit"
-              disabled={!canChat || memoryBusy || memoryNote.trim().length < 3}
-              className="rounded-lg bg-bone px-3 py-2 text-xs font-semibold text-ink-1000 transition hover:bg-white disabled:opacity-40"
-            >
-              Remember
+            <button type="submit" disabled={!canChat || memoryBusy || memoryNote.trim().length < 3} className="arch-chat-memory-save">
+              {memoryBusy ? 'Saving…' : 'Remember'}
             </button>
           </form>
 
-          <div className="flex items-center justify-between gap-2 border-t border-white/[0.06] pt-3">
-            <p className="text-[10.5px] text-slate-600">
-              Up to {memory.limits.maxNotes} notes. In chat you can also say &quot;remember that …&quot; or &quot;clear memory&quot;.
-            </p>
+          <div className="arch-chat-memory-footer">
+            <p>Up to {memory.limits.maxNotes} notes. You can also say “remember that…” or “clear memory”.</p>
             <button
               type="button"
               disabled={!canChat || memoryBusy || (!memory.hasFacts && !memory.clearedAt)}
               onClick={() => void forgetEverything()}
-              className="shrink-0 rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-rose-500 disabled:opacity-40"
+              className="arch-chat-forget-all"
             >
               Forget everything
             </button>
@@ -1216,22 +1346,11 @@ export function ArchChat({
         onClose={() => setConfirmDelete(null)}
         title="Delete this chat?"
         description="The whole conversation disappears from your chat list. This cannot be undone."
+        className="arch-dialog--chat"
       >
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => setConfirmDelete(null)}
-            className="rounded-lg border border-white/[0.08] px-3 py-2 text-xs text-slate-300 hover:bg-white/[0.06]"
-          >
-            Keep it
-          </button>
-          <button
-            type="button"
-            onClick={() => confirmDelete && void remove(confirmDelete)}
-            className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-500"
-          >
-            Delete chat
-          </button>
+        <div className="arch-chat-modal-actions">
+          <button type="button" onClick={() => setConfirmDelete(null)} className="arch-chat-modal-cancel">Keep it</button>
+          <button type="button" onClick={() => confirmDelete && void remove(confirmDelete)} className="arch-chat-modal-danger">Delete chat</button>
         </div>
       </Dialog>
 
@@ -1240,22 +1359,11 @@ export function ArchChat({
         onClose={() => setConfirmClear(false)}
         title="Clear all your chats?"
         description={`This deletes all ${sessions.length} of your conversations in this workspace. Incidents, audit entries and the model are untouched.`}
+        className="arch-dialog--chat"
       >
-        <div className="flex justify-end gap-2">
-          <button
-            type="button"
-            onClick={() => setConfirmClear(false)}
-            className="rounded-lg border border-white/[0.08] px-3 py-2 text-xs text-slate-300 hover:bg-white/[0.06]"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => void clearAll()}
-            className="rounded-lg bg-rose-600 px-3 py-2 text-xs font-semibold text-white hover:bg-rose-500"
-          >
-            Delete everything
-          </button>
+        <div className="arch-chat-modal-actions">
+          <button type="button" onClick={() => setConfirmClear(false)} className="arch-chat-modal-cancel">Cancel</button>
+          <button type="button" onClick={() => void clearAll()} className="arch-chat-modal-danger">Delete everything</button>
         </div>
       </Dialog>
     </div>

@@ -30,7 +30,7 @@ export default async function ChatPage() {
   ]);
 
   return (
-    <div className="animate-rise space-y-4">
+    <div className="arch-chat-page animate-rise">
       {!canChat ? (
         <Alert tone="info">
           Your role ({organization.role}) can read chats but not start one. RESPONDER or above can send messages; everyone who can
@@ -61,9 +61,13 @@ export default async function ChatPage() {
         }
         canChat={canChat && config.enabled}
         engineLabel={config.model}
+        engineProvider={config.provider}
         workspaceName={organization.name}
         modelVersion={corpus?.modelVersion ?? null}
+        modelTrained={corpus?.modelTrained ?? false}
         incidentsTracked={corpus?.incidents ?? 0}
+        knowledgeChunks={corpus?.knowledgeChunks ?? 0}
+        servicesTracked={corpus?.services ?? 0}
       />
     </div>
   );
