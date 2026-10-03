@@ -45,6 +45,23 @@ export function MarketingMotion({ children }: { children: ReactNode }) {
         const select = <T extends HTMLElement>(selector: string) => Array.from(root.querySelectorAll<T>(selector));
         const upcoming = (element: HTMLElement) => element.getBoundingClientRect().bottom > 0;
 
+        // Hero video subtle parallax depth when scrolling into the page
+        const heroMedia = root.querySelector<HTMLElement>('.mk-hero-media');
+        if (heroMedia && !compact) {
+          gsap.to(heroMedia, {
+            yPercent: 16,
+            scale: 1.03,
+            opacity: 0.4,
+            ease: 'none',
+            scrollTrigger: {
+              trigger: '.mk-hero',
+              start: 'top top',
+              end: 'bottom top',
+              scrub: 1.2,
+            },
+          });
+        }
+
         // Pin only the interlude, never the film or interactive product previews.
         // Mobile keeps natural scrolling with smaller depth offsets.
         for (const story of select('[data-mk-story]')) {
@@ -54,18 +71,19 @@ export function MarketingMotion({ children }: { children: ReactNode }) {
             scrollTrigger: {
               trigger: story,
               start: compact ? 'top bottom' : 'top top',
-              end: compact ? 'bottom top' : '+=110%',
+              end: compact ? 'bottom top' : '+=125%',
               pin: compact ? false : stage,
-              scrub: 0.8,
+              scrub: 1.2,
+              anticipatePin: 1,
               invalidateOnRefresh: true,
             },
           });
           timeline.fromTo(story.querySelector('[data-mk-depth="back"]'),
-            { yPercent: -12, rotation: -15 }, { yPercent: 18, rotation: 20, ease: 'none' }, 0);
+            { yPercent: -16, rotation: -18, scale: 0.92 }, { yPercent: 22, rotation: 24, scale: 1.1, ease: 'none' }, 0);
           timeline.fromTo(story.querySelector('[data-mk-depth="front"]'),
-            { yPercent: 24, scale: 0.85 }, { yPercent: -30, scale: 1.15, ease: 'none' }, 0);
+            { yPercent: 28, scale: 0.82 }, { yPercent: -34, scale: 1.2, ease: 'none' }, 0);
           timeline.fromTo(story.querySelector('[data-mk-depth="copy"]'),
-            { y: compact ? 24 : 65 }, { y: compact ? -24 : -65, ease: 'none' }, 0);
+            { y: compact ? 24 : 75 }, { y: compact ? -24 : -75, ease: 'none' }, 0);
         }
 
         for (const heading of select('[data-mk-heading]').filter(upcoming)) {
