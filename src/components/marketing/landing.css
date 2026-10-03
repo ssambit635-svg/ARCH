@@ -110,9 +110,9 @@
 .mk-nav--hidden { transform: translateY(-102%); opacity: 0; pointer-events: none; }
 .mk-nav-sensor { position: fixed; inset: 0 0 auto; z-index: 199; height: 12px; pointer-events: none; }
 .mk-nav-row { display: flex; align-items: center; justify-content: space-between; gap: 36px; min-height: 72px; }
-.mk-brand { display: inline-flex; flex-shrink: 0; align-items: center; gap: 10px; font-family: var(--mk-display); font-size: 19px; font-weight: 700; line-height: 1; letter-spacing: 0.04em; color: var(--mk-fg); }
-.mk-brand-dot { color: var(--mk-accent); }
-.mk-brand-mark { width: 27px; height: 27px; object-fit: contain; filter: brightness(0) invert(1); }
+.mk-brand { display: inline-flex; flex-shrink: 0; align-items: center; gap: 12px; font-family: var(--mk-display); font-size: 26px; font-weight: 800; line-height: 1; letter-spacing: 0.08em; color: var(--mk-fg); }
+.mk-brand-dot { color: var(--mk-accent); font-weight: 900; }
+.mk-brand-mark { width: 34px; height: 34px; object-fit: contain; filter: brightness(0) invert(1); }
 .mk-light .mk-brand-mark { filter: brightness(0); }
 .mk-nav-links, .mk-nav-actions { display: flex; align-items: center; }
 .mk-nav-links { gap: 28px; }
@@ -284,23 +284,23 @@
 .mk-dragon-stage { position: relative; width: 100%; aspect-ratio: 848 / 478; overflow: hidden; border: 0; border-radius: 14px; background: #020503; }
 .mk-footer { padding-top: 30px; }
 .mk-footer-row { display: flex; flex-wrap: wrap; align-items: center; gap: 28px; }
-.mk-footer .mk-brand { font-size: 17px; }
+.mk-footer .mk-brand { font-size: 24px; font-weight: 800; }
 .mk-footer p { color: var(--mk-subtle); font-size: 10px; }
 .mk-footer nav { display: flex; flex-wrap: wrap; gap: 26px; margin-left: auto; color: var(--mk-muted); font-size: 11px; }
 .mk-footer nav a { display: inline-flex; align-items: center; gap: 6px; transition: color 160ms ease; }
 .mk-footer a:hover { color: var(--mk-accent); }
 .mk-watermark-wrap { width: 100%; margin-top: 64px; overflow: hidden; }
 .mk-watermark { display: block; width: 100%; height: auto; user-select: none; pointer-events: none; }
-.mk-watermark text { font-family: var(--mk-display); font-size: 330px; font-weight: 900; }
+.mk-watermark text { font-family: var(--mk-display); font-size: 380px; font-weight: 900; }
 
 /* A full-screen depth interlude. Without JS it remains an ordinary readable section. */
 .mk-story { position: relative; background: var(--mk-bg); }
-.mk-story-stage { position: relative; display: grid; align-items: center; min-height: 100svh; overflow: hidden; isolation: isolate; padding-block: 110px; }
-.mk-story-copy { position: relative; z-index: 2; }
-.mk-story h2 { margin: 28px 0; font-family: var(--mk-display); font-size: clamp(40px, 6.6vw, 108px); font-weight: 600; line-height: 1.12; letter-spacing: -0.055em; }
+.mk-story-stage { position: relative; display: grid; align-items: center; min-height: 100svh; overflow: hidden; isolation: isolate; padding-block: 110px; will-change: transform; }
+.mk-story-copy { position: relative; z-index: 2; will-change: transform; }
+.mk-story h2 { margin: 28px 0; font-family: var(--mk-display); font-size: clamp(44px, 7.5vw, 120px); font-weight: 700; line-height: 1.1; letter-spacing: -0.055em; }
 .mk-story h2 span { color: var(--mk-accent); }
-.mk-story-description { max-width: 390px; margin-bottom: 28px; color: var(--mk-muted); font-size: 16px; line-height: 1.8; }
-.mk-story-orbit { position: absolute; z-index: -1; pointer-events: none; border: 1px solid var(--mk-accent-soft); border-radius: 50%; }
+.mk-story-description { max-width: 440px; margin-bottom: 28px; color: var(--mk-muted); font-size: 17px; line-height: 1.8; }
+.mk-story-orbit { position: absolute; z-index: -1; pointer-events: none; border: 1px solid var(--mk-accent-soft); border-radius: 50%; will-change: transform; }
 .mk-story-orbit-back { width: 90vw; height: 90vw; right: -35vw; top: -20vw; }
 .mk-story-orbit-front { width: 55vw; height: 55vw; right: -18vw; bottom: -28vw; border-color: var(--mk-accent); background: var(--mk-accent-soft); }
 .mk-story-coordinate { position: absolute; bottom: 32px; right: 5%; color: var(--mk-subtle); font: 10px var(--font-mono); letter-spacing: 0.16em; }

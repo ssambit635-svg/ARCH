@@ -40,9 +40,9 @@ export function useLenis(enabled = true) {
     ready.current = true;
 
     const lenis = new Lenis({
-      lerp: 0.11,
-      wheelMultiplier: 1.1,
-      touchMultiplier: 1.7,
+      lerp: 0.075,
+      wheelMultiplier: 1.0,
+      touchMultiplier: 1.5,
       smoothWheel: true,
       // Momentum scroll on iOS makes pinned sections overshoot their scrub range.
       syncTouch: false,
