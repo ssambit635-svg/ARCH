@@ -6,6 +6,13 @@
  * AI_NAME instead of hard-coding the version, so the next release is a one-line change.
  */
 export const PRODUCT_NAME = 'ARCH';
+
+/**
+ * The release the marketing surface advertises. Keep it equal to package.json's version —
+ * `tests/marketing-minimal.test.ts` fails if the two drift apart, because the landing page tells
+ * visitors which release they are looking at.
+ */
+export const PRODUCT_VERSION = '0.3.0';
 export const AI_NAME = 'ARCH V1.1';
 export const AI_SHORT = 'V1.1';
 

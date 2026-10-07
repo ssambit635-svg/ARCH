@@ -15,6 +15,33 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Changed — the landing page says what it is and shows it
+
+- **The hero leads with the product, not the poetry.** "Incident response for engineering teams.
+  Self-hosted. Human-reviewed AI." is now the headline, with the type set so "Incident response"
+  never breaks across lines; "Through the noise. Into clarity." moved to a small subline.
+- **The page no longer repeats "clarity."** It appeared four times (hero subline, workflow
+  description, closing headline, browser title). It now appears once, in the hero subline. Section
+  copy that leaned on it was rewritten around what the software does: repeats fold into one
+  incident, context arrives with the alert, a responder approves each draft, and the workflow
+  interlude reads "Your monitoring finds it. ARCH runs the response."
+- **Illustrations out, product screens in.** The night-mountain reveal film and poster that owned the
+  hero, and the dragon logo film that closed the page, are removed from the repository
+  (`public/arch-alpine-*`, `public/arch-dragon-*`) along with the `AmbientVideo` component, which had
+  no other caller. In their place the hero shows a real capture of an open incident — severity,
+  blast radius, the deployments before it, the timeline — and the closing section shows the
+  published status page a customer would read. Both are captured from a local workspace at 2× and
+  shipped as WebP in `public/product/`; the dragon mark stays as the brand mark in the navigation
+  and footer.
+- **Every marketing image is described.** The screenshots carry a specific alt description, an
+  intrinsic width and height, and a caption stating the data is sample data. The decorative brand
+  marks keep `alt=""` and now also declare `aria-hidden="true"`, so an empty alt is always a
+  deliberate choice rather than a missing one — `tests/marketing-minimal.test.ts` enforces that for
+  every image on the page.
+- `tests/marketing-media.test.ts` now checks the screens themselves: WebP signature, intrinsic size
+  (2× the declared CSS box), non-trivial file size, a caption, and that the retired films and their
+  poster files cannot reappear.
+
 ### Changed — a footer that closes the page properly
 
 - The footer is now a sitemap instead of a single row: the brand beside a one-line summary, three

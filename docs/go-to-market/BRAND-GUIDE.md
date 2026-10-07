@@ -223,6 +223,13 @@ the one stone you never remove — the same way the audit trail is the one recor
 
 ## 8. Imagery & 3D
 
+- **The hero is the product.** An illustration only works if a visitor can connect it to incident
+  response; otherwise it reads as decoration, and decoration is what makes a page look like a
+  template. The hero and the closing section carry real captures of shipped screens
+  (`public/product/incident-workspace.webp`, `public/product/status-page.webp`), each with a
+  descriptive `alt`, an intrinsic `width`/`height`, and a caption that says the data is sample data.
+  Screens are captured from a local workspace at 2× and compressed to WebP; re-capture them when the
+  screen they show changes.
 - **Real artefacts over illustrations.** The lifecycle section shows the signed webhook, the
   incident timeline, the rendered status page and the hash-chained audit ledger — depictions of
   behaviour the product actually has. Never mock a UI we don't have.
@@ -280,8 +287,8 @@ and it must **stop** when the visitor asks it to.
 
 | Place | Rule |
 |---|---|
-| Landing page H1 | "The room where the incident ends." |
-| Browser title | `ARCH — incident response for developer teams` |
+| Landing page H1 | "Incident response for engineering teams." — the literal description leads; the poetry ("Through the noise. Into clarity.") is the subline, used once on the page. |
+| Browser title | `ARCH — Incident response for engineering teams` |
 | Email subject | `[ARCH] Checkout API — CRITICAL incident opened` |
 | Status page header | Org name, then "System status", then current overall status |
 | Error page | What broke, what to do, a link to the ARCH status page |

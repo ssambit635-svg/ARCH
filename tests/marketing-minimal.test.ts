@@ -33,27 +33,56 @@ describe('minimal marketing surface', () => {
     expect(nav).toContain('aria-controls="marketing-mobile-nav"');
   });
 
-  it('lets the anime mountain reveal film own a clean, accessible hero without copy or shade overlays', () => {
+  it('says what ARCH is in the hero and shows a real screen rather than an illustration', () => {
     const hero = render(Hero);
     const heroSource = source('src/components/marketing/hero.tsx');
     expect(hero).toContain('id="hero-title"');
-    expect(hero).toContain('ARCH incident operations');
-    expect(hero).toContain('/arch-alpine-poster.jpg');
-    expect(hero).not.toContain('href="/register"');
-    expect(hero).not.toContain('href="#workspace"');
-    expect(hero).not.toContain('When things break');
+    // A visitor has five seconds: the literal description is the headline. Read the heading as a
+    // visitor hears it, and keep "Incident response" unbroken so the phrase survives line wrapping.
+    const headline = (/<h1[^>]*>([\s\S]*?)<\/h1>/.exec(hero)?.[1] ?? '').replace(/<[^>]+>/g, '');
+    expect(headline).toContain('Incident response for engineering teams.');
+    expect(headline).toContain('Self-hosted.');
+    expect(headline).toContain('Human-reviewed AI.');
+    expect(hero).toContain('mk-hero-nowrap');
+    // The hero names the release, and that release is the package version — never a stale one.
+    const pkg = JSON.parse(source('package.json')) as { version: string };
+    expect(hero).toContain(`Early access · v${pkg.version}`);
+    // The poetry survives as the subline, not as the product description.
+    expect(hero).toContain('Through the noise.');
+    expect(hero).toContain('/product/incident-workspace.webp');
+    expect(hero).toContain('href="/register"');
+    expect(hero).toContain('href="#workspace"');
     expect(hero).not.toContain('StatusChip');
     expect(hero).not.toContain('status/arch');
     expect(heroSource).not.toContain('mk-hero-shade');
-    expect(heroSource).not.toContain('mk-hero-copy');
+    expect(heroSource).not.toContain('mk-hero-video');
     expect(heroSource).not.toContain('ScrollTrigger');
+  });
+
+  it('never repeats its own headline line, and describes or hides every image', () => {
+    const marketing = ['hero', 'nav', 'parallax-story', 'intelligence', 'workspace', 'lifecycle', 'topology', 'platform', 'deploy', 'closing', 'footer']
+      .map((name) => source(`src/components/marketing/${name}.tsx`))
+      .join('\n');
+    // "clarity" used to appear four times on one page; one deliberate use is the budget.
+    expect(marketing.match(/clarity/gi) ?? []).toHaveLength(1);
+
+    const rendered = [render(Hero), render(MarketingNav), render(Closing), render(SiteFooter)].join('\n');
+    const images = [...rendered.matchAll(/<img\b[^>]*>/g)].map((match) => match[0]);
+    // The page carries informative images, and each one is described.
+    expect(images.filter((tag) => /alt="[^"]{40,}"/.test(tag)).length).toBeGreaterThanOrEqual(2);
+    for (const tag of images) {
+      const alt = /alt="([^"]*)"/.exec(tag)?.[1] ?? null;
+      expect(alt, `every <img> needs an alt attribute: ${tag}`).not.toBeNull();
+      // An empty alt is only legitimate when the image is explicitly hidden from assistive tech.
+      if (alt === '') expect(tag, `empty alt has to be a deliberate decorative choice: ${tag}`).toContain('aria-hidden="true"');
+    }
   });
 
   it('fills the viewport and adds a static-first, reduced-motion-safe parallax interlude', () => {
     const css = source('src/components/marketing/landing.css');
     const motion = source('src/components/marketing/gsap-reveal.tsx');
-    expect(css).toMatch(/\.mk-hero \{[^}]*height: 100svh/);
-    expect(css).toMatch(/\.mk-hero-video \{[^}]*object-fit: cover/);
+    expect(css).toMatch(/\.mk-hero \{[^}]*min-height: 100svh/);
+    expect(css).toMatch(/\.mk-hero-shot \{[^}]*border-radius: 14px/);
     expect(css).toContain('.mk-main { padding-top: 0; }');
     const story = render(ParallaxStory);
     expect(story).toContain('id="story-title"');
@@ -94,10 +123,10 @@ describe('minimal marketing surface', () => {
     expect(deploy).toContain('role="status"');
   });
 
-  it('keeps the closing film and does not advertise an incorrect license or a demo status URL', () => {
+  it('closes on the customer-facing screen and does not advertise an incorrect license or a demo status URL', () => {
     const closing = render(Closing);
     const footer = render(SiteFooter);
-    expect(source('src/components/marketing/closing.tsx')).toContain('/arch-dragon-reveal.mp4');
+    expect(source('src/components/marketing/closing.tsx')).toContain('/product/status-page.webp');
     expect(footer).toContain('All rights reserved');
     expect(footer).not.toContain('MIT');
     expect(closing).not.toContain('status/arch');
