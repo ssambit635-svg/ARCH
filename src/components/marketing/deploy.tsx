@@ -3,6 +3,7 @@
 import { LinkArrow } from './link-arrow';
 import { useEffect, useRef, useState } from 'react';
 import { GITHUB_REPO_URL } from '@/lib/brand';
+import { copyToClipboard } from '@/lib/copy-to-clipboard';
 import { TechStackTiles } from './tech-stack';
 
 const COMMANDS = [
@@ -23,12 +24,8 @@ export function Deploy() {
 
   const copyCommands = async () => {
     if (resetRef.current) clearTimeout(resetRef.current);
-    try {
-      await navigator.clipboard.writeText(COMMANDS.join('\n'));
-      setCopyState('copied');
-    } catch {
-      setCopyState('error');
-    }
+    const copied = await copyToClipboard(COMMANDS.join('\n'));
+    setCopyState(copied ? 'copied' : 'error');
     resetRef.current = setTimeout(() => setCopyState('idle'), 3000);
   };
 
