@@ -25,17 +25,18 @@ const FOOTER_COLUMNS: Array<{ heading: string; links: FooterLink[] }> = [
     heading: 'Developers',
     links: [
       { label: 'Documentation', href: `${GITHUB_REPO_URL}/tree/main/docs`, external: true },
+      { label: 'Setup guide', href: `${GITHUB_REPO_URL}/blob/main/docs/DEVELOPMENT.md`, external: true },
       { label: 'GitHub', href: GITHUB_REPO_URL, external: true },
       { label: 'Changelog', href: `${GITHUB_REPO_URL}/blob/main/CHANGELOG.md`, external: true },
       { label: 'Security', href: `${GITHUB_REPO_URL}/blob/main/SECURITY.md`, external: true },
     ],
   },
   {
-    heading: 'Account',
+    heading: 'Get started',
     links: [
       { label: 'Create an account', href: '/register', route: true },
       { label: 'Log in', href: '/login', route: true },
-      { label: 'Public status page', href: '/status/arch', route: true },
+      // No link to the demo status page: the marketing surface does not advertise it.
       { label: 'License', href: `${GITHUB_REPO_URL}/blob/main/LICENSE`, external: true },
     ],
   },

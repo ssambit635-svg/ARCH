@@ -18,9 +18,10 @@ Rules for this file:
 ### Changed — a footer that closes the page properly
 
 - The footer is now a sitemap instead of a single row: the brand beside a one-line summary, three
-  link columns (Product, Developers, Account), and a legal bar carrying the copyright, the licence
-  note and a back-to-top control. Type sizes, spacing and hover states follow the same rhythm as the
-  rest of the page, and the layout collapses to one column, then to paired columns, on narrow screens.
+  link columns (Product, Developers, Get started), and a legal bar carrying the copyright, the
+  licence note and a back-to-top control. Type sizes, spacing and hover states follow the same
+  rhythm as the rest of the page, and the layout collapses to one column, then to paired columns,
+  on narrow screens.
 - The `ARCH.` wordmark closing the page is set in the Orbitron display face at its heaviest weight and
   stretched across the full width, so the letterforms read as thick and wide rather than thin.
 - The diagonal shards that cut through the wordmark are gone. In their place the lettering fades and

@@ -10,6 +10,7 @@ import { Lifecycle } from '@/components/marketing/lifecycle';
 import { Platform } from '@/components/marketing/platform';
 import { Deploy } from '@/components/marketing/deploy';
 import { Closing } from '@/components/marketing/closing';
+import { SiteFooter } from '@/components/marketing/footer';
 import { allowedTransitions } from '@/server/services/incident-state';
 
 const render = (component: () => ReturnType<typeof createElement>) => renderToStaticMarkup(createElement(component));
@@ -95,10 +96,12 @@ describe('minimal marketing surface', () => {
 
   it('keeps the closing film and does not advertise an incorrect license or a demo status URL', () => {
     const closing = render(Closing);
+    const footer = render(SiteFooter);
     expect(source('src/components/marketing/closing.tsx')).toContain('/arch-dragon-reveal.mp4');
-    expect(closing).toContain('All rights reserved');
-    expect(closing).not.toContain('MIT');
+    expect(footer).toContain('All rights reserved');
+    expect(footer).not.toContain('MIT');
     expect(closing).not.toContain('status/arch');
+    expect(footer).not.toContain('status/arch');
   });
 
   it.each(['dark', 'light'])('%s text tokens keep AA contrast on every neutral surface', (theme) => {
@@ -151,16 +154,27 @@ describe('minimal marketing surface', () => {
     expect(render(MarketingNav)).not.toContain('mk-nav--hidden');
   });
 
-  it('keeps the classic isometric tech tiles and the full-width fractured footer wordmark', () => {
+  it('keeps the classic isometric tech tiles and the full-bleed, dissolving footer wordmark', () => {
     const css = source('src/components/marketing/landing.css');
     const tiles = source('src/components/marketing/tech-stack.tsx');
+    const footerSource = source('src/components/marketing/footer.tsx');
     expect(tiles).toContain('IsometricStack');
     expect(tiles).toContain('mk-tech-grid');
     expect(css).toContain('.mk-iso-front');
     expect(css).toMatch(/\.mk-watermark \{[^}]*width: 100%/);
-    expect(render(Closing)).toContain('clip-path="url(#mk-wordmark-cuts)"');
-    expect(render(Closing)).toContain('textLength="1400"');
-    expect(source('src/components/marketing/closing.tsx')).toContain('ARCH.');
+
+    const wordmark = render(SiteFooter);
+    // Full-bleed: the word is stretched across the entire viewBox width.
+    expect(wordmark).toContain('textLength="1440"');
+    expect(footerSource).toContain('ARCH.');
+    // The diagonal shards are gone — the word is no longer cut into bands.
+    expect(footerSource).not.toContain('mk-wordmark-cuts');
+    expect(wordmark).not.toContain('clip-path');
+    // Four stacked copies: three soft copies underneath, one crisp copy on top.
+    expect(wordmark.match(/<text /g)).toHaveLength(4);
+    expect(wordmark.match(/<feGaussianBlur /g)).toHaveLength(3);
+    // The word is decorative, so it stays out of the accessibility tree.
+    expect(wordmark).toContain('aria-hidden="true"');
   });
 });
 
