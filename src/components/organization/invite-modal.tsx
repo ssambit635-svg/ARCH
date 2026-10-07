@@ -4,25 +4,24 @@ import { useActionState, useState } from 'react';
 import { Dialog } from '@/components/ui/dialog';
 import { Field, FormError, Input, Select, SubmitButton } from '@/components/ui/form';
 import { inviteMemberAction, type ActionResult } from '@/app/dashboard/actions';
+import { copyToClipboard } from '@/lib/copy-to-clipboard';
 
 /** Invite-a-teammate modal — the one-time invite link renders inside with a copy button. */
 export function InviteModal({ triggerLabel = 'Invite member' }: { triggerLabel?: string }) {
   const [open, setOpen] = useState(false);
   const [state, action] = useActionState<ActionResult | undefined, FormData>(inviteMemberAction, undefined);
   const [copied, setCopied] = useState(false);
+  const [copyUnavailable, setCopyUnavailable] = useState(false);
 
   const inviteUrl = state?.ok ? (state.data as { inviteUrl?: string } | undefined)?.inviteUrl : undefined;
   const showLink = Boolean(inviteUrl && state?.ok && state.message && !state.message.startsWith('Invitation emailed'));
 
   const copy = async () => {
     if (!inviteUrl) return;
-    try {
-      await navigator.clipboard.writeText(inviteUrl);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard unavailable (permissions) — the link stays visible for manual copy.
-    }
+    const didCopy = await copyToClipboard(inviteUrl);
+    setCopied(didCopy);
+    setCopyUnavailable(!didCopy);
+    if (didCopy) window.setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -59,7 +58,7 @@ export function InviteModal({ triggerLabel = 'Invite member' }: { triggerLabel?:
           ) : null}
 
           {showLink && inviteUrl ? (
-            <div className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] p-3.5" role="status">
+            <div className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] p-3.5">
               <p className="text-[13px] font-medium text-amber-200">Invitation created — share this link once:</p>
               <p className="arch-mono break-all rounded-lg bg-abyss-950/80 p-2.5 text-xs text-slate-200">{inviteUrl}</p>
               <button
@@ -69,6 +68,9 @@ export function InviteModal({ triggerLabel = 'Invite member' }: { triggerLabel?:
               >
                 {copied ? 'Copied ✓' : 'Copy link'}
               </button>
+              {copyUnavailable ? (
+                <p className="text-xs text-amber-200" role="status">Clipboard access is blocked here. Select the link above to copy it manually.</p>
+              ) : null}
             </div>
           ) : null}
 

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AI_NAME } from '@/lib/brand';
+import { copyToClipboard } from '@/lib/copy-to-clipboard';
 import { Dialog } from '@/components/ui/dialog';
 import { toast } from '@/components/ui/toast';
 import { IconBook, IconChat, IconCopy, IconDownload, IconIncident, IconMemory, IconPencil, IconPlus, IconRetry, IconSearch, IconServices, IconSpark, IconTrash } from '@/components/shell/icons';
@@ -223,28 +224,6 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
   const payload = await response.json().catch(() => null);
   if (!response.ok) throw new Error(payload?.error?.message ?? 'Something went wrong. Try again.');
   return payload.data as T;
-}
-
-/** Copy without a library, and without silently failing in an insecure context. */
-async function copyText(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    try {
-      const area = document.createElement('textarea');
-      area.value = text;
-      area.style.position = 'fixed';
-      area.style.opacity = '0';
-      document.body.appendChild(area);
-      area.select();
-      const copied = document.execCommand('copy');
-      document.body.removeChild(area);
-      return copied;
-    } catch {
-      return false;
-    }
-  }
 }
 
 /** The transcript as Markdown — what a user would paste into a postmortem or a handover doc. */
@@ -517,7 +496,7 @@ export function ArchChat({
   }, [activeId, canChat, sending, feedbackBusyId]);
 
   const copyChat = useCallback(async () => {
-    const copied = await copyText(toMarkdown(activeSession, messages));
+    const copied = await copyToClipboard(toMarkdown(activeSession, messages));
     toast(copied ? 'Chat copied as Markdown.' : 'Copy failed — select the text instead.', copied ? 'success' : 'error');
   }, [activeSession, messages]);
 
@@ -1033,7 +1012,7 @@ export function ArchChat({
                         <button
                           type="button"
                           onClick={async () => {
-                            const copied = await copyText(message.content);
+                            const copied = await copyToClipboard(message.content);
                             toast(copied ? 'Answer copied.' : 'Copy failed — select the text instead.', copied ? 'success' : 'error');
                           }}
                           className="arch-chat-message-action"

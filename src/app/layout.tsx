@@ -8,6 +8,7 @@ import './globals.css';
  *   Inter         — primary UI and body typeface.
  *   Geist Mono    — developer monospace for subheadings, metadata, labels, CLI and code blocks.
  *   Space Grotesk — secondary geometric display fallback.
+ *   Michroma     — futuristic, angular footer wordmark (SIL Open Font License).
  */
 const orbitron = localFont({
   src: './fonts/orbitron-latin-wght-normal.woff2',
@@ -15,6 +16,16 @@ const orbitron = localFont({
   display: 'swap',
   variable: '--font-orbitron',
   fallback: ['ui-sans-serif', 'system-ui', 'sans-serif'],
+});
+
+// Michroma (SIL Open Font License) gives the footer wordmark a sharper, Azonix-like sci-fi cut.
+const michroma = localFont({
+  src: './fonts/michroma-latin-400-normal.woff2',
+  weight: '400',
+  display: 'swap',
+  preload: false,
+  variable: '--font-michroma',
+  fallback: ['Orbitron', 'ui-sans-serif', 'system-ui', 'sans-serif'],
 });
 
 const inter = localFont({
@@ -93,7 +104,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`dark ${orbitron.variable} ${inter.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
+      className={`dark ${orbitron.variable} ${michroma.variable} ${inter.variable} ${geistMono.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
       suppressHydrationWarning
     >
       <body className="min-h-screen flex flex-col bg-[#050608] text-[#f4f4f5] antialiased selection:bg-[#c7c7c7] selection:text-[#050608]">

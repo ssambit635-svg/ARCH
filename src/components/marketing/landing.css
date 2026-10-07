@@ -152,8 +152,58 @@
 .mk-feature-grid h3 { margin: 18px 0 14px; font-family: var(--mk-display); font-size: 18px; font-weight: 500; letter-spacing: -0.015em; line-height: 1.45; }
 .mk-feature-grid p { max-width: 350px; color: var(--mk-muted); font-size: 14px; line-height: 1.85; }
 
-/* Interactive product preview, kept soft and open rather than framed in hard rules. */
-.mk-console { overflow: hidden; border: 0; border-radius: 16px; background: var(--mk-surface); }
+/* Interactive product preview, framed as a quiet macOS-style browser window. */
+.mk-browser-window {
+  position: relative;
+  border: 1px solid var(--mk-line);
+  border-radius: 18px;
+  background: var(--mk-surface);
+  box-shadow: 0 30px 90px -56px rgb(0 0 0 / 80%), 0 1px 0 rgb(255 255 255 / 4%) inset;
+}
+.mk-browser-chrome {
+  display: grid;
+  grid-template-columns: 1fr minmax(220px, 400px) 1fr;
+  align-items: center;
+  gap: 20px;
+  min-height: 54px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--mk-line-soft);
+  border-radius: 17px 17px 0 0;
+  background: var(--mk-bg-soft);
+}
+.mk-window-controls { display: flex; align-items: center; gap: 8px; }
+.mk-window-dot { width: 11px; height: 11px; flex: 0 0 auto; border-radius: 50%; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 10%); }
+.mk-window-dot--close { background: #ff5f57; }
+.mk-window-dot--minimize { background: #febc2e; }
+.mk-window-dot--expand { background: #28c840; }
+.mk-browser-address {
+  overflow: hidden;
+  padding: 8px 14px;
+  border: 1px solid rgb(255 255 255 / 4%);
+  border-radius: 8px;
+  background: rgb(0 0 0 / 14%);
+  color: var(--mk-subtle);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1.2;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mk-browser-actions { display: flex; justify-self: end; align-items: center; gap: 4px; }
+.mk-browser-actions span { width: 3px; height: 3px; border-radius: 50%; background: var(--mk-subtle); }
+.mk-console { overflow: hidden; border: 0; border-radius: 0 0 17px 17px; background: var(--mk-surface); }
+.mk-console-rating-row { display: flex; justify-content: flex-end; padding: 11px 24px; border-top: 1px solid var(--mk-line-soft); background: rgb(255 255 255 / 1.2%); }
+.mk-preview-rating { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px 12px; }
+.mk-preview-rating-label { color: var(--mk-subtle); font-size: 9px; }
+.mk-rating-stars { display: inline-flex; align-items: center; gap: 2px; }
+.mk-rating-option { position: relative; display: inline-flex; align-items: center; justify-content: center; width: 19px; height: 20px; cursor: pointer; }
+.mk-rating-option input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.mk-rating-option > span { color: var(--mk-subtle); font-size: 16px; line-height: 1; transition: color 120ms ease, transform 120ms ease; }
+.mk-rating-option.is-active > span { color: #f5bd4f; }
+.mk-rating-option:hover > span { transform: scale(1.12); }
+.mk-rating-option input:focus-visible + span { border-radius: 3px; outline: 2px solid var(--mk-focus); outline-offset: 2px; }
+.mk-rating-status { color: var(--mk-muted); font-size: 9px; white-space: nowrap; }
 .mk-console-bar { display: flex; align-items: center; justify-content: space-between; gap: 20px; min-height: 56px; padding: 16px 24px; background: var(--mk-bg-soft); font-size: 12px; }
 .mk-console-bar strong { font-family: var(--mk-display); font-weight: 600; letter-spacing: 0.04em; }
 .mk-console-path { padding-left: 12px; color: var(--mk-muted); }
@@ -191,8 +241,10 @@
 .mk-suggestion p { color: var(--mk-muted); font-size: 11px; line-height: 1.85; }
 .mk-suggestion > span { display: block; margin-top: 18px; color: var(--mk-subtle); font-size: 9px; line-height: 1.7; }
 .mk-timeline ol { display: grid; gap: 18px; margin: 0; padding: 0; list-style: none; }
-.mk-timeline li { display: grid; grid-template-columns: 35px minmax(0, 1fr); gap: 14px; color: var(--mk-muted); font-size: 11px; line-height: 1.7; }
-.mk-timeline time { color: var(--mk-subtle); font-family: var(--font-mono); font-size: 9px; }
+.mk-timeline li { display: grid; grid-template-columns: 54px minmax(0, 1fr); gap: 10px; color: var(--mk-muted); font-size: 11px; line-height: 1.7; }
+.mk-timeline-stamp { display: flex; align-items: baseline; gap: 4px; white-space: nowrap; }
+.mk-timeline-number, .mk-timeline time { color: var(--mk-subtle); font-family: var(--font-mono); font-size: 9px; }
+.mk-timeline-number { color: var(--mk-accent); }
 .mk-preview-caption { margin-top: 16px; color: var(--mk-subtle); text-align: center; font-size: 10px; line-height: 1.7; }
 
 /* Four real states, set out as soft, touch-friendly choices rather than outlined rows. */
@@ -284,14 +336,21 @@
 .mk-dragon-stage { position: relative; width: 100%; aspect-ratio: 848 / 478; overflow: hidden; border: 0; border-radius: 14px; background: #020503; }
 .mk-footer { padding-top: 30px; }
 .mk-footer-row { display: flex; flex-wrap: wrap; align-items: center; gap: 28px; }
-.mk-footer .mk-brand { font-size: 24px; font-weight: 800; }
+.mk-footer .mk-brand {
+  font-family: var(--font-michroma), var(--mk-display);
+  font-size: 21px;
+  font-weight: 400;
+  letter-spacing: 0.12em;
+  text-shadow: 0 1px 10px rgb(59 142 244 / 16%);
+}
+.mk-footer .mk-brand-dot { font-weight: 400; letter-spacing: 0; }
 .mk-footer p { color: var(--mk-subtle); font-size: 10px; }
 .mk-footer nav { display: flex; flex-wrap: wrap; gap: 26px; margin-left: auto; color: var(--mk-muted); font-size: 11px; }
 .mk-footer nav a { display: inline-flex; align-items: center; gap: 6px; transition: color 160ms ease; }
 .mk-footer a:hover { color: var(--mk-accent); }
 .mk-watermark-wrap { width: 100%; margin-top: 64px; overflow: hidden; }
 .mk-watermark { display: block; width: 100%; height: auto; user-select: none; pointer-events: none; }
-.mk-watermark text { font-family: var(--mk-display); font-size: 380px; font-weight: 900; }
+.mk-watermark text { font-family: var(--font-michroma), var(--mk-display); font-size: 360px; font-weight: 400; letter-spacing: 0.04em; }
 
 /* A full-screen depth interlude. Without JS it remains an ordinary readable section. */
 .mk-story { position: relative; background: var(--mk-bg); }
@@ -345,6 +404,7 @@
 }
 
 @media (max-width: 759px) {
+  .mk-browser-chrome { grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; padding-inline: 16px; }
   .mk-console-body { grid-template-columns: minmax(0, 1fr); }
   .mk-console-sidebar { padding: 20px 16px 12px; }
   .mk-incident-list { display: flex; overflow-x: auto; gap: 8px; padding-bottom: 8px; }
@@ -385,6 +445,14 @@
   .mk-feature-grid p { max-width: 100%; }
   .mk-feature-number { display: none; }
   .mk-feature-grid h3 { margin-top: 0; }
+  .mk-browser-chrome { min-height: 50px; gap: 12px; padding-inline: 14px; }
+  .mk-window-controls { gap: 6px; }
+  .mk-window-dot { width: 9px; height: 9px; }
+  .mk-browser-address { padding-inline: 8px; font-size: 8px; }
+  .mk-browser-actions { gap: 3px; }
+  .mk-console-rating-row { justify-content: flex-start; padding-inline: 18px; }
+  .mk-preview-rating { justify-content: flex-start; gap: 6px 10px; }
+  .mk-preview-rating-label, .mk-rating-status { font-size: 8px; }
   .mk-console-bar { gap: 12px; padding-inline: 18px; font-size: 10px; }
   .mk-console-path { padding-left: 6px; }
   .mk-console-demo { display: none; }
