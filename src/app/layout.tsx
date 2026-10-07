@@ -64,7 +64,7 @@ const jetbrainsMono = localFont({
 
 export const metadata: Metadata = {
   title: {
-    default: 'ARCH — Clarity when things break',
+    default: 'ARCH — Incident response for engineering teams',
     template: '%s | ARCH',
   },
   description:
@@ -82,7 +82,7 @@ export const metadata: Metadata = {
     'native AI',
   ],
   openGraph: {
-    title: 'ARCH — Clarity when things break',
+    title: 'ARCH — Incident response for engineering teams',
     description:
       'Bring alerts, context, and your team together in one focused, self-hosted workspace.',
     type: 'website',
@@ -90,7 +90,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ARCH — Clarity when things break',
+    title: 'ARCH — Incident response for engineering teams',
     description: 'Bring alerts, context, and your team together in one focused, self-hosted workspace.',
   },
 };

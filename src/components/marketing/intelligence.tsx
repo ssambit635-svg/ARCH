@@ -1,15 +1,15 @@
 const FEATURES = [
   {
-    title: 'Less noise. One clear signal.',
-    body: 'Signed webhook intake and incident fingerprinting bring repeated alerts into a single response. Your team works from the same context.',
+    title: 'Repeats fold into one incident.',
+    body: 'Signed webhook intake and alert fingerprinting group the same failure into a single response, so two responders are not working one outage twice.',
   },
   {
-    title: 'Context, without the hunt.',
-    body: 'Keep the timeline, affected services, related changes, and useful runbooks close to the work. Spend less time piecing things together.',
+    title: 'Context arrives with the alert.',
+    body: 'The service graph, recent deployments, an SLO, and matching runbooks sit beside the incident instead of across five browser tabs.',
   },
   {
-    title: 'Assistance. Not autopilot.',
-    body: 'Native tools help with triage and drafts. A responder reviews every suggestion before it changes an incident or reaches a customer.',
+    title: 'A responder approves each draft.',
+    body: 'Native triage and drafts are stored as drafts. Nothing changes an incident or reaches a customer until a permitted responder reviews it.',
   },
 ];
 
@@ -18,7 +18,7 @@ export function Intelligence() {
     <section id="intelligence" className="mk-section mk-intro" aria-labelledby="intelligence-title">
       <div id="library-map" className="mk-anchor" />
       <div className="mk-container">
-        <h2 id="intelligence-title" className="mk-eyebrow" data-mk-reveal>A clearer way to work</h2>
+        <h2 id="intelligence-title" className="mk-eyebrow" data-mk-reveal>What ARCH does with an alert</h2>
         <div className="mk-feature-grid" data-mk-stagger="rows">
           {FEATURES.map((feature, index) => (
             <article key={feature.title}>

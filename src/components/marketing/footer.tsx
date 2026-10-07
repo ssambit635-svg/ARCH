@@ -153,7 +153,7 @@ export function SiteFooter() {
         <div className="mk-footer-grid" data-mk-reveal>
           <div className="mk-footer-intro">
             <Link href="/" className="mk-brand" aria-label="ARCH home">
-              <img src="/dragon-mark.webp" alt="" width="28" height="28" className="mk-brand-mark" />
+              <img src="/dragon-mark.webp" alt="" aria-hidden="true" width="28" height="28" className="mk-brand-mark" />
               <span>
                 ARCH<span className="mk-brand-dot">.</span>
               </span>
