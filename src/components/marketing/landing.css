@@ -330,25 +330,105 @@
 .mk-iso:hover .mk-iso-front,
 .mk-iso:active .mk-iso-front { transform: translate(3.5px, 3.5px); }
 
-/* A quiet closing, a useful footer and the half-faded wordmark. */
+/* A quiet closing, a useful footer and the wordmark dissolving into the page. */
 .mk-closing-grid { display: grid; grid-template-columns: 1fr 0.9fr; gap: 80px; align-items: center; }
-.mk-dragon-stage { position: relative; width: 100%; aspect-ratio: 848 / 478; overflow: hidden; border: 0; border-radius: 14px; background: #020503; }
-.mk-footer { padding-top: 30px; }
-.mk-footer-row { display: flex; flex-wrap: wrap; align-items: center; gap: 28px; }
-.mk-footer .mk-brand {
-  font-family: var(--font-michroma), var(--mk-display);
-  font-size: 21px;
-  font-weight: 400;
-  letter-spacing: 0.12em;
+.mk-closing { padding-bottom: 64px; }
+.mk-dragon-stage { position: relative; width: 100%; aspect-ratio: 848 / 478; overflow: hidden; border: 1px solid var(--mk-line-soft); border-radius: 14px; background: var(--mk-tile); }
+
+.mk-footer { position: relative; padding-top: 64px; }
+.mk-footer::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--mk-line) 14%, var(--mk-line) 86%, transparent);
 }
-.mk-footer .mk-brand-dot { font-weight: 400; letter-spacing: 0; }
-.mk-footer p { color: var(--mk-subtle); font-size: 10px; }
-.mk-footer nav { display: flex; flex-wrap: wrap; gap: 26px; margin-left: auto; color: var(--mk-muted); font-size: 11px; }
-.mk-footer nav a { display: inline-flex; align-items: center; gap: 6px; transition: color 160ms ease; }
-.mk-footer a:hover { color: var(--mk-accent); }
-.mk-watermark-wrap { width: 100%; margin-top: 64px; overflow: hidden; }
+
+.mk-footer-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.55fr); gap: 56px 80px; align-items: start; }
+.mk-footer-intro { min-width: 0; }
+.mk-footer-tagline { max-width: 32ch; margin: 22px 0 0; color: var(--mk-muted); font-size: 13px; line-height: 1.85; text-wrap: pretty; }
+
+.mk-footer-columns { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
+.mk-footer-column { min-width: 0; }
+.mk-footer-heading {
+  margin: 0 0 20px;
+  color: var(--mk-subtle);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.mk-footer-links { display: grid; gap: 13px; margin: 0; padding: 0; list-style: none; }
+.mk-footer-links a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--mk-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  transition: color 180ms ease;
+}
+.mk-footer-links a::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 -4px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.55;
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+  transition: transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.mk-footer-links a:hover { color: var(--mk-fg); }
+.mk-footer-links a:hover::after { transform: scaleX(1); }
+.mk-footer-links a .mk-link-arrow { transition: transform 260ms cubic-bezier(0.22, 1, 0.36, 1); }
+.mk-footer-links a:hover .mk-link-arrow { transform: translate(2px, -2px); }
+
+.mk-footer-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 28px;
+  margin-top: 64px;
+  padding-block: 24px;
+  border-top: 1px solid var(--mk-line-soft);
+}
+.mk-footer-legal,
+.mk-footer-note { margin: 0; color: var(--mk-subtle); font-size: 12px; line-height: 1.6; }
+.mk-footer-note { color: var(--mk-subtle); opacity: 0.72; }
+.mk-footer-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin-left: auto;
+  color: var(--mk-muted);
+  font-size: 12px;
+  line-height: 1.6;
+  transition: color 180ms ease;
+}
+.mk-footer-top:hover { color: var(--mk-fg); }
+.mk-footer-top-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--mk-line);
+  border-radius: 50%;
+  transition: border-color 180ms ease, transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+.mk-footer-top:hover .mk-footer-top-icon { border-color: var(--mk-accent); transform: translateY(-3px); }
+
+.mk-watermark-wrap { width: 100%; margin-top: 40px; overflow: hidden; }
 .mk-watermark { display: block; width: 100%; height: auto; user-select: none; pointer-events: none; }
-.mk-watermark text { font-family: var(--font-michroma), var(--mk-display); font-size: 360px; font-weight: 400; letter-spacing: 0.04em; }
+.mk-watermark text {
+  font-family: var(--mk-display);
+  font-size: 360px;
+  font-weight: 900;
+}
 
 /* A full-screen depth interlude. Without JS it remains an ordinary readable section. */
 .mk-story { position: relative; background: var(--mk-bg); }
@@ -380,6 +460,8 @@
   .mk-console-content { grid-template-columns: 1fr; gap: 26px; }
   .mk-model-grid, .mk-lifecycle-grid, .mk-closing-grid { gap: 48px; }
   .mk-deploy-grid { gap: 40px; }
+  .mk-footer-grid { gap: 48px 56px; }
+  .mk-footer-columns { gap: 32px; }
   .mk-tech-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
 
@@ -420,6 +502,9 @@
   .mk-model-copy { max-width: 620px; }
   .mk-closing-grid { grid-template-columns: 1fr; gap: 48px; }
   .mk-dragon-stage { max-width: 450px; }
+  .mk-footer { padding-top: 52px; }
+  .mk-footer-grid { grid-template-columns: 1fr; gap: 44px; }
+  .mk-footer-tagline { max-width: 46ch; }
   /* Fifteen technologies should not become eight rows of decoration on a phone. */
   .mk-tech-grid { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: 120px; overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x proximity; padding-block: 8px 14px; }
   .mk-tech-grid li { scroll-snap-align: start; }
@@ -469,9 +554,11 @@
   .mk-tech-grid { grid-auto-columns: 108px; }
   .mk-tech-grid li { gap: 10px; padding: 18px 6px; font-size: 10px; }
   .mk-iso { width: 52px; }
-  .mk-footer-row { gap: 20px; }
-  .mk-footer nav { width: 100%; gap: 22px; margin-left: 0; }
-  .mk-watermark { padding-inline: 0; letter-spacing: 0.01em; }
+  .mk-footer-columns { grid-template-columns: 1fr 1fr; gap: 34px 24px; }
+  /* Copyright and back-to-top share the first row; the note drops below them. */
+  .mk-footer-bar { gap: 12px 20px; }
+  .mk-footer-note { order: 3; flex-basis: 100%; }
+  .mk-footer-top { order: 2; margin-left: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {
