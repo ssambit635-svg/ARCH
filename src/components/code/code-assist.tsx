@@ -3,6 +3,7 @@
 import { useActionState, useState } from 'react';
 import { Select, SubmitButton, Textarea } from '@/components/ui/form';
 import { reviewCodeAction, type CodeReviewState } from '@/app/dashboard/actions';
+import { copyToClipboard } from '@/lib/copy-to-clipboard';
 
 /**
  * ARCH Code Assist — paste code or a stack trace, get a review / fix / explanation from ARCH's
@@ -26,19 +27,20 @@ const SEVERITY_STYLE = {
 } as const;
 
 function CopyButton({ text }: { text: string }) {
-  const [copied, setCopied] = useState(false);
+  const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>('idle');
   return (
     <button
       type="button"
       className="rounded-md border border-white/10 px-2 py-1 text-xs text-slate-300 hover:bg-white/[0.06]"
+      aria-label={copyState === 'error' ? 'Copy unavailable; select the text manually' : 'Copy'}
       onClick={() => {
-        void navigator.clipboard?.writeText(text).then(() => {
-          setCopied(true);
-          setTimeout(() => setCopied(false), 1500);
+        void copyToClipboard(text).then((copied) => {
+          setCopyState(copied ? 'copied' : 'error');
+          window.setTimeout(() => setCopyState('idle'), 2000);
         });
       }}
     >
-      {copied ? 'Copied' : 'Copy'}
+      {copyState === 'copied' ? 'Copied' : copyState === 'error' ? 'Copy unavailable' : 'Copy'}
     </button>
   );
 }
