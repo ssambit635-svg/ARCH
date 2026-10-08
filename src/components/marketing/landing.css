@@ -698,7 +698,7 @@
   background: var(--mk-coral);
   opacity: 0.92;
 }
-.mk-hero-shot { border-color: var(--mk-fg); box-shadow: 0 24px 60px rgb(0 0 0 / 14%); }
+.mk-hero-shot { border-color: var(--mk-fg); }
 .mk-hero-chip {
   position: absolute;
   display: inline-flex;
@@ -713,7 +713,6 @@
   font-weight: 600;
   letter-spacing: 0.01em;
   white-space: nowrap;
-  box-shadow: 0 10px 24px rgb(0 0 0 / 12%);
 }
 .mk-hero-chip--severity { top: -16px; left: -18px; color: var(--mk-coral); }
 .mk-hero-chip--trail { right: -14px; bottom: -14px; background: var(--mk-lilac); color: var(--mk-paper-ink); }
@@ -728,8 +727,8 @@
   to { opacity: 1; transform: translateY(0); }
 }
 @keyframes mk-hero-dot-pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgb(242 85 51 / 45%); }
-  50% { box-shadow: 0 0 0 6px rgb(242 85 51 / 0%); }
+  0%, 100% { outline: 0 solid rgb(242 85 51 / 45%); }
+  50% { outline: 6px solid rgb(242 85 51 / 0%); }
 }
 
 /* A paper interlude gives the scroll story a different emotional register. */
@@ -1095,7 +1094,6 @@
   font-weight: 600;
   letter-spacing: 0.02em;
   white-space: nowrap;
-  box-shadow: 0 8px 18px rgb(37 38 41 / 28%);
 }
 
 /* Backdrop application window with the service topology */
@@ -1107,7 +1105,6 @@
   border: 1px solid rgb(37 38 41 / 12%);
   border-radius: 14px;
   background: #fbf8f2;
-  box-shadow: 0 30px 70px rgb(37 38 41 / 14%);
 }
 .mk-control-backdrop-body { position: relative; height: 100%; }
 .mk-control-ring {
@@ -1147,7 +1144,6 @@
   border: 1px solid rgb(37 38 41 / 14%);
   border-radius: 26px;
   background: #fff;
-  box-shadow: 0 26px 60px rgb(37 38 41 / 20%);
 }
 .mk-control-phone-status { display: flex; justify-content: space-between; color: #a7a7a7; font-size: 9px; }
 .mk-control-phone-id { margin: 12px 0 0; color: #8a8a8a; font-family: var(--font-mono); font-size: 10px; }
@@ -1175,7 +1171,6 @@
   border: 1px solid rgb(37 38 41 / 14%);
   border-radius: 14px;
   background: #fff;
-  box-shadow: 0 36px 84px rgb(37 38 41 / 28%);
 }
 .mk-control-chat .mk-control-titlebar { border-radius: 13px 13px 0 0; }
 .mk-control-chat-body { display: grid; gap: 14px; padding: 16px 18px 10px; }
@@ -1226,7 +1221,6 @@
   border: 1px solid rgb(0 0 0 / 40%);
   border-radius: 14px;
   background: #17181c;
-  box-shadow: 0 30px 70px rgb(23 24 28 / 42%);
 }
 .mk-control-terminal .mk-control-titlebar--dark { border-radius: 13px 13px 0 0; }
 .mk-control-terminal-body {
@@ -1262,7 +1256,6 @@
   color: var(--mk-paper-ink);
   font-size: 11.5px;
   font-weight: 600;
-  box-shadow: 0 14px 34px rgb(37 38 41 / 26%);
 }
 .mk-control-scribe-dot { width: 7px; height: 7px; flex: 0 0 auto; border-radius: 50%; background: var(--mk-coral); }
 @media (prefers-reduced-motion: no-preference) {

@@ -67,7 +67,7 @@ export function SiteFooter() {
         <section className="mk-footer-meta-col">
           <h3>Product</h3>
           <ul>
-            <li><Link href="/status/arch">Status page</Link></li>
+            <li><Link href="/dashboard/status">Status pages</Link></li>
             <li><Link href="/register">Get started</Link></li>
           </ul>
         </section>
