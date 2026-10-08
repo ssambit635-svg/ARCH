@@ -925,6 +925,13 @@
    ============================================================================ */
 
 .mk-footer {
+  /* One fade, two legible bands. The cream half carries the statement in ink;
+     the orange is raised so the field is saturated coral by mid-height and
+     closes on ember instead of washing back to a pale orange. Previously every
+     letter here was white, which measured 1.5:1 to 2.5:1 on this fade and read
+     as invisible. */
+  --mk-footer-ink: #2a1410;
+  --mk-footer-ink-soft: rgb(42 20 16 / 86%);
   position: relative;
   display: flex;
   min-height: 100svh;
@@ -932,7 +939,17 @@
   justify-content: space-between;
   overflow: hidden;
   padding-top: 0;
-  background: linear-gradient(180deg, #fff 0%, #fff 14%, #f9c2b8 32%, var(--mk-coral) 69%, #f7835e 100%);
+  background: linear-gradient(
+    180deg,
+    #fff 0%,
+    #fff 6%,
+    #fde4d9 16%,
+    #f9bc9f 32%,
+    #f4784f 50%,
+    #e2401a 64%,
+    #d93a14 82%,
+    #cf3410 100%
+  );
   color: #fff;
   text-align: center;
 }
@@ -946,24 +963,32 @@
   width: 100%;
   padding-block: 140px 100px;
 }
-.mk-footer-cta .mk-eyebrow { justify-content: center; margin-bottom: 28px; color: #fff; }
-.mk-footer-cta .mk-eyebrow::before { background: #fff; }
+.mk-footer-cta .mk-eyebrow { justify-content: center; margin-bottom: 28px; color: var(--mk-footer-ink); }
+.mk-footer-cta .mk-eyebrow::before { background: var(--mk-footer-ink); }
 .mk-footer-cta h2 {
   max-width: 980px;
   margin: 0;
-  color: #fff;
+  color: var(--mk-footer-ink);
   font-family: var(--mk-display-editorial);
   font-size: clamp(56px, 8.4vw, 118px);
   font-weight: 400;
   letter-spacing: -0.065em;
   line-height: 0.9;
 }
-.mk-footer-cta-copy { margin-top: 28px; color: #fff; font-size: clamp(17px, 2vw, 25px); line-height: 1.35; }
+.mk-footer-cta-copy { margin-top: 28px; color: var(--mk-footer-ink-soft); font-size: clamp(17px, 2vw, 25px); line-height: 1.35; }
 .mk-footer-cta-actions { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 22px; margin-top: 34px; }
-.mk-footer-cta .mk-button { background: var(--mk-paper-ink); color: #fff; }
-.mk-footer-cta .mk-button:hover { background: #fff; color: var(--mk-paper-ink); }
-.mk-footer-cta-link { display: inline-flex; align-items: center; gap: 9px; color: #fff; font-size: 13px; }
-.mk-footer-cta-link:hover { color: var(--mk-paper-ink); }
+.mk-footer-cta .mk-button { background: var(--mk-footer-ink); color: #fff; }
+.mk-footer-cta .mk-button:hover { background: #fff; color: var(--mk-footer-ink); }
+.mk-footer-cta-link { display: inline-flex; align-items: center; gap: 9px; color: var(--mk-footer-ink); font-size: 13px; font-weight: 500; text-decoration: none; text-underline-offset: 4px; transition: color 160ms ease; }
+.mk-footer-cta-link:hover { text-decoration: underline; }
+.mk-footer-cta-link .mk-link-arrow { flex: 0 0 auto; }
+.mk-footer-base {
+  /* The closing links need a ground they can rely on. The page fade is measured
+     in percentages, so on a tall (stacked) footer the pale band would drift
+     under them; this band is solid ember 40px in — above the first heading —
+     whatever hue the fade has reached by then. */
+  background: linear-gradient(180deg, rgb(207 52 16 / 0%) 0, #cf3410 40px, #bf2c0b 100%);
+}
 /* Real ways to reach us, set into the closing frame: inbox, repository, policies. */
 .mk-footer-meta {
   display: grid;
@@ -977,7 +1002,7 @@
 }
 .mk-footer-meta-col h3 {
   margin: 0 0 18px;
-  color: rgb(255 255 255 / 78%);
+  color: rgb(255 255 255 / 92%);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.14em;
@@ -990,11 +1015,16 @@
   gap: 8px;
   color: #fff;
   font-size: 14px;
+  font-weight: 500;
   line-height: 1.5;
   overflow-wrap: anywhere;
+  text-decoration: none;
+  text-underline-offset: 4px;
   transition: color 160ms ease, opacity 160ms ease;
 }
-.mk-footer-meta-col a:hover { color: var(--mk-paper-ink); }
+/* The links sit on saturated orange, so hover stays white and underlines rather
+   than dropping to ink, which would fall under 4:1 here. */
+.mk-footer-meta-col a:hover { text-decoration: underline; }
 .mk-footer-meta-col a .mk-link-arrow { flex: 0 0 auto; }
 .mk-footer-bar {
   width: min(100% - 80px, 1200px);
@@ -1005,6 +1035,9 @@
 .mk-footer-legal,
 .mk-footer-note,
 .mk-footer-top { color: #fff; }
+.mk-footer-note { opacity: 0.88; }
+.mk-footer-top { text-decoration: none; text-underline-offset: 4px; }
+.mk-footer-top:hover { text-decoration: underline; }
 .mk-footer-top-icon { border-color: rgb(255 255 255 / 70%); }
 .mk-watermark-wrap { display: none; }
 

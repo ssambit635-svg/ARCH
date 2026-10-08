@@ -45,38 +45,42 @@ export function SiteFooter() {
       </div>
 
       {/* The closing frame now carries real ways to reach us: a monitored inbox,
-          the public repository, and the policies a buyer asks for. */}
-      <nav id="contact" className="mk-footer-meta" aria-label="Contact and legal">
-        <section className="mk-footer-meta-col">
-          <h3>Contact</h3>
-          <ul>
-            <li><a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></li>
-            <li><a href={GITHUB_REPO_URL} target="_blank" rel="noreferrer">GitHub <LinkArrow /></a></li>
-            <li><a href={`${GITHUB_REPO_URL}/issues`} target="_blank" rel="noreferrer">Report an issue <LinkArrow /></a></li>
-            <li><a href={`${GITHUB_REPO_URL}/discussions`} target="_blank" rel="noreferrer">Discussions <LinkArrow /></a></li>
-          </ul>
-        </section>
-        <section className="mk-footer-meta-col">
-          <h3>Legal</h3>
-          <ul>
-            <li><a href={`${GITHUB_REPO_URL}/blob/main/docs/legal/PRIVACY-POLICY.md`} target="_blank" rel="noreferrer">Privacy policy</a></li>
-            <li><a href={`${GITHUB_REPO_URL}/blob/main/docs/legal/TERMS-OF-SERVICE.md`} target="_blank" rel="noreferrer">Terms &amp; conditions</a></li>
-            <li><a href={`${GITHUB_REPO_URL}/blob/main/SECURITY.md`} target="_blank" rel="noreferrer">Security &amp; compliance</a></li>
-          </ul>
-        </section>
-        <section className="mk-footer-meta-col">
-          <h3>Product</h3>
-          <ul>
-            <li><Link href="/dashboard/status">Status pages</Link></li>
-            <li><Link href="/register">Get started</Link></li>
-          </ul>
-        </section>
-      </nav>
+          the public repository, and the policies a buyer asks for. The base band
+          keeps this whole block on solid ember so the white links stay legible
+          however tall the fade above it grows. */}
+      <div className="mk-footer-base">
+        <nav id="contact" className="mk-footer-meta" aria-label="Contact and legal">
+          <section className="mk-footer-meta-col">
+            <h3>Contact</h3>
+            <ul>
+              <li><a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></li>
+              <li><a href={GITHUB_REPO_URL} target="_blank" rel="noreferrer">GitHub <LinkArrow /></a></li>
+              <li><a href={`${GITHUB_REPO_URL}/issues`} target="_blank" rel="noreferrer">Report an issue <LinkArrow /></a></li>
+              <li><a href={`${GITHUB_REPO_URL}/discussions`} target="_blank" rel="noreferrer">Discussions <LinkArrow /></a></li>
+            </ul>
+          </section>
+          <section className="mk-footer-meta-col">
+            <h3>Legal</h3>
+            <ul>
+              <li><a href={`${GITHUB_REPO_URL}/blob/main/docs/legal/PRIVACY-POLICY.md`} target="_blank" rel="noreferrer">Privacy policy</a></li>
+              <li><a href={`${GITHUB_REPO_URL}/blob/main/docs/legal/TERMS-OF-SERVICE.md`} target="_blank" rel="noreferrer">Terms &amp; conditions</a></li>
+              <li><a href={`${GITHUB_REPO_URL}/blob/main/SECURITY.md`} target="_blank" rel="noreferrer">Security &amp; compliance</a></li>
+            </ul>
+          </section>
+          <section className="mk-footer-meta-col">
+            <h3>Product</h3>
+            <ul>
+              <li><Link href="/dashboard/status">Status pages</Link></li>
+              <li><Link href="/register">Get started</Link></li>
+            </ul>
+          </section>
+        </nav>
 
-      <div className="mk-footer-bar">
-        <p className="mk-footer-legal">© 2026 ARCH. All rights reserved.</p>
-        <p className="mk-footer-note">Proprietary license · self-hosted on your infrastructure</p>
-        <a href="#top" className="mk-footer-top">Back to top</a>
+        <div className="mk-footer-bar">
+          <p className="mk-footer-legal">© 2026 ARCH. All rights reserved.</p>
+          <p className="mk-footer-note">Proprietary license · self-hosted on your infrastructure</p>
+          <a href="#top" className="mk-footer-top">Back to top</a>
+        </div>
       </div>
 
       <Wordmark />

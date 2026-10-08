@@ -15,6 +15,17 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Fixed — the closing frame's text is readable
+
+- The footer's statement, links and legal line were all white on a cream-to-coral fade. Where the
+  letters actually sit, that measured between 1.5:1 and 2.5:1 against the background — well under
+  the 4.5:1 a 12–14px link needs — which is why the bottom of the page read as blank.
+- The statement now sits in a deep ink on the pale half of the fade (5.1:1 or better everywhere it
+  can land), and the orange is raised: the field reaches a saturated coral by mid-height and closes
+  on ember rather than washing back out to a lighter orange.
+- The contact, legal and product links plus the legal bar share a solid ember band, so their white
+  text stays above 5:1 no matter how tall the footer grows when the columns stack on a phone.
+
 ### Changed — the landing page says what it is and shows it
 
 - **The hero leads with the product, not the poetry.** "Incident response for engineering teams.
