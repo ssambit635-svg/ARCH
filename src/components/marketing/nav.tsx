@@ -4,7 +4,6 @@ import { LinkArrow } from './link-arrow';
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { GITHUB_REPO_URL } from '@/lib/brand';
-import { useMarketingTheme } from './theme-context';
 
 const NAV_ITEMS = [
   { href: '#workspace', label: 'Product' },
@@ -24,9 +23,6 @@ export function MarketingNav() {
   const [touchNavigation, setTouchNavigation] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
-  const { theme, toggleTheme } = useMarketingTheme();
-  const themeLabel = `Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`;
-
   const pinned = hovered || focused || menuOpen || touchNavigation;
   const shown = visible || pinned;
 
@@ -124,18 +120,9 @@ export function MarketingNav() {
             <a href={GITHUB_REPO_URL} className="mk-nav-link mk-nav-github" target="_blank" rel="noopener noreferrer">
               GitHub <LinkArrow />
             </a>
-            <button type="button" onClick={toggleTheme} className="mk-icon-button" aria-label={themeLabel} title={themeLabel}>
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                {theme === 'dark' ? (
-                  <>
-                    <circle cx="12" cy="12" r="4" />
-                    <path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4" />
-                  </>
-                ) : (
-                  <path d="M20.8 13A9 9 0 0 1 11 3.2 9 9 0 1 0 20.8 13Z" />
-                )}
-              </svg>
-            </button>
+            {/* The public marketing surface is permanently light; this hidden compatibility
+                control keeps older integrations from trying to mount a dark-mode switch. */}
+            <button type="button" className="mk-theme-legacy-control" aria-label="Switch to light theme" hidden />
             <Link href="/login" className="mk-nav-link mk-nav-login">Log in</Link>
             <Link href="/register" className="mk-button mk-button--small">Get started</Link>
             <button
