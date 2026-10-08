@@ -124,6 +124,9 @@ export function MarketingMotion({ children }: { children: ReactNode }) {
         const reveal = (targets: HTMLElement[], trigger: HTMLElement) => {
           const unread = targets.filter((element) => !revealedElements.has(element));
           if (!unread.length || !upcoming(trigger)) return;
+          // Hero content must never wait on a scroll position: on short viewports the
+          // call-to-action sits below the trigger line and would stay invisible on load.
+          const inHero = Boolean(trigger.closest('.mk-hero'));
           gsap.fromTo(unread, { y: compact ? 18 : 28, opacity: 0 }, {
             y: 0,
             opacity: 1,
@@ -132,7 +135,9 @@ export function MarketingMotion({ children }: { children: ReactNode }) {
             ease: 'power3.out',
             clearProps: 'transform,opacity',
             onComplete: () => unread.forEach((element) => revealedElements.add(element)),
-            scrollTrigger: { trigger, start: 'top 90%', once: true },
+            ...(inHero
+              ? { delay: 0.15 }
+              : { scrollTrigger: { trigger, start: 'top 90%', once: true } }),
           });
         };
 

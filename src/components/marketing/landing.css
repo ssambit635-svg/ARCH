@@ -651,7 +651,7 @@
    centered, and the figure never waits for a scroll-triggered reveal. */
 .mk-hero {
   min-height: min(100svh, 920px);
-  padding-block: calc(var(--mk-nav-height) + 48px) 72px;
+  padding-block: calc(var(--mk-nav-height) + 32px) 56px;
   background: var(--mk-bg);
 }
 .mk-hero-inner {
@@ -662,30 +662,31 @@
 .mk-hero-copy { padding-bottom: 0; }
 .mk-hero-title {
   max-width: 9ch;
-  font-size: clamp(46px, 5.6vw, 84px);
+  font-size: clamp(40px, 4.6vw, 66px);
   line-height: 1;
   letter-spacing: -0.055em;
 }
 .mk-hero-nowrap { white-space: normal; }
 .mk-hero-claim {
   max-width: 17ch;
-  margin-top: 22px;
+  margin-top: 16px;
   color: var(--mk-accent);
-  font-size: 0.44em;
+  font-size: 0.46em;
   line-height: 1.14;
   letter-spacing: -0.03em;
 }
 .mk-hero-poetry {
-  margin-top: 30px;
+  margin-top: 22px;
   padding-left: 20px;
   border-left: 2px solid var(--mk-coral);
   color: var(--mk-fg);
   font-family: var(--mk-display-editorial);
-  font-size: 19px;
+  font-size: 18px;
   line-height: 1.35;
 }
 .mk-hero-poetry span { color: var(--mk-coral); }
-.mk-hero-lede { max-width: 38ch; margin-top: 20px; font-size: 15px; line-height: 1.7; }
+.mk-hero-lede { max-width: 38ch; margin-top: 16px; font-size: 15px; line-height: 1.7; }
+.mk-hero-copy .mk-actions { margin-top: 26px; }
 .mk-hero-figure { position: relative; z-index: 0; }
 .mk-hero-frame { position: relative; }
 .mk-hero-frame::before {
@@ -1171,12 +1172,12 @@
   left: 50%;
   width: min(480px, 46%);
   transform: translateX(-50%);
-  overflow: hidden;
   border: 1px solid rgb(37 38 41 / 14%);
   border-radius: 14px;
   background: #fff;
   box-shadow: 0 36px 84px rgb(37 38 41 / 28%);
 }
+.mk-control-chat .mk-control-titlebar { border-radius: 13px 13px 0 0; }
 .mk-control-chat-body { display: grid; gap: 14px; padding: 16px 18px 10px; }
 .mk-control-msg { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; }
 .mk-control-msg-avatar {
@@ -1222,12 +1223,12 @@
   top: 122px;
   right: 2%;
   width: 332px;
-  overflow: hidden;
   border: 1px solid rgb(0 0 0 / 40%);
   border-radius: 14px;
   background: #17181c;
   box-shadow: 0 30px 70px rgb(23 24 28 / 42%);
 }
+.mk-control-terminal .mk-control-titlebar--dark { border-radius: 13px 13px 0 0; }
 .mk-control-terminal-body {
   margin: 0;
   padding: 16px 18px 18px;
