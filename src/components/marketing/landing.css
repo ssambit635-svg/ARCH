@@ -964,6 +964,38 @@
 .mk-footer-cta .mk-button:hover { background: #fff; color: var(--mk-paper-ink); }
 .mk-footer-cta-link { display: inline-flex; align-items: center; gap: 9px; color: #fff; font-size: 13px; }
 .mk-footer-cta-link:hover { color: var(--mk-paper-ink); }
+/* Real ways to reach us, set into the closing frame: inbox, repository, policies. */
+.mk-footer-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 40px 56px;
+  width: min(100% - 80px, 1200px);
+  margin: 0 auto;
+  padding-block: 48px 56px;
+  border-top: 1px solid rgb(255 255 255 / 46%);
+  text-align: left;
+}
+.mk-footer-meta-col h3 {
+  margin: 0 0 18px;
+  color: rgb(255 255 255 / 78%);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.mk-footer-meta-col ul { display: grid; gap: 12px; margin: 0; padding: 0; list-style: none; }
+.mk-footer-meta-col a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  transition: color 160ms ease, opacity 160ms ease;
+}
+.mk-footer-meta-col a:hover { color: var(--mk-paper-ink); }
+.mk-footer-meta-col a .mk-link-arrow { flex: 0 0 auto; }
 .mk-footer-bar {
   width: min(100% - 80px, 1200px);
   margin: 0 auto;
@@ -980,10 +1012,12 @@
   .mk-footer-cta { padding-block: 104px 80px; }
   .mk-footer-cta h2 { font-size: clamp(50px, 14vw, 84px); }
   .mk-footer-cta-copy { font-size: 16px; }
+  .mk-footer-meta { width: calc(100% - 44px); gap: 32px 28px; padding-block: 40px 44px; }
   .mk-footer-bar { width: calc(100% - 44px); }
 }
 @media (max-width: 579px) {
   .mk-footer-cta .mk-eyebrow { max-width: 28ch; }
   .mk-footer-cta-actions { flex-direction: column; gap: 18px; }
+  .mk-footer-meta { grid-template-columns: 1fr; gap: 32px; }
   .mk-footer-bar { align-items: flex-start; }
 }

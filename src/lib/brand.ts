@@ -22,3 +22,9 @@ export const AI_SHORT = 'V1.1';
  */
 export const GITHUB_REPO = 'ssambit635-svg/ARCH';
 export const GITHUB_REPO_URL = `https://github.com/${GITHUB_REPO}`;
+
+/**
+ * The public contact inbox shown in the site footer. One constant so the address
+ * is never hard-coded across pages.
+ */
+export const CONTACT_EMAIL = 'ssambit635@gmail.com';
