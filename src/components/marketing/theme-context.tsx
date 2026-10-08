@@ -1,8 +1,8 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
 
-export type MarketingTheme = 'dark' | 'light';
+export type MarketingTheme = 'light';
 
 interface ThemeContextValue {
   theme: MarketingTheme;
@@ -11,38 +11,24 @@ interface ThemeContextValue {
 }
 
 const ThemeContext = createContext<ThemeContextValue>({
-  theme: 'dark',
+  theme: 'light',
   toggleTheme: () => {},
   setTheme: () => {},
 });
 
-const STORAGE_KEY = 'arch-marketing-theme';
-
-/** Theme tokens are scoped to marketing, so navigating into the console cannot restyle it. */
+/**
+ * Marketing is intentionally light-only. Keeping the provider means existing
+ * consumers remain stable while preventing a dark-mode preference from changing
+ * the visual language of the public site.
+ */
 export function MarketingThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<MarketingTheme>('dark');
-
-  useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-      if (saved === 'light' || saved === 'dark') setThemeState(saved);
-    } catch {
-      // The default remains usable when browser storage is unavailable.
-    }
-  }, []);
-
-  const setTheme = (next: MarketingTheme) => {
-    setThemeState(next);
-    try {
-      window.localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      // Theme switching still works without persistence.
-    }
+  const setTheme = (_next: MarketingTheme) => {
+    // ARCH marketing has one deliberate visual mode: light.
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme: () => setTheme(theme === 'dark' ? 'light' : 'dark') }}>
-      <div data-theme={theme} className={`mk-theme-root ${theme === 'light' ? 'mk-light' : 'mk-dark'}`}>
+    <ThemeContext.Provider value={{ theme: 'light', setTheme, toggleTheme: () => {} }}>
+      <div data-theme="light" className="mk-theme-root mk-light">
         {children}
       </div>
     </ThemeContext.Provider>

@@ -9,8 +9,8 @@ export function Closing() {
       <div className="mk-container mk-closing-grid">
         <div>
           <p className="mk-eyebrow" data-mk-reveal>Take it from here</p>
-          <h2 id="closing-title" className="mk-title" data-mk-heading aria-label="Run your next incident in ARCH.">Run your next<br /> incident in ARCH.</h2>
-          <p className="mk-description" data-mk-reveal>Start on your own machine, keep the timeline, and tell customers what is happening from the same workspace.</p>
+          <h2 id="closing-title" className="mk-title" data-mk-heading aria-label="So good, you will break things on purpose.">So good, you’ll break<br /> things on purpose.</h2>
+          <p className="mk-description" data-mk-reveal>Ready to put AI to work on your incidents? Start with ARCH and keep every decision in view.</p>
           <div className="mk-actions" data-mk-reveal>
             <Link href="/register" className="mk-button">Get started <LinkArrow direction="right" /></Link>
             <a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer" className="mk-text-link">Explore on GitHub <LinkArrow /></a>
