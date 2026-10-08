@@ -324,20 +324,75 @@
 
 /* Honest setup and the actual CLI, not a fabricated SDK. */
 .mk-deploy-grid { display: grid; grid-template-columns: 1.25fr 1fr; align-items: start; gap: 64px; }
-.mk-terminal { min-width: 0; padding: 22px 24px; border: 0; border-radius: 14px; background: var(--mk-surface); }
-.mk-terminal-header { display: flex; justify-content: space-between; align-items: center; gap: 20px; padding-bottom: 16px; color: var(--mk-muted); font-size: 11px; }
-.mk-copy-button { padding: 7px 10px; border: 0; border-radius: 6px; background: var(--mk-surface-alt); color: var(--mk-fg); font-size: 10px; transition: color 160ms ease, background-color 160ms ease; }
-.mk-copy-button:hover { background: var(--mk-hover); color: var(--mk-accent); }
-.mk-terminal pre { overflow-x: auto; margin-top: 24px; padding-bottom: 8px; color: var(--mk-fg); font-family: var(--font-mono); font-size: 11px; line-height: 2.3; }
-.mk-terminal-note { margin-top: 24px; padding-top: 16px; color: var(--mk-subtle); font-size: 10px; line-height: 1.8; }
-.mk-copy-error { margin-top: 14px; color: var(--mk-negative); font-size: 11px; line-height: 1.8; }
+/* A real terminal window, not a pale panel: the setup reads as the thing you
+   actually type, and it stays dark in both themes. */
+.mk-terminal {
+  min-width: 0;
+  overflow: hidden;
+  border: 0;
+  border: 1px solid rgb(23 24 28 / 14%);
+  border-radius: 12px;
+  background: #17181c;
+  color: #c8cad1;
+}
+.mk-terminal-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 14px;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+  background: linear-gradient(180deg, #2c2e34 0%, #22242a 100%);
+}
+.mk-terminal-dots { display: flex; flex: 0 0 auto; gap: 8px; }
+.mk-terminal-dots i { width: 12px; height: 12px; border-radius: 50%; }
+.mk-terminal-dots i:nth-child(1) { background: #ff5f57; }
+.mk-terminal-dots i:nth-child(2) { background: #febc2e; }
+.mk-terminal-dots i:nth-child(3) { background: #28c840; }
+.mk-terminal-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: rgb(255 255 255 / 62%);
+  font-size: 11.5px;
+  text-align: center;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.mk-copy-button {
+  flex: 0 0 auto;
+  padding: 5px 11px;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 6px;
+  background: rgb(255 255 255 / 9%);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+.mk-copy-button:hover { background: rgb(255 255 255 / 18%); border-color: rgb(255 255 255 / 28%); }
+.mk-terminal-body {
+  overflow-x: auto;
+  margin: 0;
+  padding: 20px 22px 22px;
+  color: #c8cad1;
+  font-family: var(--font-mono);
+  font-size: 12.5px;
+  line-height: 2.05;
+}
+.mk-terminal-line { display: block; white-space: pre; }
+.mk-terminal-prompt { color: var(--mk-coral); }
+.mk-terminal-command { color: #f2f4f7; }
+.mk-terminal-comment { color: rgb(255 255 255 / 58%); }
+.mk-terminal-caret { color: var(--mk-coral); }
+@media (prefers-reduced-motion: no-preference) {
+  .mk-terminal-caret { animation: mk-control-blink 1.1s steps(1) infinite; }
+}
+.mk-terminal-note { margin: 0; padding: 14px 22px 18px; border-top: 1px solid rgb(255 255 255 / 8%); color: rgb(255 255 255 / 62%); font-size: 10.5px; line-height: 1.8; }
+.mk-copy-error { margin: 0; padding: 0 22px 18px; color: #ffb4a8; font-size: 11px; line-height: 1.8; }
 .mk-deploy-copy h3 { font-family: var(--mk-display); font-size: 20px; font-weight: 500; letter-spacing: -0.015em; line-height: 1.4; }
 .mk-deploy-copy > p { margin-block: 16px; color: var(--mk-muted); font-size: 13px; line-height: 1.85; }
 .mk-deploy-copy code { font-size: 0.9em; }
-.mk-cli-note { margin-top: 30px; padding-top: 24px; }
-.mk-cli-note h4 { font-family: var(--mk-display); color: var(--mk-fg); font-size: 13px; font-weight: 600; letter-spacing: 0.02em; }
-.mk-cli-note p { margin-top: 8px; color: var(--mk-muted); font-size: 12px; line-height: 1.8; }
-.mk-cli-note pre { overflow-x: auto; margin-block: 16px; padding: 14px 16px; border: 0; border-radius: 8px; background: var(--mk-surface); color: var(--mk-fg); font-size: 11px; line-height: 2; }
 
 /* Technology tiles are grouped by space, not a hard grid of cell borders. */
 .mk-stack { margin-top: 64px; }
@@ -587,8 +642,8 @@
   .mk-stage-detail h3 { font-size: 20px; }
   .mk-stage-detail > p:not(.mk-eyebrow) { font-size: 13px; }
   .mk-model-facts { gap: 14px; font-size: 9px; }
-  .mk-terminal { padding-inline: 18px; }
-  .mk-terminal pre { font-size: 10px; }
+  .mk-terminal-body { padding-inline: 16px; font-size: 11.5px; line-height: 1.95; }
+  .mk-terminal-note { padding-inline: 16px; }
   .mk-tech-grid { grid-auto-columns: 108px; }
   .mk-tech-grid li { gap: 10px; padding: 18px 6px; font-size: 10px; }
   .mk-iso { width: 52px; }
@@ -925,6 +980,13 @@
    ============================================================================ */
 
 .mk-footer {
+  /* One fade, two legible bands. The cream half carries the statement in ink;
+     the orange is raised so the field is saturated coral by mid-height and
+     closes on ember instead of washing back to a pale orange. Previously every
+     letter here was white, which measured 1.5:1 to 2.5:1 on this fade and read
+     as invisible. */
+  --mk-footer-ink: #2a1410;
+  --mk-footer-ink-soft: rgb(42 20 16 / 86%);
   position: relative;
   display: flex;
   min-height: 100svh;
@@ -932,7 +994,17 @@
   justify-content: space-between;
   overflow: hidden;
   padding-top: 0;
-  background: linear-gradient(180deg, #fff 0%, #fff 14%, #f9c2b8 32%, var(--mk-coral) 69%, #f7835e 100%);
+  background: linear-gradient(
+    180deg,
+    #fff 0%,
+    #fff 6%,
+    #fde4d9 16%,
+    #f9bc9f 32%,
+    #f4784f 50%,
+    #e2401a 64%,
+    #d93a14 82%,
+    #cf3410 100%
+  );
   color: #fff;
   text-align: center;
 }
@@ -946,24 +1018,32 @@
   width: 100%;
   padding-block: 140px 100px;
 }
-.mk-footer-cta .mk-eyebrow { justify-content: center; margin-bottom: 28px; color: #fff; }
-.mk-footer-cta .mk-eyebrow::before { background: #fff; }
+.mk-footer-cta .mk-eyebrow { justify-content: center; margin-bottom: 28px; color: var(--mk-footer-ink); }
+.mk-footer-cta .mk-eyebrow::before { background: var(--mk-footer-ink); }
 .mk-footer-cta h2 {
   max-width: 980px;
   margin: 0;
-  color: #fff;
+  color: var(--mk-footer-ink);
   font-family: var(--mk-display-editorial);
   font-size: clamp(56px, 8.4vw, 118px);
   font-weight: 400;
   letter-spacing: -0.065em;
   line-height: 0.9;
 }
-.mk-footer-cta-copy { margin-top: 28px; color: #fff; font-size: clamp(17px, 2vw, 25px); line-height: 1.35; }
+.mk-footer-cta-copy { margin-top: 28px; color: var(--mk-footer-ink-soft); font-size: clamp(17px, 2vw, 25px); line-height: 1.35; }
 .mk-footer-cta-actions { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 22px; margin-top: 34px; }
-.mk-footer-cta .mk-button { background: var(--mk-paper-ink); color: #fff; }
-.mk-footer-cta .mk-button:hover { background: #fff; color: var(--mk-paper-ink); }
-.mk-footer-cta-link { display: inline-flex; align-items: center; gap: 9px; color: #fff; font-size: 13px; }
-.mk-footer-cta-link:hover { color: var(--mk-paper-ink); }
+.mk-footer-cta .mk-button { background: var(--mk-footer-ink); color: #fff; }
+.mk-footer-cta .mk-button:hover { background: #fff; color: var(--mk-footer-ink); }
+.mk-footer-cta-link { display: inline-flex; align-items: center; gap: 9px; color: var(--mk-footer-ink); font-size: 13px; font-weight: 500; text-decoration: none; text-underline-offset: 4px; transition: color 160ms ease; }
+.mk-footer-cta-link:hover { text-decoration: underline; }
+.mk-footer-cta-link .mk-link-arrow { flex: 0 0 auto; }
+.mk-footer-base {
+  /* The closing links need a ground they can rely on. The page fade is measured
+     in percentages, so on a tall (stacked) footer the pale band would drift
+     under them; this band is solid ember 40px in — above the first heading —
+     whatever hue the fade has reached by then. */
+  background: linear-gradient(180deg, rgb(207 52 16 / 0%) 0, #cf3410 40px, #bf2c0b 100%);
+}
 /* Real ways to reach us, set into the closing frame: inbox, repository, policies. */
 .mk-footer-meta {
   display: grid;
@@ -977,7 +1057,7 @@
 }
 .mk-footer-meta-col h3 {
   margin: 0 0 18px;
-  color: rgb(255 255 255 / 78%);
+  color: rgb(255 255 255 / 92%);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.14em;
@@ -990,11 +1070,16 @@
   gap: 8px;
   color: #fff;
   font-size: 14px;
+  font-weight: 500;
   line-height: 1.5;
   overflow-wrap: anywhere;
+  text-decoration: none;
+  text-underline-offset: 4px;
   transition: color 160ms ease, opacity 160ms ease;
 }
-.mk-footer-meta-col a:hover { color: var(--mk-paper-ink); }
+/* The links sit on saturated orange, so hover stays white and underlines rather
+   than dropping to ink, which would fall under 4:1 here. */
+.mk-footer-meta-col a:hover { text-decoration: underline; }
 .mk-footer-meta-col a .mk-link-arrow { flex: 0 0 auto; }
 .mk-footer-bar {
   width: min(100% - 80px, 1200px);
@@ -1005,6 +1090,9 @@
 .mk-footer-legal,
 .mk-footer-note,
 .mk-footer-top { color: #fff; }
+.mk-footer-note { opacity: 0.88; }
+.mk-footer-top { text-decoration: none; text-underline-offset: 4px; }
+.mk-footer-top:hover { text-decoration: underline; }
 .mk-footer-top-icon { border-color: rgb(255 255 255 / 70%); }
 .mk-watermark-wrap { display: none; }
 
@@ -1032,12 +1120,25 @@
 .mk-control {
   padding: 112px 0 0;
   overflow: hidden;
+  isolation: isolate;
   background: linear-gradient(180deg, var(--mk-paper) 0%, #f5e2cd 40%, #f08a55 66%, var(--mk-coral) 82%);
 }
 .mk-control-heading { margin-bottom: 0; }
+/* The lattice fills the section but never sits over the copy. */
+.mk-control-lattice {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.mk-control > .mk-container { position: relative; z-index: 1; }
 
 .mk-control-stage {
   position: relative;
+  z-index: 1;
   width: min(100% - 48px, 1240px);
   height: 680px;
   margin: 64px auto 0;
@@ -1107,6 +1208,7 @@
   background: #fbf8f2;
 }
 .mk-control-backdrop-body { position: relative; height: 100%; }
+.mk-control-lattice--topology { border-radius: inherit; }
 .mk-control-ring {
   position: absolute;
   top: 50%;
