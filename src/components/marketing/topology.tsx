@@ -15,6 +15,7 @@ const RobotScene = dynamic(() => import('./robot-scene').then((module) => module
 export function Topology() {
   const sectionRef = useRef<HTMLElement>(null);
   const [nearViewport, setNearViewport] = useState(false);
+  const [cursorPoint, setCursorPoint] = useState({ x: 0, y: 0, active: false });
 
   useEffect(() => {
     if (!('IntersectionObserver' in window)) {
@@ -34,8 +35,23 @@ export function Topology() {
   return (
     <section ref={sectionRef} id="topology" className="mk-section" aria-labelledby="native-model-title">
       <div className="mk-container mk-model-grid">
-        <div className="mk-model-visual" data-mk-reveal>
-          {nearViewport ? <RobotScene /> : <div className="robot-stage" aria-hidden="true" />}
+        <div
+          className="mk-model-visual"
+          data-mk-reveal
+          onPointerMove={(event) => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            setCursorPoint({ x: event.clientX - rect.left, y: event.clientY - rect.top, active: true });
+          }}
+          onPointerLeave={() => setCursorPoint((point) => ({ ...point, active: false }))}
+        >
+          <div className="mk-robot-viewport">
+            <span
+              className={`mk-robot-signal${cursorPoint.active ? ' is-active' : ''}`}
+              style={{ transform: `translate3d(${cursorPoint.x}px, ${cursorPoint.y}px, 0)` }}
+              aria-hidden="true"
+            />
+            {nearViewport ? <RobotScene /> : <div className="robot-stage" aria-hidden="true" />}
+          </div>
           <p className="mk-model-caption">A little personality. Not a measure of intelligence.</p>
         </div>
 
