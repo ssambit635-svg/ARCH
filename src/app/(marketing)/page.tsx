@@ -8,7 +8,6 @@ import { Workspace } from '@/components/marketing/workspace';
 import { Lifecycle } from '@/components/marketing/lifecycle';
 import { Platform } from '@/components/marketing/platform';
 import { Deploy } from '@/components/marketing/deploy';
-import { Closing } from '@/components/marketing/closing';
 import { SiteFooter } from '@/components/marketing/footer';
 
 export default function LandingPage() {
@@ -28,7 +27,6 @@ export default function LandingPage() {
         <Platform />
         <Deploy />
       </main>
-      <Closing />
       <SiteFooter />
     </MarketingMotion>
   );
