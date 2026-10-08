@@ -64,8 +64,6 @@ const INCIDENTS: PreviewIncident[] = [
 
 export function Workspace() {
   const [activeIndex, setActiveIndex] = useState(0);
-  const [rating, setRating] = useState(0);
-  const [hoveredRating, setHoveredRating] = useState(0);
   const incident = INCIDENTS[activeIndex]!;
 
   return (
@@ -91,10 +89,6 @@ export function Workspace() {
             <div className="mk-browser-actions"><span /><span /><span /></div>
           </div>
           <div className="mk-console" role="region" aria-label="Interactive workspace preview with illustrative data">
-            <div className="mk-console-bar">
-              <span><strong>ARCH</strong><span className="mk-console-path"> / Workspace / Incidents</span></span>
-              <span className="mk-console-demo">Sample workspace</span>
-            </div>
             <div className="mk-console-body">
               <div className="mk-console-sidebar">
                 <p className="mk-console-label">Incidents <span>{INCIDENTS.length}</span></p>
@@ -114,7 +108,6 @@ export function Workspace() {
                     </button>
                   ))}
                 </div>
-                <p className="mk-console-hint">Choose an incident to explore.</p>
               </div>
 
               <div id="preview-incident-detail" className="mk-console-detail" aria-live="polite" aria-atomic="true">
@@ -149,36 +142,6 @@ export function Workspace() {
                     </ol>
                   </div>
                 </div>
-              </div>
-            </div>
-            <div className="mk-console-rating-row">
-              <div className="mk-preview-rating" onMouseLeave={() => setHoveredRating(0)}>
-                <span id="workspace-preview-rating-label" className="mk-preview-rating-label">Rate this preview</span>
-                <div className="mk-rating-stars" role="radiogroup" aria-labelledby="workspace-preview-rating-label">
-                  {[1, 2, 3, 4, 5].map((value) => (
-                    <label
-                      key={value}
-                      className={`mk-rating-option${(hoveredRating || rating) >= value ? ' is-active' : ''}`}
-                      onMouseEnter={() => setHoveredRating(value)}
-                    >
-                      <input
-                        type="radio"
-                        name="workspace-preview-rating"
-                        value={value}
-                        checked={rating === value}
-                        aria-label={`${value} ${value === 1 ? 'star' : 'stars'}`}
-                        onFocus={() => setHoveredRating(value)}
-                        onBlur={() => setHoveredRating(0)}
-                        onChange={() => {
-                          setRating(value);
-                          setHoveredRating(0);
-                        }}
-                      />
-                      <span aria-hidden="true">{(hoveredRating || rating) >= value ? '★' : '☆'}</span>
-                    </label>
-                  ))}
-                </div>
-                {rating > 0 && <span className="mk-rating-status" role="status">Your rating · {rating} / 5</span>}
               </div>
             </div>
           </div>

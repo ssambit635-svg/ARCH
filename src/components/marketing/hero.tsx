@@ -26,19 +26,27 @@ export function Hero() {
           </div>
         </div>
 
-        <figure className="mk-hero-figure" data-mk-reveal>
-          <img
-            src="/product/incident-workspace.webp"
-            alt="An open ARCH incident, “Checkout latency spike in eu-west-1”: its CRITICAL severity and Monitoring state, the blast radius across the API gateway, Checkout and Web app services, the deployments that preceded it, and the response timeline."
-            width={1440}
-            height={900}
-            className="mk-hero-shot"
-            fetchPriority="high"
-            decoding="async"
-          />
+        <figure className="mk-hero-figure">
+          <div className="mk-hero-frame">
+            <img
+              src="/product/incident-workspace.webp"
+              alt="An open ARCH incident, “Checkout latency spike in eu-west-1”: its CRITICAL severity and Monitoring state, the blast radius across the API gateway, Checkout and Web app services, the deployments that preceded it, and the response timeline."
+              width={1440}
+              height={900}
+              className="mk-hero-shot"
+              fetchPriority="high"
+              decoding="async"
+            />
+            <span className="mk-hero-chip mk-hero-chip--severity" aria-hidden="true">
+              <span className="mk-hero-chip-dot" />
+              Critical · Monitoring
+            </span>
+            <span className="mk-hero-chip mk-hero-chip--trail" aria-hidden="true">
+              Timeline · decision trail
+            </span>
+          </div>
           <figcaption className="mk-hero-caption">
-            A real screen from a local ARCH workspace: one incident, its blast radius, and the
-            decision trail. Sample data.
+            A real screen from a local ARCH workspace. Sample data.
           </figcaption>
         </figure>
       </div>

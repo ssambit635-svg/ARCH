@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { GITHUB_REPO_URL } from '@/lib/brand';
+import { CONTACT_EMAIL, GITHUB_REPO_URL } from '@/lib/brand';
 import { LinkArrow } from './link-arrow';
 
 /**
@@ -36,17 +36,46 @@ export function SiteFooter() {
         <h2 id="footer-title">So good, you’ll break<br /> things on purpose</h2>
         <p className="mk-footer-cta-copy">
           Ready to put AI to work on your incidents?<br />
-          Book a call with our team today.
+          Write to us — a real person replies.
         </p>
+        <div className="mk-footer-cta-actions">
+          <a href={`mailto:${CONTACT_EMAIL}`} className="mk-button">Email us <LinkArrow direction="right" /></a>
+          <Link href="/register" className="mk-footer-cta-link">Get started <LinkArrow /></Link>
+        </div>
       </div>
 
-      {/* Kept in the DOM for keyboard/link compatibility, but intentionally out of
-          the reference-style closing frame. */}
-      <div className="mk-footer-bar mk-sr-only">
+      {/* The closing frame now carries real ways to reach us: a monitored inbox,
+          the public repository, and the policies a buyer asks for. */}
+      <nav id="contact" className="mk-footer-meta" aria-label="Contact and legal">
+        <section className="mk-footer-meta-col">
+          <h3>Contact</h3>
+          <ul>
+            <li><a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a></li>
+            <li><a href={GITHUB_REPO_URL} target="_blank" rel="noreferrer">GitHub <LinkArrow /></a></li>
+            <li><a href={`${GITHUB_REPO_URL}/issues`} target="_blank" rel="noreferrer">Report an issue <LinkArrow /></a></li>
+            <li><a href={`${GITHUB_REPO_URL}/discussions`} target="_blank" rel="noreferrer">Discussions <LinkArrow /></a></li>
+          </ul>
+        </section>
+        <section className="mk-footer-meta-col">
+          <h3>Legal</h3>
+          <ul>
+            <li><a href={`${GITHUB_REPO_URL}/blob/main/docs/legal/PRIVACY-POLICY.md`} target="_blank" rel="noreferrer">Privacy policy</a></li>
+            <li><a href={`${GITHUB_REPO_URL}/blob/main/docs/legal/TERMS-OF-SERVICE.md`} target="_blank" rel="noreferrer">Terms &amp; conditions</a></li>
+            <li><a href={`${GITHUB_REPO_URL}/blob/main/SECURITY.md`} target="_blank" rel="noreferrer">Security &amp; compliance</a></li>
+          </ul>
+        </section>
+        <section className="mk-footer-meta-col">
+          <h3>Product</h3>
+          <ul>
+            <li><Link href="/dashboard/status">Status pages</Link></li>
+            <li><Link href="/register">Get started</Link></li>
+          </ul>
+        </section>
+      </nav>
+
+      <div className="mk-footer-bar">
         <p className="mk-footer-legal">© 2026 ARCH. All rights reserved.</p>
         <p className="mk-footer-note">Proprietary license · self-hosted on your infrastructure</p>
-        <Link href="/register">Get started</Link>
-        <a href={GITHUB_REPO_URL}>Explore ARCH on GitHub <LinkArrow /></a>
         <a href="#top" className="mk-footer-top">Back to top</a>
       </div>
 
