@@ -15,6 +15,32 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Changed — the setup steps sit in a real terminal window
+
+- The quick-start commands were a pale panel on a cream page. They now render as a terminal window:
+  a dark chrome bar with the three macOS window buttons, a title, a copy control, and a body set in
+  the monospace face with a coral `$` prompt, dimmed comment line and a blinking caret after the
+  last command. It stays dark in both themes, and the copy button and horizontally scrollable body
+  keep their keyboard affordances.
+
+### Removed — the Python CLI is no longer advertised
+
+- The landing page told visitors to run `pip install ./clients/python`, `arch login` and
+  `arch incidents list`. That package is not published, so the page no longer suggests it. The code
+  in `clients/python` is untouched; `tests/marketing-minimal.test.ts` now fails if the page
+  advertises an unpublished client again.
+
+### Added — a living lattice behind "Built to stay in your control"
+
+- The section keeps its composed desktop scene and its three principles. Behind it, a canvas field
+  of drifting nodes links together and passes signals along the links — ink on the cream half of the
+  fade, warm ember once the field turns coral — and the cursor joins the lattice as it moves across
+  the section. A second, smaller graph runs inside the service window, clustered around the three
+  service pills.
+- It is decoration only: hidden from assistive tech, frozen to a single frame under
+  `prefers-reduced-motion: reduce`, paused whenever it scrolls out of view or the tab is hidden, and
+  capped at 96 nodes per canvas.
+
 ### Fixed — the closing frame's text is readable
 
 - The footer's statement, links and legal line were all white on a cream-to-coral fade. Where the

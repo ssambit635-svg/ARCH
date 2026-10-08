@@ -113,11 +113,16 @@ describe('minimal marketing surface', () => {
     expect(render(Platform)).not.toMatch(/5-State|five states/i);
   });
 
-  it('uses the actual local setup and Python CLI, not the old fictional SDK', () => {
+  it('shows the real local setup and advertises no client that is not published', () => {
     const deploy = render(Deploy);
+    expect(deploy).toContain('git clone');
     expect(deploy).toContain('npm run dev');
     expect(deploy).toContain('AUTH_SECRET_WEBHOOK');
-    expect(deploy).toContain('arch login --url');
+    // The Python CLI in clients/python is not published, so the page must not
+    // tell a visitor to install or log in with it.
+    expect(deploy).not.toContain('pip install');
+    expect(deploy).not.toContain('arch login');
+    expect(deploy).not.toContain('arch incidents');
     expect(deploy).not.toContain('from arch_client');
     expect(deploy).not.toContain('npm run db:seed');
     expect(deploy).toContain('role="status"');

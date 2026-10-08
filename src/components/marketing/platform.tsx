@@ -1,3 +1,5 @@
+import { ControlLattice } from './control-lattice';
+
 const PRINCIPLES = [
   {
     title: 'Your infrastructure.',
@@ -23,6 +25,9 @@ const PRINCIPLES = [
 export function Platform() {
   return (
     <section id="capabilities" className="mk-section mk-control" aria-labelledby="principles-title">
+      {/* Living lattice behind the whole frame: nodes and travelling signals,
+          decoration only. It freezes to one frame under reduced motion. */}
+      <ControlLattice variant="field" />
       <div className="mk-container">
         <div className="mk-section-heading mk-control-heading">
           <div>
@@ -48,6 +53,7 @@ export function Platform() {
             <span className="mk-control-titlebar-label">ARCH — Incident workspace</span>
           </div>
           <div className="mk-control-backdrop-body">
+            <ControlLattice variant="topology" />
             <span className="mk-control-ring mk-control-ring--1" />
             <span className="mk-control-ring mk-control-ring--2" />
             <span className="mk-control-ring mk-control-ring--3" />
