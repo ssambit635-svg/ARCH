@@ -2,6 +2,7 @@ import { db } from '@/lib/db';
 import { AppError } from '@/lib/errors';
 import { randomToken, sha256 } from '@/lib/crypto';
 import { requirePermission } from '@/lib/permissions';
+import { env } from '@/lib/env';
 import { writeAudit } from '@/lib/audit';
 import { organizationRepository } from '../repositories/organization.repository';
 import { invitationRepository } from '../repositories/invitation.repository';
@@ -229,8 +230,8 @@ export async function inviteMember(params: {
 
   return {
     invitation,
-    inviteUrl: `/invite/${token}`,
-    emailSent: Boolean(existingUser),
+    inviteUrl: `${env.APP_URL.replace(/\/$/, '')}/invite/${token}`,
+    emailQueued: Boolean(existingUser),
   };
 }
 
@@ -242,11 +243,18 @@ export async function listInvitations(params: { organizationId: string; userId: 
 
 export async function revokeInvitation(params: { organizationId: string; actorId: string; invitationId: string }) {
   await requirePermission(params.organizationId, params.actorId, 'member.manage');
-  const invitation = await invitationRepository.findById(params.organizationId, params.invitationId);
-  if (!invitation) throw AppError.notFound('Invitation not found.');
 
   return db.$transaction(async (tx) => {
-    const updated = await invitationRepository.setStatus(invitation.id, 'REVOKED', null, tx);
+    const invitation = await invitationRepository.findById(params.organizationId, params.invitationId, tx);
+    if (!invitation) throw AppError.notFound('Invitation not found.');
+    if (invitation.status !== 'PENDING') throw AppError.conflict('Only pending invitations can be revoked.');
+
+    // Compare-and-set prevents an accept/revoke race from revoking an already accepted invite.
+    const transition = await invitationRepository.transitionStatus(invitation.id, 'PENDING', 'REVOKED', null, tx);
+    if (transition.count !== 1) throw AppError.conflict('This invitation is no longer pending.');
+
+    const updated = await invitationRepository.findById(params.organizationId, invitation.id, tx);
+    if (!updated) throw AppError.notFound('Invitation not found.');
     await writeAudit(
       {
         organizationId: params.organizationId,
@@ -285,19 +293,21 @@ export async function acceptInvitation(params: { token: string; userId: string; 
   if (invitation.status === 'ACCEPTED') throw AppError.conflict('This invitation has already been accepted.');
   if (invitation.status !== 'PENDING') throw AppError.conflict('This invitation is no longer valid.');
   if (invitation.expiresAt.getTime() < Date.now()) {
-    await invitationRepository.setStatus(invitation.id, 'EXPIRED', null);
-    throw AppError.conflict('This invitation has expired.');
+    const transition = await invitationRepository.transitionStatus(invitation.id, 'PENDING', 'EXPIRED', null);
+    throw AppError.conflict(transition.count === 1 ? 'This invitation has expired.' : 'This invitation is no longer valid.');
   }
   if (invitation.email.toLowerCase() !== params.userEmail.toLowerCase()) {
     throw AppError.forbidden('This invitation was sent to a different email address.');
   }
 
   return db.$transaction(async (tx) => {
+    const transition = await invitationRepository.transitionStatus(invitation.id, 'PENDING', 'ACCEPTED', new Date(), tx);
+    if (transition.count !== 1) throw AppError.conflict('This invitation is no longer valid.');
+
     const existing = await organizationRepository.findMembership(invitation.organizationId, params.userId, tx);
     if (!existing) {
       await organizationRepository.addMember(invitation.organizationId, params.userId, invitation.role, tx);
     }
-    await invitationRepository.setStatus(invitation.id, 'ACCEPTED', new Date(), tx);
     await writeAudit(
       {
         organizationId: invitation.organizationId,

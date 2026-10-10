@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, type FormEvent } from 'react';
 import { useActionState } from 'react';
 import { SubmitButton } from '@/components/ui/form';
 import { toast } from '@/components/ui/toast';
@@ -23,6 +23,7 @@ export function ActionForm({
   inline = false,
   onDone,
   quiet = false,
+  confirm,
 }: {
   action: (state: ActionResult | undefined, formData: FormData) => Promise<ActionResult>;
   children?: React.ReactNode;
@@ -34,9 +35,14 @@ export function ActionForm({
   onDone?: (result: ActionResult) => void;
   /** When true, outcomes surface only as toasts — nothing renders inline. */
   quiet?: boolean;
+  /** Optional native confirmation shown before submitting a destructive action. */
+  confirm?: string;
 }) {
   const [state, formAction] = useActionState<ActionResult | undefined, FormData>(action, undefined);
   const seen = useRef(state);
+  const guardSubmit = (event: FormEvent<HTMLFormElement>) => {
+    if (confirm && !window.confirm(confirm)) event.preventDefault();
+  };
 
   useEffect(() => {
     if (!state || state === seen.current) return;
@@ -50,7 +56,7 @@ export function ActionForm({
   }, [state, onDone, quiet]);
 
   return (
-    <form action={formAction} className={className}>
+    <form action={formAction} className={className} onSubmit={guardSubmit}>
       {children}
       <div className={inline ? 'flex items-center gap-2' : 'mt-3 flex flex-wrap items-center gap-3'}>
         <SubmitButton variant={variant} pendingLabel={pendingLabel}>
@@ -78,7 +84,7 @@ export function InlineAction({ action, label, variant = 'secondary', confirm }: 
   confirm?: string;
 }) {
   return (
-    <ActionForm action={action} submitLabel={label} variant={variant} inline className="">
+    <ActionForm action={action} submitLabel={label} variant={variant} inline className="" confirm={confirm}>
       {confirm ? <span className="hidden">{confirm}</span> : null}
     </ActionForm>
   );

@@ -15,6 +15,7 @@ Start with the row that matches who you are.
 ## All documents
 
 ### Product (`docs/product/`)
+- **CURRENT-STATUS.md** — plain-language current facts, dashboard numbers, features, and limits.
 - **PRD.md** — problem, users, scope, requirements, success criteria for v1.
 - **FEATURES.md** — every feature, marked Must / Should / Later.
 - **USER-STORIES.md** — stories with testable acceptance criteria.

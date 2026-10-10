@@ -31,7 +31,7 @@ import {
 import { createIncident, addIncidentComment, updateIncident } from '@/server/services/incident.service';
 import { createProject, createService, updateService } from '@/server/services/project.service';
 import { createStatusPage, setStatusPagePublished, updateStatusPage } from '@/server/services/statusPage.service';
-import { createOrganization, changeMemberRole, inviteMember, removeMember, updateOrganization } from '@/server/services/organization.service';
+import { createOrganization, changeMemberRole, inviteMember, removeMember, revokeInvitation, updateOrganization } from '@/server/services/organization.service';
 import { createEndpoint, deleteEndpoint, rotateEndpointSecret, updateEndpoint } from '@/server/services/webhook.service';
 import { approveSuggestion, dismissSuggestion, generateSuggestion } from '@/server/services/copilot.service';
 import { reviewCode, type CodeReviewResult } from '@/server/services/codeAssist.service';
@@ -131,14 +131,29 @@ export async function inviteMemberAction(_state: ActionResult | undefined, formD
     const result = await inviteMember({ organizationId: organization.id, actorId: user.id, email: input.email, role: input.role });
     revalidatePath('/dashboard/settings');
 
-    // The raw token is shown exactly once: it is the only copy that exists outside the hash.
+    // Only expose a raw link when the invitee needs to receive it manually. If email is queued,
+    // keep the token out of the manager's browser response.
     return {
       ok: true,
-      message: result.emailSent
-        ? `Invitation emailed to ${input.email}.`
-        : `Invitation created. Share this link with ${input.email}: ${result.inviteUrl}`,
-      data: { inviteUrl: result.inviteUrl },
+      message: result.emailQueued
+        ? `Invitation email queued for ${input.email}.`
+        : `Invitation created. Share the one-time link with ${input.email}.`,
+      ...(result.emailQueued ? {} : { data: { inviteUrl: result.inviteUrl } }),
     };
+  } catch (error) {
+    return toFailure(error);
+  }
+}
+
+export async function revokeInvitationAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+  try {
+    const { user, organization } = await context();
+    const invitationId = String(formData.get('invitationId') ?? '').trim();
+    if (!invitationId) return { ok: false, error: 'Missing invitation id.' };
+
+    await revokeInvitation({ organizationId: organization.id, actorId: user.id, invitationId });
+    revalidatePath('/dashboard/settings');
+    return { ok: true, message: 'Invitation revoked. Its link can no longer be used.' };
   } catch (error) {
     return toFailure(error);
   }

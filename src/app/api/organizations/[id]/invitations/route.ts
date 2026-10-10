@@ -9,18 +9,34 @@ type Context = { params: Promise<{ id: string }> };
 export const GET = handleRoute<Context>(async (_request, context) => {
   const { id } = await context.params;
   const user = await requireUser();
-  return ok(await listInvitations({ organizationId: id, userId: user.id }));
+  const invitations = await listInvitations({ organizationId: id, userId: user.id });
+  return ok(
+    invitations.map(({ id: invitationId, email, role, status, expiresAt, acceptedAt, createdAt }) => ({
+      id: invitationId,
+      email,
+      role,
+      status,
+      expiresAt,
+      acceptedAt,
+      createdAt,
+    })),
+  );
 });
 
 /**
  * POST — invite someone by email.
- * Returns `inviteUrl` once: for invitees without an account yet, that link is how they join
- * (the notification email can only be queued for people who already have a user row).
+ * For an invitee without an account, return the absolute one-time link once. If an email is queued,
+ * report that state without returning the raw link; never serialize the stored token hash.
  */
 export const POST = handleRoute<Context>(async (request: NextRequest, context) => {
   const { id } = await context.params;
   const user = await requireUser();
   const body = parseBody(inviteMemberSchema, await readJson(request));
   const result = await inviteMember({ organizationId: id, actorId: user.id, email: body.email, role: body.role });
-  return created({ invitation: result.invitation, inviteUrl: result.inviteUrl, emailSent: result.emailSent });
+  const { id: invitationId, email, role, status, expiresAt, acceptedAt, createdAt } = result.invitation;
+  return created({
+    invitation: { id: invitationId, email, role, status, expiresAt, acceptedAt, createdAt },
+    emailQueued: result.emailQueued,
+    ...(result.emailQueued ? {} : { inviteUrl: result.inviteUrl }),
+  });
 });

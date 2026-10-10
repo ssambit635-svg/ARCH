@@ -15,6 +15,44 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Breaking — invitation API reports the email queue accurately
+
+- `POST /api/organizations/:id/invitations` replaces the inaccurate `emailSent` field with
+  `emailQueued`. Migrate clients to read the new field. When `emailQueued` is true, the raw
+  invitation URL is omitted; when false, an absolute one-time URL is returned for manual sharing.
+- Invitation list/create responses now include only public metadata; `tokenHash` and other internal
+  invitation fields are no longer serialized.
+
+### Changed — more room for the workspace, with navigation you can hide
+
+- The desktop sidebar can be hidden from the top bar or with `Ctrl+B` / `⌘B`; the preference is
+  remembered in a cookie and read before the dashboard renders. The workspace expands into the
+  space it frees.
+- The mobile navigation now behaves as a modal drawer: it traps keyboard focus, closes on Escape or
+  backdrop click, restores focus to its opener, and prevents the page behind it from scrolling.
+- Increased the spacing and type scale across the authenticated shell and shared controls for a more
+  comfortable working surface.
+
+### Changed — status and contributor docs describe the shipped product
+
+- Added a plain-language current-status guide that separates organization dashboard numbers from
+  unverified product-wide metrics, distinguishes offline model evaluation from customer outcomes,
+  and explains early-access limits.
+- Replaced blueprint-era contributor instructions with current application setup, architecture,
+  security, and verification guidance. No team-seat quota was added: plan limits remain unvalidated
+  draft pricing, not an enforced product limit.
+
+### Improved — team-member management
+
+- Search the organization roster by name or email and filter by role; filtered totals and empty
+  results are announced accessibly. The roster remains tenant-scoped and role changes still go
+  through server authorization.
+- Managers can revoke pending invites, which is recorded in the audit log. Invitation status changes
+  use a conditional database transition so accepting and revoking the same invitation cannot both
+  succeed.
+- Removed the duplicate invite button, reset invite form state when its modal closes, and stop
+  returning a raw invite token to the manager when the invitation email is queued.
+
 ### Changed — the setup steps sit in a real terminal window
 
 - The quick-start commands were a pale panel on a cream page. They now render as a terminal window:

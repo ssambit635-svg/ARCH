@@ -98,7 +98,7 @@ M4 (P1): Slack notifications, password reset, status-page subscribers,
 Implementation notes:
 - `provider.generate(system, user, options)` returns `{ text, promptTokens, completionTokens, model }`
   (not a bare string) so token usage can be logged on every AiSuggestion.
-- Extra env knob: `AI_RATE_LIMIT_PER_MINUTE` (default 20). `AI_PROVIDER` defaults to `mock`.
+- Extra env knob: `AI_RATE_LIMIT_PER_MINUTE` (default 20). `AI_PROVIDER` defaults to `arch`; use `mock` for tests.
 - Permissions: `copilot.read` (all roles), `copilot.generate` + `copilot.review` (OWNER/ADMIN/RESPONDER).
 
 ## V3 addendum: ARCH's own AI (implemented)

@@ -101,8 +101,8 @@ describe('notification outbox', () => {
       role: 'RESPONDER',
     });
 
-    expect(result.emailSent).toBe(true);
-    expect(result.inviteUrl).toMatch(/^\/invite\//);
+    expect(result.emailQueued).toBe(true);
+    expect(new URL(result.inviteUrl).pathname).toMatch(/^\/invite\/[^/]+$/);
 
     const notification = await db.notification.findFirstOrThrow();
     expect(notification.reason).toBe('MEMBER_INVITED');
@@ -118,7 +118,7 @@ describe('notification outbox', () => {
       role: 'VIEWER',
     });
 
-    expect(result.emailSent).toBe(false);
+    expect(result.emailQueued).toBe(false);
     expect(await db.notification.count()).toBe(0);
     expect(await db.invitation.count({ where: { email: 'newcomer@acme.test' } })).toBe(1);
     expect(await db.auditLog.count({ where: { action: 'member.invite' } })).toBe(1);

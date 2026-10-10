@@ -1,5 +1,7 @@
+import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { requireUser, resolveOrganization } from '@/lib/session';
+import { isSidebarVisible, SIDEBAR_PREFERENCE_COOKIE } from '@/components/shell/sidebar-preferences';
 import { listOrganizations } from '@/server/services/organization.service';
 import { incidentRepository } from '@/server/repositories/incident.repository';
 import { serviceRepository } from '@/server/repositories/service.repository';
@@ -16,6 +18,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (organizations.length === 0) redirect('/onboarding');
 
   const organization = await resolveOrganization(user.id);
+  const cookieStore = await cookies();
+  const initialSidebarVisible = isSidebarVisible(cookieStore.get(SIDEBAR_PREFERENCE_COOKIE)?.value);
   const [openIncidents, recentIncidents, services] = await Promise.all([
     incidentRepository.count(organization.id, { open: true }),
     incidentRepository.findRecent(organization.id, 8),
@@ -67,6 +71,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       role={organization.role}
       openIncidents={openIncidents}
       paletteEntries={paletteEntries}
+      initialSidebarVisible={initialSidebarVisible}
     >
       {children}
     </Shell>

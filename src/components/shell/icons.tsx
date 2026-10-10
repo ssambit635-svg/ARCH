@@ -10,6 +10,13 @@ function Base({ className = 'size-[18px]', children }: P & { children: React.Rea
   );
 }
 
+export const IconSidebar = (p: P) => (
+  <Base {...p}>
+    <rect x="3" y="3" width="14" height="14" rx="2" />
+    <path d="M8 3v14" />
+  </Base>
+);
+
 export const IconOverview = (p: P) => (
   <Base {...p}>
     <rect x="3" y="3" width="6" height="6" rx="1.5" />

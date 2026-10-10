@@ -1,124 +1,62 @@
 # Contributing to ARCH
 
-Thanks for wanting to help. This repository is currently the **product blueprint** — documentation
-that the application is built from. There is no application code yet; the build starts at Milestone 1
-in [`docs/product/ROADMAP.md`](docs/product/ROADMAP.md).
+Thanks for helping improve ARCH. This repository contains the working early-access application, its tests, and product and operations documentation. For local setup and production preparation, start with [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md); for current product facts and limits, see [`docs/product/CURRENT-STATUS.md`](docs/product/CURRENT-STATUS.md).
 
----
+## Before you start
 
-## Ways to contribute right now
+- Check the current implementation and open issues before proposing a new feature.
+- For a product or scope change, explain the user problem, compatibility impact, and operational cost.
+- For a security concern, do **not** open a public issue. Follow [`SECURITY.md`](SECURITY.md).
+- Do not add customer metrics, availability claims, compliance claims, plan limits, or provider support without verified evidence and an explicit product decision.
 
-| Contribution | Where |
-|---|---|
-| Report a documentation error or contradiction | Open an issue quoting the file and line |
-| Improve clarity of a document | A pull request with a short rationale |
-| Challenge an architectural decision | Open an issue referencing the decision number in `docs/engineering/ARCHITECTURE.md` §13 |
-| Report a security concern | **Do not open a public issue** — see [`SECURITY.md`](SECURITY.md) |
-| Suggest a feature | Open an issue; it gets considered against `docs/product/FEATURES.md` |
+## Development and verification
 
-**Before proposing a new feature, read the out-of-scope lists.** `docs/product/PRD.md` §2,
-`docs/product/ROADMAP.md`, and the exclusions in `docs/product/FEATURES.md` exist to protect the v1
-scope. Proposals that re-litigate them need new evidence, not enthusiasm.
+Use Node.js 20.19 or newer. The full setup, database options, and environment variables are documented in [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md).
 
----
+Before requesting review, run the checks relevant to your change. The standard suite is:
 
-## The one rule that matters: docs and code never disagree
-
-If you change behaviour, update the document in the **same** pull request. Specifically:
-
-| If you change… | Update… |
-|---|---|
-| A database model or enum | `AGENTS.md` §4 (schema) and `docs/product/PRD.md` §7 |
-| An API route or its permissions | `AGENTS.md` §5 and §6 |
-| A permission rule | `AGENTS.md` §6 and `docs/EXPLAINED-SIMPLY.md` §5 |
-| A feature's scope | `docs/product/FEATURES.md` and `docs/product/PRD.md` |
-| Pricing, limits or plan behaviour | `docs/product/PRICING.md` and `docs/support/FAQ.md` |
-| Security posture or a new subprocessor | `docs/engineering/SECURITY-AND-COMPLIANCE.md`, `docs/legal/PRIVACY-POLICY.md`, `docs/legal/DATA-PROCESSING-ADDENDUM.md` |
-| Retention windows | Privacy Policy, DPA and SLA together — **all three, always** |
-| Anything shipped to customers | `CHANGELOG.md` |
-
-A contradiction between documents is a bug of the same severity as a failing test.
-
----
-
-## Working on the application (once Milestone 1 lands)
-
-### Setup
 ```bash
-npm install
-docker compose up -d          # PostgreSQL on :5432
-npx prisma migrate dev
-npm run dev                   # http://localhost:3000
+npm run db:generate
+npm run typecheck
+npm test
+npm run build
 ```
 
-### Non-negotiable engineering rules
-Full list in [`AGENTS.md`](AGENTS.md) §9. The short version:
+`npm test` provisions an isolated PostgreSQL test database and runs tests serially. For API changes, also run `npm run smoke:api` against a running local app. For `clients/python` changes, run `pytest clients/python/tests`. Never use production data or commit local environment files, generated corpora, model artifacts, or credentials.
 
-1. **TypeScript strict.** No `any` in service or repository signatures.
-2. **Validate every external input with Zod** — bodies, query params, webhook payloads.
-3. **Tenant safety:** repositories take `organizationId` as a **required** parameter. There is no
-   `findById(id)` — only `findById(organizationId, id)`.
-4. **Authorize server-side on every mutation** via `requirePermission`. Never trust an org id, role or
-   permission from the client.
-5. **Cross-tenant access returns 404**, never 403 — do not confirm that another tenant's resource exists.
-6. **Transactions for multi-write operations** (incident + event + audit + notification).
-7. **Webhooks: verify HMAC before parsing.** Store secret hashes only. Reject stale timestamps.
-8. **Never log or return** tokens, password hashes, webhook secrets or customer content.
-9. **Small vertical slices:** database → server logic → API → UI → test, in one pull request.
-10. **Every screen ships loading, empty and error states.** Forms are accessible (labelled, keyboard
-    operable, focus visible).
+## Engineering requirements
 
-### Tests that must pass before merge
-- **Permission matrix** — each role × each action, allowed and denied.
-- **Tenant isolation** — cross-org ID, cross-org slug, tampered body org id → 404 or ignored.
-- **Incident state machine** — every legal transition works, every illegal one is rejected.
-- **Webhook signatures** — valid accepted; invalid, stale, or missing rejected with nothing stored.
+Follow [`AGENTS.md`](AGENTS.md) and the current implementation. In particular:
 
-If a change makes one of these fail, the change as written is wrong — not the test.
+1. Resolve tenant and role context on the server; never trust client-supplied organization IDs or permissions.
+2. Enforce tenant scoping and permissions on every protected read and write.
+3. Validate external input with the existing Zod schemas and keep business rules in services.
+4. Preserve audit and incident event records when changing incident workflows.
+5. Keep secrets and customer content out of logs, responses, screenshots, test fixtures, and commits.
+6. Make interactive UI keyboard-operable, labelled, responsive, and complete with loading, empty, and error states.
+7. Update the relevant documentation and [`CHANGELOG.md`](CHANGELOG.md) with shipped behaviour in the same pull request.
 
----
+A documentation/code contradiction is a defect. Do not copy roadmap ideas into status docs as though they are shipped functionality.
 
-## Commit and pull request conventions
+## Pull requests
 
-**Commit style:** `type(scope): summary` — `feat(incidents): add reopen transition`,
-`fix(auth): reject expired reset tokens`, `docs(pricing): correct Growth seat count`.
+Keep changes focused and describe:
 
-Types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`, `perf`, `security`.
+- the user or engineering problem;
+- what changed and any migrations or configuration required;
+- tests and build checks run, including anything not run;
+- important risks, compatibility notes, and intentionally deferred scope.
 
-**Pull requests:**
-- One vertical slice per PR. If it needs the word "and" twice in the description, split it.
-- Describe: what changed, why, what you tested, and what you deliberately left out.
-- Reference the milestone (`ROADMAP.md` #5) or the story (`US-4.2`).
-- Never merge your own PR without a written self-review explaining the risk. With a small team that
-  is the only review available — so it must be honest.
-- A rollback is a success, not a failure. Say so in the PR if you are unsure.
-
----
+Use conventional commit subjects when committing: `feat(scope): ...`, `fix(scope): ...`, `docs(scope): ...`, `test(scope): ...`, `refactor(scope): ...`, or `chore(scope): ...`. Do not include unrelated formatting or generated output.
 
 ## Documentation style
 
-- Short sentences, active voice, second person.
-- Numbers over adjectives. "200 ms p95" beats "fast".
-- No unearned superlatives: best-in-class, seamless, world-class, revolutionary.
-- Every document has an **owner** and a **last reviewed** date at the bottom.
-- Tables for anything comparative; diagrams in plain ASCII so they survive in any editor.
-- Write so a new engineer can act on it in their first week without asking anyone.
+Use direct language, explain limits, and distinguish implemented behaviour from planned work. Prefer measured facts over adjectives. Keep docs accurate when implementation, security posture, or deployment requirements change.
+
+## Code of conduct and license
+
+Participation is governed by [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). ARCH is proprietary; see [`LICENSE`](LICENSE). A contribution does not transfer ownership and must be submitted under the repository's terms.
 
 ---
 
-## Code of conduct
-
-Participation is governed by [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md). In short: be the kind of
-reviewer you needed when you were learning.
-
----
-
-## Licensing
-
-This repository is **proprietary** — see [`LICENSE`](LICENSE). Contributing does not transfer
-ownership; by opening a pull request you confirm you have the right to submit the contribution and
-agree that it is licensed under the same terms.
-
----
-
-*Owner: Engineering · Review cadence: 90 days*
+Owner: Engineering · Last reviewed: 2026-10-11
