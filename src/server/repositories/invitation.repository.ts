@@ -31,8 +31,17 @@ export const invitationRepository = {
     });
   },
 
-  setStatus(id: string, status: InvitationStatus, acceptedAt: Date | null, client: DbClient = db) {
-    return client.invitation.update({ where: { id }, data: { status, acceptedAt } });
+  transitionStatus(
+    id: string,
+    from: InvitationStatus,
+    to: InvitationStatus,
+    acceptedAt: Date | null,
+    client: DbClient = db,
+  ) {
+    return client.invitation.updateMany({
+      where: { id, status: from },
+      data: { status: to, acceptedAt },
+    });
   },
 
   async expireStale(now: Date, client: DbClient = db) {

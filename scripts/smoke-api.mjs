@@ -631,13 +631,24 @@ await check('GET /api/v1/incidents rejects a bogus bearer token', 'GET', '/api/v
 
 const inviteeEmail = `smoke-invitee-${stamp}@example.com`;
 let inviteToken;
-await check('POST /api/organizations/:id/invitations invites an email', 'POST', `/api/organizations/${orgId}/invitations`, {
+await check('POST /api/organizations/:id/invitations returns a safe one-time link', 'POST', `/api/organizations/${orgId}/invitations`, {
   body: { email: inviteeEmail, role: 'RESPONDER' },
   expect: 201,
-  assert: (r) => expectField(r, 'data.inviteUrl'),
-  save: (r) => (inviteToken = r.json.data.inviteUrl.split('/').pop()),
+  assert: (r) => {
+    const invitation = expectField(r, 'data.invitation');
+    const inviteUrl = expectField(r, 'data.inviteUrl');
+    if (r.json.data.emailQueued !== false) throw new Error('no email should be queued for an unknown account');
+    if ('tokenHash' in invitation) throw new Error('stored invite token hash must not be returned');
+    if (!new URL(inviteUrl).pathname.startsWith('/invite/')) throw new Error('invite URL must be absolute and usable');
+  },
+  save: (r) => (inviteToken = new URL(r.json.data.inviteUrl).pathname.split('/').pop()),
 });
-await check('GET /api/organizations/:id/invitations lists pending invites', 'GET', `/api/organizations/${orgId}/invitations`, { assert: (r) => r.json.data });
+await check('GET /api/organizations/:id/invitations omits stored token hashes', 'GET', `/api/organizations/${orgId}/invitations`, {
+  assert: (r) => {
+    if (!Array.isArray(r.json.data)) throw new Error('expected an invitation list');
+    if (r.json.data.some((invitation) => 'tokenHash' in invitation)) throw new Error('stored invite token hash must not be returned');
+  },
+});
 
 // The invitee accepts with their own session — a second account, same organization.
 const inviteePassword = 'smoke-invitee-password-1';
@@ -669,6 +680,26 @@ for (const [key, value] of inviteeJar) jar.set(key, value);
 await check('the OWNER removes the member', 'DELETE', `/api/organizations/${orgId}/members/${inviteeId}`, { expect: [200, 204] });
 await check('the removed member is gone from the roster', 'GET', `/api/organizations/${orgId}/members`, {
   assert: (r) => !r.json.data.some((member) => member.userId === inviteeId || member.user?.id === inviteeId),
+});
+
+const ownerSession = new Map(jar);
+jar.clear();
+await requireAccount('POST /api/auth/register creates an account for an email invite', {
+  email: `smoke-email-invite-${stamp}@example.com`,
+  password: 'smoke-email-invite-password-1',
+  name: 'Smoke Email Invite',
+});
+jar.clear();
+for (const [key, value] of ownerSession) jar.set(key, value);
+await check('queued invitation omits the raw link and stored token hash', 'POST', `/api/organizations/${orgId}/invitations`, {
+  body: { email: `smoke-email-invite-${stamp}@example.com`, role: 'VIEWER' },
+  expect: 201,
+  assert: (r) => {
+    const invitation = expectField(r, 'data.invitation');
+    if (r.json.data.emailQueued !== true) throw new Error('an existing account should queue an invitation email');
+    if ('inviteUrl' in r.json.data) throw new Error('do not return a raw link when email is queued');
+    if ('tokenHash' in invitation) throw new Error('stored invite token hash must not be returned');
+  },
 });
 
 // ---------------------------------------------------------------- 13. negative paths & tenancy

@@ -1,531 +1,91 @@
-# ARCH — Coding Agent Context (AGENTS.md)
+# ARCH — Engineering context
 
-## 1. Product
+**Current product:** ARCH **0.3.0**, early access. This is a working application, not a blueprint-only repository. Use this file for current engineering rules; use the linked source docs for detailed behaviour.
 
-ARCH is a **multi-tenant incident-management + public-status-page SaaS** for developer teams.
+## Product and operating model
 
-Workflow it supports:
-alert comes in → incident created → assigned to responder → timeline collaboration →
-resolution → public status page updated → audit trail preserved.
+ARCH helps engineering teams receive configured alerts, coordinate incident response, preserve an audit trail, and publish customer-facing status updates. It is self-hosted and designed to work alongside monitoring tools, GitHub, and existing team workflows.
 
-ARCH is **NOT**: an AI model, IDE, code generator, debugger, hosting platform, CI/CD,
-Kubernetes manager, billing system, or a replacement for GitHub/Slack/AWS.
+ARCH is a modular monolith: one Next.js web application, PostgreSQL, and a separately supervised worker for queued notifications and model-training jobs. The built-in assistant is a small native engine; generated advice and changes require human review.
 
-**Positioning:** "ARCH is where your team goes when your application breaks."
+## Stack
 
-### Core principles
-- Modular monolith — NO microservices in v1.
-- Every tenant-owned query MUST be scoped by `organizationId`.
-- Never trust org ID / role / permission from the client — authorize server-side on every mutation.
-- Smallest working vertical slice first: DB → server logic → API → UI → test.
-- No AI in v1. Readable code over premature abstraction.
+- Node.js 20.19+ · Next.js 16 · React 19 · strict TypeScript
+- Tailwind CSS 4 · PostgreSQL · Prisma 7 · Zod
+- Auth.js 5 · PostgreSQL-backed worker/outbox
+- Vitest with a separate real PostgreSQL test database
+- Python CLI under `clients/python`
 
----
+## Source map
 
-## 2. Stack
+```text
+src/app/                    Pages, route handlers, and server actions
+src/components/             Product, marketing, and shared UI
+src/lib/                     Auth, configuration, permissions, validation
+src/server/services/        Business rules and orchestration
+src/server/repositories/    Organization-scoped database access
+src/server/ai/              Native inference, retrieval, and guardrails
+src/worker/                 Notification processing and model training
+prisma/                     Schema and SQL migrations
+clients/python/             Python CLI and tests
+tests/                      Unit and database-backed integration tests
+docs/                       Product, engineering, support, and operations
+```
 
-| Layer | Technology |
-|---|---|
-| Language | TypeScript (strict) |
-| Framework | Next.js 14+ App Router |
-| Styling | Tailwind CSS |
-| Database | PostgreSQL 16 (Docker, local) |
-| ORM | Prisma |
-| Validation | Zod |
-| Auth | Auth.js (NextAuth v5) — credentials or GitHub provider |
-| Email | Provider behind an adapter (start with console/Resend) |
-| Background jobs | Add only when notifications/webhooks need it (Inngest/Trigger.dev) |
+## Required engineering rules
 
-### Local setup
+1. **Tenant isolation:** every organization-owned read or write must be scoped by the organization resolved from the authenticated session or token. Never trust an organization ID or role sent by the browser.
+2. **Authorization:** enforce permissions on the server for every protected action. A non-member or cross-tenant resource is `404`; a member without the required role is `403`.
+3. **Layering:** route handlers validate input and call services; services enforce business rules and call repositories. Keep Prisma queries in repositories unless an existing, documented exception applies.
+4. **Validation:** validate request bodies, query parameters, webhook payloads, and action input with the existing Zod schemas.
+5. **Writes:** use transactions for related data changes. Preserve the incident event and audit trail together; do not silently skip audit writes.
+6. **Secrets:** never log, return, or commit passwords, tokens, webhook secrets, or customer content. Verify webhook signatures and timestamps before trusting payloads.
+7. **AI:** use only the shipped `arch` or `mock` provider. Keep context organization-scoped, treat model output as untrusted, and preserve human approval for incident updates and GitHub pull requests. Do not add external AI providers without an explicit product/security decision.
+8. **User experience:** support keyboard use, visible focus, labelled controls, loading/empty/error states, and narrow screens. Respect reduced-motion preferences.
+9. **Documentation:** update the relevant guide and changelog in the same change when shipped behaviour changes.
+10. **Scope:** prefer a tested vertical slice over a broad rewrite. Do not claim uptime, compliance, accuracy, or performance guarantees without measured evidence and approval.
 
-~~~bash
-npm install
-docker compose up -d          # PostgreSQL on :5432
-npx prisma migrate dev
-npm run dev                   # http://localhost:3000
-~~~
+## Local setup
 
-### Environment variables (`.env`)
+Use Node.js **20.19+**. Start from the checked-in example, keep local secrets private, and use two different secrets:
 
-~~~env
-DATABASE_URL="postgresql://arch:arch@localhost:5432/arch"
-AUTH_SECRET="generate-with-openssl-rand-base64-32"
-AUTH_SECRET_WEBHOOK="separate-secret-for-webhook-signatures"
-APP_URL="http://localhost:3000"
-EMAIL_PROVIDER=""             # empty = console logging in dev
-~~~
+```bash
+npm ci
+cp .env.example .env
+chmod 600 .env
+openssl rand -base64 32   # set as AUTH_SECRET
+openssl rand -base64 32   # set as AUTH_SECRET_WEBHOOK
+npm run dev
+```
 
----
+The development command generates Prisma, starts the local database fallback when needed, applies migrations, and starts Next.js. It does not seed a shared demo account. Run `npm run worker` in another terminal to process email notifications and scheduled model-training jobs.
 
-## 3. Architecture overview
+For Docker, managed PostgreSQL, OAuth, demo data, and production setup, follow [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md). Never use the embedded development database in production.
 
-~~~text
-Browser ──▶ Next.js App Router
-              ├── (marketing)  public landing + status pages
-              ├── (auth)       login / register
-              ├── dashboard    authenticated app (server components)
-              └── api/         route handlers (Zod-validated)
-                      │
-                      ├── lib/permissions.ts   ← RBAC gate on EVERY mutation
-                      ├── server/services/     ← business logic
-                      ├── server/repositories/ ← Prisma queries (org-scoped)
-                      └── prisma ──▶ PostgreSQL
-~~~
+## Verification before review
 
-- Route handlers never talk to Prisma directly — they call services, services call repositories.
-- All list queries filter by `organizationId` at the repository layer, unconditionally.
+```bash
+npm run db:generate
+npm run typecheck
+npm test
+npm run build
+```
 
-### Folder structure
+The test suite provisions its own PostgreSQL database. `npm run build` needs valid environment configuration; use the production environment's secrets only through its secret manager, never local committed values. When testing a running app, `npm run smoke:api` exercises key API and tenant-isolation paths. Run Python CLI tests when changing `clients/python`.
 
-~~~text
-src/
-  app/
-    (marketing)/page.tsx
-    (auth)/{login,register}/page.tsx
-    dashboard/
-      incidents/  status/  settings/  audit/
-    status/[slug]/page.tsx        # public, unauthenticated
-    api/
-      auth/[...nextauth]/route.ts
-      health/route.ts
-      organizations/route.ts
-      incidents/route.ts
-      incidents/[id]/route.ts
-      incidents/[id]/events/route.ts
-      webhooks/[provider]/route.ts
-      status-pages/route.ts
-      status-pages/[id]/publish/route.ts
-      status-pages/public/[slug]/route.ts
-  components/ui/  components/incidents/  components/status/
-  lib/{db,auth,permissions,validation,audit}.ts
-  server/
-    services/{incident,organization,statusPage,webhook,notification}.service.ts
-    repositories/*.repository.ts
-prisma/schema.prisma
-docker-compose.yml
-~~~
+## Authoritative references
+
+- [`README.md`](README.md) — current product overview and local quick start.
+- [`docs/product/CURRENT-STATUS.md`](docs/product/CURRENT-STATUS.md) — simple, current product facts and known limits.
+- [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) — setup and deploy preparation.
+- [`docs/api.md`](docs/api.md) — beta API contract.
+- [`docs/engineering/ARCHITECTURE.md`](docs/engineering/ARCHITECTURE.md) — request flow and system architecture.
+- [`docs/engineering/ARCH-MODEL.md`](docs/engineering/ARCH-MODEL.md), [`ARCH-AGENT.md`](docs/engineering/ARCH-AGENT.md), and [`AI-GUARDRAILS.md`](docs/engineering/AI-GUARDRAILS.md) — native assistance and its boundaries.
+- [`docs/engineering/OPERATIONS-RUNBOOK.md`](docs/engineering/OPERATIONS-RUNBOOK.md) — operations, recovery, and release checks.
+- [`SECURITY.md`](SECURITY.md) — how to report a vulnerability.
+
+`AGENTS-V2.md` is a historical implementation log. If it conflicts with this file, the current source, or the linked engineering docs, follow the current source and docs and fix the stale note in the same change.
 
 ---
 
-## 4. Data model — `prisma/schema.prisma`
-
-~~~prisma
-generator client {
-  provider = "prisma-client-js"
-}
-
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-// ---------- Enums ----------
-
-enum MembershipRole {
-  OWNER
-  ADMIN
-  RESPONDER
-  VIEWER
-}
-
-enum IncidentSeverity {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
-}
-
-enum IncidentStatus {
-  INVESTIGATING
-  IDENTIFIED
-  MONITORING
-  RESOLVED
-}
-
-enum ServiceStatus {
-  OPERATIONAL
-  DEGRADED
-  OUTAGE
-  MAINTENANCE
-}
-
-enum IncidentEventType {
-  STATUS_CHANGED
-  SEVERITY_CHANGED
-  ASSIGNED
-  COMMENT
-  LINKED
-}
-
-enum NotificationChannel {
-  EMAIL
-  SLACK
-}
-
-enum NotificationStatus {
-  PENDING
-  SENT
-  FAILED
-}
-
-// ---------- Auth (Auth.js compatible) ----------
-
-model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  name          String?
-  passwordHash  String?
-  emailVerified DateTime?
-  image         String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
-
-  accounts      Account[]
-  sessions      Session[]
-  memberships   Membership[]
-  incidentsCreated Incident[] @relation("IncidentCreator")
-  incidentsAssigned Incident[] @relation("IncidentAssignee")
-  incidentEvents    IncidentEvent[]
-  auditLogs         AuditLog[]
-  notifications     Notification[]
-
-  @@map("users")
-}
-
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String?
-  access_token      String?
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String?
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
-}
-
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
-}
-
-model VerificationToken {
-  identifier String
-  token      String   @unique
-  expires    DateTime
-
-  @@unique([identifier, token])
-  @@map("verification_tokens")
-}
-
-// ---------- Tenancy & RBAC ----------
-
-model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  slug      String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  memberships   Membership[]
-  projects      Project[]
-  incidents     Incident[]
-  statusPages   StatusPage[]
-  webhookEndpoints WebhookEndpoint[]
-  auditLogs     AuditLog[]
-  notifications Notification[]
-
-  @@map("organizations")
-}
-
-model Membership {
-  id             String         @id @default(cuid())
-  userId         String
-  organizationId String
-  role           MembershipRole @default(VIEWER)
-  createdAt      DateTime       @default(now())
-
-  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@unique([userId, organizationId])
-  @@index([organizationId])
-  @@map("memberships")
-}
-
-// ---------- Catalog ----------
-
-model Project {
-  id             String   @id @default(cuid())
-  organizationId String
-  name           String
-  slug           String
-  createdAt      DateTime @default(now())
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  services     Service[]
-  incidents    Incident[]
-
-  @@unique([organizationId, slug])
-  @@map("projects")
-}
-
-model Service {
-  id        String        @id @default(cuid())
-  projectId String
-  name      String
-  status    ServiceStatus @default(OPERATIONAL)
-  createdAt DateTime      @default(now())
-
-  project           Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  incidents         Incident[]
-  statusPageServices StatusPageService[]
-
-  @@index([projectId])
-  @@map("services")
-}
-
-// ---------- Incidents ----------
-
-model Incident {
-  id             String           @id @default(cuid())
-  organizationId String
-  projectId      String
-  serviceId      String?
-  title          String
-  description    String?
-  severity       IncidentSeverity @default(MEDIUM)
-  status         IncidentStatus   @default(INVESTIGATING)
-  createdById    String
-  assignedToId   String?
-  startedAt      DateTime         @default(now())
-  resolvedAt     DateTime?
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  project      Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  service      Service?     @relation(fields: [serviceId], references: [id], onDelete: SetNull)
-  createdBy    User         @relation("IncidentCreator", fields: [createdById], references: [id])
-  assignedTo   User?        @relation("IncidentAssignee", fields: [assignedToId], references: [id])
-  events       IncidentEvent[]
-  notifications Notification[]
-
-  @@index([organizationId, status])
-  @@index([organizationId, createdAt])
-  @@map("incidents")
-}
-
-model IncidentEvent {
-  id         String             @id @default(cuid())
-  incidentId String
-  authorId   String
-  type       IncidentEventType
-  body       String?
-  metadata   Json?
-  createdAt  DateTime           @default(now())
-
-  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-  author   User     @relation(fields: [authorId], references: [id])
-
-  @@index([incidentId, createdAt])
-  @@map("incident_events")
-}
-
-// ---------- Status pages ----------
-
-model StatusPage {
-  id             String   @id @default(cuid())
-  organizationId String
-  name           String
-  slug           String   @unique
-  isPublished    Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-
-  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  services     StatusPageService[]
-
-  @@map("status_pages")
-}
-
-model StatusPageService {
-  id           String      @id @default(cuid())
-  statusPageId String
-  serviceId    String
-  displayName  String?
-
-  statusPage StatusPage @relation(fields: [statusPageId], references: [id], onDelete: Cascade)
-  service    Service    @relation(fields: [serviceId], references: [id], onDelete: Cascade)
-
-  @@unique([statusPageId, serviceId])
-  @@map("status_page_services")
-}
-
-// ---------- Webhooks (ingestion) ----------
-
-model WebhookEndpoint {
-  id             String   @id @default(cuid())
-  organizationId String
-  provider       String   // "generic" | "github" | "sentry" | "grafana" ...
-  externalId     String?  // provider-side id or path token
-  secretHash     String
-  isActive       Boolean  @default(true)
-  createdAt      DateTime @default(now())
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, externalId])
-  @@map("webhook_endpoints")
-}
-
-// ---------- Observability ----------
-
-model AuditLog {
-  id             String   @id @default(cuid())
-  organizationId String
-  actorId        String
-  action         String   // "incident.create", "member.role_change", ...
-  entityType     String
-  entityId       String
-  metadata       Json?
-  createdAt      DateTime @default(now())
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  actor        User         @relation(fields: [actorId], references: [id])
-
-  @@index([organizationId, createdAt])
-  @@map("audit_logs")
-}
-
-model Notification {
-  id             String             @id @default(cuid())
-  organizationId String
-  incidentId     String?
-  recipientId    String
-  channel        NotificationChannel
-  status         NotificationStatus @default(PENDING)
-  sentAt         DateTime?
-  createdAt      DateTime           @default(now())
-
-  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  incident     Incident?    @relation(fields: [incidentId], references: [id], onDelete: Cascade)
-  recipient    User         @relation(fields: [recipientId], references: [id])
-
-  @@index([status, createdAt])
-  @@map("notifications")
-}
-~~~
-
----
-
-## 5. API routes
-
-| Method | Route | Auth | Required role | Notes |
-|---|---|---|---|---|
-| GET | `/api/health` | none | — | liveness probe |
-| GET | `/api/github-stars` | none | — | landing-page star badge; this repo's count from GitHub, cached 5 min; `stars` is `null` when GitHub can't be read |
-| POST | `/api/auth/register` | none | — | creates User |
-| GET/POST | `/api/organizations` | session | — / creator becomes OWNER | |
-| GET | `/api/organizations/:id/members` | session | VIEWER+ | org-scoped |
-| PATCH | `/api/organizations/:id/members/:userId` | session | ADMIN+ | role change → audit log |
-| GET/POST | `/api/incidents` | session | VIEWER+ / RESPONDER+ | always filter by session org |
-| GET/PATCH | `/api/incidents/:id` | session | VIEWER+ / RESPONDER+ | status transitions validated |
-| POST | `/api/incidents/:id/events` | session | RESPONDER+ | timeline entry |
-| GET/POST | `/api/status-pages` | session | VIEWER+ / ADMIN+ | |
-| POST | `/api/status-pages/:id/publish` | session | ADMIN+ | toggles isPublished |
-| GET | `/api/status-pages/public/:slug` | none | — | only if isPublished=true |
-| POST | `/api/webhooks/:provider` | signature | — | HMAC verify with AUTH_SECRET_WEBHOOK |
-| GET | `/api/audit` | session | ADMIN+ | org-scoped, paginated |
-
-**Rules:** every handler: parse body with Zod → `requirePermission(orgId, actor, ACTION)` → service call → audit log for writes → shape response. Return 403 on permission failure, 404 when the resource isn't in the caller's org (never leak cross-tenant existence).
-
----
-
-## 6. RBAC permission matrix
-
-| Action | OWNER | ADMIN | RESPONDER | VIEWER |
-|---|---|---|---|---|
-| View incidents/status/audit (own org) | ✅ | ✅ | ✅ | ✅ |
-| Create/assign/resolve incidents, post events | ✅ | ✅ | ✅ | ❌ |
-| Manage projects & services | ✅ | ✅ | ❌ | ❌ |
-| Invite/remove members, change roles | ✅ | ✅ | ❌ | ❌ |
-| Manage webhooks & integrations | ✅ | ✅ | ❌ | ❌ |
-| Publish status page | ✅ | ✅ | ❌ | ❌ |
-| Org settings, billing, delete org | ✅ | ❌ | ❌ | ❌ |
-
-Implement as a single source of truth in `lib/permissions.ts`:
-
-~~~ts
-// action → minimum roles allowed
-export const PERMISSIONS = {
-  "incident.read":   ["OWNER", "ADMIN", "RESPONDER", "VIEWER"],
-  "incident.write":  ["OWNER", "ADMIN", "RESPONDER"],
-  "project.manage":  ["OWNER", "ADMIN"],
-  "member.manage":   ["OWNER", "ADMIN"],
-  "webhook.manage":  ["OWNER", "ADMIN"],
-  "statuspage.publish": ["OWNER", "ADMIN"],
-  "org.settings":    ["OWNER"],
-} as const;
-
-export async function requirePermission(
-  organizationId: string, userId: string, action: keyof typeof PERMISSIONS
-) { /* lookup membership → throw 403 if role not allowed */ }
-~~~
-
----
-
-## 7. MVP milestones & acceptance criteria
-
-1. **Setup + DB + auth** — `docker compose up` → migrate → register/login works; `/api/health` returns 200.
-2. **Orgs + membership** — create org (creator = OWNER), invite member by email, member sees only their org.
-3. **RBAC enforced** — matrix above enforced in every route; cross-org ID in request → 404.
-4. **Projects & services** — CRUD within org; service has live status.
-5. **Incident CRUD + timeline** — create/assign/transition with valid state machine (`INVESTIGATING → IDENTIFIED → MONITORING → RESOLVED`, reopen allowed); every transition writes an IncidentEvent + AuditLog.
-6. **Public status page** — publish/unpublish; `/status/[slug]` shows service statuses; unpublished → 404.
-7. **Webhook ingestion** — HMAC signature verified, invalid signature → 401, creates/updates incident from payload.
-8. **Notifications** — PENDING → SENT/FAILED lifecycle via email adapter; retry once on failure.
-9. **Audit logs** — every mutating action recorded; ADMIN-viewable, paginated.
-10. **Hardening** — rate limiting on auth + webhooks, error boundaries, loading/empty states, permission + transition tests green, deploy docs.
-
----
-
-## 8. Out of scope for v1
-
-AI models · code generation · debugging tools · hosting user apps · CI/CD pipelines ·
-Kubernetes · billing/payments · mobile apps · microservices · real-time chat ·
-replacing GitHub/Slack/AWS/IDEs.
-
----
-
-## 9. Coding, security & testing rules
-
-- **TypeScript strict**; no `any` in service/repository signatures.
-- Validate **all** external input with Zod (bodies, query params, webhook payloads).
-- Multi-tenant safety: repositories take `organizationId` as a **required** parameter; never filter by ID alone.
-- Use Prisma `$transaction` when an operation spans >1 write (incident + event + audit + notification).
-- Webhooks: verify HMAC (`AUTH_SECRET_WEBHOOK`) before parsing; reject stale timestamps; store only `secretHash`, never raw secrets.
-- Never log or return tokens, password hashes, or webhook secrets. Secrets live only in `.env`.
-- Every UI screen ships with **loading, empty, and error** states; forms use accessible labels.
-- Tests (Vitest/Playwright): (a) permission matrix — each role × each action, (b) incident state transitions incl. illegal ones, (c) cross-tenant isolation returns 404, (d) webhook signature accept/reject.
-- Commit style: `feat(incidents): ...`, `fix(auth): ...`, one vertical slice per PR.
-~~~
-
-**How to use it:** put this file at your project root, then tell your agent:
-
-> "Read AGENTS.md. Build Milestone 1: project setup, Dockerized Postgres, Prisma migration, auth, and organization creation. Follow the coding rules."
-
-It has enough context to build every milestone without re-explaining your product.
+Owner: Engineering · Last reviewed: 2026-10-11

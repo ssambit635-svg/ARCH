@@ -9,6 +9,7 @@ import {
   listInvitations,
   listMembers,
   removeMember,
+  revokeInvitation,
 } from '@/server/services/organization.service';
 import { auditActionSummary, listAuditLogs } from '@/server/services/audit.service';
 import { createEndpoint, listDeliveries } from '@/server/services/webhook.service';
@@ -117,6 +118,59 @@ describe('tenant isolation', () => {
     expect(acmeAudit.items.every((entry) => entry.organizationId === acme.organization.id)).toBe(true);
   });
 
+  it('revokes pending invitations only in the caller’s organization and audits the change', async () => {
+    const acme = await createTenant('Acme');
+    const globex = await createTenant('Globex');
+    const invitee = await createTestUser('pending@acme.test', 'Pending teammate');
+    const invite = await inviteMember({
+      organizationId: acme.organization.id,
+      actorId: acme.owner.id,
+      email: invitee.email,
+      role: 'RESPONDER',
+    });
+    const invitationId = invite.invitation.id;
+    const token = invite.inviteUrl.split('/').at(-1)!;
+
+    const responder = await createTestUser('responder@acme.test', 'Responder');
+    await addMember(acme.organization.id, responder.id, 'RESPONDER');
+    await expect(revokeInvitation({ organizationId: acme.organization.id, actorId: responder.id, invitationId })).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    await expect(revokeInvitation({ organizationId: globex.organization.id, actorId: globex.owner.id, invitationId })).rejects.toMatchObject({ code: 'NOT_FOUND' });
+
+    const revoked = await revokeInvitation({ organizationId: acme.organization.id, actorId: acme.owner.id, invitationId });
+    expect(revoked.status).toBe('REVOKED');
+    expect(await db.auditLog.count({ where: { organizationId: acme.organization.id, action: 'member.invite_revoke', entityId: invitationId } })).toBe(1);
+    await expect(revokeInvitation({ organizationId: acme.organization.id, actorId: acme.owner.id, invitationId })).rejects.toMatchObject({ code: 'CONFLICT' });
+    await expect(acceptInvitation({ token, userId: invitee.id, userEmail: invitee.email })).rejects.toMatchObject({ code: 'CONFLICT' });
+    expect(await db.membership.findFirst({ where: { organizationId: acme.organization.id, userId: invitee.id } })).toBeNull();
+  });
+
+  it('allows either acceptance or revocation to win, never both', async () => {
+    const acme = await createTenant('Acme');
+    const invitee = await createTestUser('racing@acme.test', 'Racing teammate');
+    const invite = await inviteMember({
+      organizationId: acme.organization.id,
+      actorId: acme.owner.id,
+      email: invitee.email,
+      role: 'RESPONDER',
+    });
+    const token = invite.inviteUrl.split('/').at(-1)!;
+
+    const outcomes = await Promise.allSettled([
+      revokeInvitation({ organizationId: acme.organization.id, actorId: acme.owner.id, invitationId: invite.invitation.id }),
+      acceptInvitation({ token, userId: invitee.id, userEmail: invitee.email }),
+    ]);
+
+    expect(outcomes.filter((outcome) => outcome.status === 'fulfilled')).toHaveLength(1);
+    const finalInvitation = await db.invitation.findUniqueOrThrow({ where: { id: invite.invitation.id } });
+    const membership = await db.membership.findFirst({ where: { organizationId: acme.organization.id, userId: invitee.id } });
+    if (finalInvitation.status === 'ACCEPTED') {
+      expect(membership?.role).toBe('RESPONDER');
+    } else {
+      expect(finalInvitation.status).toBe('REVOKED');
+      expect(membership).toBeNull();
+    }
+  });
+
   it('protects the last owner and validates invitation acceptance', async () => {
     const acme = await createTenant('Acme');
     const globex = await createTenant('Globex');
@@ -133,7 +187,7 @@ describe('tenant isolation', () => {
     const invitedUser = await createTestUser('invited@acme.test', 'Invited');
     const outsider = await createTestUser('outsider@globex.test', 'Outsider');
     const invite = await inviteMember({ organizationId: acme.organization.id, actorId: acme.owner.id, email: 'invited@acme.test', role: 'VIEWER' });
-    const token = invite.inviteUrl.replace('/invite/', '');
+    const token = new URL(invite.inviteUrl).pathname.split('/').at(-1)!;
 
     await expect(acceptInvitation({ token, userId: outsider.id, userEmail: outsider.email })).rejects.toMatchObject({ code: 'FORBIDDEN' });
 

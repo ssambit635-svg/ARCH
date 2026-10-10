@@ -62,7 +62,7 @@ export function Stat({
         className={`pointer-events-none absolute inset-x-0 top-0 h-[1.5px] bg-gradient-to-r ${accentBar[resolved]}`}
       />
       <div className="flex items-center justify-between gap-2">
-        <span className="font-mono text-[11px] font-medium uppercase tracking-[0.1em] text-zinc-400">
+        <span className="font-mono text-[12px] font-medium uppercase tracking-[0.1em] text-zinc-400">
           {label}
         </span>
         {(icon || spark) && (
@@ -101,7 +101,7 @@ export function Stat({
           </span>
         )}
       </div>
-      {footnote && <div className="mt-1.5 font-mono text-xs text-zinc-500">{footnote}</div>}
+      {footnote && <div className="mt-1.5 font-mono text-[13px] text-zinc-500">{footnote}</div>}
     </div>
   );
 }

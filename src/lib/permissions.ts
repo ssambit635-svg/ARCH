@@ -1,6 +1,10 @@
 import type { DbClient } from './db';
 import { db } from './db';
 import { AppError } from './errors';
+import { ROLES } from './roles';
+import type { Role } from './roles';
+export { ROLES } from './roles';
+export type { Role } from './roles';
 
 /**
  * RBAC — single source of truth.
@@ -9,9 +13,6 @@ import { AppError } from './errors';
  * webhook ingestion path all call `requirePermission`; nothing trusts a role sent by a client.
  * `roleHasPermission` is pure so the matrix can be unit-tested without a database.
  */
-
-export const ROLES = ['OWNER', 'ADMIN', 'RESPONDER', 'VIEWER'] as const;
-export type Role = (typeof ROLES)[number];
 
 export const PERMISSIONS = {
   'org.read': ['OWNER', 'ADMIN', 'RESPONDER', 'VIEWER'],

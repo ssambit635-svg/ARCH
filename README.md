@@ -208,7 +208,7 @@ See the [API reference](docs/api.md), [CLI guide](clients/python/README.md), and
 
 | You want to… | Start here |
 | :--- | :--- |
-| Understand the product | [Product overview](docs/EXPLAINED-SIMPLY.md) |
+| Understand the product | [Current facts, features & limits](docs/product/CURRENT-STATUS.md) · [Detailed overview](docs/EXPLAINED-SIMPLY.md) |
 | Develop locally | [Development guide](docs/DEVELOPMENT.md) |
 | Understand the architecture | [Architecture](docs/engineering/ARCHITECTURE.md) |
 | Run and recover the service | [Operations runbook](docs/engineering/OPERATIONS-RUNBOOK.md) |

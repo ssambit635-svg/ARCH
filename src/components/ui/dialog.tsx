@@ -1,12 +1,9 @@
 'use client';
 
-import { useEffect, useRef, type ReactNode } from 'react';
+import { useEffect, useId, useRef, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 
-/**
- * Accessible modal dialog — portal, Escape to close, backdrop click to close,
- * initial focus into the panel, body scroll lock while open.
- */
+/** Accessible modal dialog: portal, focus containment/restoration, Escape, backdrop close and scroll lock. */
 export function Dialog({
   open,
   onClose,
@@ -25,20 +22,63 @@ export function Dialog({
   className?: string;
 }) {
   const panelRef = useRef<HTMLDivElement>(null);
+  const descriptionId = useId();
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     if (!open) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
+
+    const panel = panelRef.current;
+    if (!panel) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     document.body.style.overflow = 'hidden';
-    panelRef.current?.focus();
+    panel.focus();
+
+    const getFocusableElements = () =>
+      Array.from(
+        panel.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => !element.hasAttribute('hidden') && !element.closest('[aria-hidden="true"]'));
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== 'Tab') return;
+
+      const focusable = getFocusableElements();
+      if (focusable.length === 0) {
+        event.preventDefault();
+        panel.focus();
+        return;
+      }
+
+      const first = focusable[0]!;
+      const last = focusable[focusable.length - 1]!;
+      const activeElement = document.activeElement;
+      const focusIsInside = panel.contains(activeElement);
+      if (event.shiftKey && (!focusIsInside || activeElement === first || activeElement === panel)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (!focusIsInside || activeElement === last || activeElement === panel)) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', onKey);
     return () => {
       document.removeEventListener('keydown', onKey);
-      document.body.style.overflow = '';
+      document.body.style.overflow = previousOverflow;
+      if (previouslyFocused?.isConnected) previouslyFocused.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) return null;
 
@@ -46,7 +86,7 @@ export function Dialog({
     <div
       className="fixed inset-0 z-[70] flex items-end justify-center bg-black/70 p-4 backdrop-blur-sm animate-fade-in sm:items-center"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget) onCloseRef.current();
       }}
       role="presentation"
     >
@@ -56,16 +96,21 @@ export function Dialog({
         role="dialog"
         aria-modal="true"
         aria-label={typeof title === 'string' ? title : 'Dialog'}
+        aria-describedby={description ? descriptionId : undefined}
         className={`layer-shadow w-full animate-scale-in rounded-2xl border border-white/10 bg-abyss-850 outline-none ${wide ? 'max-w-2xl' : 'max-w-md'} ${className}`}
       >
         <div className="flex items-start justify-between gap-4 border-b border-white/[0.07] px-5 py-4">
           <div>
             <h2 className="text-[15px] font-semibold tracking-tight text-white">{title}</h2>
-            {description ? <p className="mt-0.5 text-[13px] text-slate-400">{description}</p> : null}
+            {description ? (
+              <p id={descriptionId} className="mt-0.5 text-[13px] text-slate-400">
+                {description}
+              </p>
+            ) : null}
           </div>
           <button
             type="button"
-            onClick={onClose}
+            onClick={() => onCloseRef.current()}
             aria-label="Close dialog"
             className="rounded-lg p-1.5 text-slate-500 transition hover:bg-white/[0.07] hover:text-slate-200"
           >

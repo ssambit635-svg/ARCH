@@ -22,6 +22,7 @@ import {
   rotateWebhookSecretAction,
   toggleWebhookEndpointAction,
   updateOrganizationAction,
+  revokeInvitationAction,
 } from '@/app/dashboard/actions';
 
 export const metadata: Metadata = { title: 'Settings' };
@@ -80,7 +81,6 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
         eyebrow="System"
         title="Settings"
         description="Organization profile, people, and the integrations that open incidents for you."
-        action={tab === 'people' && canManageMembers ? <InviteModal /> : undefined}
       />
 
       <div className="mb-6">
@@ -151,13 +151,13 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
           <Card>
             <CardHeader
               title="Invitations"
-              description="Invite by email. People who already have an ARCH account get an email; for everyone else the invite link is shown once."
+              description="Existing account holders receive an invitation email; otherwise, a one-time link is shown. You can revoke pending invitations."
             />
             <CardBody>
               {invitations.length === 0 ? (
                 <p className="py-2 text-sm text-slate-400">No invitations yet.</p>
               ) : (
-                <Table head={['Email', 'Role', 'Status', 'Expires', 'Invited']}>
+                <Table head={canManageMembers ? ['Email', 'Role', 'Status', 'Expires', 'Invited', 'Actions'] : ['Email', 'Role', 'Status', 'Expires', 'Invited']}>
                   {invitations.map((invitation) => (
                     <tr key={invitation.id} className="link-row hover:bg-white/[0.02]">
                       <td className="px-4 py-3 text-slate-200 first:pl-5">{invitation.email}</td>
@@ -168,7 +168,25 @@ export default async function SettingsPage({ searchParams }: { searchParams: Pro
                         </Badge>
                       </td>
                       <td className="whitespace-nowrap px-4 py-3 text-slate-400">{timeAgo(invitation.expiresAt)}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-slate-400 last:pr-5">{timeAgo(invitation.createdAt)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-slate-400">{timeAgo(invitation.createdAt)}</td>
+                      {canManageMembers ? (
+                        <td className="px-4 py-3 last:pr-5">
+                          {invitation.status === 'PENDING' ? (
+                            <ActionForm
+                              action={revokeInvitationAction}
+                              submitLabel="Revoke"
+                              variant="danger"
+                              inline
+                              quiet
+                              confirm={`Revoke the pending invitation for ${invitation.email}? Its link will stop working immediately.`}
+                            >
+                              <input type="hidden" name="invitationId" value={invitation.id} />
+                            </ActionForm>
+                          ) : (
+                            <span className="text-xs text-slate-600">—</span>
+                          )}
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </Table>

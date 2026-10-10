@@ -84,7 +84,13 @@ export function SidebarNav({ openIncidents, onNavigate }: { openIncidents: numbe
                     </span>
                     <span className="arch-sidebar-link-label">{item.label}</span>
                     {item.ai ? <span className="arch-sidebar-ai-tag">AI</span> : null}
-                    {badge > 0 ? <span className="arch-sidebar-count">{badge}</span> : null}
+                    {badge > 0 ? (
+                      <span className="arch-sidebar-count" title={`${badge} open incident${badge === 1 ? '' : 's'}`}>
+                        {badge > 99 ? (
+                          <><span aria-hidden="true">99+</span><span className="sr-only">{badge} open incidents</span></>
+                        ) : badge}
+                      </span>
+                    ) : null}
                   </Link>
                 </li>
               );
@@ -96,9 +102,9 @@ export function SidebarNav({ openIncidents, onNavigate }: { openIncidents: numbe
   );
 }
 
-export function SidebarBrand() {
+export function SidebarBrand({ onNavigate }: { onNavigate?: () => void } = {}) {
   return (
-    <Link href="/dashboard" className="arch-sidebar-brand" aria-label="ARCH home">
+    <Link href="/dashboard" onClick={onNavigate} className="arch-sidebar-brand" aria-label="ARCH home">
       <Logo subtitle="Response workspace" />
     </Link>
   );

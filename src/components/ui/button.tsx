@@ -20,9 +20,9 @@ const variantStyles: Record<Variant, string> = {
 };
 
 const sizeStyles: Record<Size, string> = {
-  sm: 'h-7 px-2.5 text-xs gap-1.5 rounded-md',
-  md: 'h-9 px-3.5 text-xs font-medium gap-1.5 rounded-lg',
-  lg: 'h-10 px-4 text-sm font-medium gap-2 rounded-lg',
+  sm: 'h-8 px-3 text-[13px] gap-1.5 rounded-lg',
+  md: 'h-10 px-4 text-sm font-medium gap-2 rounded-lg',
+  lg: 'h-11 px-5 text-base font-medium gap-2 rounded-xl',
 };
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {

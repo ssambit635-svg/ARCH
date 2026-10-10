@@ -1,10 +1,11 @@
 'use client';
 
+import type { RefObject } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Kbd } from '@/components/ui/kbd';
 import { OrgSelector } from '@/components/organization/org-selector';
-import { IconExternal, IconPlus, IconSearch } from './icons';
+import { IconExternal, IconPlus, IconSearch, IconSidebar } from './icons';
 import { UserMenu } from './user-menu';
 
 const titles: Record<string, string> = {
@@ -61,6 +62,10 @@ export function Topbar({
   statusSlug,
   user,
   role,
+  sidebarVisible,
+  onToggleSidebar,
+  mobileMenuOpen,
+  mobileMenuButtonRef,
   onMenu,
   onSearch,
 }: {
@@ -69,16 +74,43 @@ export function Topbar({
   statusSlug: string;
   user: { email: string; name: string | null };
   role: string;
+  sidebarVisible: boolean;
+  onToggleSidebar: () => void;
+  mobileMenuOpen: boolean;
+  mobileMenuButtonRef: RefObject<HTMLButtonElement | null>;
   onMenu: () => void;
   onSearch: () => void;
 }) {
   return (
     <header className="arch-product-topbar">
       <div className="arch-product-topbar-row">
-        <button type="button" onClick={onMenu} aria-label="Open navigation" className="arch-mobile-menu-button">
+        <button
+          type="button"
+          ref={mobileMenuButtonRef}
+          onClick={onMenu}
+          aria-label="Open navigation"
+          aria-expanded={mobileMenuOpen}
+          aria-controls={mobileMenuOpen ? 'arch-mobile-navigation' : undefined}
+          aria-haspopup="dialog"
+          className="arch-mobile-menu-button"
+        >
           <svg viewBox="0 0 20 20" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden>
             <path d="M3 5.5h14M3 10h14M3 14.5h14" />
           </svg>
+        </button>
+
+        <button
+          type="button"
+          onClick={onToggleSidebar}
+          aria-label={sidebarVisible ? 'Hide sidebar' : 'Show sidebar'}
+          aria-expanded={sidebarVisible}
+          aria-controls={sidebarVisible ? 'arch-desktop-navigation' : undefined}
+          aria-keyshortcuts="Control+B Meta+B"
+          title={`${sidebarVisible ? 'Hide' : 'Show'} sidebar · Ctrl+B / ⌘B`}
+          className={`arch-desktop-sidebar-toggle${sidebarVisible ? '' : ' is-hidden'}`}
+        >
+          <IconSidebar className="size-[19px]" />
+          <span className="sr-only">{sidebarVisible ? 'Hide sidebar' : 'Show sidebar'}</span>
         </button>
 
         <OrgSelector organizations={organizations} current={currentOrg} />
