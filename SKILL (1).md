@@ -1,26 +1,26 @@
 ---
-name: design-system-ai-software-reliability-platform-incident-io
+name: design-system-hackerrank-online-coding-tests-and-technical-interviews
 description: >
-  Apply the AI software reliability platform | incident.io design system when building or updating UI.
+  Apply the HackerRank - Online Coding Tests and Technical Interviews design system when building or updating UI.
   Use when creating components, choosing colors or typography,
   or reviewing designs for marketing interfaces.
 ---
 
-# AI software reliability platform | incident.io — Design System Skill
+# HackerRank - Online Coding Tests and Technical Interviews — Design System Skill
 
 ## When to Use
 
-- Building new UI components for AI software reliability platform | incident.io.
+- Building new UI components for HackerRank - Online Coding Tests and Technical Interviews.
 - Reviewing or updating existing component styles.
 - Choosing colors, typography, or spacing for marketing pages.
 - Checking designs against the extracted token set.
 
 ## Context
 
-- **Product:** AI software reliability platform | incident.io — https://incident.io/#status-pages
+- **Product:** HackerRank - Online Coding Tests and Technical Interviews — https://www.hackerrank.com/
 - **Surface:** marketing
 - **Audience:** Business decision-makers and potential customers
-- **Character:** Conversion-focused marketing presence with a rich, diverse color palette and 3 typefaces.
+- **Character:** Conversion-focused marketing presence with a balanced color system and 3 typefaces.
 
 ## Tokens
 
@@ -28,70 +28,68 @@ description: >
 
 | Token | Value | Role |
 |-------|-------|------|
-| --color-surface-quaternary | `#575552` | Surface |
-| --color-surface-quaternary | `#E4D9C8` | Surface |
-| --color-surface-tertiary | `#F1EBE2` | Surface |
-| --color-content-tertiary | `#787470` | Text Secondary |
-| --color-content-secondary | `#B9B4AF` | Text Secondary |
-| --color-stroke-hover | `#CACACE` | Text Light |
-| color-13 | `#FFFFFF` | Background |
+| --border-color | `#05C770` | Border |
 | color-1 | `#000000` | Text Primary |
-| color-2 | `#4B5563` | Text Primary |
-| color-4 | `#6B7280` | Text Secondary |
-| color-6 | `#F25533` | Accent |
-| color-10 | `#E5E7EB` | Border |
-| color-12 | `#F7F7F8` | Text Light |
+| color-3 | `#AEF96C` | Accent |
+| color-4 | `#FFFFFF` | Text Light |
 
 ### Typography
 
-**Font stack:** STKBureauSerif, STKBureauSans, Inter
+**Font stack:** Kalice, Satoshi, Times New Roman
 
 | Level | Size | Usage |
 |-------|------|-------|
-| text-xs | 13px | Captions, metadata |
+| text-xs | 14px | Captions, metadata |
 | text-sm | 16px | Labels, secondary text |
-| text-base | 18px | Body text (default) |
-| text-lg | 36px | Subheadings, emphasis |
-| text-xl | 44px | Section headings |
+| text-base | 24px | Body text (default) |
+| text-lg | 40px | Subheadings, emphasis |
+| text-xl | 72px | Section headings |
 
 **Weight scale:** 400 · 500
-**Line heights:** 48.4px · 41.4px · 24px · 25.2px · 18px · 22.4px · 18.2px
+**Line heights:** 88px · 14px · 24px · 28.5px · 19.84px · 36px · 52px
 
 ### Spacing
 
-**Base unit:** 8px
+**Base unit:** 4px
 
-`space-1: 4px` · `space-2: 8px` · `space-3: 10px` · `space-4: 12px` · `space-5: 16px` · `space-6: 20px` · `space-7: 24px` · `space-8: 32px` · `space-9: 40px` · `space-10: 48px` · `space-11: 80px` · `space-12: 93px`
+`space-1: 2px` · `space-2: 4px` · `space-3: 5px` · `space-4: 8px` · `space-5: 10px` · `space-6: 12px` · `space-7: 16px` · `space-8: 20px` · `space-9: 24px` · `space-10: 28px` · `space-11: 40px` · `space-12: 44px` · `space-13: 48px` · `space-14: 56px` · `space-15: 72px` · `space-16: 104px`
 
 ### Shapes
 
-**Border radius:** `radius-sm: 3.35544e+07px` · `radius-md: 4px` · `radius-lg: 6px` · `radius-xl: 8px` · `radius-full: 12px`
+**Border radius:** `radius-sm: 1px` · `radius-md: 4px` · `radius-lg: 1000px`
 
 ### Elevation
 
-_None detected._
+- **shadow-sm:** `rgba(255, 255, 255, 0.4) 0px 1px 8.5px 0px inset`
 
 ### Motion
 
 - **duration-fast:** `all`
 - **duration-fast:** `none`
-- **duration-fast:** `0s 0.1s`
-- **duration-fast:** `0s 0.2s`
-- **duration-fast:** `color 0.15s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), outline-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), text-decoration-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), fill 0.15s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.15s cubic-bezier(0.4, 0, 0.2, 1), --tw-gradient-from 0.15s cubic-bezier(0.4, 0, 0.2, 1), --tw-gradient-via 0.15s cubic-bezier(0.4, 0, 0.2, 1), --tw-gradient-to 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.15s cubic-bezier(0.4, 0, 0.2, 1), transform 0.15s cubic-bezier(0.4, 0, 0.2, 1), translate 0.15s cubic-bezier(0.4, 0, 0.2, 1), scale 0.15s cubic-bezier(0.4, 0, 0.2, 1), rotate 0.15s cubic-bezier(0.4, 0, 0.2, 1), filter 0.15s cubic-bezier(0.4, 0, 0.2, 1), -webkit-backdrop-filter 0.15s cubic-bezier(0.4, 0, 0.2, 1), backdrop-filter 0.15s cubic-bezier(0.4, 0, 0.2, 1), display 0.15s cubic-bezier(0.4, 0, 0.2, 1), content-visibility 0.15s cubic-bezier(0.4, 0, 0.2, 1), overlay 0.15s cubic-bezier(0.4, 0, 0.2, 1), pointer-events 0.15s cubic-bezier(0.4, 0, 0.2, 1)`
-- **duration-fast:** `color 0.15s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.15s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1), transform 0.15s cubic-bezier(0.4, 0, 0.2, 1)`
-- **duration-base:** `transform 0.2s cubic-bezier(0, 0, 0.2, 1), translate 0.2s cubic-bezier(0, 0, 0.2, 1), scale 0.2s cubic-bezier(0, 0, 0.2, 1), rotate 0.2s cubic-bezier(0, 0, 0.2, 1)`
-- **duration-base:** `opacity 0.25s`
-- **duration-base:** `background-color 0.3s cubic-bezier(0.2, 0, 0, 1), -webkit-backdrop-filter 0.3s cubic-bezier(0.2, 0, 0, 1), backdrop-filter 0.3s cubic-bezier(0.2, 0, 0, 1), transform 0.3s cubic-bezier(0.2, 0, 0, 1)`
-- **duration-slow:** `0.5s cubic-bezier(0.4, 0, 0.2, 1)`
-- **duration-slow:** `color 0.5s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), outline-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), text-decoration-color 0.5s cubic-bezier(0.4, 0, 0.2, 1), fill 0.5s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.5s cubic-bezier(0.4, 0, 0.2, 1), --tw-gradient-from 0.5s cubic-bezier(0.4, 0, 0.2, 1), --tw-gradient-via 0.5s cubic-bezier(0.4, 0, 0.2, 1), --tw-gradient-to 0.5s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.5s cubic-bezier(0.4, 0, 0.2, 1), transform 0.5s cubic-bezier(0.4, 0, 0.2, 1), translate 0.5s cubic-bezier(0.4, 0, 0.2, 1), scale 0.5s cubic-bezier(0.4, 0, 0.2, 1), rotate 0.5s cubic-bezier(0.4, 0, 0.2, 1), filter 0.5s cubic-bezier(0.4, 0, 0.2, 1), -webkit-backdrop-filter 0.5s cubic-bezier(0.4, 0, 0.2, 1), backdrop-filter 0.5s cubic-bezier(0.4, 0, 0.2, 1), display 0.5s cubic-bezier(0.4, 0, 0.2, 1), content-visibility 0.5s cubic-bezier(0.4, 0, 0.2, 1), overlay 0.5s cubic-bezier(0.4, 0, 0.2, 1), pointer-events 0.5s cubic-bezier(0.4, 0, 0.2, 1)`
+- **duration-base:** `transform 0.2s`
+- **duration-base:** `filter 0.25s, opacity 0.25s`
+- **duration-base:** `padding 0.25s`
+- **duration-base:** `transform 0.3s, opacity 0.2s`
+- **duration-slow:** `background-color 0.4s cubic-bezier(0.44, 0, 0.56, 1), border-color 0.4s cubic-bezier(0.44, 0, 0.56, 1), box-shadow 0.4s cubic-bezier(0.44, 0, 0.56, 1)`
+- **duration-slow:** `0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.6s both hr1-rise`
+- **duration-slow:** `0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.75s both hr1-rise`
+- **duration-slow:** `1s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both hr1-word`
+- **duration-slow:** `1s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both hr1-word`
+- **duration-slow:** `1s cubic-bezier(0.22, 1, 0.36, 1) 0.33s both hr1-word`
+- **duration-slow:** `1s cubic-bezier(0.22, 1, 0.36, 1) 0.42s both hr1-word`
+- **duration-slow:** `1s cubic-bezier(0.22, 1, 0.36, 1) 0.51s both hr1-word`
+- **duration-slow:** `45s linear infinite hr1-ticker`
 
 ## Component Inventory
 
-- **Buttons:** 42 detected
-- **Links:** 120 detected
-- **Navigation:** 4 elements
-- **Lists:** 5 detected
-- **Images:** 187 detected
+- **Buttons:** 26 detected
+- **Links:** 89 detected
+- **Inputs:** 89 detected
+- **Navigation:** 1 elements
+- **Lists:** 14 detected
+- **Code blocks:** 3 detected
+- **Forms:** 1 detected
+- **Images:** 199 detected
 
 ## Constraints
 
@@ -99,14 +97,14 @@ _None detected._
 
 - Use tokens from the tables above — do not introduce new values.
 - Include hover, focus-visible, and disabled states for interactive elements.
-- Follow the 8px spacing grid.
+- Follow the 4px spacing grid.
 - Meet WCAG 2.2 AA contrast minimums.
 
 ### Never
 
 - Do not introduce colors outside the extracted palette.
 - Do not use arbitrary spacing values — stick to the scale.
-- Do not mix border-radius values. Pin to the detected set (3.35544e+07px, 4px, 6px, 8px, 12px).
+- Do not mix border-radius values. Pin to the detected set (1px, 4px, 1000px).
 - Do not use full-uppercase text for body or paragraph content.
 - Do not nest interactive elements (e.g. buttons inside links).
 - Do not ship components without defining hover, focus-visible, and disabled states.
