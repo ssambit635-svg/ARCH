@@ -15,6 +15,22 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Changed — a public site that looks like the product
+
+- The marketing homepage has been rebuilt as a light, structured product surface: a sticky
+  navigation that never hides itself, a hero that states what ARCH is above a real workspace capture,
+  a four-fact proof strip, and one section for each step from alert to published status page.
+- Buttons, tabs, inputs and the navigation now share one system: 46px pill actions with clear hover,
+  active and focus states, a single primary action per view, and no auto-hiding controls.
+- The "one incident, three surfaces" section keeps the terminal, channel window and phone scene, now
+  drawn as live HTML/CSS over a calmer service map instead of a page of overlapping windows.
+- The footer keeps its paper-to-ember gradient and oversized wordmark, with legal and contact links
+  on solid ember so contrast does not depend on viewport height.
+- Removed the animated robot mascot and its 3D runtime, the retired brand film and poster, the sample
+  avatar set, unused mark files and the design-tool exports that were sitting at the repository root.
+  The page is lighter, the dependency tree is smaller, and the repository now carries only assets the
+  site actually uses.
+
 ### Breaking — invitation API reports the email queue accurately
 
 - `POST /api/organizations/:id/invitations` replaces the inaccurate `emailSent` field with

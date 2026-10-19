@@ -32,10 +32,10 @@ type Particle = {
 
 type Pulse = { a: number; b: number; t: number; speed: number };
 
-const INK: Rgb = [37, 38, 41];
-const WARM: Rgb = [255, 245, 238];
-const EMBER: Rgb = [242, 85, 51];
-const EMBER_LIGHT: Rgb = [255, 241, 230];
+const INK: Rgb = [16, 19, 26];
+const WARM: Rgb = [255, 255, 255];
+const BLUE: Rgb = [59, 142, 244];
+const BLUE_LIGHT: Rgb = [176, 210, 255];
 const TAU = Math.PI * 2;
 /** How far the cursor reaches into the lattice, in CSS pixels. */
 const CURSOR_REACH = 168;
@@ -141,7 +141,7 @@ export function ControlLattice({ variant = 'field' }: { variant?: Variant }) {
       pulses = Array.from({ length: 12 }, () => spawnPulse({ a: 0, b: 0, t: 0, speed: 0 }));
     };
 
-    // Ink on the cream half of the field, warm white once it has turned coral.
+    // Ink over the paper half of the stage, white once it fades into the panel.
     const tintAt = (y: number): Rgb =>
       variant === 'topology' ? INK : mix(INK, WARM, smoothstep(0.4, 0.86, y / Math.max(1, height)));
 
@@ -234,7 +234,7 @@ export function ControlLattice({ variant = 'field' }: { variant?: Variant }) {
         const x = from.x + dx * pulse.t;
         const y = from.y + dy * pulse.t;
         const ember =
-          variant === 'topology' ? EMBER : mix(EMBER, EMBER_LIGHT, smoothstep(0.35, 0.85, y / Math.max(1, height)));
+          variant === 'topology' ? BLUE : mix(BLUE, BLUE_LIGHT, smoothstep(0.35, 0.85, y / Math.max(1, height)));
         // Fade the signal in and out along the edge, so it reads as a packet
         // being passed rather than a dot blinking on and off.
         const envelope = Math.sin(Math.PI * pulse.t);
@@ -359,7 +359,7 @@ export function ControlLattice({ variant = 'field' }: { variant?: Variant }) {
   return (
     <canvas
       ref={canvasRef}
-      className={variant === 'topology' ? 'mk-control-lattice mk-control-lattice--topology' : 'mk-control-lattice'}
+      className="mk-stage-lattice"
       aria-hidden="true"
     />
   );
