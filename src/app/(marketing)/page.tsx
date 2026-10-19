@@ -1,15 +1,21 @@
 import { MarketingMotion } from '@/components/marketing/gsap-reveal';
 import { MarketingNav } from '@/components/marketing/nav';
-import { ParallaxStory } from '@/components/marketing/parallax-story';
 import { Hero } from '@/components/marketing/hero';
-import { Intelligence } from '@/components/marketing/intelligence';
-import { Topology } from '@/components/marketing/topology';
+import { ProofStrip } from '@/components/marketing/proof';
+import { Pillars } from '@/components/marketing/pillars';
 import { Workspace } from '@/components/marketing/workspace';
-import { Lifecycle } from '@/components/marketing/lifecycle';
-import { Platform } from '@/components/marketing/platform';
+import { Workflow } from '@/components/marketing/workflow';
+import { Engine } from '@/components/marketing/engine';
+import { Control } from '@/components/marketing/control';
+import { StatusProof } from '@/components/marketing/status-proof';
 import { Deploy } from '@/components/marketing/deploy';
 import { SiteFooter } from '@/components/marketing/footer';
 
+/**
+ * Section order is the argument:
+ *   what it is → the constraints → what changes → the workspace → the workflow →
+ *   the engine → who stays in control → the customer-facing outcome → how to run it → close.
+ */
 export default function LandingPage() {
   return (
     <MarketingMotion>
@@ -19,12 +25,13 @@ export default function LandingPage() {
       <MarketingNav />
       <main id="main" className="mk-main relative z-10" tabIndex={-1}>
         <Hero />
-        <ParallaxStory />
-        <Intelligence />
+        <ProofStrip />
+        <Pillars />
         <Workspace />
-        <Lifecycle />
-        <Topology />
-        <Platform />
+        <Workflow />
+        <Engine />
+        <Control />
+        <StatusProof />
         <Deploy />
       </main>
       <SiteFooter />

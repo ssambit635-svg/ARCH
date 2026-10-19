@@ -151,6 +151,24 @@ them at once and keeps a stray `text-indigo-400` from reintroducing blue in a fu
 was remapped to a stone neutral specifically because it is a blue-gray and body copy is where the
 blue was most visible. **Do not add new `indigo-*`/`violet-*` classes** — use `signal-*` or `ink-*`.
 
+**Marketing surface — the public site.** The console stays graphite; the public site is
+deliberately its own light room, so a visitor meets the product rather than a dark screenshot.
+It reuses the same blue and the same geometry, not the same background.
+
+| Token | Hex | Use |
+|---|---|---|
+| `paper` | `#f6f4ef` | page background |
+| `panel` | `#ffffff` | cards, bands, the product window frame |
+| `ink` | `#10131a` | headings, body, primary buttons |
+| `muted` / `subtle` | `#4f5561` / `#5b6270` | secondary and tertiary copy — both AA on paper |
+| `hairline` | `#e3ddd2` | every panel edge and divider |
+| `blue-500` | `#3b8ef4` | the one accent: dots, meters, marks (3:1 — decorative only) |
+| `blue-700` | `#1c5cc0` | accent text and focus rings (5.7:1 on paper) |
+| `ember` | `#e2401a` → `#bf2c0b` | the closing CTA only; white links sit on `#bf2c0b` (5.1:1) |
+
+The dark bands (native engine, setup terminal, workspace preview) remap the same token names
+(`.mk-on-dark`), so a component never grows a second palette.
+
 ---
 
 ## 5. Typography
@@ -202,17 +220,22 @@ the one stone you never remove — the same way the audit trail is the one recor
 
 ## 7. Visual language
 
-- **Layout:** generous whitespace, one idea per screen, left-aligned. Marketing is asymmetric and
-  editorial; the hero is deliberately *not* centred. Grid: 4 px base unit, 8 px rhythm, 1400px max.
-- **Components:** 8 px radius on controls, 12–14 px on panels. **Subtle borders over heavy shadows**;
-  shadows only for elevation that means something (modals, palettes, the boot curtain).
-- **The hairline is the primary structural element.** `1px` at `rgb(255 255 255 / 0.075)`, with a
-  brighter `0.14` top edge on panels to imply a light source above. Panels get `.arch-panel`.
-- **Film grain** (`.arch-grain`, SVG turbulence at 3.2% opacity) sits over the marketing surface. It
-  is what separates "dark theme" from "photographed surface", and it kills banding across the hero
-  video and the WebGL canvas.
-- **Hover is an edge, not a bloom.** `.card-lift` moves 2px and brightens its border; `.arch-sheen`
-  sweeps a specular highlight. Neither changes hue.
+- **Layout:** generous whitespace, one idea per screen, left-aligned. The marketing grid is
+  1240px wide with a 4px base unit, an 8px rhythm and a 104px vertical beat between sections.
+  Sections alternate paper → white → paper, with exactly two dark bands (the engine and the
+  workspace) and one ember close.
+- **Components:** 8px radius on small controls, 9–12px on inputs and tabs, 14–18px on panels,
+  `999px` on every button and pill. **Hairlines instead of shadows**; the one permitted elevation
+  effect is a 1px lift on hover.
+- **One action system.** `.mk-button` is a pill with a 46px height, a 14px/600 label and an
+  optional trailing arrow. Variants: primary (ink), ghost (hairline border), small (38px).
+  `.mk-button--accent` exists but is reserved — a page never shows two accent buttons at once.
+- **The hairline is the primary structural element.** `1px` `#e3ddd2` on paper, `#1d2b42` on dark.
+  Panels are flat surfaces; the page has no glow, no gradient behind type and no decorative shadow.
+- **Hover is an edge, not a bloom.** Background and border change over 160ms; the primary button
+  lifts 1px. Nothing changes hue on hover except text links, which move to `blue-700`.
+- **Focus is visible everywhere:** a 2px `blue-700` outline with a 3px offset, on the same radius
+  as the control.
 - **Charts:** line charts for trends, stacked bars for status history, hairline sparklines in stat
   cells. Never pie charts for time.
 - **Empty states:** one sentence of what to do next, plus a single primary action.
@@ -221,32 +244,27 @@ the one stone you never remove — the same way the audit trail is the one recor
 
 ---
 
-## 8. Imagery & 3D
+## 8. Imagery & assets
 
-- **The hero is the product.** An illustration only works if a visitor can connect it to incident
-  response; otherwise it reads as decoration, and decoration is what makes a page look like a
-  template. The hero and the closing section carry real captures of shipped screens
-  (`public/product/incident-workspace.webp`, `public/product/status-page.webp`), each with a
+- **The hero is the product.** The hero and the closing argument carry real captures of shipped
+  screens (`public/product/incident-workspace.webp`, `public/product/status-page.webp`), each with a
   descriptive `alt`, an intrinsic `width`/`height`, and a caption that says the data is sample data.
   Screens are captured from a local workspace at 2× and compressed to WebP; re-capture them when the
   screen they show changes.
-- **Real artefacts over illustrations.** The lifecycle section shows the signed webhook, the
-  incident timeline, the rendered status page and the hash-chained audit ledger — depictions of
-  behaviour the product actually has. Never mock a UI we don't have.
-- **Footage:** real stock video, Pexels licence (free for commercial use, no attribution required),
-  served from the Pexels CDN at runtime. Clips are graded — `saturate(0.42) contrast(1.18)
-  brightness(0.72)` plus a warm soft-light pass and a vignette — so they sit in the graphite palette
-  instead of arriving with a stock blue cast. Footage is *not* vendored into git; large binaries stay
-  out of the repository (see the `model-data/` precedent in `.gitignore`).
-- **3D:** the hero and topology stages are **procedural** — a service-dependency graph built from a
-  20-line adjacency list, lit by a runtime IBL studio (`Lightformer`s inside drei's `<Environment>`),
-  so there is no HDRI to download and an air-gapped install renders identically. Procedural beats a
-  baked asset here because it can be *shaped by data*: it shows a real blast radius.
-- **Sketchfab** is used for physical assets that benefit from a scanned model, via `SketchfabStage`.
-  Models are **CC-BY**, which requires credit — the author is named and linked in the stage HUD *and*
-  in the footer. Swapping in a model means changing `uid` and the attribution line.
-- **Attribution block** lives in the footer of the marketing site: footage authors, model authors and
-  licence, and the typefaces. Keep it there when assets change.
+- **Scenes are code.** The "one incident, three surfaces" section is live HTML/CSS fed by the
+  `.mk-stage` stylesheet: a terminal, a channel window and a phone over a service map. It is not a
+  screenshot, so it cannot go stale, and it stays crisp at any density.
+- **The service field** behind that scene is a 2D canvas (`control-lattice.tsx`) drawing nodes and
+  travelling pulses in the brand blue. It is decoration: hidden from assistive tech, frozen to one
+  frame under reduced motion, and paused when it leaves the viewport or the tab is hidden.
+- **No stock footage, no 3D, no mascot.** The site ships no video, no WebGL model, no sample
+  avatars and no photographic decoration. Large binaries do not belong in this repository; the only
+  media are the two product captures and the dragon mark.
+- **Framework marks** in the "built with" row are decorative inline SVG. Every tile is verified
+  against `package.json` or a repository path by `tests/marketing-tech-stack.test.ts`.
+- **Never commit a scratch upload.** Design-tool exports, AI-prompt files, screen recordings and
+  one-off experiments belong in an issue or an external drive, not at the repository root. The
+  marketing tests fail if a retired upload reappears.
 - No stock photos of people in headsets pointing at monitors.
 
 ---
@@ -258,28 +276,22 @@ and it must **stop** when the visitor asks it to.
 
 | Signature | Where | Why |
 |---|---|---|
-| Boot sequence | first visit only | staged as a subsystem boot log; also holds the curtain while footage buffers and WebGL compiles |
-| Lenis smooth scroll | marketing surface | one eased scroll feel; shares a single rAF loop with ScrollTrigger so pins never lag a frame |
-| Pinned scroll story | `#lifecycle` | scrubs the four moves; artefacts swap on the same timeline as the copy |
-| Line-mask reveal | headlines | each line translates up from behind its own overflow clip |
-| Scramble decode | hero keyword | noise resolving into a signal — the product's own gesture |
-| Ken Burns drift | hero footage | 34s, ±12% scale; reads as camera movement, not a zoom |
-| Live WebGL topology | hero, `#topology` | a failing node heating its dependents ring by ring |
-| Blend-mode cursor | fine pointers only | `mix-blend-mode: difference`, so it never needs a colour |
-| Counters, marquee, sheen | proof, integrations | instrument behaviour, not decoration |
+| Line-mask reveal | section headings | each line translates up from behind its own overflow clip, once |
+| Rise-in | copy blocks, cards, tiles | 22px, 0.7s, staggered within a group; never replayed |
+| Panel drift | product window, stage, terminal | 34px scrub tied to scroll position, no opacity hiding |
+| Wordmark drift | footer signature | the closing word rises as the page ends |
+| Live service field | `#control` | nodes and signals in the brand blue; decoration only |
+| Terminal caret | setup block | a single 1.1s blink; the only ambient loop |
 
 **Non-negotiables for motion:**
 
-1. **`prefers-reduced-motion: reduce` disables all of it** — no curtain, no scramble, no autoplay
-   video (the poster still shows), no WebGL graph (a flat dependency list replaces it), and reveals
-   resolve straight to their end state so nothing is stranded off-screen.
-2. **The boot gate.** Reveals wait for the curtain to lift (`BootProvider` in
-   `src/components/marketing/boot-gate.ts`). Without it the hero's reveal completes behind the
-   preloader and the most expensive moment on the page happens where nobody can see it.
+1. **`prefers-reduced-motion: reduce` disables all of it.** Reveals resolve to their end state, the
+   service field freezes to one frame, and the caret stops. Content is never stranded off-screen.
+2. **No scroll-jacking.** Nothing pins, snaps or hijacks the wheel. The navigation is sticky and
+   never hides itself.
 3. **Never animate a layout property** on a scroll-driven element. Transform and opacity only.
-4. **The public status page gets no scroll animation.** See §7.
-5. The preloader has a **hard ceiling** (3.2s) and never shows twice in a session. A preloader that
-   can strand a visitor is worse than no preloader.
+4. **No preloader, no custom cursor, no autoplay media.**
+5. **The public status page gets no scroll animation.** See §7.
 
 ---
 
@@ -287,6 +299,7 @@ and it must **stop** when the visitor asks it to.
 
 | Place | Rule |
 |---|---|
+| Primary button | One per view: ink pill, 46px, `Get started` / `Start free`; the ghost variant carries the second action. |
 | Landing page H1 | "Incident response for engineering teams." — the literal description leads; the poetry ("Through the noise. Into clarity.") is the subline, used once on the page. |
 | Browser title | `ARCH — Incident response for engineering teams` |
 | Email subject | `[ARCH] Checkout API — CRITICAL incident opened` |

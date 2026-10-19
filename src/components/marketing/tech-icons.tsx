@@ -1,7 +1,7 @@
 /**
- * Brand marks for the hero's "Tech Stack" tiles that vui-primitives.tsx does not already provide
- * (Next.js, React, TypeScript, Tailwind, GSAP and Motion live there). Same conventions as those:
- * inline SVG, sized by the caller through `className`, decorative (the tile carries the label).
+ * Brand marks for the "built with" tiles. Framework marks that are simple enough to draw by hand
+ * live in `tech-marks.tsx`; this file carries the larger official marks. Both use the same
+ * conventions: inline SVG, sized by the caller, decorative (the tile carries the label).
  *
  * Logos come from Simple Icons (https://simpleicons.org, CC0 data). Trademarks remain their
  * owners'; they are used here only to name technology ARCH is built with.
@@ -10,8 +10,7 @@
 type TechIconProps = { className?: string };
 
 /**
- * React mark (Simple Icons, CC0 data; the mark itself belongs to its owner). vui-primitives.tsx has a
- * `ReactIcon`, but its path is only the outer silhouette and renders as a solid blob at tile size.
+ * React mark (Simple Icons, CC0 data; the mark itself belongs to its owner).
  */
 export function ReactAtomIcon({ className }: TechIconProps) {
   return (

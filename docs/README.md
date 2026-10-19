@@ -32,6 +32,9 @@ Start with the row that matches who you are.
 - **SECURITY-AND-COMPLIANCE.md** — controls, threat model, DPDP/GDPR posture, subprocessors.
 - **OPERATIONS-RUNBOOK.md** — deploy, rollback, backups, on-call, our own incident process.
 
+### Design (`docs/design/`)
+- **MARKETING-UI.md** — tokens, components, layout, motion and media rules for the public site.
+
 ### Go-to-market (`docs/go-to-market/`)
 - **GTM-PLAN.md** — positioning, segments, channels, launch sequence.
 - **COMPETITIVE-ANALYSIS.md** — who else is in the space and where ARCH differs.

@@ -3,42 +3,49 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { readFileSync, existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { MarketingNav } from '@/components/marketing/nav';
-import { ParallaxStory } from '@/components/marketing/parallax-story';
 import { Hero } from '@/components/marketing/hero';
+import { ProofStrip } from '@/components/marketing/proof';
+import { Pillars } from '@/components/marketing/pillars';
 import { Workspace } from '@/components/marketing/workspace';
-import { Lifecycle } from '@/components/marketing/lifecycle';
-import { Platform } from '@/components/marketing/platform';
+import { Workflow } from '@/components/marketing/workflow';
+import { Engine } from '@/components/marketing/engine';
+import { Control } from '@/components/marketing/control';
+import { StatusProof } from '@/components/marketing/status-proof';
 import { Deploy } from '@/components/marketing/deploy';
-import { Closing } from '@/components/marketing/closing';
 import { SiteFooter } from '@/components/marketing/footer';
 import { allowedTransitions } from '@/server/services/incident-state';
 
 const render = (component: () => ReturnType<typeof createElement>) => renderToStaticMarkup(createElement(component));
 const source = (path: string) => readFileSync(path, 'utf8');
 
-describe('minimal marketing surface', () => {
-  it('keeps useful navigation and one accessible theme control', () => {
+describe('marketing surface', () => {
+  it('keeps one sticky navigation bar with a real mobile disclosure', () => {
     const nav = render(MarketingNav);
     expect(nav).toContain('aria-label="Primary"');
-    expect(nav).toContain('href="#workspace"');
-    expect(nav).toContain('href="#lifecycle"');
-    expect(nav).toContain('href="/login"');
-    expect(nav).toContain('href="/register"');
-    expect(nav.match(/aria-label="Switch to light theme"/g)).toHaveLength(1);
-    expect(nav).not.toContain('Search ARCH');
-    expect(nav).not.toContain('status/arch');
-    // The mobile disclosure starts closed, so its links are not keyboard-reachable.
+    for (const href of ['#product', '#workflow', '#engine', '#deploy', '/login', '/register']) {
+      expect(nav).toContain(`href="${href}"`);
+    }
+    // The bar stays put: no auto-hide state, no pointer sensor, no hidden theme switch.
+    expect(nav).not.toContain('mk-nav--hidden');
+    expect(nav).not.toContain('mk-nav-sensor');
+    expect(nav).not.toContain('Switch to light theme');
+    expect(nav).not.toContain('aria-label="Search ARCH"');
     expect(nav).toMatch(/id="marketing-mobile-nav"[^>]*hidden=""/);
     expect(nav).toContain('aria-expanded="false"');
     expect(nav).toContain('aria-controls="marketing-mobile-nav"');
+    // Scrolling adds a hairline rather than moving the bar out of the way.
+    const navSource = source('src/components/marketing/nav.tsx');
+    expect(navSource).toContain('mk-nav--scrolled');
+    expect(navSource).not.toContain('AUTO_HIDE_MS');
+    expect(navSource).not.toContain('clientY <= 24');
   });
 
   it('says what ARCH is in the hero and shows a real screen rather than an illustration', () => {
     const hero = render(Hero);
     const heroSource = source('src/components/marketing/hero.tsx');
     expect(hero).toContain('id="hero-title"');
-    // A visitor has five seconds: the literal description is the headline. Read the heading as a
-    // visitor hears it, and keep "Incident response" unbroken so the phrase survives line wrapping.
+    // A visitor has five seconds: the literal description is the headline. Read it as a
+    // visitor hears it, and keep "Incident response" unbroken so the phrase survives wrapping.
     const headline = (/<h1[^>]*>([\s\S]*?)<\/h1>/.exec(hero)?.[1] ?? '').replace(/<[^>]+>/g, '');
     expect(headline).toContain('Incident response for engineering teams.');
     expect(headline).toContain('Self-hosted.');
@@ -51,22 +58,25 @@ describe('minimal marketing surface', () => {
     expect(hero).toContain('Through the noise.');
     expect(hero).toContain('/product/incident-workspace.webp');
     expect(hero).toContain('href="/register"');
-    expect(hero).toContain('href="#workspace"');
+    expect(hero).toContain('href="#product"');
+    // Three checkable constraints, set as a list rather than a paragraph.
+    expect(hero.match(/class="mk-hero-point"/g)).toHaveLength(3);
     expect(hero).not.toContain('StatusChip');
     expect(hero).not.toContain('status/arch');
-    expect(heroSource).not.toContain('mk-hero-shade');
     expect(heroSource).not.toContain('mk-hero-video');
     expect(heroSource).not.toContain('ScrollTrigger');
   });
 
   it('never repeats its own headline line, and describes or hides every image', () => {
-    const marketing = ['hero', 'nav', 'parallax-story', 'intelligence', 'workspace', 'lifecycle', 'topology', 'platform', 'deploy', 'closing', 'footer']
+    const marketing = [
+      'hero', 'nav', 'proof', 'pillars', 'workspace', 'workflow', 'engine', 'control', 'status-proof', 'deploy', 'footer',
+    ]
       .map((name) => source(`src/components/marketing/${name}.tsx`))
       .join('\n');
     // "clarity" used to appear four times on one page; one deliberate use is the budget.
     expect(marketing.match(/clarity/gi) ?? []).toHaveLength(1);
 
-    const rendered = [render(Hero), render(MarketingNav), render(Closing), render(SiteFooter)].join('\n');
+    const rendered = [render(Hero), render(MarketingNav), render(StatusProof), render(SiteFooter)].join('\n');
     const images = [...rendered.matchAll(/<img\b[^>]*>/g)].map((match) => match[0]);
     // The page carries informative images, and each one is described.
     expect(images.filter((tag) => /alt="[^"]{40,}"/.test(tag)).length).toBeGreaterThanOrEqual(2);
@@ -78,22 +88,38 @@ describe('minimal marketing surface', () => {
     }
   });
 
-  it('fills the viewport and adds a static-first, reduced-motion-safe parallax interlude', () => {
+  it('opens on a full viewport hero and reveals sections without pinning the page', () => {
     const css = source('src/components/marketing/landing.css');
     const motion = source('src/components/marketing/gsap-reveal.tsx');
     expect(css).toMatch(/\.mk-hero \{[^}]*min-height: 100svh/);
-    expect(css).toMatch(/\.mk-hero-shot \{[^}]*border-radius: 14px/);
     expect(css).toContain('.mk-main { padding-top: 0; }');
-    const story = render(ParallaxStory);
-    expect(story).toContain('id="story-title"');
-    expect(story).toContain('href="#intelligence"');
-    expect(story.match(/data-mk-depth=/g)).toHaveLength(3);
-    expect(motion).toContain('pin: compact ? false : stage');
-    expect(motion.indexOf('if (!match.conditions?.animate)')).toBeLessThan(motion.indexOf("select('[data-mk-story]')"));
+    expect(css).toContain('.mk-hero-frame');
+    // No scroll-jacking: the page is never pinned, and every reveal is one-shot.
+    expect(motion).not.toContain('pin:');
+    expect(motion).not.toContain('[data-mk-story]');
+    expect(motion).toContain('start: \'top 92%\'');
     expect(motion).toContain('context.revert()');
+    expect(motion.indexOf('if (!match.conditions?.animate)')).toBeLessThan(motion.indexOf("select('[data-mk-heading]')"));
+    // Motion is opt-in and reduced-motion visitors get the final frame immediately.
+    expect(css).toContain('prefers-reduced-motion: reduce');
   });
 
-  it('labels the preview honestly and gives its selections an accessible state', () => {
+  it('states four checkable facts under the hero', () => {
+    const proof = render(ProofStrip);
+    expect(proof.match(/mk-proof-item/g)).toHaveLength(4);
+    expect(proof).toContain('External AI API calls');
+    expect(proof).toContain('PostgreSQL');
+    expect(source('src/components/marketing/proof.tsx')).not.toMatch(/best-in-class|world-class|revolutionary/i);
+  });
+
+  it('groups the product claims into three scannable pillars', () => {
+    const pillars = render(Pillars);
+    expect(pillars.match(/class="mk-pillar"/g)).toHaveLength(3);
+    expect(pillars.match(/mk-pillar-index/g)).toHaveLength(3);
+    expect(pillars).toContain('id="pillars-title"');
+  });
+
+  it('labels the workspace preview honestly and gives its selections an accessible state', () => {
     const workspace = render(Workspace);
     expect(workspace).toContain('illustrative data');
     expect(workspace.match(/aria-pressed="true"/g)).toHaveLength(1);
@@ -101,16 +127,33 @@ describe('minimal marketing surface', () => {
     expect(workspace).toContain('aria-controls="preview-incident-detail"');
     expect(workspace).toContain('aria-live="polite"');
     expect(workspace).toContain('Draft · responder review required');
+    // The app window is the product, so it keeps the shipped console's dark surface.
+    expect(workspace).toContain('mk-on-dark');
   });
 
-  it('shows the four real incident states, not a fictional fifth state', () => {
-    const lifecycle = render(Lifecycle);
-    expect(lifecycle.match(/aria-pressed=/g)).toHaveLength(4);
+  it('shows the four real incident states as tabs, not a fictional fifth state', () => {
+    const workflow = render(Workflow);
+    const tabs = [...workflow.matchAll(/role="tab"/g)];
+    expect(tabs).toHaveLength(4);
+    expect(workflow.match(/aria-selected="true"/g)).toHaveLength(1);
+    expect(workflow.match(/aria-selected="false"/g)).toHaveLength(3);
+    expect(workflow).toContain('role="tabpanel"');
     for (const state of ['Investigating', 'Identified', 'Monitoring', 'Resolved']) {
-      expect(lifecycle).toContain(state);
+      expect(workflow).toContain(state);
     }
     expect(allowedTransitions('INVESTIGATING')).toEqual(['IDENTIFIED', 'MONITORING', 'RESOLVED']);
-    expect(render(Platform)).not.toMatch(/5-State|five states/i);
+    expect(render(Control)).not.toMatch(/5-State|five states/i);
+  });
+
+  it('describes the native engine with its limits intact', () => {
+    const engine = render(Engine);
+    expect(engine).toContain('CPU');
+    expect(engine).toContain('Human-reviewed');
+    expect(engine).toContain('not a general-purpose language model');
+    // A card of four signals, each with a visible note.
+    expect(engine.match(/mk-engine-row"/g)).toHaveLength(4);
+    expect(engine).toContain('mk-engine-flag');
+    expect(engine).toContain('Inference stays on your host.');
   });
 
   it('shows the real local setup and advertises no client that is not published', () => {
@@ -118,29 +161,32 @@ describe('minimal marketing surface', () => {
     expect(deploy).toContain('git clone');
     expect(deploy).toContain('npm run dev');
     expect(deploy).toContain('AUTH_SECRET_WEBHOOK');
-    // The Python CLI in clients/python is not published, so the page must not
-    // tell a visitor to install or log in with it.
+    // The Python CLI in clients/python is not published, so the page must not tell a visitor
+    // to install or log in with it.
     expect(deploy).not.toContain('pip install');
     expect(deploy).not.toContain('arch login');
     expect(deploy).not.toContain('arch incidents');
     expect(deploy).not.toContain('from arch_client');
     expect(deploy).not.toContain('npm run db:seed');
     expect(deploy).toContain('role="status"');
+    expect(deploy).toContain('mk-terminal');
   });
 
   it('closes on the customer-facing screen and does not advertise an incorrect license or a demo status URL', () => {
-    const closing = render(Closing);
+    const status = render(StatusProof);
     const footer = render(SiteFooter);
-    expect(source('src/components/marketing/closing.tsx')).toContain('/product/status-page.webp');
+    expect(source('src/components/marketing/status-proof.tsx')).toContain('/product/status-page.webp');
+    expect(status).toContain('<figcaption');
+    expect(status).toContain('Sample data');
     expect(footer).toContain('All rights reserved');
     expect(footer).not.toContain('MIT');
-    expect(closing).not.toContain('status/arch');
+    expect(status).not.toContain('status/arch');
     expect(footer).not.toContain('status/arch');
   });
 
-  it.each(['dark', 'light'])('%s text tokens keep AA contrast on every neutral surface', (theme) => {
+  it.each(['base', 'light'])('%s text tokens keep AA contrast on every neutral surface', (theme) => {
     const css = source('src/components/marketing/landing.css');
-    const block = (theme === 'dark' ? /^\.mk \{([^}]+)\}/m : /\.mk-light \.mk \{([^}]+)\}/).exec(css)?.[1] ?? '';
+    const block = (theme === 'base' ? /^\.mk \{([^}]+)\}/m : /\.mk-light \.mk \{([^}]+)\}/).exec(css)?.[1] ?? '';
     const tokens = Object.fromEntries([...block.matchAll(/(--mk-[\w-]+): (#[\da-f]{6})/gi)].map((match) => [match[1]!, match[2]!]));
     const luminance = (hex: string) => [0, 2, 4].map((offset) => {
       const channel = parseInt(hex.slice(offset + 1, offset + 3), 16) / 255;
@@ -151,14 +197,14 @@ describe('minimal marketing surface', () => {
       return (values[0]! + 0.05) / (values[1]! + 0.05);
     };
     for (const foreground of ['--mk-fg', '--mk-muted', '--mk-subtle']) {
-      for (const background of ['--mk-bg', '--mk-bg-soft', '--mk-surface', '--mk-surface-alt', '--mk-hover']) {
+      for (const background of ['--mk-bg', '--mk-bg-soft', '--mk-surface', '--mk-surface-2', '--mk-hover']) {
         expect(contrast(tokens[foreground]!, tokens[background]!), `${theme}: ${foreground} on ${background}`).toBeGreaterThanOrEqual(4.5);
       }
     }
     expect(contrast(tokens['--mk-on-primary']!, tokens['--mk-primary']!)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it('keeps the blue flat — open surfaces, no glow — and preserves keyboard and reduced-motion affordances', () => {
+  it('keeps the blue flat — open surfaces, no glow — and preserves focus and reduced-motion affordances', () => {
     const css = source('src/components/marketing/landing.css');
     // Blue stays a flat accent, never a bloom or a glow.
     expect(css).toContain('--mk-accent: #3b8ef4');
@@ -170,44 +216,41 @@ describe('minimal marketing surface', () => {
     expect(source('src/components/marketing/site-chrome.tsx')).not.toContain('useLenis');
   });
 
-  it('keeps the landing page clear of rigid section and tile borders', () => {
+  it('separates sections by rhythm and white bands, not rigid ruled frames', () => {
     const css = source('src/components/marketing/landing.css');
-    expect(css).toMatch(/\.mk-section \{[^}]*padding-block: 96px/);
+    expect(css).toMatch(/\.mk-section \{[^}]*padding-block: 104px/);
     expect(css).not.toMatch(/\.mk-section \{[^}]*border-bottom/);
     expect(css).not.toContain('.mk-section::before');
-    expect(css).toMatch(/\.mk-tech-grid \{[^}]*gap: 10px/);
-    expect(css).toMatch(/\.mk-tech-grid li \{[^}]*border: 0/);
+    expect(css).toMatch(/\.mk-band--white \{[^}]*border-block: 1px solid/);
+    expect(css).toMatch(/\.mk-tech-grid \{[^}]*gap: 8px/);
+    expect(css).toMatch(/\.mk-tech-grid li \{[^}]*border-radius: 9px/);
   });
 
-  it('steps the navigation away after ten seconds and brings it back on hover, again and again', () => {
-    const nav = source('src/components/marketing/nav.tsx');
-    expect(nav).toContain('AUTO_HIDE_MS = 10_000');
-    expect(nav).toContain('mk-nav--hidden');
-    expect(nav).toContain('event.clientY <= 24');
-    // It starts visible on first paint.
-    expect(render(MarketingNav)).not.toContain('mk-nav--hidden');
-  });
-
-  it('keeps the classic isometric tech tiles and the full-bleed, dissolving footer wordmark', () => {
+  it('uses one action system: pill buttons, a ghost variant and a single primary per view', () => {
     const css = source('src/components/marketing/landing.css');
-    const tiles = source('src/components/marketing/tech-stack.tsx');
+    expect(css).toMatch(/\.mk-button \{[^}]*border-radius: 999px/);
+    expect(css).toMatch(/\.mk-button \{[^}]*height: 46px/);
+    expect(css).toContain('.mk-button--ghost');
+    expect(css).toContain('.mk-button--small');
+    expect(css).toMatch(/\.mk-button:hover \{[^}]*transform: translateY\(-1px\)/);
+  });
+
+  it('keeps the full-bleed footer wordmark and a warm closing surface', () => {
+    const css = source('src/components/marketing/landing.css');
     const footerSource = source('src/components/marketing/footer.tsx');
-    expect(tiles).toContain('IsometricStack');
-    expect(tiles).toContain('mk-tech-grid');
-    expect(css).toContain('.mk-iso-front');
     expect(css).toMatch(/\.mk-watermark \{[^}]*width: 100%/);
+    expect(css).toMatch(/\.mk-footer-cta \{[^}]*linear-gradient/);
 
     const wordmark = render(SiteFooter);
     // Full-bleed: the word is stretched across the entire viewBox width.
     expect(wordmark).toContain('textLength="1440"');
     expect(footerSource).toContain('ARCH.');
-    // The diagonal shards are gone — the word is no longer cut into bands.
+    // Diagonal shards are gone; the word is no longer cut into bands.
     expect(footerSource).not.toContain('mk-wordmark-cuts');
     expect(wordmark).not.toContain('clip-path');
     // Four stacked copies: three soft copies underneath, one crisp copy on top.
     expect(wordmark.match(/<text /g)).toHaveLength(4);
     expect(wordmark.match(/<feGaussianBlur /g)).toHaveLength(3);
-    // The word is decorative, so it stays out of the accessibility tree.
     expect(wordmark).toContain('aria-hidden="true"');
   });
 });

@@ -7,9 +7,11 @@ import { SplitText } from 'gsap/SplitText';
 
 /**
  * One motion owner for the landing page, not one scroll listener per component.
- * The film is deliberately excluded. All content is readable in SSR/no-JS mode;
- * GSAP only enhances it after mount. matchMedia reverts every tween, split and
- * trigger on preference/breakpoint changes, and the context cleans up on navigation.
+ *
+ * All content is readable in SSR and in no-JS mode; GSAP only enhances it after mount.
+ * `matchMedia` reverts every tween, split and trigger on a preference or breakpoint change,
+ * and the context cleans up on navigation. Deliberately absent: pinned scroll-jacking.
+ * Sections move a few pixels, headings mask in, and everything settles.
  */
 export function MarketingMotion({ children }: { children: ReactNode }) {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -34,7 +36,7 @@ export function MarketingMotion({ children }: { children: ReactNode }) {
       media.add({
         animate: '(prefers-reduced-motion: no-preference)',
         reduced: '(prefers-reduced-motion: reduce)',
-        compact: '(max-width: 759px)',
+        compact: '(max-width: 760px)',
       }, (match) => {
         if (!match.conditions?.animate) {
           root.dataset.mkMotion = 'reduced';
@@ -45,47 +47,7 @@ export function MarketingMotion({ children }: { children: ReactNode }) {
         const select = <T extends HTMLElement>(selector: string) => Array.from(root.querySelectorAll<T>(selector));
         const upcoming = (element: HTMLElement) => element.getBoundingClientRect().bottom > 0;
 
-        // Hero video subtle parallax depth when scrolling into the page
-        const heroMedia = root.querySelector<HTMLElement>('.mk-hero-media');
-        if (heroMedia && !compact) {
-          gsap.to(heroMedia, {
-            yPercent: 16,
-            scale: 1.03,
-            opacity: 0.4,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: '.mk-hero',
-              start: 'top top',
-              end: 'bottom top',
-              scrub: 1.2,
-            },
-          });
-        }
-
-        // Pin only the interlude, never the film or interactive product previews.
-        // Mobile keeps natural scrolling with smaller depth offsets.
-        for (const story of select('[data-mk-story]')) {
-          const stage = story.querySelector<HTMLElement>('.mk-story-stage');
-          if (!stage) continue;
-          const timeline = gsap.timeline({
-            scrollTrigger: {
-              trigger: story,
-              start: compact ? 'top bottom' : 'top top',
-              end: compact ? 'bottom top' : '+=125%',
-              pin: compact ? false : stage,
-              scrub: 1.2,
-              anticipatePin: 1,
-              invalidateOnRefresh: true,
-            },
-          });
-          timeline.fromTo(story.querySelector('[data-mk-depth="back"]'),
-            { yPercent: -16, rotation: -18, scale: 0.92 }, { yPercent: 22, rotation: 24, scale: 1.1, ease: 'none' }, 0);
-          timeline.fromTo(story.querySelector('[data-mk-depth="front"]'),
-            { yPercent: 28, scale: 0.82 }, { yPercent: -34, scale: 1.2, ease: 'none' }, 0);
-          timeline.fromTo(story.querySelector('[data-mk-depth="copy"]'),
-            { y: compact ? 24 : 75 }, { y: compact ? -24 : -75, ease: 'none' }, 0);
-        }
-
+        // Headings mask in, once, when they approach the viewport.
         for (const heading of select('[data-mk-heading]').filter(upcoming)) {
           if (revealedElements.has(heading)) continue;
           let revealed = false;
@@ -97,25 +59,23 @@ export function MarketingMotion({ children }: { children: ReactNode }) {
             autoSplit: true,
             aria: 'auto',
             onSplit: (split) => {
-              // Font loading/resizing must never replay a heading the visitor has read.
+              // A late font metric must never replay a heading the visitor has already read.
               if (revealed) return gsap.set(split.words, { clearProps: 'transform,opacity' });
               return gsap.fromTo(split.words, {
-                yPercent: 115,
-                rotation: compact ? 0 : 1.5,
+                yPercent: 110,
                 opacity: 0,
               }, {
                 yPercent: 0,
-                rotation: 0,
                 opacity: 1,
-                duration: 0.85,
-                stagger: { amount: 0.22 },
+                duration: 0.8,
+                stagger: { amount: 0.2 },
                 ease: 'power4.out',
                 clearProps: 'transform,opacity',
                 onComplete: () => {
                   revealed = true;
                   revealedElements.add(heading);
                 },
-                scrollTrigger: { trigger: heading, start: 'top 90%', once: true },
+                scrollTrigger: { trigger: heading, start: 'top 92%', once: true },
               });
             },
           });
@@ -124,27 +84,26 @@ export function MarketingMotion({ children }: { children: ReactNode }) {
         const reveal = (targets: HTMLElement[], trigger: HTMLElement) => {
           const unread = targets.filter((element) => !revealedElements.has(element));
           if (!unread.length || !upcoming(trigger)) return;
-          // Hero content must never wait on a scroll position: on short viewports the
-          // call-to-action sits below the trigger line and would stay invisible on load.
+          // Hero content never waits on a scroll position: on short viewports the call to
+          // action sits below the trigger line and would stay invisible on load.
           const inHero = Boolean(trigger.closest('.mk-hero'));
-          gsap.fromTo(unread, { y: compact ? 18 : 28, opacity: 0 }, {
+          gsap.fromTo(unread, { y: compact ? 14 : 22, opacity: 0 }, {
             y: 0,
             opacity: 1,
-            duration: 0.75,
-            stagger: { amount: Math.min(0.36, unread.length * 0.07) },
+            duration: 0.7,
+            stagger: { amount: Math.min(0.3, unread.length * 0.06) },
             ease: 'power3.out',
             clearProps: 'transform,opacity',
             onComplete: () => unread.forEach((element) => revealedElements.add(element)),
             ...(inHero
-              ? { delay: 0.15 }
-              : { scrollTrigger: { trigger, start: 'top 90%', once: true } }),
+              ? { delay: 0.12 }
+              : { scrollTrigger: { trigger, start: 'top 92%', once: true } }),
           });
         };
 
         for (const element of select('[data-mk-reveal]')) reveal([element], element);
         for (const group of select('[data-mk-stagger]')) {
           const items = Array.from(group.children).filter((child): child is HTMLElement => child instanceof HTMLElement);
-          // Stacked mobile articles reveal individually, not before they enter view.
           if (compact && group.dataset.mkStagger === 'rows') {
             for (const item of items) reveal([item], item);
           } else {
@@ -152,40 +111,24 @@ export function MarketingMotion({ children }: { children: ReactNode }) {
           }
         }
 
+        // Product panels rise into place without ever being hidden, so they stay interactive.
         for (const panel of select('[data-mk-panel]').filter(upcoming)) {
-          // No opacity hiding: interactive previews remain usable throughout the scrub.
-          gsap.fromTo(panel, { y: compact ? 18 : 44, scale: compact ? 1 : 0.985 }, {
+          gsap.fromTo(panel, { y: compact ? 14 : 34 }, {
             y: 0,
-            scale: 1,
             ease: 'none',
             scrollTrigger: {
               trigger: panel,
-              start: 'top 96%',
-              end: 'top 56%',
-              scrub: 0.45,
+              start: 'top 98%',
+              end: 'top 62%',
+              scrub: 0.4,
               invalidateOnRefresh: true,
             },
           });
         }
 
-        for (const track of select('[data-mk-progress]')) {
-          const workflow = track.closest<HTMLElement>('.mk-lifecycle-grid');
-          if (!workflow) continue;
-          gsap.fromTo(track, { scaleY: 0 }, {
-            scaleY: 1,
-            ease: 'none',
-            scrollTrigger: {
-              trigger: workflow,
-              start: 'top 76%',
-              end: 'bottom 48%',
-              scrub: 0.35,
-              invalidateOnRefresh: true,
-            },
-          });
-        }
-
+        // The closing wordmark drifts up as the page ends.
         for (const wordmark of select('[data-mk-wordmark]')) {
-          gsap.fromTo(wordmark, { yPercent: 28, opacity: 0.45 }, {
+          gsap.fromTo(wordmark, { yPercent: 18, opacity: 0.4 }, {
             yPercent: 0,
             opacity: 1,
             ease: 'none',

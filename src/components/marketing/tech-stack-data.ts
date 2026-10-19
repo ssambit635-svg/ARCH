@@ -6,8 +6,9 @@
  * checks that evidence (and that a version shown in a label still matches package.json). A tile for
  * something ARCH does not actually use, or a stale major version, fails the suite instead of shipping.
  *
- * Deliberately absent: Three.js / react-three-fiber (they only powered the hero ball, now removed),
- * and anything that is merely optional or planned. Order is the order the tiles render in.
+ * Deliberately absent: anything that is merely optional or planned. Three.js is used by the
+ * infrastructure lattice, but it is not a claim about the product stack, so it stays off the row.
+ * Order is the order the tiles render in.
  */
 
 export type TechId =
@@ -22,7 +23,6 @@ export type TechId =
   | 'zod'
   | 'octokit'
   | 'gsap'
-  | 'motion'
   | 'vitest'
   | 'docker'
   | 'python';
@@ -57,7 +57,6 @@ export const TECH_STACK: readonly TechStackEntry[] = [
   { id: 'octokit', label: 'Octokit', proof: { dependency: '@octokit/rest' } },
 
   { id: 'gsap', label: 'GSAP', proof: { dependency: 'gsap' } },
-  { id: 'motion', label: 'Motion', proof: { dependency: 'motion' } },
   { id: 'vitest', label: 'Vitest', proof: { dependency: 'vitest' } },
   { id: 'docker', label: 'Docker', proof: { path: 'docker-compose.yml' } },
   { id: 'python', label: 'Python', proof: { path: 'clients/python/pyproject.toml' } },

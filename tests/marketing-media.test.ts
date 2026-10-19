@@ -31,13 +31,12 @@ function webpSize(bytes: Buffer): { width: number; height: number } {
 
 /**
  * Marketing imagery is the product itself. These are captures of shipped ARCH screens, not
- * illustrations: if a capture is replaced, its alt text and caption have to be rewritten with it,
- * and the retired brand films must not creep back onto the page.
+ * illustrations: if a capture is replaced, its alt text and caption have to be rewritten with it.
  */
 describe('marketing imagery', () => {
   const SCREENS = [
     { file: 'public/product/incident-workspace.webp', width: 1440, height: 900, used: 'src/components/marketing/hero.tsx' },
-    { file: 'public/product/status-page.webp', width: 764, height: 620, used: 'src/components/marketing/closing.tsx' },
+    { file: 'public/product/status-page.webp', width: 764, height: 620, used: 'src/components/marketing/status-proof.tsx' },
   ];
 
   it('ships captioned product screens at twice the size the page reserves for them', () => {
@@ -64,14 +63,33 @@ describe('marketing imagery', () => {
     }
   });
 
-  it('keeps the retired illustration films out of the repository and off the landing page', () => {
-    for (const file of ['arch-alpine-poster.jpg', 'arch-alpine-reveal.mp4', 'arch-dragon-poster.jpg', 'arch-dragon-reveal.mp4']) {
-      expect(existsSync(join(root, 'public', file)), `public/${file} is a retired illustration`).toBe(false);
+  it('ships no retired brand films, mascot assets, sample avatars or design dumps', () => {
+    // This is the cleanup the brief asked for: the repository carries the product, not a scratch
+    // folder. Each path below was either a one-off upload or a retired marketing experiment.
+    const retired = [
+      "Word_'ARCH'_emerges_from_mountains_20261004010409.mp4",
+      'public/wwm.mp4',
+      'public/wwm-poster.jpg',
+      'public/avatars',
+      'public/robot',
+      'DESIGN.md',
+      'DESIGN (1).md',
+      'DESIGN (2).md',
+      'SKILL.md',
+      'SKILL (1).md',
+      'wappalyzer_incident-io.csv',
+    ];
+    for (const path of retired) {
+      expect(existsSync(join(root, path)), `${path} is a retired upload and must not ship`).toBe(false);
     }
-    for (const component of [...SCREENS.map((screen) => screen.used), 'src/components/marketing/nav.tsx', 'src/components/marketing/footer.tsx']) {
+
+    for (const component of [
+      ...SCREENS.map((screen) => screen.used),
+      'src/components/marketing/nav.tsx',
+      'src/components/marketing/footer.tsx',
+    ]) {
       expect(source(component)).not.toContain('.mp4');
     }
-    expect(existsSync(join(root, 'src/components/marketing/ambient-video.tsx'))).toBe(false);
     expect(statSync(join(root, 'public/product/incident-workspace.webp')).size).toBeGreaterThan(100_000);
   });
 });

@@ -3,9 +3,9 @@ import { CONTACT_EMAIL, GITHUB_REPO_URL } from '@/lib/brand';
 import { LinkArrow } from './link-arrow';
 
 /**
- * Decorative signature retained at the very bottom of the page. It is crisp and
- * never participates in the CTA above; the reference footer's feeling comes from
- * the open gradient field and typography, not from a blur filter.
+ * The footer carries the final call to action on the page's one warm surface: paper dissolving
+ * into ember, ink type at the top, white links on solid ember underneath. The oversized wordmark
+ * is decorative and is the last thing a visitor scrolls past.
  */
 function Wordmark() {
   return (
@@ -17,39 +17,37 @@ function Wordmark() {
           <filter id="mk-wm-blur-soft"><feGaussianBlur stdDeviation="19" /></filter>
           <filter id="mk-wm-blur-haze"><feGaussianBlur stdDeviation="7" /></filter>
         </defs>
-        <g fill="var(--mk-accent)">
-          <text x="0" y="300" textLength="1440" lengthAdjust="spacingAndGlyphs" opacity="0.22">ARCH.</text>
-          <text x="0" y="300" textLength="1440" lengthAdjust="spacingAndGlyphs" opacity="0.22">ARCH.</text>
-          <text x="0" y="300" textLength="1440" lengthAdjust="spacingAndGlyphs" opacity="0.22">ARCH.</text>
-          <text x="0" y="300" textLength="1440" lengthAdjust="spacingAndGlyphs">ARCH.</text>
+        <g fill="#ffffff">
+          <text x="0" y="300" textLength="1440" lengthAdjust="spacingAndGlyphs" opacity="0.05">ARCH.</text>
+          <text x="0" y="300" textLength="1440" lengthAdjust="spacingAndGlyphs" opacity="0.05">ARCH.</text>
+          <text x="0" y="300" textLength="1440" lengthAdjust="spacingAndGlyphs" opacity="0.05">ARCH.</text>
+          <text x="0" y="300" textLength="1440" lengthAdjust="spacingAndGlyphs" opacity="0.1">ARCH.</text>
         </g>
       </svg>
     </div>
   );
 }
 
-/** The final page mirrors the supplied incident.io-style closing frame. */
 export function SiteFooter() {
   return (
     <footer className="mk-footer" aria-labelledby="footer-title">
       <div className="mk-footer-cta mk-container">
-        <h2 id="footer-title">So good, you’ll break<br /> things on purpose</h2>
+        <p className="mk-eyebrow">Start here</p>
+        <h2 id="footer-title">When it breaks,<br /> start here.</h2>
         <p className="mk-footer-cta-copy">
-          Ready to put AI to work on your incidents?<br />
-          Write to us — a real person replies.
+          Bring the alert, the context and the team into one workspace.<br />
+          Self-hosted from the first commit. A real person answers.
         </p>
         <div className="mk-footer-cta-actions">
-          <a href={`mailto:${CONTACT_EMAIL}`} className="mk-button">Email us <LinkArrow direction="right" /></a>
-          <Link href="/register" className="mk-footer-cta-link">Get started <LinkArrow /></Link>
+          <Link href="/register" className="mk-button mk-button--large">Get started <LinkArrow direction="right" /></Link>
+          <a href={`mailto:${CONTACT_EMAIL}`} className="mk-footer-cta-link">
+            Email us <LinkArrow />
+          </a>
         </div>
       </div>
 
-      {/* The closing frame now carries real ways to reach us: a monitored inbox,
-          the public repository, and the policies a buyer asks for. The base band
-          keeps this whole block on solid ember so the white links stay legible
-          however tall the fade above it grows. */}
       <div className="mk-footer-base">
-        <nav id="contact" className="mk-footer-meta" aria-label="Contact and legal">
+        <nav className="mk-footer-meta" id="contact" aria-label="Contact and legal">
           <section className="mk-footer-meta-col">
             <h3>Contact</h3>
             <ul>
@@ -60,6 +58,15 @@ export function SiteFooter() {
             </ul>
           </section>
           <section className="mk-footer-meta-col">
+            <h3>Product</h3>
+            <ul>
+              <li><Link href="/register">Get started</Link></li>
+              <li><Link href="/login">Open your workspace</Link></li>
+              <li><a href={`${GITHUB_REPO_URL}/blob/main/docs/product/FEATURES.md`} target="_blank" rel="noreferrer">Features</a></li>
+              <li><a href={`${GITHUB_REPO_URL}/blob/main/docs/engineering/ARCH-MODEL.md`} target="_blank" rel="noreferrer">Native engine</a></li>
+            </ul>
+          </section>
+          <section className="mk-footer-meta-col">
             <h3>Legal</h3>
             <ul>
               <li><a href={`${GITHUB_REPO_URL}/blob/main/docs/legal/PRIVACY-POLICY.md`} target="_blank" rel="noreferrer">Privacy policy</a></li>
@@ -67,19 +74,19 @@ export function SiteFooter() {
               <li><a href={`${GITHUB_REPO_URL}/blob/main/SECURITY.md`} target="_blank" rel="noreferrer">Security &amp; compliance</a></li>
             </ul>
           </section>
-          <section className="mk-footer-meta-col">
-            <h3>Product</h3>
-            <ul>
-              <li><Link href="/dashboard/status">Status pages</Link></li>
-              <li><Link href="/register">Get started</Link></li>
-            </ul>
-          </section>
         </nav>
 
         <div className="mk-footer-bar">
           <p className="mk-footer-legal">© 2026 ARCH. All rights reserved.</p>
           <p className="mk-footer-note">Proprietary license · self-hosted on your infrastructure</p>
-          <a href="#top" className="mk-footer-top">Back to top</a>
+          <a href="#top" className="mk-footer-top">
+            Back to top
+            <span className="mk-footer-top-icon" aria-hidden="true">
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 13V3M4 7l4-4 4 4" />
+              </svg>
+            </span>
+          </a>
         </div>
       </div>
 

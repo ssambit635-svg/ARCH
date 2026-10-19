@@ -1,15 +1,15 @@
 'use client';
 
-import { LinkArrow } from './link-arrow';
-import { useState } from 'react';
 import Link from 'next/link';
+import { useState } from 'react';
+import { LinkArrow } from './link-arrow';
 
 interface PreviewIncident {
   id: string;
   title: string;
   service: string;
   severity: string;
-  status: 'Investigating' | 'Identified' | 'Resolved';
+  status: 'Investigating' | 'Identified' | 'Monitoring' | 'Resolved';
   assignee: string;
   suggestion: string;
   timeline: Array<{ time: string; text: string }>;
@@ -20,8 +20,8 @@ const INCIDENTS: PreviewIncident[] = [
     id: 'INC-204',
     title: 'Checkout API latency is elevated',
     service: 'checkout-api',
-    severity: 'High',
-    status: 'Identified',
+    severity: 'CRITICAL',
+    status: 'Monitoring',
     assignee: 'Alex Mercer',
     suggestion: 'A database lock appeared after the latest deploy. Review the migration and compare it with previous pool-saturation incidents before choosing a rollback.',
     timeline: [
@@ -35,7 +35,7 @@ const INCIDENTS: PreviewIncident[] = [
     id: 'INC-203',
     title: 'Webhook deliveries are delayed',
     service: 'webhook-worker',
-    severity: 'Medium',
+    severity: 'HIGH',
     status: 'Investigating',
     assignee: 'Sam Patel',
     suggestion: 'Delivery retries increased alongside queue depth. Check worker throughput and the downstream rate limit; the available evidence does not yet confirm a root cause.',
@@ -49,7 +49,7 @@ const INCIDENTS: PreviewIncident[] = [
     id: 'INC-201',
     title: 'Database connection spike',
     service: 'postgres-primary',
-    severity: 'Low',
+    severity: 'LOW',
     status: 'Resolved',
     assignee: 'Taylor Chen',
     suggestion: 'The timeline records a pool-limit adjustment and recovery. Use those notes to prepare a postmortem draft, then have the responder verify the impact and follow-up actions.',
@@ -57,71 +57,84 @@ const INCIDENTS: PreviewIncident[] = [
       { time: '01:20', text: 'Connection-limit alert received.' },
       { time: '01:24', text: 'Pool configuration identified as the cause.' },
       { time: '01:31', text: 'Configuration adjusted. Service monitored.' },
-      { time: '01:42', text: 'Service recovered. Incident resolved.' },
     ],
   },
 ];
 
+/**
+ * The workspace preview is the centrepiece: a real, dark application window with the same
+ * information hierarchy as the shipped console. Selecting an incident swaps the record, so the
+ * page demonstrates the workflow instead of describing it.
+ */
 export function Workspace() {
   const [activeIndex, setActiveIndex] = useState(0);
   const incident = INCIDENTS[activeIndex]!;
 
   return (
-    <section id="workspace" className="mk-section" aria-labelledby="workspace-title">
+    <section id="product" className="mk-section mk-band--white" aria-labelledby="workspace-title">
       <div className="mk-container">
-        <div className="mk-section-heading">
+        <div className="mk-section-head">
           <div>
             <p className="mk-eyebrow" data-mk-reveal>The workspace</p>
-            <h2 id="workspace-title" className="mk-title" data-mk-heading aria-label="The whole picture. One place to work.">The whole picture.<br /> One place to work.</h2>
-            <p className="mk-description" data-mk-reveal>A shared queue, one continuous timeline, and the context to take the next step.</p>
+            <h2 id="workspace-title" className="mk-title" data-mk-heading aria-label="The whole picture, in one window.">
+              The whole picture,<br /> in one window.
+            </h2>
+            <p className="mk-description" data-mk-reveal>
+              A shared queue, one continuous timeline, and just enough context to take the next step.
+            </p>
           </div>
-          <Link href="/login" className="mk-text-link" data-mk-reveal>Open your workspace <LinkArrow /></Link>
+          <Link href="/login" className="mk-text-link mk-section-aside" data-mk-reveal>
+            Open your workspace <LinkArrow />
+          </Link>
         </div>
 
-        <div className="mk-browser-window" data-mk-panel>
-          <div className="mk-browser-chrome" aria-hidden="true">
-            <div className="mk-window-controls">
-              <span className="mk-window-dot mk-window-dot--close" />
-              <span className="mk-window-dot mk-window-dot--minimize" />
-              <span className="mk-window-dot mk-window-dot--expand" />
+        <div className="mk-app" data-mk-panel>
+          <div className="mk-on-dark">
+            <div className="mk-app-bar">
+              <span className="mk-window-dots" aria-hidden="true">
+                <span className="mk-window-dot" /><span className="mk-window-dot" /><span className="mk-window-dot" />
+              </span>
+              <span className="mk-app-address">app.arch.dev / incidents</span>
+              <span className="mk-app-bar-right" aria-hidden="true"><i /> live · sample data</span>
             </div>
-            <div className="mk-browser-address">app.arch.dev / workspace / incidents</div>
-            <div className="mk-browser-actions"><span /><span /><span /></div>
-          </div>
-          <div className="mk-console" role="region" aria-label="Interactive workspace preview with illustrative data">
-            <div className="mk-console-body">
-              <div className="mk-console-sidebar">
-                <p className="mk-console-label">Incidents <span>{INCIDENTS.length}</span></p>
-                <div className="mk-incident-list" aria-label="Sample incidents">
+
+            <div className="mk-app-body">
+              <div className="mk-app-rail">
+                <p className="mk-rail-label">Incidents <span>{INCIDENTS.length}</span></p>
+                <div className="mk-rail-list" aria-label="Sample incidents">
                   {INCIDENTS.map((item, index) => (
                     <button
                       key={item.id}
                       type="button"
-                      className={`mk-incident-option${index === activeIndex ? ' is-active' : ''}`}
+                      className={`mk-rail-item${index === activeIndex ? ' is-active' : ''}`}
                       aria-pressed={index === activeIndex}
                       aria-controls="preview-incident-detail"
                       onClick={() => setActiveIndex(index)}
                     >
-                      <span className="mk-incident-option-meta"><span>{item.id}</span><span>{item.severity}</span></span>
-                      <span className="mk-incident-option-title">{item.title}</span>
-                      <span className="mk-incident-option-status"><span className={`mk-status-dot mk-status-dot--${item.status.toLowerCase()}`} aria-hidden="true" />{item.status}</span>
+                      <span className="mk-rail-id"><span>{item.id}</span><span>{item.severity}</span></span>
+                      <span className="mk-rail-title">{item.title}</span>
+                      <span className="mk-rail-status">
+                        <span className={`mk-dot mk-dot--${item.status.toLowerCase()}`} aria-hidden="true" />
+                        {item.status}
+                      </span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div id="preview-incident-detail" className="mk-console-detail" aria-live="polite" aria-atomic="true">
-                <div className="mk-incident-heading">
-                  <span className="mk-console-id">{incident.id}</span>
+              <div id="preview-incident-detail" className="mk-app-detail" aria-live="polite" aria-atomic="true">
+                <div className="mk-detail-head">
+                  <span className="mk-detail-id">{incident.id}</span>
                   <span className={`mk-state mk-state--${incident.status.toLowerCase()}`}>{incident.status}</span>
                 </div>
                 <h3>{incident.title}</h3>
-                <dl className="mk-incident-metadata">
+                <dl className="mk-meta">
                   <div><dt>Service</dt><dd>{incident.service}</dd></div>
                   <div><dt>Severity</dt><dd>{incident.severity}</dd></div>
                   <div><dt>Assigned to</dt><dd>{incident.assignee}</dd></div>
+                  <div><dt>Source</dt><dd>webhook</dd></div>
                 </dl>
-                <div className="mk-console-content">
+                <div className="mk-app-grid">
                   <div className="mk-suggestion">
                     <h4>Suggested next step</h4>
                     <p>{incident.suggestion}</p>
@@ -146,7 +159,9 @@ export function Workspace() {
             </div>
           </div>
         </div>
-        <p className="mk-preview-caption">Interactive preview · illustrative data, not a live incident feed.</p>
+        <p className="mk-app-caption">
+          Interactive preview · illustrative data, not a live incident feed.
+        </p>
       </div>
     </section>
   );
