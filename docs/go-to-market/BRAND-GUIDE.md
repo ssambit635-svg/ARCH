@@ -162,9 +162,14 @@ It reuses the same blue and the same geometry, not the same background.
 | `ink` | `#10131a` | headings, body, primary buttons |
 | `muted` / `subtle` | `#4f5561` / `#5b6270` | secondary and tertiary copy — both AA on paper |
 | `hairline` | `#e3ddd2` | every panel edge and divider |
-| `blue-500` | `#3b8ef4` | the one accent: dots, meters, marks (3:1 — decorative only) |
-| `blue-700` | `#1c5cc0` | accent text and focus rings (5.7:1 on paper) |
-| `ember` | `#e2401a` → `#bf2c0b` | the closing CTA only; white links sit on `#bf2c0b` (5.1:1) |
+| `ember` | `#e2401a` | the one accent: dots, meters, marks (decorative only) |
+| `ember-deep` | `#bf2c0b` | accent text and focus rings (5.3:1 on paper); white links sit on it in the close (5.9:1) |
+| `info` | `#1d6fb8` | the Monitoring state only — a semantic colour, always beside its word, never decoration |
+
+> An earlier pass swept a dragon blue (`#3b8ef4`) across every accent on this surface, which
+> left the page with three competing hues (cold blue, warm paper, ember close) and turned a
+> semantic state colour into the brand. That sweep is reverted: the marketing accent is the
+> ember family end to end, and blue survives only where it means "monitoring".
 
 The dark bands (native engine, setup terminal, workspace preview) remap the same token names
 (`.mk-on-dark`), so a component never grows a second palette.

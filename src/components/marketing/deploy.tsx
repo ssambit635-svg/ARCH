@@ -7,7 +7,7 @@ import { TechStackTiles } from './tech-stack';
 import { LinkArrow } from './link-arrow';
 
 const COMMANDS = [
-  'git clone https://github.com/ssambit635-svg/ARCH.git',
+  `git clone ${GITHUB_REPO_URL}.git`,
   'cd ARCH && npm ci',
   'cp .env.example .env && chmod 600 .env',
   '# Set distinct AUTH_SECRET and AUTH_SECRET_WEBHOOK in .env',
