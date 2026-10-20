@@ -32,11 +32,33 @@ Rules for this file:
 - The native-engine meter is explicitly a block element. As an inline span it ignored its 4px
   height, which let the accent fill grow into a pill and sit over the note underneath it.
 
-### Added — one squared grid under the whole site
+### Changed — a plain background, no checker pattern
 
-- The marketing page sits on the same hairline lattice as the closing band: one 76px square grid,
-  drawn with linear gradients in the theme's own line colour, carried through the white and dark
-  bands so the lattice never stops at a section boundary.
+- The public site now sits on a flat paper surface. The 76px hairline lattice that used to run
+  behind the page and through every band — plus the hero's blueprint field, the line grid inside
+  the incident window and the survey rules on the closing band — is gone. Sections are separated
+  by surface colour, hairline borders and spacing instead of a drawn grid, so body copy and
+  screenshots sit on a plain background.
+- Sign-in and registration use the same plain graphite surface; their fixed background grid was
+  removed with it.
+
+### Changed — white actions instead of black blocks
+
+- Every primary action on the public site is now a white pill with an ink label and a visible ink
+  outline: the navigation and hero "Get started", "Publish your first page", the selected tab in
+  the workflow section, the "Approve fix" demo action and the pane labels. The dark fill is gone,
+  so no action reads as a black block against the page, and each pill keeps a clear outline on
+  paper, on white panels and inside the product windows.
+- Hover keeps the pill white (a warm paper tint), darkens the outline and lifts the button 1px, so
+  the action stays legible at every state rather than inverting to dark.
+- Fixed the reason the pills looked empty: the page's prose rule (`.mk a { color: inherit }`) is
+  more specific than a bare `.mk-button`, so every action link inherited the ink body colour and
+  painted an ink label on an ink fill. Action colours are now stated at a weight the prose rule
+  cannot beat, so a button label always comes from the button — on the paper page, inside the
+  product windows and on the closing ember band.
+- The action palette and those label rules now ship in `src/components/marketing/actions.css`,
+  loaded after the page sheet, so the two cannot drift apart and a cached page sheet cannot bring
+  the ink pill back.
 
 ### Added — a deploy configuration that says where it is
 

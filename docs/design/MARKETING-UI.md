@@ -11,10 +11,13 @@ the code actually follows. When this document and the CSS disagree, the CSS is t
 ## 1. Direction
 
 A light, engineered product site. Paper background, white panels, hairline rules, one ember
-accent that runs from the first eyebrow dot to the closing band. Blue appears only as the
-semantic colour of the Monitoring state, always beside its word. The layout borrows the discipline of a documentation-heavy marketing page —
-generous spacing, a soft 12–16px panel language, pill actions, a restrained type scale — and keeps
-ARCH's own voice, display face and colour.
+accent that runs from the first eyebrow dot to the closing band. Every background is plain: no
+grid, lattice or checker overlay is painted behind content — the page, the hero, the section
+bands and the incident window are flat fills, and the closing band keeps only its ember gradient.
+Blue appears only as the semantic colour of the Monitoring state, always beside its word. The
+layout borrows the discipline of a documentation-heavy marketing page — generous spacing, a soft
+12–16px panel language, pill actions, a restrained type scale — and keeps ARCH's own voice,
+display face and colour.
 
 The public surface is intentionally **not** the graphite console. A visitor meets the product inside
 a framed capture and inside a dark application window, so the page reads as a shopfront in front of
@@ -38,7 +41,8 @@ a dark workshop.
 ## 3. Tokens
 
 All tokens are defined on `.mk` and overridden by `.mk-light .mk`. Dark bands remap the same names
-with `.mk-on-dark`.
+with `.mk-on-dark`. The `--mk-primary*` set lives in `actions.css`; every other token lives in
+`landing.css`.
 
 | Token | Light | Dark band | Role |
 |---|---|---|---|
@@ -52,7 +56,8 @@ with `.mk-on-dark`.
 | `--mk-accent` | `#e2401a` | `#ff8a3d` | dots, meters, marks (decorative) |
 | `--mk-accent-strong` | `#bf2c0b` | `#ffa25e` | accent text, hover |
 | `--mk-info` / `--mk-info-strong` | `#1d6fb8` | `#7fb3ff` / `#a8c8ff` | the Monitoring state only — semantic, never decoration |
-| `--mk-primary` (+ `--mk-primary-hover`) | `#10131a` (`#262b36`) | `#f4f4f5` (`#ffffff`) | primary button background |
+| `--mk-primary` (+ `--mk-primary-hover`) | `#ffffff` (`#efece4`) | `#f4f4f5` (`#ffffff`) | primary button background — white on every surface |
+| `--mk-primary-line` | `#6f6c66` | `rgb(255 255 255 / 55%)` | outline around a white action, so it stays visible on paper and on white panels |
 | `--mk-focus` | `#bf2c0b` | `#ffa25e` | focus outline |
 | `--mk-win-*` | fixed in both | fixed in both | the dark product windows (terminal, stage, app frames) |
 
@@ -74,14 +79,25 @@ No `next/font/google` calls. All faces are vendored in `src/app/fonts/` (OFL-1.1
 
 ### Buttons
 
+The action surface — the pill palette, its label rules, the selected workflow tab and the demo
+"Approve fix" action — ships in `src/components/marketing/actions.css`, imported after
+`landing.css`. Geometry stays with the components in `landing.css`; the palette and the
+specificity-sensitive label rules travel together so a stale copy of the page sheet cannot leave a
+dark pill with an invisible label behind.
+
 - One pill system: `height: 46px`, `padding-inline: 22px`, `border-radius: 999px`,
   `font-size: 14px`, `font-weight: 600`, optional 14px arrow.
-- Variants: primary (ink), ghost (hairline border), small (38px, used in the navigation),
-  large (52px, used in the footer). There is no accent fill: ember is a decorative accent only and
-  must never carry button text — the fake "Approve fix" action in the control stage obeys the
-  same ink-primary rule as a real button.
+- Variants: primary (white pill, ink label, `--mk-primary-line` outline so it stays visible on
+  paper and on white panels), ghost (transparent, hairline border), small (38px, used in the
+  navigation), large (52px, used in the footer). There is no accent fill: ember is a decorative
+  accent only and must never carry button text — the fake "Approve fix" action in the control stage
+  obeys the same white-primary rule as a real button. No primary action is ever an ink/black block.
 - Hover: background shifts through `--mk-primary-hover` / `--mk-on-primary-hover` (never a
   hardcoded colour, so a button on a dark band cannot flip dark-on-dark), 1px lift. Active: lift returns to 0. Focus: 2px outline, 3px offset.
+- The pill's label colour is declared as `.mk a.mk-button` / `.mk button.mk-button`, because the
+  prose rule `.mk a { color: inherit }` is (0,1,1) and would otherwise win against a bare
+  `.mk-button` (0,1,0) — that bug painted ink labels on ink fills and made the actions look empty.
+  Any new action variant must restate its colour at that weight or higher.
 - A view never shows two primary buttons in the same cluster. The second action is a ghost button
   or a text link.
 
@@ -94,7 +110,8 @@ No `next/font/google` calls. All faces are vendored in `src/app/fonts/` (OFL-1.1
 ### Tabs (workflow)
 
 - A segmented container with a hairline, 12px radius and 4px padding.
-- Selected tab: ink background, paper text, `aria-selected="true"`, roving `tabIndex`.
+- Selected tab: white background, ink text, a `--mk-primary-line` outline (so the selected pill
+  stays legible inside the white segmented container) and `aria-selected="true"`, roving `tabIndex`.
 - The panel is a real `role="tabpanel"` with `aria-labelledby` pointing at the active tab.
 
 ### Interactive previews
