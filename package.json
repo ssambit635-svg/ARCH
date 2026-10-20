@@ -2,7 +2,7 @@
   "name": "arch",
   "version": "0.3.0",
   "private": true,
-  "description": "ARCH — multi-tenant incident management + public status pages for developer teams.",
+  "description": "ARCH \u2014 multi-tenant incident management + public status pages for developer teams.",
   "type": "module",
   "engines": {
     "node": ">=20.19"
@@ -11,6 +11,7 @@
     "dev": "node scripts/dev.mjs",
     "dev:next": "next dev --hostname 0.0.0.0",
     "build": "next build",
+    "build:deploy": "node scripts/deploy-build.mjs",
     "start": "next start --hostname 0.0.0.0",
     "dev:all": "node scripts/dev.mjs",
     "worker": "tsx src/worker/main.ts",

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { GITHUB_REPO_URL } from '@/lib/brand';
 import { copyToClipboard } from '@/lib/copy-to-clipboard';
 import { TechStackTiles } from './tech-stack';
+import { TECH_STACK } from './tech-stack-data';
 import { LinkArrow } from './link-arrow';
 
 const COMMANDS = [
@@ -122,10 +123,13 @@ export function Deploy() {
         </div>
 
         <div className="mk-stack">
-          <div className="mk-stack-panel mk-on-dark">
+          <div className="mk-stack-panel mk-on-dark" data-mk-panel>
             <div className="mk-stack-head">
               <p className="mk-eyebrow" data-mk-reveal>Built with tools you already know</p>
-              <p>Every tile verified against package.json</p>
+              <p className="mk-stack-verified">
+                <span className="mk-stack-pulse" aria-hidden="true" />
+                {TECH_STACK.length} / {TECH_STACK.length} verified against package.json
+              </p>
             </div>
             <TechStackTiles />
           </div>

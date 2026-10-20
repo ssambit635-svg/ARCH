@@ -84,7 +84,7 @@ export function MarketingNav() {
             GitHub <LinkArrow />
           </a>
           <Link href="/login" className="mk-nav-link mk-nav-login">Log in</Link>
-          <Link href="/register" className="mk-button mk-button--small">Get started</Link>
+          <Link href="/register" className="mk-button mk-button--small">Get started <LinkArrow direction="right" /></Link>
           <button
             ref={menuButtonRef}
             type="button"

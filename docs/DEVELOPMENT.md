@@ -156,6 +156,10 @@ npm run build
 npm start
 ```
 
+For Render, use the checked-in `render.yaml` blueprint; the build stage is `npm run build:deploy`
+(generate once, then build) and the guide explains how to read a deploy that appears to hang —
+see [Deploying ARCH on Render](engineering/DEPLOY-RENDER.md).
+
 Neither `npm run build` nor `npm start` applies migrations. Coordinate migrations with the release process rather than assuming a running HTTP server implies a complete schema. See the [operations runbook](engineering/OPERATIONS-RUNBOOK.md) for recovery and deployment checks.
 
 ## Troubleshooting

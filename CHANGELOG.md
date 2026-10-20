@@ -15,6 +15,36 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Changed — a closing section that invites a click
+
+- The footer is now a full closing band in the incident.io mould: a serif headline over a drifting
+  ember gradient, two large actions, four link columns and a legal bar. Both actions are white
+  pills with ink labels at 60px, visible at rest — nothing in the close depends on a hover state or
+  a scroll trigger to become legible, and the labels stay readable from the paper end of the
+  gradient to the ember end.
+- The oversized `ARCH.` wordmark and the scrolling proof rail are gone. The band now ends on the
+  link bar instead of trailing two decorative blocks under it.
+- The technology panel is a frame rather than a row: tiles carry the dependency they are proven by,
+  a pointer-tracked spotlight and a shallow 3D tilt, and the panel takes one slow light pass.
+  Every label and proof line is readable before the pointer arrives.
+- Section, hero and navigation actions grew to 54px and 42px with the arrow rendered as an icon, so
+  the primary action reads at a glance instead of looking like a caption.
+- The native-engine meter is explicitly a block element. As an inline span it ignored its 4px
+  height, which let the accent fill grow into a pill and sit over the note underneath it.
+
+### Added — one squared grid under the whole site
+
+- The marketing page sits on the same hairline lattice as the closing band: one 76px square grid,
+  drawn with linear gradients in the theme's own line colour, carried through the white and dark
+  bands so the lattice never stops at a section boundary.
+
+### Added — a deploy configuration that says where it is
+
+- `render.yaml` and `docs/engineering/DEPLOY-RENDER.md` pin the build (`npm ci --include=dev &&
+  npm run build:deploy`) and start (`npm start`) commands, the health check and the required
+  environment. `npm run build:deploy` generates the Prisma client once and then builds, printing one
+  line per stage, so a restarted build no longer looks like a build that never finishes.
+
 ### Changed — a public site that looks like the product
 
 - The marketing homepage has been rebuilt as a light, structured product surface: a sticky

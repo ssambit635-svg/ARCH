@@ -53,6 +53,9 @@
   --mk-negative: #ff6a7c;
   --mk-ember: #e2401a;
   --mk-ember-deep: #bf2c0b;
+  /* The whole site sits on one squared grid — the same hairline lattice the closing band uses. */
+  --mk-grid-size: 76px;
+  --mk-grid-line: rgb(255 255 255 / 6%);
   --mk-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --mk-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mk-mono: var(--font-geist-mono), var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -73,7 +76,7 @@
   min-height: 100vh;
   isolation: isolate;
   overflow-x: clip;
-  background: var(--mk-bg);
+  background-color: var(--mk-bg);
   color: var(--mk-fg);
   color-scheme: dark;
   font-family: var(--mk-sans);
@@ -111,6 +114,7 @@
   --mk-info-soft: #e8f1fa;
   --mk-focus: #bf2c0b;
   --mk-nav-bg: rgb(246 244 239 / 88%);
+  --mk-grid-line: #e3ddd2;
   --mk-positive: #0f7a4f;
   --mk-caution: #8a5a08;
   --mk-negative: #b42336;
@@ -148,9 +152,10 @@
   --mk-positive: #58d3a0;
   --mk-caution: #f0b63a;
   --mk-negative: #ff6a7c;
-  background: var(--mk-bg);
+  background-color: var(--mk-bg);
   color: var(--mk-fg);
   color-scheme: dark;
+  --mk-grid-line: rgb(244 244 245 / 7%);
 }
 
 /* The marketing wrapper sits outside `.mk`, so it cannot read the tokens below;
@@ -164,6 +169,24 @@
 }
 
 /* ---------------------------------------------------------------- utilities */
+
+/* The squared paper: one hairline every 76px, on the page and on every band that paints its own
+   surface, so the lattice never stops at a section boundary. */
+.mk {
+  background-color: var(--mk-bg);
+  background-image:
+    linear-gradient(to right, var(--mk-grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--mk-grid-line) 1px, transparent 1px);
+  background-size: var(--mk-grid-size) var(--mk-grid-size);
+}
+.mk .mk-band--white,
+.mk .mk-band--dark,
+.mk .mk-on-dark {
+  background-image:
+    linear-gradient(to right, var(--mk-grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--mk-grid-line) 1px, transparent 1px);
+  background-size: var(--mk-grid-size) var(--mk-grid-size);
+}
 
 .mk *,
 .mk *::before,
@@ -293,8 +316,18 @@
   background: var(--mk-surface);
   color: var(--mk-fg);
 }
-.mk-button--small { height: 38px; padding: 0 16px; font-size: 13px; }
-.mk-button--large { height: 52px; padding: 0 26px; font-size: 15px; }
+.mk-button--small { height: 42px; padding: 0 20px; font-size: 13.5px; }
+.mk-button--large { height: 54px; padding: 0 28px; font-size: 15.5px; }
+/* The closing action: the largest target on the page, and the one a visitor is most likely
+   to click. It keeps the base pill geometry so it still reads as the same button. */
+.mk-button--xl {
+  height: 60px;
+  padding: 0 32px;
+  font-size: 15.5px;
+  letter-spacing: -0.012em;
+  gap: 12px;
+}
+
 
 .mk-text-link,
 .mk-muted-link {
@@ -1104,11 +1137,18 @@
 .mk-engine-row-label { color: var(--mk-fg); font-size: 13px; font-weight: 500; }
 .mk-engine-row-value { color: var(--mk-subtle); font-family: var(--mk-mono); font-size: 10px; letter-spacing: 0.04em; }
 .mk-engine-meter {
+  /* A block, explicitly: an inline span ignores `height`, which let the fill grow to a full
+     pill and sit on top of the note underneath it. */
+  display: block;
+  position: relative;
+  width: 100%;
   height: 4px;
+  min-height: 4px;
   margin-top: 10px;
   overflow: hidden;
   border-radius: 999px;
   background: var(--mk-line-soft);
+  contain: paint;
 }
 .mk-engine-meter-fill { display: block; height: 100%; border-radius: inherit; background: var(--mk-accent); }
 .mk-engine-row-note { margin: 8px 0 0; color: var(--mk-subtle); font-size: 11.5px; line-height: 1.55; }
@@ -1567,7 +1607,27 @@
 .mk-deploy-copy .mk-muted-link { margin-top: 18px; }
 
 .mk-stack { margin-top: 56px; }
-.mk-stack-panel { border-radius: 16px; padding: 28px; }
+.mk-stack-panel {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 16px;
+  padding: 28px;
+}
+/* One slow light pass across the whole frame. It never moves content and never leaves the
+   panel dim: the sweep is a translucent highlight on top of a static surface. */
+.mk-stack-panel::after {
+  content: '';
+  position: absolute;
+  inset: -70% -25%;
+  z-index: 2;
+  background: linear-gradient(100deg, transparent 42%, rgb(255 255 255 / 6%) 50%, transparent 58%);
+  transform: translate3d(-55%, 0, 0);
+  animation: mk-stack-sweep 11s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  pointer-events: none;
+}
+.mk-stack-head,
+.mk-tech-grid { position: relative; z-index: 1; }
 .mk-stack-head {
   display: flex;
   flex-wrap: wrap;
@@ -1578,6 +1638,24 @@
 }
 .mk-stack-head .mk-eyebrow { margin: 0; }
 .mk-stack-head p { margin: 0; color: var(--mk-subtle); font-family: var(--mk-mono); font-size: 10px; letter-spacing: 0.04em; }
+.mk-stack-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--mk-subtle);
+  font-family: var(--mk-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.mk-stack-pulse {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--mk-positive);
+  animation: mk-stack-pulse 2.6s ease-in-out infinite;
+}
 .mk-tech-grid {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
@@ -1585,11 +1663,13 @@
   margin: 0;
   padding: 0;
   list-style: none;
+  perspective: 1200px;
 }
 .mk-tech-grid li {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 11px;
   padding: 12px 13px;
   border: 1px solid var(--mk-line-soft);
   border-radius: 9px;
@@ -1598,22 +1678,106 @@
   font-family: var(--mk-mono);
   font-size: 10.5px;
   line-height: 1.3;
-  transition: border-color 160ms ease, background-color 160ms ease, color 160ms ease;
+  transform-style: preserve-3d;
+  transition: border-color 200ms ease, background-color 200ms ease, color 200ms ease, transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-.mk-tech-grid li:hover { border-color: var(--mk-line-strong); background: var(--mk-surface-2); color: var(--mk-fg); }
-.mk-tech-icon { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 22px; height: 22px; }
+/* The spotlight follows the pointer: a conic wedge anchored at the cursor, painted inside the
+   tile so the frame keeps its flat border. It is additive — the label is fully legible without it. */
+.mk-tech-grid li::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: conic-gradient(
+    from 130deg at var(--mk-tile-x, 50%) var(--mk-tile-y, 50%),
+    transparent 0deg,
+    rgb(255 138 61 / 26%) 38deg,
+    transparent 96deg
+  );
+  opacity: 0;
+  transition: opacity 220ms ease;
+  pointer-events: none;
+}
+.mk-tech-grid li:hover {
+  border-color: var(--mk-line-strong);
+  background: var(--mk-surface-2);
+  color: var(--mk-fg);
+  transform: perspective(900px) rotateX(var(--mk-tile-rx, 0deg)) rotateY(var(--mk-tile-ry, 0deg)) translateY(-2px);
+}
+.mk-tech-grid li:hover::after { opacity: 1; }
+.mk-tech-grid li > * { position: relative; z-index: 1; }
+.mk-tech-copy { display: grid; min-width: 0; gap: 2px; }
+.mk-tech-name {
+  color: inherit;
+  font-family: var(--mk-sans);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mk-tech-proof {
+  color: var(--mk-subtle);
+  font-family: var(--mk-mono);
+  font-size: 8.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color 200ms ease;
+}
+.mk-tech-grid li:hover .mk-tech-proof { color: var(--mk-muted); }
+.mk-tech-index {
+  position: absolute;
+  top: 7px;
+  right: 9px;
+  color: var(--mk-line-strong);
+  font-family: var(--mk-mono);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  opacity: 0;
+  transition: opacity 200ms ease;
+}
+.mk-tech-grid li:hover .mk-tech-index { opacity: 1; }
+.mk-tech-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 5px;
+  border: 1px solid var(--mk-line-soft);
+  border-radius: 8px;
+  background: var(--mk-surface-2);
+  transition: border-color 200ms ease, transform 240ms ease;
+}
+.mk-tech-grid li:hover .mk-tech-icon { border-color: var(--mk-line-strong); transform: translateZ(14px); }
 .mk-tech-icon svg { width: 100%; height: 100%; }
+
+@keyframes mk-stack-sweep {
+  0%, 12% { transform: translate3d(-55%, 0, 0); opacity: 0; }
+  24% { opacity: 1; }
+  62%, 100% { transform: translate3d(55%, 0, 0); opacity: 0; }
+}
+@keyframes mk-stack-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.82); }
+}
 
 /* ------------------------------------------------------------------ footer */
 
 .mk-footer {
   --mk-footer-ink: #2a1410;
-  --mk-footer-ink-soft: rgb(42 20 16 / 86%);
+  --mk-footer-ink-soft: rgb(42 20 16 / 84%);
   --mk-footer-mist: #fffdfb;
   --mk-footer-blush: #fde6db;
   --mk-footer-peach: #f9cfb5;
   --mk-footer-apricot: #f6b491;
   --mk-footer-coral: #f19a6f;
+  --mk-footer-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, ui-serif, serif;
   position: relative;
   display: flex;
   flex-direction: column;
@@ -1626,65 +1790,158 @@
    itself, so the ink copy above always sits on the pale half and the links below always sit on
    solid ember — contrast is a property of the layout, not of a lucky viewport height. */
 .mk-footer-cta {
+  position: relative;
+  isolation: isolate;
   display: flex;
   flex: 1;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   width: 100%;
-  min-height: 76svh;
-  padding-block: 104px 200px;
+  min-height: 84svh;
+  padding-block: clamp(96px, 11vw, 148px) 0;
+  overflow: hidden;
   background: linear-gradient(
     180deg,
     var(--mk-surface) 0%,
-    var(--mk-footer-mist) 8%,
-    var(--mk-footer-blush) 22%,
-    var(--mk-footer-peach) 42%,
-    var(--mk-footer-apricot) 64%,
-    var(--mk-footer-coral) 80%,
-    var(--mk-ember) 94%,
+    var(--mk-footer-mist) 7%,
+    var(--mk-footer-blush) 20%,
+    var(--mk-footer-peach) 38%,
+    var(--mk-footer-apricot) 54%,
+    var(--mk-footer-coral) 70%,
+    var(--mk-ember) 84%,
     var(--mk-ember-deep) 100%
   );
+}
+/* Ember light drifts across the band. Two soft linear washes, no filters, no per-frame layout:
+   only background-position and transform move. */
+.mk-footer-cta::before {
+  content: '';
+  position: absolute;
+  inset: -25% -30%;
+  z-index: -1;
+  background:
+    linear-gradient(102deg, transparent 10%, rgb(255 255 255 / 30%) 34%, transparent 58%),
+    linear-gradient(76deg, transparent 36%, rgb(255 122 61 / 34%) 62%, transparent 88%);
+  background-size: 170% 170%, 150% 150%;
+  background-position: 10% 0%, 90% 100%;
+  animation: mk-footer-drift 22s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+/* A hairline survey grid, masked at both ends so the band never turns into a table. */
+.mk-footer-cta::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgb(42 20 16 / 8%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(42 20 16 / 8%) 1px, transparent 1px);
+  background-size: 76px 76px;
+  mask-image: linear-gradient(180deg, transparent 4%, #000 34%, #000 68%, transparent 96%);
+  pointer-events: none;
+}
+.mk-footer-cta-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: clamp(56px, 8vw, 104px);
 }
 .mk-footer-cta .mk-eyebrow { margin-bottom: 22px; color: var(--mk-footer-ink); }
 .mk-footer-cta .mk-eyebrow::before { background: var(--mk-footer-ink); }
 .mk-footer-cta h2 {
-  max-width: 900px;
+  max-width: 1020px;
   margin: 0;
   color: var(--mk-footer-ink);
-  font-family: var(--mk-display);
-  font-size: clamp(46px, 8vw, 104px);
-  font-weight: 500;
-  letter-spacing: -0.055em;
-  line-height: 0.94;
+  font-family: var(--mk-footer-serif);
+  font-size: clamp(44px, 7.6vw, 104px);
+  font-weight: 400;
+  letter-spacing: -0.045em;
+  line-height: 0.95;
+  /* Room for the italic descender in “on purpose.” when the curtain unclips the line box. */
+  padding-bottom: 0.08em;
   text-wrap: balance;
 }
-.mk-footer-cta-copy { margin: 24px 0 0; color: var(--mk-footer-ink-soft); font-size: clamp(16px, 1.8vw, 21px); line-height: 1.45; }
-.mk-footer-cta-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 14px; margin-top: 32px; }
-.mk-footer-cta .mk-button { background: var(--mk-footer-ink); color: var(--mk-surface); }
-.mk-footer-cta .mk-button:hover { background: var(--mk-surface); color: var(--mk-footer-ink); }
-.mk-footer-cta-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--mk-footer-ink);
-  font-size: 13px;
-  font-weight: 500;
-  text-underline-offset: 4px;
+.mk-footer-cta h2 em { font-style: italic; font-weight: 400; }
+.mk-footer-cta-copy {
+  margin: 26px 0 0;
+  color: var(--mk-footer-ink-soft);
+  font-size: clamp(16px, 1.7vw, 20px);
+  line-height: 1.5;
+  text-wrap: pretty;
 }
-.mk-footer-cta-link:hover { text-decoration: underline; }
-
+.mk-footer-cta-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 36px;
+}
+/* Both actions are visible at rest, and both are white: the band under them runs from paper to
+   ember, so a white pill with an ink label is the only pair that stays legible at every point of
+   it. The secondary is white with an ink hairline, not a see-through outline.
+   Nothing here is opacity-animated, so the close of the page cannot lose its call to action. */
+.mk-footer-cta .mk-button--on-ember {
+  border-color: var(--mk-footer-ink);
+  background: var(--mk-footer-mist);
+  color: var(--mk-footer-ink);
+}
+.mk-footer-cta .mk-button--on-ember:hover {
+  border-color: var(--mk-footer-mist);
+  background: var(--mk-footer-ink);
+  color: var(--mk-footer-mist);
+}
+.mk-footer-cta .mk-button--on-ember.mk-button--ghost {
+  border-color: rgb(42 20 16 / 78%);
+  background: rgb(255 253 251 / 94%);
+  color: var(--mk-footer-ink);
+}
+.mk-footer-cta .mk-button--on-ember.mk-button--ghost:hover {
+  border-color: var(--mk-footer-ink);
+  background: var(--mk-footer-ink);
+  color: var(--mk-footer-mist);
+}
+.mk-footer-cta-fineprint {
+  margin: 18px 0 0;
+  color: var(--mk-footer-ink-soft);
+  font-family: var(--mk-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
 .mk-footer-base { background: var(--mk-ember-deep); }
 .mk-footer-meta {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 32px 56px;
+  grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr));
+  gap: 32px 48px;
   width: min(100% - 64px, 1176px);
   margin: 0 auto;
-  padding-block: 44px 40px;
-  border-top: 1px solid color-mix(in srgb, var(--mk-on-accent) 34%, transparent);
+  padding-block: 48px 40px;
+  border-top: 1px solid color-mix(in srgb, var(--mk-on-accent) 28%, transparent);
   text-align: left;
 }
+.mk-footer-brand { margin: 0; color: var(--mk-on-accent); font-family: var(--mk-display); font-size: 22px; font-weight: 600; letter-spacing: -0.04em; }
+.mk-footer-brand span { color: var(--mk-footer-coral); }
+.mk-footer-tagline { max-width: 30ch; margin: 10px 0 0; color: color-mix(in srgb, var(--mk-on-accent) 82%, transparent); font-size: 12.5px; line-height: 1.6; }
+.mk-footer-gh {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 16px;
+  padding: 7px 13px;
+  border: 1px solid color-mix(in srgb, var(--mk-on-accent) 40%, transparent);
+  border-radius: 999px;
+  color: var(--mk-on-accent);
+  font-size: 11.5px;
+  font-weight: 500;
+  transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+.mk-footer-gh:hover { border-color: var(--mk-on-accent); background: var(--mk-on-accent); color: var(--mk-ember-deep); }
 .mk-footer-meta-col h3 {
   margin: 0 0 14px;
   color: var(--mk-on-accent);
@@ -1742,13 +1999,9 @@
 }
 .mk-footer-top:hover .mk-footer-top-icon { border-color: var(--mk-on-accent); }
 
-.mk-watermark-wrap { width: 100%; overflow: hidden; background: var(--mk-ember-deep); }
-.mk-watermark { display: block; width: 100%; height: auto; margin-bottom: -3.5%; user-select: none; pointer-events: none; opacity: 0.9; }
-.mk-watermark text {
-  font-family: var(--mk-display);
-  font-size: 360px;
-  font-weight: 500;
-  letter-spacing: -0.04em;
+@keyframes mk-footer-drift {
+  0% { background-position: 8% 0%, 92% 100%; transform: translate3d(-2%, 0, 0) scale(1.02); }
+  100% { background-position: 92% 100%, 8% 0%; transform: translate3d(2%, -1%, 0) scale(1.06); }
 }
 
 /* -------------------------------------------------------------- responsive */
@@ -1922,15 +2175,23 @@
   .mk-tech-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mk-tech-grid li { padding: 10px; font-size: 10px; }
 
-  .mk-footer-cta { min-height: 58svh; padding-block: 88px 64px; }
+  .mk-footer-cta { min-height: 0; padding-block: 96px 0; }
   .mk-footer-cta h2 { font-size: clamp(42px, 12vw, 64px); }
+  .mk-footer-cta-inner { padding-bottom: 48px; }
+  .mk-footer-cta-actions { flex-direction: column; width: 100%; }
+  .mk-footer-cta-actions .mk-button { width: min(100%, 360px); }
   .mk-footer-meta { grid-template-columns: 1fr 1fr; gap: 28px; width: calc(100% - 40px); }
+  .mk-footer-brand-col { grid-column: 1 / -1; }
   .mk-footer-bar { width: calc(100% - 40px); }
   .mk-footer-note { order: 3; flex-basis: 100%; }
 }
 
 @media (max-width: 560px) {
   .mk { --mk-nav-height: 62px; }
+  .mk-tech-icon { width: 26px; height: 26px; padding: 4px; }
+  .mk-tech-name { font-size: 11px; }
+  .mk-tech-proof { font-size: 8px; }
+  .mk-tech-index { display: none; }
   .mk-brand { font-size: 17px; gap: 8px; }
   .mk-brand-tile { width: 27px; height: 27px; border-radius: 7px; }
   .mk-brand-mark { width: 19px; height: 19px; }
@@ -1967,7 +2228,6 @@
   .mk-footer-meta { grid-template-columns: 1fr; gap: 24px; }
   .mk-footer-bar { align-items: flex-start; }
   .mk-footer-top { margin-left: 0; }
-  .mk-watermark { margin-bottom: -6%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
