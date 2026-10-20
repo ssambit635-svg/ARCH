@@ -33,9 +33,11 @@ type Particle = {
 type Pulse = { a: number; b: number; t: number; speed: number };
 
 const INK: Rgb = [16, 19, 26];
-const WARM: Rgb = [255, 255, 255];
-const BLUE: Rgb = [59, 142, 244];
-const BLUE_LIGHT: Rgb = [176, 210, 255];
+const WHITE: Rgb = [255, 255, 255];
+/* The accent is ember, matching --mk-accent / --mk-ember in landing.css.
+   Canvas cannot read CSS variables, so the token values are mirrored here. */
+const EMBER: Rgb = [224, 64, 16];
+const EMBER_LIGHT: Rgb = [255, 138, 61];
 const TAU = Math.PI * 2;
 /** How far the cursor reaches into the lattice, in CSS pixels. */
 const CURSOR_REACH = 168;
@@ -143,7 +145,7 @@ export function ControlLattice({ variant = 'field' }: { variant?: Variant }) {
 
     // Ink over the paper half of the stage, white once it fades into the panel.
     const tintAt = (y: number): Rgb =>
-      variant === 'topology' ? INK : mix(INK, WARM, smoothstep(0.4, 0.86, y / Math.max(1, height)));
+      variant === 'topology' ? INK : mix(INK, WHITE, smoothstep(0.4, 0.86, y / Math.max(1, height)));
 
     const draw = (now: number) => {
       const step = last ? Math.min(40, now - last) / 16.667 : 1;
@@ -234,7 +236,7 @@ export function ControlLattice({ variant = 'field' }: { variant?: Variant }) {
         const x = from.x + dx * pulse.t;
         const y = from.y + dy * pulse.t;
         const ember =
-          variant === 'topology' ? BLUE : mix(BLUE, BLUE_LIGHT, smoothstep(0.35, 0.85, y / Math.max(1, height)));
+          variant === 'topology' ? EMBER : mix(EMBER, EMBER_LIGHT, smoothstep(0.35, 0.85, y / Math.max(1, height)));
         // Fade the signal in and out along the edge, so it reads as a packet
         // being passed rather than a dot blinking on and off.
         const envelope = Math.sin(Math.PI * pulse.t);

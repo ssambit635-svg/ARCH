@@ -1,4 +1,4 @@
-import { GITHUB_REPO_URL } from '@/lib/brand';
+import { AI_NAME, GITHUB_REPO_URL } from '@/lib/brand';
 import { LinkArrow } from './link-arrow';
 
 const SIGNALS = [
@@ -87,7 +87,7 @@ export function Engine() {
 
         <div className="mk-engine-card" data-mk-panel aria-label="Signals the native engine computes">
           <div className="mk-engine-card-bar">
-            <span>ARCH V1.1 · engine</span>
+            <span>{AI_NAME} · engine</span>
             <span className="mk-engine-flag">on-device</span>
           </div>
           <div className="mk-engine-rows">

@@ -17,7 +17,7 @@ function Wordmark() {
           <filter id="mk-wm-blur-soft"><feGaussianBlur stdDeviation="19" /></filter>
           <filter id="mk-wm-blur-haze"><feGaussianBlur stdDeviation="7" /></filter>
         </defs>
-        <g fill="#ffffff">
+        <g fill="currentColor">
           <text x="0" y="300" textLength="1440" lengthAdjust="spacingAndGlyphs" opacity="0.05">ARCH.</text>
           <text x="0" y="300" textLength="1440" lengthAdjust="spacingAndGlyphs" opacity="0.05">ARCH.</text>
           <text x="0" y="300" textLength="1440" lengthAdjust="spacingAndGlyphs" opacity="0.05">ARCH.</text>

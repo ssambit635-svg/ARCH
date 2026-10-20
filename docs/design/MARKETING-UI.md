@@ -10,8 +10,9 @@ the code actually follows. When this document and the CSS disagree, the CSS is t
 
 ## 1. Direction
 
-A light, engineered product site. Paper background, white panels, hairline rules, one blue signal
-and one warm close. The layout borrows the discipline of a documentation-heavy marketing page —
+A light, engineered product site. Paper background, white panels, hairline rules, one ember
+accent that runs from the first eyebrow dot to the closing band. Blue appears only as the
+semantic colour of the Monitoring state, always beside its word. The layout borrows the discipline of a documentation-heavy marketing page —
 generous spacing, a soft 12–16px panel language, pill actions, a restrained type scale — and keeps
 ARCH's own voice, display face and colour.
 
@@ -41,17 +42,19 @@ with `.mk-on-dark`.
 
 | Token | Light | Dark band | Role |
 |---|---|---|---|
-| `--mk-bg` | `#f6f4ef` | `#05070d` | page / band background |
-| `--mk-surface` | `#ffffff` | `#0b1018` | panels, cards |
-| `--mk-surface-2` | `#fbfaf6` | `#111827` | window chrome, inset panels |
-| `--mk-fg` | `#10131a` | `#f4f6fa` | headings and body |
-| `--mk-muted` | `#4f5561` | `#b3bccb` | secondary copy |
-| `--mk-subtle` | `#5b6270` | `#a5aec0` | labels, captions |
-| `--mk-line` | `#e3ddd2` | `#1d2b42` | hairlines |
-| `--mk-accent` | `#3b8ef4` | `#7fb3ff` | dots, meters, marks (decorative) |
-| `--mk-accent-strong` | `#1c5cc0` | `#9cc6ff` | accent text, hover |
-| `--mk-primary` | `#10131a` | `#f4f6fa` | primary button background |
-| `--mk-focus` | `#1c5cc0` | `#9cc6ff` | focus outline |
+| `--mk-bg` | `#f6f4ef` | `#050608` | page / band background |
+| `--mk-surface` | `#ffffff` | `#0d0e12` | panels, cards |
+| `--mk-surface-2` | `#fbfaf6` | `#121318` | window chrome, inset panels |
+| `--mk-fg` | `#10131a` | `#f4f4f5` | headings and body |
+| `--mk-muted` | `#4f5561` | `#b3b3ba` | secondary copy |
+| `--mk-subtle` | `#5b6270` | `#a3a3ab` | labels, captions |
+| `--mk-line` | `#e3ddd2` | `#26262b` | hairlines (dark bands are neutral graphite, never blue-black) |
+| `--mk-accent` | `#e2401a` | `#ff8a3d` | dots, meters, marks (decorative) |
+| `--mk-accent-strong` | `#bf2c0b` | `#ffa25e` | accent text, hover |
+| `--mk-info` / `--mk-info-strong` | `#1d6fb8` | `#7fb3ff` / `#a8c8ff` | the Monitoring state only — semantic, never decoration |
+| `--mk-primary` (+ `--mk-primary-hover`) | `#10131a` (`#262b36`) | `#f4f4f5` (`#ffffff`) | primary button background |
+| `--mk-focus` | `#bf2c0b` | `#ffa25e` | focus outline |
+| `--mk-win-*` | fixed in both | fixed in both | the dark product windows (terminal, stage, app frames) |
 
 `tests/marketing-minimal.test.ts` computes WCAG contrast for `fg`, `muted` and `subtle` on every
 neutral surface in both token sets. A palette change that drops below 4.5:1 fails the suite.
@@ -74,9 +77,11 @@ No `next/font/google` calls. All faces are vendored in `src/app/fonts/` (OFL-1.1
 - One pill system: `height: 46px`, `padding-inline: 22px`, `border-radius: 999px`,
   `font-size: 14px`, `font-weight: 600`, optional 14px arrow.
 - Variants: primary (ink), ghost (hairline border), small (38px, used in the navigation),
-  large (52px, used in the footer). There is no accent fill: blue is a decorative accent only and
-  must never carry button text.
-- Hover: background shifts, 1px lift. Active: lift returns to 0. Focus: 2px outline, 3px offset.
+  large (52px, used in the footer). There is no accent fill: ember is a decorative accent only and
+  must never carry button text — the fake "Approve fix" action in the control stage obeys the
+  same ink-primary rule as a real button.
+- Hover: background shifts through `--mk-primary-hover` / `--mk-on-primary-hover` (never a
+  hardcoded colour, so a button on a dark band cannot flip dark-on-dark), 1px lift. Active: lift returns to 0. Focus: 2px outline, 3px offset.
 - A view never shows two primary buttons in the same cluster. The second action is a ghost button
   or a text link.
 

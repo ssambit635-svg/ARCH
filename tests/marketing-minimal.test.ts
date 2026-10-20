@@ -202,18 +202,58 @@ describe('marketing surface', () => {
       }
     }
     expect(contrast(tokens['--mk-on-primary']!, tokens['--mk-primary']!)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(tokens['--mk-on-primary-hover']!, tokens['--mk-primary-hover']!)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(tokens['--mk-accent-strong']!, tokens['--mk-bg']!)).toBeGreaterThanOrEqual(4.5);
+    expect(contrast(tokens['--mk-info-strong']!, tokens['--mk-bg']!)).toBeGreaterThanOrEqual(4.5);
   });
 
-  it('keeps the blue flat — open surfaces, no glow — and preserves focus and reduced-motion affordances', () => {
+  it('keeps the accent flat — open surfaces, no glow — and preserves focus and reduced-motion affordances', () => {
     const css = source('src/components/marketing/landing.css');
-    // Blue stays a flat accent, never a bloom or a glow.
-    expect(css).toContain('--mk-accent: #3b8ef4');
+    // One warm accent, flat, never a bloom or a glow. Blue was swept across the whole
+    // page once before; it may only return as --mk-info, the Monitoring state colour.
+    expect(css).toContain('--mk-accent: #e2401a');
+    expect(css).toContain('--mk-accent-strong: #bf2c0b');
+    expect(css).not.toContain('#3b8ef4');
+    expect(css).not.toContain('#1c5cc0');
     expect(css).not.toMatch(/box-shadow|radial-gradient|text-shadow|drop-shadow/);
-    expect(css).toContain('--mk-line: #182438');
+    expect(css).toContain('--mk-line: #26262b');
     expect(css).toContain('.mk-light .mk');
     expect(css).toContain(':focus-visible');
     expect(css).toContain('prefers-reduced-motion: reduce');
     expect(source('src/components/marketing/site-chrome.tsx')).not.toContain('useLenis');
+  });
+
+  it('keeps blue semantic, buttons token-driven and pane labels unclipped', () => {
+    const css = source('src/components/marketing/landing.css');
+    const lattice = source('src/components/marketing/control-lattice.tsx');
+    // Monitoring reads blue because it is a state, not because blue is the brand.
+    expect(css).toMatch(/\.mk-state--monitoring \{[^}]*var\(--mk-info-soft\)/);
+    expect(css).toMatch(/\.mk-dot--monitoring \{ background: var\(--mk-info\); \}/);
+    expect(lattice).toContain('EMBER');
+    expect(lattice).not.toContain('59, 142, 244');
+    // Button hover flips through the theme's own tokens, so it cannot go dark-on-dark
+    // on a dark band or stay hardcoded to one theme.
+    expect(css).toMatch(/\.mk-button:hover \{ background: var\(--mk-primary-hover\); color: var\(--mk-on-primary-hover\);/);
+    // The fake "Approve fix" action follows the real button rule: ink, no accent fill.
+    expect(css).toMatch(/\.mk-approve \{ background: var\(--mk-primary\); color: var\(--mk-on-primary\); \}/);
+    // Pane tags straddle the top edge; the pane must not clip them in half.
+    expect(css).toMatch(/\.mk-pane \{[^}]*overflow: visible;/);
+    // Hiding the header CTA on small phones must not hide the mobile menu's CTA too.
+    // The type tokens must actually be defined — every heading and label reads
+    // through them, so losing them silently falls the whole page back to a system face.
+    expect(css).toContain('--mk-display: var(--font-space-grotesk)');
+    expect(css).toContain('--mk-sans: var(--font-inter)');
+    expect(css).toContain('--mk-mono: var(--font-geist-mono)');
+    expect(css).toContain('.mk-nav-actions .mk-button--small { display: none; }');
+    expect(css).not.toContain('.mk-nav .mk-button--small { display: none; }');
+  });
+
+  it('derives shared strings instead of hard-coding them a second time', () => {
+    const deploy = source('src/components/marketing/deploy.tsx');
+    const engine = source('src/components/marketing/engine.tsx');
+    expect(deploy).toContain('`git clone ${GITHUB_REPO_URL}.git`');
+    expect(deploy).not.toContain('git clone https://github.com/');
+    expect(engine).toContain('{AI_NAME} · engine');
   });
 
   it('separates sections by rhythm and white bands, not rigid ruled frames', () => {
