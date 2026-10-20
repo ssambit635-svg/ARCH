@@ -27,8 +27,8 @@ export function Hero() {
             <li className="mk-hero-point">Every write audited</li>
           </ul>
           <div className="mk-actions" data-mk-reveal>
-            <Link href="/register" className="mk-button">Get started <LinkArrow direction="right" /></Link>
-            <Link href="#product" className="mk-button mk-button--ghost">
+            <Link href="/register" className="mk-button mk-button--large">Get started <LinkArrow direction="right" /></Link>
+            <Link href="#product" className="mk-button mk-button--large mk-button--ghost">
               See the workspace
             </Link>
           </div>

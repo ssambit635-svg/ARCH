@@ -15,6 +15,27 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Changed — a closing section that invites a click
+
+- The footer is now a full closing band in the incident.io mould: a serif headline over a drifting
+  ember gradient, one large solid action and one outlined action, a proof rail, four link columns
+  and the oversized wordmark. Both actions are visible at rest, at 60px with 15.5px labels — nothing
+  in the close depends on a hover state or a scroll trigger to become legible.
+- The technology panel is a frame rather than a row: tiles carry the dependency they are proven by,
+  a pointer-tracked spotlight and a shallow 3D tilt, and the panel takes one slow light pass.
+  Every label and proof line is readable before the pointer arrives.
+- Section, hero and navigation actions grew to 54px and 42px with the arrow rendered as an icon, so
+  the primary action reads at a glance instead of looking like a caption.
+- The native-engine meter is explicitly a block element. As an inline span it ignored its 4px
+  height, which let the accent fill grow into a pill and sit over the note underneath it.
+
+### Added — a deploy configuration that says where it is
+
+- `render.yaml` and `docs/engineering/DEPLOY-RENDER.md` pin the build (`npm ci --include=dev &&
+  npm run build:deploy`) and start (`npm start`) commands, the health check and the required
+  environment. `npm run build:deploy` generates the Prisma client once and then builds, printing one
+  line per stage, so a restarted build no longer looks like a build that never finishes.
+
 ### Changed — a public site that looks like the product
 
 - The marketing homepage has been rebuilt as a light, structured product surface: a sticky

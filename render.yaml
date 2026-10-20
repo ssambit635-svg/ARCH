@@ -1,0 +1,42 @@
+# Render blueprint — ARCH.
+#
+# The value of this file is that the commands are explicit. Most "the build never finishes"
+# reports are a service whose Build Command is `npm run dev`: the dev entrypoint starts an
+# embedded PostgreSQL cluster and a watching dev server, so the build step never returns.
+#
+# Apply with: Render Dashboard → New → Blueprint → pick this repository.
+services:
+  - type: web
+    name: arch
+    runtime: node
+    plan: starter # 2 GB. Next 16 + Turbopack does not finish reliably in 512 MB.
+    region: singapore
+    branch: main
+    autoDeployTrigger: commit
+    buildCommand: npm ci --include=dev && npm run build:deploy
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.3
+      - key: NEXT_TELEMETRY_DISABLED
+        value: '1'
+      # Keep the build inside the instance's memory; without this Turbopack grows until the
+      # kernel kills the build and the host restarts it from zero.
+      - key: NODE_OPTIONS
+        value: --max-old-space-size=1536
+      - key: APP_URL
+        sync: false
+      - key: DATABASE_URL
+        sync: false
+      - key: AUTH_SECRET
+        generateValue: true
+      - key: AUTH_SECRET_WEBHOOK
+        generateValue: true
+      # Optional integrations. Leave empty to keep the offline modes.
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_OWNER
+        sync: false
+      - key: GITHUB_REPO
+        sync: false

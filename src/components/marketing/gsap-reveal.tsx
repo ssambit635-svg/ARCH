@@ -111,6 +111,19 @@ export function MarketingMotion({ children }: { children: ReactNode }) {
           }
         }
 
+        // The closing headline is uncovered rather than faded: a clip-path curtain rises from
+        // the baseline. Text is never transparent, so a dropped trigger cannot hide the sentence.
+        for (const curtain of select('[data-mk-curtain]').filter(upcoming)) {
+          gsap.fromTo(curtain, { clipPath: 'inset(0% 0% 100% 0%)', y: compact ? 12 : 26 }, {
+            clipPath: 'inset(0% 0% 0% 0%)',
+            y: 0,
+            duration: 0.95,
+            ease: 'power4.out',
+            scrollTrigger: { trigger: curtain, start: 'top 88%', once: true },
+            clearProps: 'clipPath,transform',
+          });
+        }
+
         // Product panels rise into place without ever being hidden, so they stay interactive.
         for (const panel of select('[data-mk-panel]').filter(upcoming)) {
           gsap.fromTo(panel, { y: compact ? 14 : 34 }, {
@@ -142,8 +155,25 @@ export function MarketingMotion({ children }: { children: ReactNode }) {
           });
         }
 
+        // Failsafe. A scroll trigger that never fires (a stale layout after a late image, a
+        // throttled rAF loop on a slow device, a browser that drops ScrollTrigger's refresh)
+        // must not leave copy permanently transparent. Anything still at zero opacity inside the
+        // viewport after three seconds is handed back to the page, whether or not it was hugged
+        // by the observer.
+        const failsafe = window.setTimeout(() => {
+          for (const element of select<HTMLElement>('[data-mk-reveal], [data-mk-stagger] > *, [data-mk-curtain]')) {
+            const rect = element.getBoundingClientRect();
+            const visible = rect.bottom > 0 && rect.top < window.innerHeight;
+            if (!visible) continue;
+            if (Number.parseFloat(getComputedStyle(element).opacity) > 0.99) continue;
+            gsap.set(element, { clearProps: 'opacity,transform,clipPath' });
+            revealedElements.add(element);
+          }
+        }, 3000);
+
         root.dataset.mkMotion = 'ready';
         refreshLayout();
+        return () => window.clearTimeout(failsafe);
       });
       return () => media.revert();
     }, root);
