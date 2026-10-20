@@ -275,23 +275,44 @@ describe('marketing surface', () => {
     expect(css).toMatch(/\.mk-button:hover \{[^}]*transform: translateY\(-1px\)/);
   });
 
-  it('keeps the full-bleed footer wordmark and a warm closing surface', () => {
+  it('closes on a warm band that ends at the link bar, with white actions that read at rest', () => {
     const css = source('src/components/marketing/landing.css');
     const footerSource = source('src/components/marketing/footer.tsx');
-    expect(css).toMatch(/\.mk-watermark \{[^}]*width: 100%/);
+    const footer = render(SiteFooter);
+
+    // The closing band keeps its paper-to-ember gradient.
     expect(css).toMatch(/\.mk-footer-cta \{[^}]*linear-gradient/);
 
-    const wordmark = render(SiteFooter);
-    // Full-bleed: the word is stretched across the entire viewBox width.
-    expect(wordmark).toContain('textLength="1440"');
-    expect(footerSource).toContain('ARCH.');
-    // Diagonal shards are gone; the word is no longer cut into bands.
-    expect(footerSource).not.toContain('mk-wordmark-cuts');
-    expect(wordmark).not.toContain('clip-path');
-    // Four stacked copies: three soft copies underneath, one crisp copy on top.
-    expect(wordmark.match(/<text /g)).toHaveLength(4);
-    expect(wordmark.match(/<feGaussianBlur /g)).toHaveLength(3);
-    expect(wordmark).toContain('aria-hidden="true"');
+    // The oversized wordmark and the scrolling proof rail were removed: the band ends on the
+    // legal bar, and nothing decorative sits underneath it.
+    expect(footerSource).not.toContain('mk-watermark');
+    expect(footerSource).not.toContain('mk-footer-rail');
+    expect(css).not.toContain('.mk-watermark');
+    expect(css).not.toContain('mk-footer-rail');
+    expect(footer).not.toContain('data-mk-wordmark');
+    expect(footer).not.toContain('<text ');
+    // The only decorative SVGs left are the small link arrows.
+    expect(footer.match(/<svg /g)?.every((tag) => tag === '<svg ')).toBe(true);
+
+    // Both actions are white pills with ink labels — legible on paper, peach and ember alike.
+    expect(css).toMatch(/\.mk-footer-cta \.mk-button--on-ember \{[^}]*background: var\(--mk-footer-mist\)/);
+    expect(css).toMatch(/\.mk-footer-cta \.mk-button--on-ember \{[^}]*color: var\(--mk-footer-ink\)/);
+    expect(footer.match(/mk-button--on-ember/g)).toHaveLength(2);
+    expect(footer).toContain('Get started for free');
+    expect(footer).toContain('Talk to an expert');
+  });
+
+  it('lays the whole site on the same squared grid as the closing band', () => {
+    const css = source('src/components/marketing/landing.css');
+    // One lattice size, shared by the page and every band that paints its own surface.
+    expect(css).toMatch(/\.mk \{[^}]*--mk-grid-size: 76px/);
+    expect(css).toMatch(/\.mk \{[^}]*--mk-grid-line/);
+    expect(css).toMatch(/\.mk \{[^}]*background-image:[\s\S]*?linear-gradient\(to right, var\(--mk-grid-line\)/);
+    expect(css).toMatch(/\.mk \.mk-band--white,[\s\S]*?\.mk \.mk-on-dark \{[\s\S]*?background-size: var\(--mk-grid-size\)/);
+    // The dark bands get a light hairline rather than the paper one.
+    expect(css).toMatch(/\.mk-on-dark \{[^}]*--mk-grid-line: rgb\(244 244 245/);
+    // A grid is drawn with linear gradients only — no glow, no radial bloom.
+    expect(css).not.toMatch(/radial-gradient/);
   });
 });
 

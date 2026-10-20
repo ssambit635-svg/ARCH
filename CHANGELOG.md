@@ -18,9 +18,12 @@ Rules for this file:
 ### Changed — a closing section that invites a click
 
 - The footer is now a full closing band in the incident.io mould: a serif headline over a drifting
-  ember gradient, one large solid action and one outlined action, a proof rail, four link columns
-  and the oversized wordmark. Both actions are visible at rest, at 60px with 15.5px labels — nothing
-  in the close depends on a hover state or a scroll trigger to become legible.
+  ember gradient, two large actions, four link columns and a legal bar. Both actions are white
+  pills with ink labels at 60px, visible at rest — nothing in the close depends on a hover state or
+  a scroll trigger to become legible, and the labels stay readable from the paper end of the
+  gradient to the ember end.
+- The oversized `ARCH.` wordmark and the scrolling proof rail are gone. The band now ends on the
+  link bar instead of trailing two decorative blocks under it.
 - The technology panel is a frame rather than a row: tiles carry the dependency they are proven by,
   a pointer-tracked spotlight and a shallow 3D tilt, and the panel takes one slow light pass.
   Every label and proof line is readable before the pointer arrives.
@@ -28,6 +31,12 @@ Rules for this file:
   the primary action reads at a glance instead of looking like a caption.
 - The native-engine meter is explicitly a block element. As an inline span it ignored its 4px
   height, which let the accent fill grow into a pill and sit over the note underneath it.
+
+### Added — one squared grid under the whole site
+
+- The marketing page sits on the same hairline lattice as the closing band: one 76px square grid,
+  drawn with linear gradients in the theme's own line colour, carried through the white and dark
+  bands so the lattice never stops at a section boundary.
 
 ### Added — a deploy configuration that says where it is
 

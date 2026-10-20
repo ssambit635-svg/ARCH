@@ -4,44 +4,16 @@ import { LinkArrow } from './link-arrow';
 
 /**
  * The footer carries the final call to action on the page's one warm surface: paper dissolving
- * into ember, a serif close at the top, white links on solid ember underneath. The oversized
- * wordmark is decorative and is the last thing a visitor scrolls past.
+ * into ember, a serif close at the top, white links on solid ember underneath. The band ends on
+ * the link bar — there is no oversized wordmark and no marquee underneath it.
  *
- * Two rules keep this section honest:
+ * Three rules keep this section honest:
  *   - Nothing here is revealed by hover. Both actions are solid, labelled and present at rest.
+ *   - The actions sit on white pills with ink labels, so they read on every point of the
+ *     gradient, from paper at the top to ember at the bottom.
  *   - The closing actions never animate from `opacity: 0`; they rise from a transform only, so a
  *     missed scroll trigger can never leave the primary CTA invisible.
  */
-
-const PROOF_RAIL = [
-  'Self-hosted',
-  'No external AI calls',
-  'Every write audited',
-  'Human-reviewed suggestions',
-  'CPU-only inference',
-  'Your database, your region',
-];
-
-function Wordmark() {
-  return (
-    <div className="mk-watermark-wrap" aria-hidden="true">
-      <svg className="mk-watermark" data-mk-wordmark viewBox="0 0 1440 400" focusable="false" role="presentation">
-        <defs>
-          {/* Inert compatibility definitions for older snapshots. No text uses them. */}
-          <filter id="mk-wm-blur-mist"><feGaussianBlur stdDeviation="34" /></filter>
-          <filter id="mk-wm-blur-soft"><feGaussianBlur stdDeviation="19" /></filter>
-          <filter id="mk-wm-blur-haze"><feGaussianBlur stdDeviation="7" /></filter>
-        </defs>
-        <g fill="currentColor">
-          <text x="0" y="300" textLength="1440" lengthAdjust="spacingAndGlyphs" opacity="0.05">ARCH.</text>
-          <text x="0" y="300" textLength="1440" lengthAdjust="spacingAndGlyphs" opacity="0.05">ARCH.</text>
-          <text x="0" y="300" textLength="1440" lengthAdjust="spacingAndGlyphs" opacity="0.05">ARCH.</text>
-          <text x="0" y="300" textLength="1440" lengthAdjust="spacingAndGlyphs" opacity="0.1">ARCH.</text>
-        </g>
-      </svg>
-    </div>
-  );
-}
 
 export function SiteFooter() {
   return (
@@ -57,23 +29,16 @@ export function SiteFooter() {
             The alert, the context and the postmortem in one workspace you run yourself.
           </p>
           <div className="mk-footer-cta-actions">
-            <Link href="/register" className="mk-button mk-button--xl">
+            <Link href="/register" className="mk-button mk-button--xl mk-button--on-ember">
               Get started for free <LinkArrow direction="right" />
             </Link>
-            <a href={`mailto:${CONTACT_EMAIL}`} className="mk-button mk-button--xl mk-button--outline-ink">
+            <a href={`mailto:${CONTACT_EMAIL}`} className="mk-button mk-button--xl mk-button--on-ember mk-button--ghost">
               Talk to an expert
             </a>
           </div>
           <p className="mk-footer-cta-fineprint">Self-hosted · no card · a real person answers.</p>
         </div>
 
-        <div className="mk-footer-rail" aria-hidden="true">
-          <div className="mk-footer-rail-track">
-            {[...PROOF_RAIL, ...PROOF_RAIL].map((item, index) => (
-              <span key={`${item}-${index}`}>{item}</span>
-            ))}
-          </div>
-        </div>
       </div>
 
       <div className="mk-footer-base">
@@ -126,8 +91,6 @@ export function SiteFooter() {
           </a>
         </div>
       </div>
-
-      <Wordmark />
     </footer>
   );
 }

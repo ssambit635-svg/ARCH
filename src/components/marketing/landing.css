@@ -53,6 +53,9 @@
   --mk-negative: #ff6a7c;
   --mk-ember: #e2401a;
   --mk-ember-deep: #bf2c0b;
+  /* The whole site sits on one squared grid — the same hairline lattice the closing band uses. */
+  --mk-grid-size: 76px;
+  --mk-grid-line: rgb(255 255 255 / 6%);
   --mk-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --mk-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mk-mono: var(--font-geist-mono), var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -73,7 +76,7 @@
   min-height: 100vh;
   isolation: isolate;
   overflow-x: clip;
-  background: var(--mk-bg);
+  background-color: var(--mk-bg);
   color: var(--mk-fg);
   color-scheme: dark;
   font-family: var(--mk-sans);
@@ -111,6 +114,7 @@
   --mk-info-soft: #e8f1fa;
   --mk-focus: #bf2c0b;
   --mk-nav-bg: rgb(246 244 239 / 88%);
+  --mk-grid-line: #e3ddd2;
   --mk-positive: #0f7a4f;
   --mk-caution: #8a5a08;
   --mk-negative: #b42336;
@@ -148,9 +152,10 @@
   --mk-positive: #58d3a0;
   --mk-caution: #f0b63a;
   --mk-negative: #ff6a7c;
-  background: var(--mk-bg);
+  background-color: var(--mk-bg);
   color: var(--mk-fg);
   color-scheme: dark;
+  --mk-grid-line: rgb(244 244 245 / 7%);
 }
 
 /* The marketing wrapper sits outside `.mk`, so it cannot read the tokens below;
@@ -164,6 +169,24 @@
 }
 
 /* ---------------------------------------------------------------- utilities */
+
+/* The squared paper: one hairline every 76px, on the page and on every band that paints its own
+   surface, so the lattice never stops at a section boundary. */
+.mk {
+  background-color: var(--mk-bg);
+  background-image:
+    linear-gradient(to right, var(--mk-grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--mk-grid-line) 1px, transparent 1px);
+  background-size: var(--mk-grid-size) var(--mk-grid-size);
+}
+.mk .mk-band--white,
+.mk .mk-band--dark,
+.mk .mk-on-dark {
+  background-image:
+    linear-gradient(to right, var(--mk-grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--mk-grid-line) 1px, transparent 1px);
+  background-size: var(--mk-grid-size) var(--mk-grid-size);
+}
 
 .mk *,
 .mk *::before,
@@ -1859,18 +1882,27 @@
   gap: 14px;
   margin-top: 36px;
 }
-/* Both actions are visible at rest: solid ink primary, outlined secondary. Nothing here is
-   opacity-animated, so the close of the page cannot lose its call to action. */
-.mk-footer-cta .mk-button { background: var(--mk-footer-ink); color: var(--mk-footer-mist); }
-.mk-footer-cta .mk-button:hover { background: var(--mk-footer-mist); color: var(--mk-footer-ink); }
-.mk-footer-cta .mk-button--outline-ink {
-  border-color: rgb(42 20 16 / 44%);
-  background: rgb(255 253 251 / 22%);
+/* Both actions are visible at rest, and both are white: the band under them runs from paper to
+   ember, so a white pill with an ink label is the only pair that stays legible at every point of
+   it. The secondary is white with an ink hairline, not a see-through outline.
+   Nothing here is opacity-animated, so the close of the page cannot lose its call to action. */
+.mk-footer-cta .mk-button--on-ember {
+  border-color: var(--mk-footer-ink);
+  background: var(--mk-footer-mist);
   color: var(--mk-footer-ink);
-  backdrop-filter: blur(6px);
 }
-.mk-footer-cta .mk-button--outline-ink:hover {
-  border-color: transparent;
+.mk-footer-cta .mk-button--on-ember:hover {
+  border-color: var(--mk-footer-mist);
+  background: var(--mk-footer-ink);
+  color: var(--mk-footer-mist);
+}
+.mk-footer-cta .mk-button--on-ember.mk-button--ghost {
+  border-color: rgb(42 20 16 / 78%);
+  background: rgb(255 253 251 / 94%);
+  color: var(--mk-footer-ink);
+}
+.mk-footer-cta .mk-button--on-ember.mk-button--ghost:hover {
+  border-color: var(--mk-footer-ink);
   background: var(--mk-footer-ink);
   color: var(--mk-footer-mist);
 }
@@ -1882,45 +1914,6 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
-/* The proof rail is decorative, so it is hidden from assistive tech and paused on hover. */
-.mk-footer-rail {
-  position: relative;
-  z-index: 1;
-  width: 100%;
-  margin-top: auto;
-  padding-block: 14px;
-  overflow: hidden;
-  background: var(--mk-ember-deep);
-  border-top: 1px solid rgb(255 253 251 / 22%);
-  border-bottom: 1px solid rgb(255 253 251 / 22%);
-  mask-image: linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
-}
-.mk-footer-rail-track {
-  display: flex;
-  width: max-content;
-  animation: mk-footer-rail 42s linear infinite;
-}
-.mk-footer-rail:hover .mk-footer-rail-track { animation-play-state: paused; }
-.mk-footer-rail-track span {
-  display: inline-flex;
-  align-items: center;
-  gap: 26px;
-  padding-inline: 26px;
-  color: rgb(255 253 251 / 88%);
-  font-family: var(--mk-mono);
-  font-size: 10px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-.mk-footer-rail-track span::after {
-  content: '';
-  width: 4px;
-  height: 4px;
-  border-radius: 50%;
-  background: rgb(255 253 251 / 55%);
-}
-
 .mk-footer-base { background: var(--mk-ember-deep); }
 .mk-footer-meta {
   display: grid;
@@ -2006,22 +1999,9 @@
 }
 .mk-footer-top:hover .mk-footer-top-icon { border-color: var(--mk-on-accent); }
 
-.mk-watermark-wrap { width: 100%; overflow: hidden; background: var(--mk-ember-deep); }
-.mk-watermark { display: block; width: 100%; height: auto; margin-bottom: -3.5%; user-select: none; pointer-events: none; opacity: 0.9; }
-.mk-watermark text {
-  font-family: var(--mk-display);
-  font-size: 360px;
-  font-weight: 500;
-  letter-spacing: -0.04em;
-}
-
 @keyframes mk-footer-drift {
   0% { background-position: 8% 0%, 92% 100%; transform: translate3d(-2%, 0, 0) scale(1.02); }
   100% { background-position: 92% 100%, 8% 0%; transform: translate3d(2%, -1%, 0) scale(1.06); }
-}
-@keyframes mk-footer-rail {
-  from { transform: translate3d(0, 0, 0); }
-  to { transform: translate3d(-50%, 0, 0); }
 }
 
 /* -------------------------------------------------------------- responsive */
@@ -2248,7 +2228,6 @@
   .mk-footer-meta { grid-template-columns: 1fr; gap: 24px; }
   .mk-footer-bar { align-items: flex-start; }
   .mk-footer-top { margin-left: 0; }
-  .mk-watermark { margin-bottom: -6%; }
 }
 
 @media (prefers-reduced-motion: reduce) {
