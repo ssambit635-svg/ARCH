@@ -185,9 +185,11 @@ describe('marketing surface', () => {
   });
 
   it.each(['base', 'light'])('%s text tokens keep AA contrast on every neutral surface', (theme) => {
-    const css = source('src/components/marketing/landing.css');
-    const block = (theme === 'base' ? /^\.mk \{([^}]+)\}/m : /\.mk-light \.mk \{([^}]+)\}/).exec(css)?.[1] ?? '';
-    const tokens = Object.fromEntries([...block.matchAll(/(--mk-[\w-]+): (#[\da-f]{6})/gi)].map((match) => [match[1]!, match[2]!]));
+    // The page sheet owns the surface palette, the action sheet owns the primary set; merge both
+    // so neither can drift without this assertion noticing.
+    const sheets = ['landing', 'actions'].map((name) => source(`src/components/marketing/${name}.css`));
+    const blockFor = (css: string) => (theme === 'base' ? /^\.mk \{([^}]+)\}/m : /\.mk-light \.mk \{([^}]+)\}/).exec(css)?.[1] ?? '';
+    const tokens = Object.fromEntries(sheets.flatMap((css) => [...blockFor(css).matchAll(/(--mk-[\w-]+): (#[\da-f]{6})/gi)].map((match) => [match[1]!, match[2]!])));
     const luminance = (hex: string) => [0, 2, 4].map((offset) => {
       const channel = parseInt(hex.slice(offset + 1, offset + 3), 16) / 255;
       return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
@@ -224,7 +226,7 @@ describe('marketing surface', () => {
   });
 
   it('keeps blue semantic, buttons token-driven and pane labels unclipped', () => {
-    const css = source('src/components/marketing/landing.css');
+    const css = source('src/components/marketing/landing.css') + source('src/components/marketing/actions.css');
     const lattice = source('src/components/marketing/control-lattice.tsx');
     // Monitoring reads blue because it is a state, not because blue is the brand.
     expect(css).toMatch(/\.mk-state--monitoring \{[^}]*var\(--mk-info-soft\)/);
@@ -234,8 +236,9 @@ describe('marketing surface', () => {
     // Button hover flips through the theme's own tokens, so it cannot go dark-on-dark
     // on a dark band or stay hardcoded to one theme.
     expect(css).toMatch(/\.mk-button:hover \{ background: var\(--mk-primary-hover\); color: var\(--mk-on-primary-hover\);/);
-    // The fake "Approve fix" action follows the real button rule: ink, no accent fill.
-    expect(css).toMatch(/\.mk-approve \{ background: var\(--mk-primary\); color: var\(--mk-on-primary\); \}/);
+    // The fake "Approve fix" action follows the real button rule: white pill, ink label, a
+    // hairline so it stays visible on the white phone pane — never an ink block, no accent fill.
+    expect(css).toMatch(/\.mk \.mk-approve \{[^}]*border: 1px solid var\(--mk-primary-line\)/);
     // Pane tags straddle the top edge; the pane must not clip them in half.
     expect(css).toMatch(/\.mk-pane \{[^}]*overflow: visible;/);
     // Hiding the header CTA on small phones must not hide the mobile menu's CTA too.
@@ -295,23 +298,88 @@ describe('marketing surface', () => {
     expect(footer.match(/<svg /g)?.every((tag) => tag === '<svg ')).toBe(true);
 
     // Both actions are white pills with ink labels — legible on paper, peach and ember alike.
-    expect(css).toMatch(/\.mk-footer-cta \.mk-button--on-ember \{[^}]*background: var\(--mk-footer-mist\)/);
-    expect(css).toMatch(/\.mk-footer-cta \.mk-button--on-ember \{[^}]*color: var\(--mk-footer-ink\)/);
+    expect(css).toMatch(/\.mk-footer-cta \.mk-button\.mk-button--on-ember \{[^}]*background: var\(--mk-footer-mist\)/);
+    expect(css).toMatch(/\.mk-footer-cta \.mk-button\.mk-button--on-ember \{[^}]*color: var\(--mk-footer-ink\)/);
     expect(footer.match(/mk-button--on-ember/g)).toHaveLength(2);
     expect(footer).toContain('Get started for free');
     expect(footer).toContain('Talk to an expert');
   });
 
-  it('lays the whole site on the same squared grid as the closing band', () => {
+  it('keeps action labels from being recoloured by the prose anchor rule', () => {
+    const css = source('src/components/marketing/actions.css');
+    // `.mk a` / `.mk button` set `color: inherit` at (0,1,1). A bare `.mk-button` (0,1,0) loses that
+    // fight, so the pill was painted ink and its label inherited the same ink — a button that
+    // looked empty. The action colour is restated where it outranks the prose rule.
+    const specificity = (selector: string): [number, number, number] => {
+      const ids = (selector.match(/#[\w-]+/g) ?? []).length;
+      const classes = (selector.match(/\.[\w-]+|\[[^\]]+\]|:(?!:)[\w-]+/g) ?? []).length;
+      const elements = (selector.match(/(?:^|[\s>+~])([a-z][\w-]*)/gi) ?? []).length;
+      return [ids, classes, elements];
+    };
+    const beats = (a: string, b: string) => {
+      const x = specificity(a);
+      const y = specificity(b);
+      for (let i = 0; i < 3; i += 1) {
+        const [mine, theirs] = [x[i] ?? 0, y[i] ?? 0];
+        if (mine !== theirs) return mine > theirs;
+      }
+      return false;
+    };
+
+    const page = source('src/components/marketing/landing.css');
+    expect(page).toContain('.mk a { color: inherit;');
+    expect(css).toMatch(/\.mk a\.mk-button,\s*\n\.mk button\.mk-button \{[^}]*color: var\(--mk-on-primary\);/);
+    expect(beats('.mk a.mk-button', '.mk a')).toBe(true);
+    // The ghost variant restates its own label colour at the same weight, or it would fall back
+    // to the ink above and vanish on the dark windows the panes live in.
+    expect(css).toMatch(/\.mk a\.mk-button--ghost,\s*\n\.mk button\.mk-button--ghost,[\s\S]*?color: var\(--mk-fg\);/);
+    expect(beats('.mk a.mk-button--ghost', '.mk a')).toBe(true);
+    // The closing band keeps its own ink by matching the new specificity. Its rules live in the
+    // page sheet, which is why they are stated as `.mk-button.mk-button--on-ember`.
+    expect(page).toContain('.mk-footer-cta .mk-button.mk-button--on-ember {');
+    expect(beats('.mk-footer-cta .mk-button.mk-button--on-ember', '.mk a.mk-button')).toBe(true);
+    // The action sheet has to load after the page sheet, or a cached copy of the page sheet could
+    // win the tie on the shared selectors.
+    const layout = source('src/app/(marketing)/layout.tsx');
+    expect(layout.indexOf('marketing/landing.css')).toBeLessThan(layout.indexOf('marketing/actions.css'));
+  });
+
+  it('gives every primary action a white pill rather than an ink block', () => {
+    const css = source('src/components/marketing/actions.css');
+    // The light palette's action colour is white, so nav, hero, status and demo buttons all read
+    // as white pills with ink labels instead of black blocks on the paper.
+    expect(css).toMatch(/\.mk-light \.mk \{[\s\S]*?--mk-primary: #ffffff;/);
+    expect(css).toMatch(/\.mk-light \.mk \{[\s\S]*?--mk-on-primary: #10131a;/);
+    expect(css).not.toMatch(/\.mk-light \.mk \{[\s\S]*?--mk-primary: #10131a;/);
+    // A white pill on paper or a white band needs an outline to stay visible; this surface stays
+    // flat, so the outline is a hairline rather than a shadow.
+    expect(css).toMatch(/\.mk-light \.mk \{[\s\S]*?--mk-primary-line: #6f6c66;/);
+    expect(css).toMatch(/\.mk a\.mk-button,[\s\S]*?border-color: var\(--mk-primary-line\)/);
+    expect(css).not.toMatch(/box-shadow/);
+    // The other controls that used the ink fill follow the same rule.
+    expect(css).toMatch(/\.mk \.mk-tab\[aria-selected='true'\] \{[^}]*border-color: var\(--mk-primary-line\)/);
+    expect(css).toMatch(/\.mk \.mk-approve \{[^}]*border: 1px solid var\(--mk-primary-line\)/);
+    // Geometry stays with the component.
+    const page = source('src/components/marketing/landing.css');
+    expect(page).toMatch(/\.mk-button \{[\s\S]*?border: 1px solid var\(--mk-primary-line\)/);
+    expect(page).toMatch(/\.mk-pane-tag \{[\s\S]*?border: 1px solid var\(--mk-line-strong\)/);
+  });
+
+  it('keeps the marketing page on a plain surface rather than a drawn lattice', () => {
     const css = source('src/components/marketing/landing.css');
-    // One lattice size, shared by the page and every band that paints its own surface.
-    expect(css).toMatch(/\.mk \{[^}]*--mk-grid-size: 76px/);
-    expect(css).toMatch(/\.mk \{[^}]*--mk-grid-line/);
-    expect(css).toMatch(/\.mk \{[^}]*background-image:[\s\S]*?linear-gradient\(to right, var\(--mk-grid-line\)/);
-    expect(css).toMatch(/\.mk \.mk-band--white,[\s\S]*?\.mk \.mk-on-dark \{[\s\S]*?background-size: var\(--mk-grid-size\)/);
-    // The dark bands get a light hairline rather than the paper one.
-    expect(css).toMatch(/\.mk-on-dark \{[^}]*--mk-grid-line: rgb\(244 244 245/);
-    // A grid is drawn with linear gradients only — no glow, no radial bloom.
+    // The page paints one flat fill. There is no squared grid, no hero blueprint field and no
+    // masked survey rule on the closing band: colour and spacing separate sections, not checks.
+    expect(css).toMatch(/\.mk \{[^}]*background-color: var\(--mk-bg\)/);
+    expect(css).not.toContain('--mk-grid-size');
+    expect(css).not.toContain('--mk-grid-line');
+    expect(css).not.toMatch(/linear-gradient\(to (right|bottom), [^)]*1px, transparent 1px\)/);
+    expect(css).not.toContain('.mk-hero::before');
+    expect(css).not.toContain('.mk-stage::before');
+    expect(css).not.toContain('.mk-footer-cta::after');
+    // The surfaces that used to carry the pattern are flat fills.
+    expect(css).toMatch(/\.mk-hero \{[^}]*background: var\(--mk-bg\)/);
+    expect(css).toMatch(/\.mk-stage \{[^}]*background: var\(--mk-surface-2\)/);
+    // No other decorative pattern is allowed onto the page either.
     expect(css).not.toMatch(/radial-gradient/);
   });
 });

@@ -1,0 +1,95 @@
+/* ============================================================================
+   ARCH marketing — actions
+   ----------------------------------------------------------------------------
+   One palette for everything a visitor can press: the pill buttons, the
+   segmented workflow tabs, the pane labels and the demo "Approve fix" action.
+   A white fill with an ink label and a visible outline, on every surface.
+
+   This sheet is imported after `landing.css`, on purpose. Two reasons:
+
+   1. The prose rule `.mk a { color: inherit }` and `.mk button { color: inherit }`
+      are (0,1,1). A bare `.mk-button` is (0,1,0), so it lost that fight and every
+      action link inherited the ink body colour — an ink label on an ink fill, a
+      pill that looked empty. The action colours below are stated at (0,2,1) so
+      the label always comes from the button.
+   2. The palette and those specificity-sensitive rules ship as one unit, so a
+      cached copy of `landing.css` cannot leave a dark pill with an invisible
+      label behind.
+
+   Geometry (height, padding, radius) stays with the component in `landing.css`.
+   ========================================================================== */
+
+/* Base palette. An isolated `.mk` (no `.mk-light`) is graphite, so an action on
+   it stays light-on-dark. */
+.mk {
+  --mk-primary: #f4f4f5;
+  --mk-primary-hover: #ffffff;
+  --mk-on-primary: #0a0c10;
+  --mk-on-primary-hover: #050608;
+  --mk-primary-line: rgb(255 255 255 / 55%);
+}
+
+/* The shipped site: white pills with ink labels on paper, on the white bands and
+   inside the product windows. No primary action is ever an ink block. */
+.mk-light .mk {
+  --mk-primary: #ffffff;
+  --mk-primary-hover: #efece4;
+  --mk-on-primary: #10131a;
+  --mk-on-primary-hover: #10131a;
+  --mk-primary-line: #6f6c66;
+}
+
+/* Dark bands remap the same names to neutral graphite — never blue-black — so the
+   accent still reads the way it does on paper. */
+.mk .mk-on-dark {
+  --mk-primary: #f4f4f5;
+  --mk-primary-hover: #ffffff;
+  --mk-on-primary: #0a0c10;
+  --mk-on-primary-hover: #050608;
+  --mk-primary-line: rgb(255 255 255 / 55%);
+}
+
+/* The label, stated above the prose rules that would otherwise win. */
+.mk a.mk-button,
+.mk button.mk-button {
+  border-color: var(--mk-primary-line);
+  color: var(--mk-on-primary);
+}
+.mk a.mk-button:hover,
+.mk button.mk-button:hover {
+  border-color: var(--mk-fg);
+  color: var(--mk-on-primary-hover);
+}
+
+/* Ghost and on-ember actions carry no fill, so they keep their own label colour. */
+.mk a.mk-button--ghost,
+.mk button.mk-button--ghost,
+.mk a.mk-button--ghost:hover,
+.mk button.mk-button--ghost:hover {
+  border-color: var(--mk-line-strong);
+  color: var(--mk-fg);
+}
+
+/* The selected workflow tab and the phone pane's active tab are white pills too,
+   and sit inside white containers — so they keep the outline. */
+.mk .mk-tab[aria-selected='true'] {
+  border-color: var(--mk-primary-line);
+  background: var(--mk-primary);
+  color: var(--mk-on-primary);
+}
+
+/* The demo action in the phone pane follows the real button rule. */
+.mk .mk-approve {
+  border: 1px solid var(--mk-primary-line);
+  background: var(--mk-primary);
+  color: var(--mk-on-primary);
+}
+
+/* In-window controls are buttons too, so they restate their label colour above `color: inherit`.
+   The copy chip sits on the dark terminal, the menu chip on paper. */
+.mk button.mk-copy-button {
+  color: var(--mk-win-fg);
+}
+.mk button.mk-icon-button {
+  color: var(--mk-fg);
+}

@@ -39,10 +39,6 @@
   --mk-accent-strong: #ffa25e;
   --mk-accent-soft: rgb(255 138 61 / 14%);
   --mk-on-accent: #1a0d05;
-  --mk-primary: #f4f4f5;
-  --mk-primary-hover: #ffffff;
-  --mk-on-primary: #0a0c10;
-  --mk-on-primary-hover: #050608;
   --mk-info: #7fb3ff;
   --mk-info-strong: #a8c8ff;
   --mk-info-soft: rgb(127 179 255 / 14%);
@@ -53,9 +49,6 @@
   --mk-negative: #ff6a7c;
   --mk-ember: #e2401a;
   --mk-ember-deep: #bf2c0b;
-  /* The whole site sits on one squared grid — the same hairline lattice the closing band uses. */
-  --mk-grid-size: 76px;
-  --mk-grid-line: rgb(255 255 255 / 6%);
   --mk-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --mk-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mk-mono: var(--font-geist-mono), var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -105,16 +98,11 @@
   --mk-accent-strong: #bf2c0b;
   --mk-accent-soft: #fcebe3;
   --mk-on-accent: #ffffff;
-  --mk-primary: #10131a;
-  --mk-primary-hover: #262b36;
-  --mk-on-primary: #ffffff;
-  --mk-on-primary-hover: #ffffff;
   --mk-info: #1d6fb8;
   --mk-info-strong: #1d6fb8;
   --mk-info-soft: #e8f1fa;
   --mk-focus: #bf2c0b;
   --mk-nav-bg: rgb(246 244 239 / 88%);
-  --mk-grid-line: #e3ddd2;
   --mk-positive: #0f7a4f;
   --mk-caution: #8a5a08;
   --mk-negative: #b42336;
@@ -140,10 +128,6 @@
   --mk-accent-strong: #ffa25e;
   --mk-accent-soft: rgb(255 138 61 / 14%);
   --mk-on-accent: #1a0d05;
-  --mk-primary: #f4f4f5;
-  --mk-primary-hover: #ffffff;
-  --mk-on-primary: #0a0c10;
-  --mk-on-primary-hover: #050608;
   --mk-info: #7fb3ff;
   --mk-info-strong: #a8c8ff;
   --mk-info-soft: rgb(127 179 255 / 14%);
@@ -155,7 +139,6 @@
   background-color: var(--mk-bg);
   color: var(--mk-fg);
   color-scheme: dark;
-  --mk-grid-line: rgb(244 244 245 / 7%);
 }
 
 /* The marketing wrapper sits outside `.mk`, so it cannot read the tokens below;
@@ -170,22 +153,10 @@
 
 /* ---------------------------------------------------------------- utilities */
 
-/* The squared paper: one hairline every 76px, on the page and on every band that paints its own
-   surface, so the lattice never stops at a section boundary. */
+/* Plain paper: one flat surface behind every section. No lattice, no checks — the page
+   colour alone carries the surface, and each band paints its own flat fill. */
 .mk {
   background-color: var(--mk-bg);
-  background-image:
-    linear-gradient(to right, var(--mk-grid-line) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--mk-grid-line) 1px, transparent 1px);
-  background-size: var(--mk-grid-size) var(--mk-grid-size);
-}
-.mk .mk-band--white,
-.mk .mk-band--dark,
-.mk .mk-on-dark {
-  background-image:
-    linear-gradient(to right, var(--mk-grid-line) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--mk-grid-line) 1px, transparent 1px);
-  background-size: var(--mk-grid-size) var(--mk-grid-size);
 }
 
 .mk *,
@@ -197,7 +168,7 @@
 .mk button { font: inherit; color: inherit; cursor: pointer; }
 .mk img { max-width: 100%; }
 .mk-main { padding-top: 0; }
-.mk-skip {
+.mk a.mk-skip {
   position: fixed;
   top: 12px;
   left: 12px;
@@ -279,6 +250,8 @@
 .mk-footnote { margin: 18px 0 0; color: var(--mk-subtle); font-size: 12.5px; line-height: 1.75; }
 
 /* ------------------------------------------------------------------ actions */
+/* Geometry lives here; the action palette and its label rules ship in actions.css, which is
+   imported after this file so a cached copy of this sheet cannot resurrect an ink pill. */
 
 .mk-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 28px; }
 
@@ -289,7 +262,7 @@
   gap: 10px;
   height: 46px;
   padding: 0 22px;
-  border: 1px solid transparent;
+  border: 1px solid var(--mk-primary-line);
   border-radius: 999px;
   background: var(--mk-primary);
   color: var(--mk-on-primary);
@@ -301,7 +274,7 @@
   white-space: nowrap;
   transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease;
 }
-.mk-button:hover { background: var(--mk-primary-hover); color: var(--mk-on-primary-hover); transform: translateY(-1px); }
+.mk-button:hover { background: var(--mk-primary-hover); color: var(--mk-on-primary-hover); border-color: var(--mk-fg); transform: translateY(-1px); }
 .mk-button:active { transform: translateY(0); }
 .mk-button .mk-link-arrow { transition: transform 160ms ease; }
 .mk-button:hover .mk-link-arrow { transform: translateX(2px); }
@@ -466,21 +439,7 @@
   min-height: 100svh;
   padding-block: 72px 84px;
   overflow: hidden;
-  background:
-    linear-gradient(180deg, var(--mk-bg) 0%, var(--mk-bg) 72%, var(--mk-bg-soft) 100%);
-}
-/* A quiet blueprint field behind the copy only; it stops before the screenshot. */
-.mk-hero::before {
-  content: '';
-  position: absolute;
-  inset: 0 42% 0 0;
-  background-image:
-    linear-gradient(to right, var(--mk-line-soft) 1px, transparent 1px),
-    linear-gradient(to bottom, var(--mk-line-soft) 1px, transparent 1px);
-  background-size: 56px 56px;
-  opacity: 0.6;
-  pointer-events: none;
-  mask-image: linear-gradient(180deg, transparent, #000 18%, #000 76%, transparent);
+  background: var(--mk-bg);
 }
 .mk-hero-inner {
   position: relative;
@@ -959,7 +918,7 @@
   gap: 9px;
   height: 38px;
   padding: 0 16px;
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
   color: var(--mk-muted);
@@ -968,7 +927,6 @@
   transition: background-color 150ms ease, color 150ms ease;
 }
 .mk-tab:hover { background: var(--mk-hover); color: var(--mk-fg); }
-.mk-tab[aria-selected="true"] { background: var(--mk-primary); color: var(--mk-on-primary); }
 .mk-tab-index { color: currentColor; opacity: 0.55; font-family: var(--mk-mono); font-size: 10px; }
 
 .mk-flow-panel {
@@ -1201,20 +1159,9 @@
   margin-top: 40px;
   border: 1px solid var(--mk-line);
   border-radius: 18px;
-  background:
-    linear-gradient(180deg, var(--mk-surface-2) 0%, var(--mk-bg-soft) 100%);
+  background: var(--mk-surface-2);
   overflow: hidden;
   isolation: isolate;
-}
-.mk-stage::before {
-  content: '';
-  position: absolute;
-  inset: 38px 0 0;
-  background-image:
-    linear-gradient(to right, color-mix(in srgb, var(--mk-fg) 4.5%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--mk-fg) 4.5%, transparent) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
 }
 .mk-stage-menubar {
   position: relative;
@@ -1312,6 +1259,7 @@
   top: -11px;
   left: 14px;
   padding: 3px 9px;
+  border: 1px solid var(--mk-line-strong);
   border-radius: 999px;
   background: var(--mk-primary);
   color: var(--mk-on-primary);
@@ -1352,14 +1300,13 @@
 .mk-phone-id { margin: 11px 0 0; color: var(--mk-subtle); font-family: var(--mk-mono); font-size: 9px; letter-spacing: 0.05em; }
 .mk-phone-title { margin: 5px 0 10px; color: var(--mk-fg); font-size: 13.5px; font-weight: 600; line-height: 1.35; }
 .mk-phone-tabs { display: flex; gap: 4px; }
-.mk-phone-tabs span { padding: 3px 8px; border-radius: 999px; color: var(--mk-muted); font-size: 9px; }
-.mk-phone-tabs .is-active { background: var(--mk-primary); color: var(--mk-on-primary); }
+.mk-phone-tabs span { padding: 3px 8px; border: 1px solid transparent; border-radius: 999px; color: var(--mk-muted); font-size: 9px; }
+.mk-phone-tabs .is-active { border-color: var(--mk-line-strong); background: var(--mk-primary); color: var(--mk-on-primary); }
 .mk-phone-label { margin: 14px 0 0; color: var(--mk-subtle); font-family: var(--mk-mono); font-size: 8.5px; letter-spacing: 0.07em; text-transform: uppercase; }
 .mk-phone-body { margin: 5px 0 0; color: var(--mk-muted); font-size: 10.5px; line-height: 1.6; }
 .mk-phone-actions { display: grid; gap: 6px; margin-top: 12px; }
 .mk-approve,
 .mk-reject { display: block; padding: 8px; border-radius: 8px; text-align: center; font-size: 10.5px; font-weight: 600; }
-.mk-approve { background: var(--mk-primary); color: var(--mk-on-primary); }
 .mk-reject { border: 1px solid var(--mk-line-strong); background: transparent; color: var(--mk-fg); }
 .mk-phone-note { margin: 10px 0 0; color: var(--mk-subtle); font-size: 8.5px; line-height: 1.5; }
 
@@ -1828,19 +1775,6 @@
   animation: mk-footer-drift 22s ease-in-out infinite alternate;
   pointer-events: none;
 }
-/* A hairline survey grid, masked at both ends so the band never turns into a table. */
-.mk-footer-cta::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background-image:
-    linear-gradient(rgb(42 20 16 / 8%) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(42 20 16 / 8%) 1px, transparent 1px);
-  background-size: 76px 76px;
-  mask-image: linear-gradient(180deg, transparent 4%, #000 34%, #000 68%, transparent 96%);
-  pointer-events: none;
-}
 .mk-footer-cta-inner {
   position: relative;
   z-index: 1;
@@ -1886,22 +1820,22 @@
    ember, so a white pill with an ink label is the only pair that stays legible at every point of
    it. The secondary is white with an ink hairline, not a see-through outline.
    Nothing here is opacity-animated, so the close of the page cannot lose its call to action. */
-.mk-footer-cta .mk-button--on-ember {
+.mk-footer-cta .mk-button.mk-button--on-ember {
   border-color: var(--mk-footer-ink);
   background: var(--mk-footer-mist);
   color: var(--mk-footer-ink);
 }
-.mk-footer-cta .mk-button--on-ember:hover {
+.mk-footer-cta .mk-button.mk-button--on-ember:hover {
   border-color: var(--mk-footer-mist);
   background: var(--mk-footer-ink);
   color: var(--mk-footer-mist);
 }
-.mk-footer-cta .mk-button--on-ember.mk-button--ghost {
+.mk-footer-cta .mk-button.mk-button--on-ember.mk-button--ghost {
   border-color: rgb(42 20 16 / 78%);
   background: rgb(255 253 251 / 94%);
   color: var(--mk-footer-ink);
 }
-.mk-footer-cta .mk-button--on-ember.mk-button--ghost:hover {
+.mk-footer-cta .mk-button.mk-button--on-ember.mk-button--ghost:hover {
   border-color: var(--mk-footer-ink);
   background: var(--mk-footer-ink);
   color: var(--mk-footer-mist);
@@ -2055,7 +1989,6 @@
   .mk-nav-mobile .mk-button:hover { color: var(--mk-on-primary-hover); }
 
   .mk-hero { min-height: auto; padding-block: 56px 72px; }
-  .mk-hero::before { inset: 0 0 45% 0; }
   .mk-hero-inner { grid-template-columns: minmax(0, 1fr); gap: 56px; }
   .mk-hero-copy { max-width: 640px; }
   .mk-hero-title { font-size: clamp(38px, 7vw, 58px); }
@@ -2084,7 +2017,6 @@
   .mk-engine-copy .mk-description { max-width: 60ch; }
 
   .mk-stage { height: auto; padding: 22px 20px 24px; }
-  .mk-stage::before { inset: 0; }
   .mk-stage-menubar { display: none; }
   .mk-stage-board { display: none; }
   .mk-stage { display: grid; gap: 10px; }

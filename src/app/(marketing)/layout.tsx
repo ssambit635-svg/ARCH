@@ -1,6 +1,9 @@
 import type { Viewport } from 'next';
 import type { ReactNode } from 'react';
 import '@/components/marketing/landing.css';
+// The action surface loads after the page sheet: its palette and the label rules that outrank the
+// prose `color: inherit` live there, so a pill is always a white fill with a visible ink label.
+import '@/components/marketing/actions.css';
 import { SiteChrome } from '@/components/marketing/site-chrome';
 
 /**

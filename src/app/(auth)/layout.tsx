@@ -4,8 +4,6 @@ import { Logo } from '@/components/ui/logo';
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="relative min-h-screen bg-[#050608] text-white flex flex-col overflow-hidden">
-      <div className="pointer-events-none fixed inset-0 bg-grid opacity-30" aria-hidden />
-
       <header className="relative z-10 border-b border-[#222]">
         <div className="mx-auto max-w-7xl px-6 h-16 flex items-center justify-between">
           <Link href="/" aria-label="ARCH home">
