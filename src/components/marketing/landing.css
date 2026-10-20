@@ -2059,7 +2059,10 @@
   .mk-hero-frame { border-radius: 14px; }
   .mk-window-bar { min-height: 36px; }
   .mk-hero-chip { top: -13px; left: 12px; padding: 6px 10px; font-size: 9.5px; }
-  .mk-hero-chip--trail { right: 12px; left: auto; }
+  /* The base class sets `top` again at equal specificity, so the trailing chip must restate
+     `top: auto`: with both `top` and `bottom` set on an absolutely positioned box the chip
+     stretched to the full height of the hero figure and covered the screenshot on phones. */
+  .mk-hero-chip--trail { top: auto; right: 12px; bottom: -13px; left: auto; }
   .mk-hero-caption { margin-top: 18px; font-size: 9.5px; }
 
   .mk-proof-item { padding-block: 18px; }
