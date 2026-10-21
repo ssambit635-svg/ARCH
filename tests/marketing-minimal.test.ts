@@ -431,20 +431,27 @@ describe('marketing surface', () => {
     expect(actionSource).toContain('textWidth + gap');
     expect(actionSource).toContain('-(chipWidth + gap)');
 
-    // Six distinct atmospheric paintings (five section bands plus the mountain-and-lake footer
-    // horizon) rhyme with the hero dawn without repeating hero-dawn.jpg.
+    // Seven distinct atmospheric paintings (five section bands, the celestial stack sky, and
+    // the mountain-and-lake footer horizon) rhyme with the hero dawn without repeating hero-dawn.jpg.
     for (const file of [
       'atmos-mist.jpg',
       'atmos-clouds.jpg',
       'atmos-dunes.jpg',
       'atmos-night.jpg',
       'atmos-dusk.jpg',
+      'atmos-constellation-sky.jpg',
       'atmos-footer-horizon.jpg',
     ]) {
       expect(existsSync(`public/marketing/${file}`), `Missing atmosphere asset: ${file}`).toBe(true);
       expect(css).toContain(`/marketing/${file}`);
     }
     expect(css).not.toMatch(/\.mk-atmos[^{]*\{[^}]*hero-dawn\.jpg/);
+
+    // Celestial stack chart plots all 14 verified tools across three constellations over the painted sky.
+    const deploy = render(Deploy);
+    expect(deploy).toContain('mk-sky-observatory');
+    expect(deploy).toContain('mk-sky-trajectory');
+    expect(deploy).toContain('mk-sky-telemetry');
 
     // Slow weighted wheel glide and masked heading reveals across the hero and every section.
     expect(smoothSource).toContain('const EASE = 0.068');
