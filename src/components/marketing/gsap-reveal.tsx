@@ -161,6 +161,21 @@ function setupMotion(root: HTMLElement): () => void {
         });
       }
 
+      // The painted mountain-and-lake horizon in the footer drifts gently as the close enters.
+      for (const footer of select<HTMLElement>('.mk-footer')) {
+        gsap.fromTo(footer, { '--mk-footer-sky-y': '-28px' }, {
+          '--mk-footer-sky-y': '28px',
+          ease: 'none',
+          scrollTrigger: {
+            trigger: footer,
+            start: 'top bottom',
+            end: 'bottom bottom',
+            scrub: 0.6,
+            invalidateOnRefresh: true,
+          },
+        });
+      }
+
       // The closing wordmark drifts up as the page ends.
       for (const wordmark of select('[data-mk-wordmark]')) {
         gsap.fromTo(wordmark, { yPercent: 18, opacity: 0.4 }, {
