@@ -614,7 +614,9 @@
   line-height: 1;
   text-wrap: balance;
 }
-.mk-hero-nowrap { white-space: nowrap; }
+/* The pun is the brand: ARCH set in ember caps inside the lowercase headline, so the eye
+   lands on the name hiding inside "arch-nemesis". */
+.mk-hero-arch { color: var(--mk-accent-strong); letter-spacing: -0.02em; }
 .mk-hero-claim {
   display: block;
   margin-top: 20px;
@@ -2114,7 +2116,6 @@
 
 @media (max-width: 1120px) {
   /* Below this width the unbroken first line is wider than its column. */
-  .mk-hero-title .mk-hero-nowrap { white-space: normal; }
   .mk-nav-links { gap: 0; }
   .mk-nav-link { padding-inline: 10px; }
   .mk-nav-github { display: none; }
@@ -2315,7 +2316,6 @@
   .mk-hero-badge { margin-bottom: 20px; }
   .mk-hero-doclink { margin-left: 2px; }
   .mk-hero-claim { font-size: 0.5em; }
-  .mk-hero-title .mk-hero-nowrap { white-space: normal; }
   .mk-actions { gap: 10px; }
   .mk-button { height: 44px; padding: 0 18px; font-size: 13.5px; }
   .mk-button--small { height: 36px; }
