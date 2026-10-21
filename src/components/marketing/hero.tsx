@@ -1,40 +1,69 @@
 import Link from 'next/link';
+import { DotGrid } from './dot-grid';
 import { LinkArrow } from './link-arrow';
 import { PRODUCT_VERSION } from '@/lib/brand';
 
 /**
- * The hero states what ARCH is before anything else: incident response for engineering teams,
- * self-hosted, with human-reviewed assistance. The proof beside it is a real capture of the
- * incident workspace, framed like a product window rather than an illustration.
+ * The hero follows the Aceternity "Hero With Background And Navbar" block (see DESIGN (6).md):
+ * a full-viewport painted dawn that fades into the page paper at every edge, four hairline
+ * scale lines framing the stage, the navigation floating over the sky, and the copy anchored
+ * to the bottom-left in a 96px Inter headline with an ink action and a plain text link.
+ *
+ * The ARCH copy keeps its literal promise — incident response, self-hosted, human-reviewed —
+ * and the real product capture moves to a full-width window directly under the stage, so the
+ * first viewport stays pure atmosphere while the proof is still one scroll away.
  */
 export function Hero() {
   return (
     <section id="top" className="mk-hero" aria-labelledby="hero-title">
-      <div className="mk-container mk-hero-inner">
-        <div className="mk-hero-copy">
-          <p className="mk-eyebrow" data-mk-reveal>Early access · v{PRODUCT_VERSION}</p>
-          <h1 id="hero-title" className="mk-hero-title">
-            <span className="mk-hero-nowrap">Incident response</span> for engineering teams.
-            <span className="mk-hero-claim">Self-hosted.<br />Human-reviewed AI.</span>
-          </h1>
-          <p className="mk-hero-poetry" data-mk-reveal>Through the noise. <span>Into clarity.</span></p>
-          <p className="mk-hero-lede" data-mk-reveal>
-            Alerts, context and decisions in one workspace your team runs itself.
-          </p>
-          <ul className="mk-hero-points" data-mk-reveal>
-            <li className="mk-hero-point">Runs on your server</li>
-            <li className="mk-hero-point">No external AI calls</li>
-            <li className="mk-hero-point">Every write audited</li>
-          </ul>
-          <div className="mk-actions" data-mk-reveal>
-            <Link href="/register" className="mk-button mk-button--large">Get started <LinkArrow direction="right" /></Link>
-            <Link href="#product" className="mk-button mk-button--large mk-button--ghost">
-              See the workspace
-            </Link>
-          </div>
+      <div className="mk-hero-stage">
+        <img
+          src="/marketing/hero-dawn.jpg"
+          alt=""
+          aria-hidden="true"
+          className="mk-hero-bg"
+          fetchPriority="high"
+          decoding="async"
+        />
+        <div className="mk-hero-shade" aria-hidden="true" />
+        <div className="mk-hero-scales" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+          <span />
         </div>
 
-        <figure className="mk-hero-figure">
+        <div className="mk-container mk-hero-inner">
+          <div className="mk-hero-copy">
+            <p className="mk-eyebrow mk-hero-badge" data-mk-reveal>Early access · v{PRODUCT_VERSION}</p>
+            <h1 id="hero-title" className="mk-hero-title">
+              <span className="mk-hero-nowrap">Incident response</span> for engineering teams.
+              <span className="mk-hero-claim">Self-hosted. Human-reviewed AI.</span>
+            </h1>
+            <p className="mk-hero-poetry" data-mk-reveal>Through the noise. <span>Into clarity.</span></p>
+            <p className="mk-hero-lede" data-mk-reveal>
+              Alerts, context and decisions in one workspace your team runs itself.
+            </p>
+            <div className="mk-actions" data-mk-reveal>
+              <Link href="/register" className="mk-button mk-button--ink">
+                <DotGrid />
+                Get started
+              </Link>
+              <Link href="#product" className="mk-text-link mk-hero-doclink">
+                See the workspace <LinkArrow direction="right" />
+              </Link>
+            </div>
+            <ul className="mk-hero-points" data-mk-reveal>
+              <li className="mk-hero-point">Runs on your server</li>
+              <li className="mk-hero-point">No external AI calls</li>
+              <li className="mk-hero-point">Every write audited</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div className="mk-container mk-hero-shotwrap">
+        <figure className="mk-hero-figure" data-mk-reveal>
           <div className="mk-hero-frame">
             <div className="mk-window-bar" aria-hidden="true">
               <span className="mk-window-dots"><span className="mk-window-dot" /><span className="mk-window-dot" /><span className="mk-window-dot" /></span>
@@ -48,7 +77,6 @@ export function Hero() {
                 width={1440}
                 height={900}
                 className="mk-shot"
-                fetchPriority="high"
                 decoding="async"
               />
             </div>

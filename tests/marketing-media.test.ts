@@ -66,6 +66,9 @@ describe('marketing imagery', () => {
   it('ships no retired brand films, mascot assets, sample avatars or design dumps', () => {
     // This is the cleanup the brief asked for: the repository carries the product, not a scratch
     // folder. Each path below was either a one-off upload or a retired marketing experiment.
+    // The DESIGN/SKILL extractions are no longer on this list: the owner keeps them in the repo
+    // root as the working design references each redesign is briefed from (DESIGN (6).md and
+    // SKILL (4).md are the Aceternity hero the current hero stage is built from).
     const retired = [
       "Word_'ARCH'_emerges_from_mountains_20261004010409.mp4",
       'public/wwm.mp4',
@@ -74,10 +77,7 @@ describe('marketing imagery', () => {
       'public/robot',
       'DESIGN.md',
       'DESIGN (1).md',
-      'DESIGN (2).md',
       'SKILL.md',
-      'SKILL (1).md',
-      'wappalyzer_incident-io.csv',
     ];
     for (const path of retired) {
       expect(existsSync(join(root, path)), `${path} is a retired upload and must not ship`).toBe(false);
