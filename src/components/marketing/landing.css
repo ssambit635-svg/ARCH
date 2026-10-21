@@ -2025,22 +2025,39 @@
   --mk-footer-peach: #f9cfb5;
   --mk-footer-apricot: #f6b491;
   --mk-footer-coral: #f19a6f;
+  --mk-footer-water: #692616;
+  --mk-footer-water-deep: #2b110b;
   --mk-footer-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, ui-serif, serif;
   position: relative;
+  isolation: isolate;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: var(--mk-ember-deep);
+  background: var(--mk-footer-water-deep);
   color: var(--mk-on-accent);
   text-align: center;
 }
-/* The page dissolves from paper into ember across the close. The gradient lives on the CTA
-   itself, so the ink copy above always sits on the pale half and the links below always sit on
-   solid ember — contrast is a property of the layout, not of a lucky viewport height.
+/* One continuous dusk horizon across the entire close: pale cream sky at the top, warm
+   alpenglow mountain ridges framing the valley below the call to action, and a still alpine
+   lake reflecting terracotta and deep ember across the link bar at the base. */
+.mk-footer::before {
+  content: '';
+  position: absolute;
+  inset: -38px 0;
+  z-index: -2;
+  background-image: url('/marketing/atmos-footer-horizon.jpg');
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: 50% 44%;
+  transform: translate3d(0, var(--mk-footer-sky-y, 0px), 0);
+  pointer-events: none;
+}
+/* The page dissolves from paper into the painted valley and down into the lake reflection.
    The first stop is the page colour itself (`--mk-bg`), not the white panel surface: the
-   section above the footer is paper, so opening on white printed a hard horizontal seam where
-   the two met. Opening on `--mk-bg` and taking the first fifth of the band to reach mist turns
-   the join into a dissolve — paper, white and orange blend with no visible line at the top. */
+   section above the footer is paper, so opening on solid `--mk-bg` and easing into translucent
+   mist over the first fifth of the band turns the join into a seamless dissolve with no
+   visible line at the top, while opening the middle of the band so the mountains and water
+   shine through behind the actions. */
 .mk-footer-cta {
   position: relative;
   isolation: isolate;
@@ -2056,13 +2073,11 @@
   background: linear-gradient(
     180deg,
     var(--mk-bg) 0%,
-    var(--mk-footer-mist) 18%,
-    var(--mk-footer-blush) 30%,
-    var(--mk-footer-peach) 44%,
-    var(--mk-footer-apricot) 59%,
-    var(--mk-footer-coral) 73%,
-    var(--mk-ember) 86%,
-    var(--mk-ember-deep) 100%
+    color-mix(in srgb, var(--mk-footer-mist) 64%, transparent) 16%,
+    color-mix(in srgb, var(--mk-footer-blush) 38%, transparent) 32%,
+    color-mix(in srgb, var(--mk-footer-peach) 20%, transparent) 52%,
+    color-mix(in srgb, var(--mk-footer-coral) 18%, transparent) 74%,
+    color-mix(in srgb, var(--mk-footer-water) 34%, transparent) 100%
   );
 }
 /* Ember light drifts across the band. Two soft linear washes, no filters, no per-frame layout:
@@ -2093,7 +2108,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding-bottom: clamp(56px, 8vw, 104px);
+  padding-bottom: clamp(76px, 10vw, 136px);
 }
 .mk-footer-cta .mk-eyebrow { margin-bottom: 22px; color: var(--mk-footer-ink); }
 .mk-footer-cta .mk-eyebrow::before { background: var(--mk-footer-ink); }
@@ -2160,7 +2175,17 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
-.mk-footer-base { background: var(--mk-ember-deep); }
+.mk-footer-base {
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--mk-footer-water) 58%, transparent) 0%,
+    color-mix(in srgb, var(--mk-footer-water-deep) 82%, transparent) 54%,
+    color-mix(in srgb, var(--mk-footer-water-deep) 92%, transparent) 100%
+  );
+  backdrop-filter: blur(3px);
+}
 .mk-footer-meta {
   display: grid;
   grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr));

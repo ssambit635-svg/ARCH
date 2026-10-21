@@ -431,8 +431,16 @@ describe('marketing surface', () => {
     expect(actionSource).toContain('textWidth + gap');
     expect(actionSource).toContain('-(chipWidth + gap)');
 
-    // Five distinct atmospheric paintings rhyme with the hero dawn without repeating hero-dawn.jpg.
-    for (const file of ['atmos-mist.jpg', 'atmos-clouds.jpg', 'atmos-dunes.jpg', 'atmos-night.jpg', 'atmos-dusk.jpg']) {
+    // Six distinct atmospheric paintings (five section bands plus the mountain-and-lake footer
+    // horizon) rhyme with the hero dawn without repeating hero-dawn.jpg.
+    for (const file of [
+      'atmos-mist.jpg',
+      'atmos-clouds.jpg',
+      'atmos-dunes.jpg',
+      'atmos-night.jpg',
+      'atmos-dusk.jpg',
+      'atmos-footer-horizon.jpg',
+    ]) {
       expect(existsSync(`public/marketing/${file}`), `Missing atmosphere asset: ${file}`).toBe(true);
       expect(css).toContain(`/marketing/${file}`);
     }
