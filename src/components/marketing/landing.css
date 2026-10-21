@@ -317,12 +317,20 @@
 .mk a.mk-button.mk-button--ink,
 .mk button.mk-button.mk-button--ink {
   height: 48px;
-  padding: 0 20px 0 8px;
+  /* Symmetric padding: the dot box and the label trade places inside a fixed footprint, so the
+     button's width is the same at rest and mid-swap and nothing below it moves. */
+  padding: 0 8px;
   gap: 12px;
   border-color: var(--mk-fg);
   border-radius: 10px;
   background: var(--mk-fg);
   color: var(--mk-surface);
+}
+/* The label travels as one block — it is not re-laid-out, only moved — so the swap is a single
+   composited transform on each half. */
+.mk-action-label {
+  display: inline-block;
+  will-change: transform;
 }
 .mk a.mk-button.mk-button--ink:hover,
 .mk button.mk-button.mk-button--ink:hover {
@@ -333,7 +341,7 @@
 .mk a.mk-button.mk-button--ink.mk-button--small,
 .mk button.mk-button.mk-button--ink.mk-button--small {
   height: 42px;
-  padding: 0 16px 0 6px;
+  padding: 0 6px;
   gap: 10px;
   font-size: 13.5px;
 }
@@ -349,7 +357,11 @@
   color: var(--mk-fg);
 }
 .mk-button--small .mk-dots { width: 28px; height: 28px; }
+.mk-dots { will-change: transform; }
 .mk-dots svg { display: block; transition: transform 450ms cubic-bezier(0.4, 0, 0.2, 1); }
+/* The CSS quarter-turn stays as the no-JS and reduced-motion answer to a hover. When GSAP is
+   driving the full swap it rides on top of this, so the square turns a little further on its
+   way across the button. */
 .mk-button--ink:hover .mk-dots svg { transform: rotate(90deg); }
 
 /* The navbar's own action, deliberately unlike the hero's ink block — one viewport never
@@ -438,13 +450,30 @@
   z-index: 200;
   border-bottom: 1px solid transparent;
   background: transparent;
-  transition: border-color 180ms ease, background-color 180ms ease;
+  /* The last two lines are the retreat: five quiet seconds and the bar translates itself out
+     of the way. It keeps its place in the tab order and in the accessibility tree the whole
+     time it is away, and it never reflows the page, so nothing below it jumps. */
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 380ms ease;
+  will-change: transform;
 }
 .mk-nav--scrolled {
   border-bottom-color: var(--mk-line);
   background: var(--mk-nav-bg);
   backdrop-filter: blur(14px);
 }
+.mk-nav--idle {
+  transform: translateY(-115%);
+  opacity: 0;
+  pointer-events: none;
+}
+/* What brings it back is not a hover strip over the page — a strip covering the top of the
+   viewport would swallow clicks meant for whatever is underneath it. The component watches
+   the pointer's distance from the top edge instead, so the page keeps every one of its own
+   click targets and the bar still answers to a hand moving upward. */
 .mk-nav-row {
   display: flex;
   align-items: center;
@@ -612,6 +641,9 @@
   font-weight: 500;
   letter-spacing: -0.045em;
   line-height: 1;
+  /* Room for the descender of “downtime’s” inside the masked line box the reveal wraps
+     around it, at the one line-height on the page that has none to spare. */
+  padding-bottom: 0.08em;
   text-wrap: balance;
 }
 /* The pun is the brand: ARCH set in ember caps inside the lowercase headline, so the eye
@@ -802,6 +834,112 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+
+/* -------------------------------------------------------------- atmosphere */
+
+/* One dawn, five weathers.
+   The hero owns the painted sky; every band below it carries a quieter cousin of the same
+   painting — morning mist, a cloud study, warm dunes, a night horizon, the last of the dusk —
+   drawn from the hero's own palette (periwinkle #a8b2d6, cream #f6f4ef, sand #f2dbb3,
+   blush #ded2d5) so the page reads as one sky seen at five hours rather than nine flat
+   rectangles. Each band is a different subject and a different temperature, never the hero
+   image repeated.
+
+   Three rules keep it calm and keep the copy readable:
+   - The image is washed with the band's own colour before it is shown, and masked out at both
+     edges, so a band dissolves into its neighbours with no seam and no horizon line.
+   - Opacity is set per band: pale images sit at 0.3–0.5 over light paper, the night image at
+     0.9 over the dark band, where it also carries a heavier wash under the copy column.
+   - The drift is a transform on a custom property, scrubbed by ScrollTrigger, so the parallax
+     costs no layout and is skipped entirely under reduced motion. */
+
+.mk-atmos { position: relative; isolation: isolate; overflow: clip; }
+.mk-atmos::before {
+  content: '';
+  position: absolute;
+  /* Headroom for the parallax drift so no edge ever pulls into view. */
+  inset: -46px 0;
+  z-index: -1;
+  background-image: var(--mk-atmos-wash), var(--mk-atmos-image);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: var(--mk-atmos-position, 50% 40%);
+  opacity: var(--mk-atmos-opacity, 0.4);
+  transform: translate3d(0, var(--mk-atmos-y, 0px), 0) scaleX(var(--mk-atmos-flip, 1));
+  /* The fade is measured from the band's own edges, not the box's: the first and last 46px are
+     parallax headroom and stay transparent, and the dissolve itself is a share of the box, so
+     a short band like the proof strip still gets a fade proportional to its own height
+     instead of two fixed stops colliding somewhere in the middle of it. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 46px, #000 calc(46px + var(--mk-atmos-fade, 14%)), #000 calc(100% - 46px - var(--mk-atmos-fade, 14%)), transparent calc(100% - 46px));
+          mask-image: linear-gradient(to bottom, transparent 46px, #000 calc(46px + var(--mk-atmos-fade, 14%)), #000 calc(100% - 46px - var(--mk-atmos-fade, 14%)), transparent calc(100% - 46px));
+  pointer-events: none;
+}
+
+/* Every wash runs from the band's own colour, left to right, so the copy column keeps its
+   contrast and the image opens up on the quiet side of the layout. */
+.mk-atmos {
+  --mk-atmos-tint: var(--mk-bg);
+  --mk-atmos-wash:
+    linear-gradient(
+      96deg,
+      color-mix(in srgb, var(--mk-atmos-tint) 86%, transparent) 0%,
+      color-mix(in srgb, var(--mk-atmos-tint) 52%, transparent) 46%,
+      color-mix(in srgb, var(--mk-atmos-tint) 70%, transparent) 100%
+    );
+}
+
+/* Morning mist over still water — the coolest band on the page, and the closest cousin of the
+   hero's sky. It sits under the proof strip, the first thing after the painting. */
+.mk-atmos--mist {
+  --mk-atmos-image: url('/marketing/atmos-mist.jpg');
+  --mk-atmos-opacity: 0.5;
+  --mk-atmos-position: 50% 34%;
+}
+/* The cloud study: blush and lavender, the softest of the five. */
+.mk-atmos--cloud {
+  --mk-atmos-image: url('/marketing/atmos-clouds.jpg');
+  --mk-atmos-opacity: 0.44;
+  --mk-atmos-position: 50% 30%;
+}
+/* Warm dunes: cream and sand, the band the page settles into before the close. */
+.mk-atmos--dune {
+  --mk-atmos-image: url('/marketing/atmos-dunes.jpg');
+  --mk-atmos-opacity: 0.46;
+  --mk-atmos-position: 50% 46%;
+}
+/* The night horizon — graphite falling to ember. This one runs on the dark band, so it is
+   nearly opaque and takes a second vertical wash to keep the copy column dark. */
+.mk-atmos--night {
+  --mk-atmos-image: url('/marketing/atmos-night.jpg');
+  --mk-atmos-opacity: 0.9;
+  --mk-atmos-position: 50% 62%;
+  --mk-atmos-wash:
+    linear-gradient(
+      92deg,
+      color-mix(in srgb, var(--mk-bg) 84%, transparent) 0%,
+      color-mix(in srgb, var(--mk-bg) 48%, transparent) 48%,
+      color-mix(in srgb, var(--mk-bg) 26%, transparent) 100%
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--mk-bg) 74%, transparent) 0%,
+      transparent 34%,
+      color-mix(in srgb, var(--mk-bg) 62%, transparent) 100%
+    );
+}
+/* Dusk: dusty rose over violet, kept faint so it reads as a tint on paper rather than a
+   picture. */
+.mk-atmos--dusk {
+  --mk-atmos-image: url('/marketing/atmos-dusk.jpg');
+  --mk-atmos-opacity: 0.32;
+  --mk-atmos-position: 50% 38%;
+}
+/* The same subject, mirrored and re-framed, is a different sky to the eye — this is how one
+   painting covers four bands without repeating itself. */
+.mk-atmos--flip { --mk-atmos-flip: -1; }
+.mk-atmos--low { --mk-atmos-position: 50% 74%; }
+.mk-atmos--high { --mk-atmos-position: 50% 18%; }
+.mk-atmos--faint { --mk-atmos-opacity: 0.3; }
 
 /* ---------------------------------------------------------------- pillars */
 

@@ -71,7 +71,7 @@ export function Workspace() {
   const incident = INCIDENTS[activeIndex]!;
 
   return (
-    <section id="product" className="mk-section mk-band--white" aria-labelledby="workspace-title">
+    <section id="product" className="mk-section mk-band--white mk-atmos mk-atmos--mist mk-atmos--flip mk-atmos--low mk-atmos--faint" aria-labelledby="workspace-title">
       <div className="mk-container">
         <div className="mk-section-head">
           <div>
@@ -159,7 +159,7 @@ export function Workspace() {
             </div>
           </div>
         </div>
-        <p className="mk-app-caption">
+        <p className="mk-app-caption" data-mk-reveal>
           Interactive preview · illustrative data, not a live incident feed.
         </p>
       </div>

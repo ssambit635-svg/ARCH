@@ -11,7 +11,7 @@ const FACTS = [
  */
 export function ProofStrip() {
   return (
-    <section className="mk-section mk-band--white mk-proof" aria-label="ARCH at a glance">
+    <section className="mk-section mk-band--white mk-proof mk-atmos mk-atmos--mist" aria-label="ARCH at a glance">
       <div className="mk-container">
         <ul className="mk-proof-grid" data-mk-stagger="rows">
           {FACTS.map((fact) => (

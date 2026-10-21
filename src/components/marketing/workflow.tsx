@@ -104,7 +104,7 @@ export function Workflow() {
   const stage = STAGES[activeIndex]!;
 
   return (
-    <section id="workflow" className="mk-section" aria-labelledby="workflow-title">
+    <section id="workflow" className="mk-section mk-atmos mk-atmos--cloud mk-atmos--flip mk-atmos--low" aria-labelledby="workflow-title">
       <div className="mk-container">
         <div className="mk-section-head">
           <div>

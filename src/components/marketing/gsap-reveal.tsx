@@ -47,9 +47,12 @@ function setupMotion(root: HTMLElement): () => void {
       const select = <T extends HTMLElement>(selector: string) => Array.from(root.querySelectorAll<T>(selector));
       const upcoming = (element: HTMLElement) => element.getBoundingClientRect().bottom > 0;
 
-      // Headings mask in, once, when they approach the viewport.
+      // Headings mask in, once, when they approach the viewport. The hero headline is one of
+      // them: it sits above the trigger line on load, so it is uncovered as the page opens
+      // rather than waiting for a scroll that has not happened yet.
       for (const heading of select('[data-mk-heading]').filter(upcoming)) {
         if (revealedElements.has(heading)) continue;
+        const inHero = Boolean(heading.closest('.mk-hero'));
         let revealed = false;
         SplitText.create(heading, {
           type: 'lines,words',
@@ -67,15 +70,17 @@ function setupMotion(root: HTMLElement): () => void {
             }, {
               yPercent: 0,
               opacity: 1,
-              duration: 0.8,
-              stagger: { amount: 0.2 },
+              duration: 1.05,
+              stagger: { amount: 0.28 },
               ease: 'power4.out',
               clearProps: 'transform,opacity',
               onComplete: () => {
                 revealed = true;
                 revealedElements.add(heading);
               },
-              scrollTrigger: { trigger: heading, start: 'top 92%', once: true },
+              ...(inHero
+                ? { delay: 0.08 }
+                : { scrollTrigger: { trigger: heading, start: 'top 92%', once: true } }),
             });
           },
         });
@@ -87,16 +92,16 @@ function setupMotion(root: HTMLElement): () => void {
         // Hero content never waits on a scroll position: on short viewports the call to
         // action sits below the trigger line and would stay invisible on load.
         const inHero = Boolean(trigger.closest('.mk-hero'));
-        gsap.fromTo(unread, { y: compact ? 14 : 22, opacity: 0 }, {
+        gsap.fromTo(unread, { y: compact ? 14 : 24, opacity: 0 }, {
           y: 0,
           opacity: 1,
-          duration: 0.7,
-          stagger: { amount: Math.min(0.3, unread.length * 0.06) },
+          duration: 0.9,
+          stagger: { amount: Math.min(0.36, unread.length * 0.08) },
           ease: 'power3.out',
           clearProps: 'transform,opacity',
           onComplete: () => unread.forEach((element) => revealedElements.add(element)),
           ...(inHero
-            ? { delay: 0.12 }
+            ? { delay: 0.14 }
             : { scrollTrigger: { trigger, start: 'top 92%', once: true } }),
         });
       };
@@ -139,6 +144,23 @@ function setupMotion(root: HTMLElement): () => void {
         });
       }
 
+      // Each band's atmosphere drifts a little slower than the page, so the dawn behind the
+      // copy reads as weather rather than wallpaper. One transform driven by a custom
+      // property, scrubbed — no layout, and nothing at all under reduced motion.
+      for (const band of select<HTMLElement>('.mk-atmos')) {
+        gsap.fromTo(band, { '--mk-atmos-y': '-38px' }, {
+          '--mk-atmos-y': '38px',
+          ease: 'none',
+          scrollTrigger: {
+            trigger: band,
+            start: 'top bottom',
+            end: 'bottom top',
+            scrub: 0.6,
+            invalidateOnRefresh: true,
+          },
+        });
+      }
+
       // The closing wordmark drifts up as the page ends.
       for (const wordmark of select('[data-mk-wordmark]')) {
         gsap.fromTo(wordmark, { yPercent: 18, opacity: 0.4 }, {
@@ -161,7 +183,7 @@ function setupMotion(root: HTMLElement): () => void {
       // viewport after three seconds is handed back to the page, whether or not it was hugged
       // by the observer.
       const failsafe = window.setTimeout(() => {
-        for (const element of select<HTMLElement>('[data-mk-reveal], [data-mk-stagger] > *, [data-mk-curtain]')) {
+        for (const element of select<HTMLElement>('[data-mk-reveal], [data-mk-stagger] > *, [data-mk-curtain], .mk-split-word')) {
           const rect = element.getBoundingClientRect();
           const visible = rect.bottom > 0 && rect.top < window.innerHeight;
           if (!visible) continue;
