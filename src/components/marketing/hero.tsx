@@ -9,9 +9,11 @@ import { PRODUCT_VERSION } from '@/lib/brand';
  * scale lines framing the stage, the navigation floating over the sky, and the copy anchored
  * to the bottom-left in a 96px Inter headline with an ink action and a plain text link.
  *
- * The ARCH copy keeps its literal promise — incident response, self-hosted, human-reviewed —
- * and the real product capture moves to a full-width window directly under the stage, so the
- * first viewport stays pure atmosphere while the proof is still one scroll away.
+ * The headline is the brand line — downtime's ARCH-nemesis, with ARCH picked out in ember —
+ * and the lede directly under it carries the literal description, so a first-time visitor
+ * still learns what ARCH is within the first screen. The real product capture sits in a
+ * full-width window directly under the stage, so the first viewport stays pure atmosphere
+ * while the proof is still one scroll away.
  */
 export function Hero() {
   return (
@@ -37,12 +39,13 @@ export function Hero() {
           <div className="mk-hero-copy">
             <p className="mk-eyebrow mk-hero-badge" data-mk-reveal>Early access · v{PRODUCT_VERSION}</p>
             <h1 id="hero-title" className="mk-hero-title">
-              <span className="mk-hero-nowrap">Incident response</span> for engineering teams.
+              Meet downtime’s<br />
+              <span className="mk-hero-arch">ARCH</span>-nemesis.
               <span className="mk-hero-claim">Self-hosted. Human-reviewed AI.</span>
             </h1>
             <p className="mk-hero-poetry" data-mk-reveal>Through the noise. <span>Into clarity.</span></p>
             <p className="mk-hero-lede" data-mk-reveal>
-              Alerts, context and decisions in one workspace your team runs itself.
+              Incident response for engineering teams — alerts, context and decisions in one workspace your team runs itself.
             </p>
             <div className="mk-actions" data-mk-reveal>
               <Link href="/register" className="mk-button mk-button--ink">

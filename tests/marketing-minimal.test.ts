@@ -49,13 +49,17 @@ describe('marketing surface', () => {
     const hero = render(Hero);
     const heroSource = source('src/components/marketing/hero.tsx');
     expect(hero).toContain('id="hero-title"');
-    // A visitor has five seconds: the literal description is the headline. Read it as a
-    // visitor hears it, and keep "Incident response" unbroken so the phrase survives wrapping.
+    // The headline is the brand line, read as a visitor hears it: downtime's ARCH-nemesis,
+    // with the deal terms (self-hosted, human-reviewed) carried in the claim beneath it.
     const headline = (/<h1[^>]*>([\s\S]*?)<\/h1>/.exec(hero)?.[1] ?? '').replace(/<[^>]+>/g, '');
-    expect(headline).toContain('Incident response for engineering teams.');
+    expect(headline).toContain('Meet downtime’s');
+    expect(headline).toContain('ARCH-nemesis.');
     expect(headline).toContain('Self-hosted.');
     expect(headline).toContain('Human-reviewed AI.');
-    expect(hero).toContain('mk-hero-nowrap');
+    expect(hero).toContain('mk-hero-arch');
+    // Catchy is not an excuse to be cryptic: the literal description rides in the lede,
+    // inside the same first screen, so a visitor still learns what ARCH is in five seconds.
+    expect(hero).toContain('Incident response for engineering teams');
     // The hero names the release, and that release is the package version — never a stale one.
     const pkg = JSON.parse(source('package.json')) as { version: string };
     expect(hero).toContain(`Early access · v${pkg.version}`);
