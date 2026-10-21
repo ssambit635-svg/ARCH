@@ -54,6 +54,12 @@
      yellow accent, warmed toward the ember so it belongs to this page's dawn. It is only ever
      a small box behind ink dots, never a text or panel colour. */
   --mk-sunbeam: #ffb224;
+  /* Dawn tints for the section journey below the hero (see the .mk-dawn--* rules): the hero
+     painting's sky, cloud, field and dusk hues, here as dusk-deep variants for the dark base. */
+  --mk-dawn-mist: #10131d;
+  --mk-dawn-blush: #17120f;
+  --mk-dawn-gold: #151209;
+  --mk-dawn-lilac: #12101a;
   --mk-display: var(--font-space-grotesk), var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --mk-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --mk-mono: var(--font-geist-mono), var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
@@ -112,6 +118,10 @@
   --mk-caution: #8a5a08;
   --mk-negative: #b42336;
   --mk-sunbeam: #ffb224;
+  --mk-dawn-mist: #edf0f8;
+  --mk-dawn-blush: #faeee3;
+  --mk-dawn-gold: #f8f0dc;
+  --mk-dawn-lilac: #f0ebf6;
   color-scheme: light;
 }
 
@@ -316,26 +326,27 @@
    sheet loads after this one. */
 .mk a.mk-button.mk-button--ink,
 .mk button.mk-button.mk-button--ink {
+  position: relative;
   height: 48px;
-  padding: 0 20px 0 8px;
-  gap: 12px;
+  padding: 0 20px 0 52px;
   border-color: var(--mk-fg);
   border-radius: 10px;
   background: var(--mk-fg);
   color: var(--mk-surface);
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, transform 160ms ease, padding 560ms cubic-bezier(0.65, 0, 0.25, 1);
 }
+/* On hover the two halves swap places: the dot box travels to the right edge while the label
+   slides left into its seat. The box is absolutely positioned and animates `left`; the label
+   rides the padding swap (52px of room moves from the left side to the right), so the button
+   never changes width and the crossing is one smooth pass. Keyboard focus gets the same swap. */
 .mk a.mk-button.mk-button--ink:hover,
-.mk button.mk-button.mk-button--ink:hover {
+.mk button.mk-button.mk-button--ink:hover,
+.mk a.mk-button.mk-button--ink:focus-visible,
+.mk button.mk-button.mk-button--ink:focus-visible {
+  padding: 0 52px 0 20px;
   border-color: var(--mk-fg);
   background: color-mix(in srgb, var(--mk-fg) 86%, var(--mk-surface));
   color: var(--mk-surface);
-}
-.mk a.mk-button.mk-button--ink.mk-button--small,
-.mk button.mk-button.mk-button--ink.mk-button--small {
-  height: 42px;
-  padding: 0 16px 0 6px;
-  gap: 10px;
-  font-size: 13.5px;
 }
 .mk-dots {
   display: inline-flex;
@@ -348,9 +359,18 @@
   background: var(--mk-sunbeam);
   color: var(--mk-fg);
 }
-.mk-button--small .mk-dots { width: 28px; height: 28px; }
-.mk-dots svg { display: block; transition: transform 450ms cubic-bezier(0.4, 0, 0.2, 1); }
-.mk-button--ink:hover .mk-dots svg { transform: rotate(90deg); }
+.mk-button--ink .mk-dots {
+  position: absolute;
+  top: 50%;
+  left: 8px;
+  transform: translateY(-50%);
+  transition: left 560ms cubic-bezier(0.65, 0, 0.25, 1);
+}
+.mk-button--ink:hover .mk-dots,
+.mk-button--ink:focus-visible .mk-dots { left: calc(100% - 40px); }
+.mk-dots svg { display: block; transition: transform 560ms cubic-bezier(0.65, 0, 0.25, 1); }
+.mk-button--ink:hover .mk-dots svg,
+.mk-button--ink:focus-visible .mk-dots svg { transform: rotate(90deg); }
 
 /* The navbar's own action, deliberately unlike the hero's ink block — one viewport never
    carries two identical primary buttons. Where the hero action is a solid black square with
@@ -417,6 +437,22 @@
 }
 .mk-band--dark { background: var(--mk-bg); color: var(--mk-fg); }
 
+/* The dawn journey: below the hero, each light section carries a different wash from the
+   painting's palette — sky mist, cloud blush, field gold, dusk lilac — never the hero's
+   background twice. Every gradient starts on the tint the previous section ended on, so the
+   page reads as one slow sky with no seam lines between sections (the white bands keep a
+   flat white core for the product windows and only borrow the tint at their edges, with
+   their hairline borders switched off so nothing cuts the flow). The dark engine band stays
+   a flat night chapter between the gold and the lilac. Deploy lands back on --mk-bg because
+   the footer gradient opens on it. */
+.mk-section.mk-dawn--proof { border-block-color: transparent; background: linear-gradient(180deg, var(--mk-bg) 0%, var(--mk-dawn-mist) 100%); }
+.mk-section.mk-dawn--pillars { background: linear-gradient(180deg, var(--mk-dawn-mist) 0%, var(--mk-dawn-blush) 100%); }
+.mk-section.mk-dawn--workspace { border-block-color: transparent; background: linear-gradient(180deg, var(--mk-dawn-blush) 0%, var(--mk-surface) 16%, var(--mk-surface) 84%, var(--mk-dawn-blush) 100%); }
+.mk-section.mk-dawn--workflow { background: linear-gradient(180deg, var(--mk-dawn-blush) 0%, var(--mk-dawn-gold) 100%); }
+.mk-section.mk-dawn--control { background: linear-gradient(180deg, var(--mk-dawn-lilac) 0%, var(--mk-dawn-mist) 100%); }
+.mk-section.mk-dawn--status { border-block-color: transparent; background: linear-gradient(180deg, var(--mk-dawn-mist) 0%, var(--mk-surface) 18%, var(--mk-surface) 82%, var(--mk-dawn-gold) 100%); }
+.mk-section.mk-dawn--deploy { background: linear-gradient(180deg, var(--mk-dawn-gold) 0%, var(--mk-bg) 88%); }
+
 .mk-section-head {
   display: flex;
   align-items: flex-end;
@@ -438,12 +474,20 @@
   z-index: 200;
   border-bottom: 1px solid transparent;
   background: transparent;
-  transition: border-color 180ms ease, background-color 180ms ease;
+  transition: transform 520ms cubic-bezier(0.4, 0, 0.2, 1), opacity 420ms ease, border-color 180ms ease, background-color 180ms ease;
 }
 .mk-nav--scrolled {
   border-bottom-color: var(--mk-line);
   background: var(--mk-nav-bg);
   backdrop-filter: blur(14px);
+}
+/* Idle for 5s (see AUTO_HIDE_MS in nav.tsx) the bar slides up out of the viewport; reaching
+   for the top of the screen brings it back. It keeps its flow space while hidden, so the
+   hero underneath never jumps. On touch devices there is no hover to wake it with, so the
+   hidden state is disarmed in CSS as well as in the component. */
+.mk-nav--hidden { transform: translateY(-100%); opacity: 0; pointer-events: none; }
+@media (hover: none), (pointer: coarse) {
+  .mk-nav--hidden { transform: none; opacity: 1; pointer-events: auto; }
 }
 .mk-nav-row {
   display: flex;

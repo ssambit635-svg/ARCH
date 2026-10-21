@@ -23,7 +23,7 @@ const PRINCIPLES = [
  */
 export function Control() {
   return (
-    <section id="control" className="mk-section mk-control" aria-labelledby="principles-title">
+    <section id="control" className="mk-section mk-control mk-dawn--control" aria-labelledby="principles-title">
       <div className="mk-container">
         <div className="mk-section-head">
           <div>

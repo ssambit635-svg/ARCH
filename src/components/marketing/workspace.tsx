@@ -71,7 +71,7 @@ export function Workspace() {
   const incident = INCIDENTS[activeIndex]!;
 
   return (
-    <section id="product" className="mk-section mk-band--white" aria-labelledby="workspace-title">
+    <section id="product" className="mk-section mk-band--white mk-dawn--workspace" aria-labelledby="workspace-title">
       <div className="mk-container">
         <div className="mk-section-head">
           <div>
