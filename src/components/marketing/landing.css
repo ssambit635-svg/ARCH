@@ -1856,41 +1856,56 @@
 
 .mk-stack { margin-top: 56px; }
 .mk-stack-panel {
+  --mk-sky-ink: #141926;
+  --mk-sky-deep: #0e1320;
+  --mk-sky-capsule: rgb(14 19 32 / 76%);
+  --mk-sky-capsule-hover: rgb(18 24 40 / 92%);
+  --mk-sky-ridge-bar: rgb(20 16 14 / 84%);
+  --mk-sky-line: rgb(255 248 236 / 22%);
+  --mk-sky-line-strong: rgb(255 214 148 / 68%);
+  --mk-sky-text: #fbf8f1;
+  --mk-sky-muted: rgb(251 248 241 / 74%);
+  --mk-sky-subtle: rgb(251 248 241 / 54%);
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  border-radius: 16px;
-  padding: 28px;
+  border: 1px solid var(--mk-line-strong);
+  border-radius: 18px;
+  padding: 0;
+  background: var(--mk-sky-deep);
+  color: var(--mk-sky-text);
 }
-/* One slow light pass across the whole frame. It never moves content and never leaves the
-   panel dim: the sweep is a translucent highlight on top of a static surface. */
+/* One slow light pass across the observatory frame. */
 .mk-stack-panel::after {
   content: '';
   position: absolute;
   inset: -70% -25%;
   z-index: 2;
-  background: linear-gradient(100deg, transparent 42%, rgb(255 255 255 / 6%) 50%, transparent 58%);
+  background: linear-gradient(100deg, transparent 44%, rgb(255 248 232 / 5%) 50%, transparent 56%);
   transform: translate3d(-55%, 0, 0);
-  animation: mk-stack-sweep 11s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: mk-stack-sweep 13s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   pointer-events: none;
 }
 .mk-stack-head,
+.mk-sky-observatory,
 .mk-tech-grid { position: relative; z-index: 1; }
 .mk-stack-head {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 10px 24px;
-  margin-bottom: 20px;
+  padding: 18px 24px 14px;
+  border-bottom: 1px solid rgb(255 248 236 / 12%);
+  background: linear-gradient(180deg, rgb(14 19 32 / 92%) 0%, rgb(22 29 48 / 78%) 100%);
 }
-.mk-stack-head .mk-eyebrow { margin: 0; }
-.mk-stack-head p { margin: 0; color: var(--mk-subtle); font-family: var(--mk-mono); font-size: 10px; letter-spacing: 0.04em; }
+.mk-stack-head .mk-eyebrow { margin: 0; color: var(--mk-sky-text); }
+.mk-stack-head p { margin: 0; color: var(--mk-sky-muted); font-family: var(--mk-mono); font-size: 10px; letter-spacing: 0.04em; }
 .mk-stack-verified {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--mk-subtle);
+  color: var(--mk-sky-muted);
   font-family: var(--mk-mono);
   font-size: 10px;
   letter-spacing: 0.1em;
@@ -1904,71 +1919,244 @@
   background: var(--mk-positive);
   animation: mk-stack-pulse 2.6s ease-in-out infinite;
 }
+
+/* Constellation filter toolbar */
+.mk-sky-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 24px;
+  border-bottom: 1px solid rgb(255 248 236 / 12%);
+  background: rgb(17 23 38 / 82%);
+  backdrop-filter: blur(8px);
+}
+.mk-sky-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 29px;
+  padding: 0 12px;
+  border: 1px solid rgb(255 248 236 / 16%);
+  border-radius: 999px;
+  background: rgb(255 248 236 / 6%);
+  color: var(--mk-sky-muted);
+  font-family: var(--mk-mono);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: border-color 180ms ease, background-color 180ms ease, color 180ms ease;
+}
+.mk-sky-pill:hover {
+  border-color: rgb(255 248 236 / 36%);
+  background: rgb(255 248 236 / 12%);
+  color: var(--mk-sky-text);
+}
+.mk-sky-pill.is-active {
+  border-color: var(--mk-sunbeam);
+  background: rgb(255 178 36 / 16%);
+  color: var(--mk-sky-text);
+}
+.mk-sky-pill-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--mk-sunbeam);
+}
+.mk-sky-pill-roman {
+  color: var(--mk-sunbeam);
+  font-weight: 600;
+}
+
+/* Painted sky + mountain + rocket observatory canvas */
+.mk-sky-stage {
+  position: relative;
+  min-height: 510px;
+  overflow: hidden;
+  background-image:
+    linear-gradient(
+      180deg,
+      rgb(16 22 38 / 30%) 0%,
+      rgb(22 26 42 / 14%) 45%,
+      rgb(28 20 16 / 26%) 86%,
+      rgb(20 15 13 / 62%) 100%
+    ),
+    url('/marketing/atmos-constellation-sky.jpg');
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: 50% 48%;
+}
+
+/* SVG astrolabe arcs, rocket trajectory & constellation lines */
+.mk-sky-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+.mk-sky-astrolabe circle,
+.mk-sky-astrolabe line {
+  fill: none;
+  stroke: rgb(255 248 236 / 15%);
+  stroke-width: 1;
+}
+.mk-sky-trajectory {
+  stroke: var(--mk-sunbeam);
+  stroke-width: 1.6;
+  stroke-dasharray: 5 5;
+  opacity: 0.72;
+}
+.mk-sky-rocket-target {
+  fill: var(--mk-sunbeam);
+}
+.mk-sky-rocket-ring {
+  fill: none;
+  stroke: var(--mk-sunbeam);
+  stroke-width: 1.2;
+  stroke-dasharray: 3 4;
+  opacity: 0.75;
+}
+.mk-sky-bridges line {
+  stroke: rgb(255 248 236 / 22%);
+  stroke-width: 1;
+  stroke-dasharray: 3 6;
+  transition: stroke 240ms ease, opacity 240ms ease;
+}
+.mk-sky-bridges line.is-lit {
+  stroke: var(--mk-sunbeam);
+  stroke-width: 1.4;
+  opacity: 0.9;
+}
+.mk-sky-constellation polyline {
+  stroke: rgb(255 248 236 / 42%);
+  stroke-width: 1.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: stroke 260ms ease, stroke-width 260ms ease, opacity 260ms ease;
+}
+.mk-sky-constellation.is-lit polyline {
+  stroke: var(--mk-sunbeam);
+  stroke-width: 2.1;
+}
+.mk-sky-constellation.is-dim {
+  opacity: 0.25;
+}
+.mk-sky-vertex-halo {
+  fill: rgb(255 178 36 / 18%);
+  stroke: rgb(255 248 236 / 45%);
+  stroke-width: 1;
+  transition: fill 220ms ease, stroke 220ms ease;
+}
+.mk-sky-constellation.is-lit .mk-sky-vertex-halo {
+  fill: rgb(255 178 36 / 32%);
+  stroke: var(--mk-sunbeam);
+}
+.mk-sky-vertex-core {
+  fill: var(--mk-sky-text);
+}
+
+/* Astronomical coordinate watermarks inside the sky frame */
+.mk-sky-OverlayLabels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.mk-sky-coord {
+  position: absolute;
+  color: rgb(255 248 236 / 62%);
+  font-family: var(--mk-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.mk-sky-coord--nw { top: 14px; left: 20px; }
+.mk-sky-coord--ne { top: 14px; right: 20px; color: var(--mk-sunbeam); }
+.mk-sky-coord--sw { bottom: 12px; left: 20px; color: rgb(255 244 222 / 72%); }
+
+/* The 14 verified star-nodes plotted across the sky */
 .mk-tech-grid {
+  position: relative;
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
+  min-height: 510px;
   margin: 0;
   padding: 0;
   list-style: none;
-  perspective: 1200px;
 }
 .mk-tech-grid li {
-  position: relative;
+  position: absolute;
+  left: var(--mk-star-x, 50%);
+  top: var(--mk-star-y, 50%);
+  transform: translate(-50%, -50%);
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 12px 13px;
-  border: 1px solid var(--mk-line-soft);
+  gap: 9px;
+  width: 168px;
+  padding: 8px 11px 8px 9px;
+  border: 1px solid var(--mk-sky-line);
   border-radius: 9px;
-  background: var(--mk-surface);
-  color: var(--mk-muted);
+  background: var(--mk-sky-capsule);
+  color: var(--mk-sky-text);
   font-family: var(--mk-mono);
   font-size: 10.5px;
-  line-height: 1.3;
-  transform-style: preserve-3d;
-  transition: border-color 200ms ease, background-color 200ms ease, color 200ms ease, transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  line-height: 1.25;
+  backdrop-filter: blur(10px);
+  cursor: pointer;
+  transition:
+    border-color 220ms ease,
+    background-color 220ms ease,
+    color 220ms ease,
+    opacity 220ms ease,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
-/* The spotlight follows the pointer: a conic wedge anchored at the cursor, painted inside the
-   tile so the frame keeps its flat border. It is additive — the label is fully legible without it. */
-.mk-tech-grid li::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: conic-gradient(
-    from 130deg at var(--mk-tile-x, 50%) var(--mk-tile-y, 50%),
-    transparent 0deg,
-    rgb(255 138 61 / 26%) 38deg,
-    transparent 96deg
-  );
-  opacity: 0;
-  transition: opacity 220ms ease;
-  pointer-events: none;
+.mk-tech-grid li.is-constellation {
+  border-color: rgb(255 214 148 / 46%);
 }
-.mk-tech-grid li:hover {
-  border-color: var(--mk-line-strong);
-  background: var(--mk-surface-2);
-  color: var(--mk-fg);
-  transform: perspective(900px) rotateX(var(--mk-tile-rx, 0deg)) rotateY(var(--mk-tile-ry, 0deg)) translateY(-2px);
+.mk-tech-grid li.is-dim {
+  opacity: 0.34;
 }
-.mk-tech-grid li:hover::after { opacity: 1; }
+.mk-tech-grid li:hover,
+.mk-tech-grid li.is-active {
+  z-index: 4;
+  border-color: var(--mk-sunbeam);
+  background: var(--mk-sky-capsule-hover);
+  color: var(--mk-sky-text);
+  transform: translate(-50%, calc(-50% - 3px)) scale(1.04);
+}
 .mk-tech-grid li > * { position: relative; z-index: 1; }
+
+/* Four-point star spark on each capsule */
+.mk-star-spark {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border-radius: 1.5px;
+  background: var(--mk-sunbeam);
+  transform: rotate(45deg);
+  transition: transform 280ms ease, background-color 200ms ease;
+}
+.mk-tech-grid li:hover .mk-star-spark,
+.mk-tech-grid li.is-active .mk-star-spark {
+  transform: rotate(135deg) scale(1.25);
+}
+
 .mk-tech-copy { display: grid; min-width: 0; gap: 2px; }
 .mk-tech-name {
   color: inherit;
   font-family: var(--mk-sans);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: -0.005em;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .mk-tech-proof {
-  color: var(--mk-subtle);
+  color: var(--mk-sky-subtle);
   font-family: var(--mk-mono);
-  font-size: 8.5px;
+  font-size: 8px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   white-space: nowrap;
@@ -1976,34 +2164,99 @@
   text-overflow: ellipsis;
   transition: color 200ms ease;
 }
-.mk-tech-grid li:hover .mk-tech-proof { color: var(--mk-muted); }
+.mk-tech-grid li:hover .mk-tech-proof,
+.mk-tech-grid li.is-active .mk-tech-proof { color: var(--mk-sky-muted); }
 .mk-tech-index {
   position: absolute;
-  top: 7px;
-  right: 9px;
-  color: var(--mk-line-strong);
+  top: 5px;
+  right: 7px;
+  color: var(--mk-sunbeam);
   font-family: var(--mk-mono);
-  font-size: 8px;
-  letter-spacing: 0.08em;
-  opacity: 0;
+  font-size: 7.5px;
+  letter-spacing: 0.06em;
+  opacity: 0.72;
   transition: opacity 200ms ease;
 }
-.mk-tech-grid li:hover .mk-tech-index { opacity: 1; }
+.mk-tech-grid li:hover .mk-tech-index,
+.mk-tech-grid li.is-active .mk-tech-index { opacity: 1; }
 .mk-tech-icon {
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  padding: 5px;
-  border: 1px solid var(--mk-line-soft);
-  border-radius: 8px;
-  background: var(--mk-surface-2);
+  width: 26px;
+  height: 26px;
+  padding: 4px;
+  border: 1px solid rgb(255 248 236 / 16%);
+  border-radius: 7px;
+  background: rgb(255 248 236 / 8%);
   transition: border-color 200ms ease, transform 240ms ease;
 }
-.mk-tech-grid li:hover .mk-tech-icon { border-color: var(--mk-line-strong); transform: translateZ(14px); }
+.mk-tech-grid li:hover .mk-tech-icon,
+.mk-tech-grid li.is-active .mk-tech-icon {
+  border-color: var(--mk-sunbeam);
+  transform: scale(1.06);
+}
 .mk-tech-icon svg { width: 100%; height: 100%; }
+
+/* Bottom Observatory Telemetry Bar along the mountain ridge */
+.mk-sky-telemetry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 24px;
+  padding: 13px 24px;
+  border-top: 1px solid rgb(255 248 236 / 16%);
+  background: var(--mk-sky-ridge-bar);
+  font-family: var(--mk-mono);
+  font-size: 10.5px;
+  backdrop-filter: blur(10px);
+}
+.mk-sky-telemetry-main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+}
+.mk-sky-telemetry-star {
+  color: var(--mk-sunbeam);
+  font-size: 12px;
+}
+.mk-sky-telemetry-code {
+  padding: 2px 6px;
+  border: 1px solid rgb(255 178 36 / 45%);
+  border-radius: 4px;
+  background: rgb(255 178 36 / 14%);
+  color: var(--mk-sunbeam);
+  font-size: 9.5px;
+  letter-spacing: 0.08em;
+}
+.mk-sky-telemetry-name {
+  color: var(--mk-sky-text);
+  font-family: var(--mk-sans);
+  font-size: 13px;
+  font-weight: 600;
+}
+.mk-sky-telemetry-role {
+  color: var(--mk-sky-muted);
+  font-size: 11px;
+}
+.mk-sky-telemetry-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+  color: var(--mk-sky-muted);
+  font-size: 10px;
+}
+.mk-sky-telemetry-meta em {
+  margin-right: 4px;
+  color: var(--mk-sunbeam);
+  font-style: normal;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
 
 @keyframes mk-stack-sweep {
   0%, 12% { transform: translate3d(-55%, 0, 0); opacity: 0; }
@@ -2290,6 +2543,7 @@
   .mk-pane--phone { width: 228px; }
   .mk-pane--chat { bottom: 20px; width: min(430px, 40%); }
   .mk-tech-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .mk-tech-grid li { width: 150px; }
 }
 
 @media (max-width: 960px) {
@@ -2374,7 +2628,21 @@
   .mk-status-grid { grid-template-columns: 1fr; gap: 40px; }
   .mk-deploy-grid { grid-template-columns: 1fr; gap: 32px; }
   .mk-deploy-copy { max-width: 640px; }
-  .mk-tech-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mk-sky-svg,
+  .mk-sky-OverlayLabels { display: none; }
+  .mk-sky-stage { min-height: 0; padding: 20px; }
+  .mk-tech-grid { min-height: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .mk-tech-grid li {
+    position: relative;
+    top: auto;
+    left: auto;
+    width: auto;
+    transform: none;
+  }
+  .mk-tech-grid li:hover,
+  .mk-tech-grid li.is-active {
+    transform: translateY(-2px);
+  }
 }
 
 @media (max-width: 760px) {
@@ -2450,7 +2718,11 @@
   .mk-terminal-bar { padding: 9px 12px; }
   .mk-terminal-title { font-size: 9.5px; }
   .mk-stack { margin-top: 40px; }
-  .mk-stack-panel { padding: 18px; }
+  .mk-stack-panel { padding: 0; }
+  .mk-stack-head,
+  .mk-sky-controls,
+  .mk-sky-telemetry { padding-inline: 16px; }
+  .mk-sky-stage { padding: 16px; }
   .mk-tech-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mk-tech-grid li { padding: 10px; font-size: 10px; }
 
