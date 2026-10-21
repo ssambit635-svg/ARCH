@@ -37,6 +37,11 @@ describe('marketing surface', () => {
     const navSource = source('src/components/marketing/nav.tsx');
     expect(navSource).toContain('mk-nav--scrolled');
     expect(navSource).not.toContain('AUTO_HIDE_MS');
+    // One ink action per viewport: the hero owns the black dot-grid block, so the bar's own
+    // action is the glass pill with the arrow chip — never a second copy of the hero button.
+    expect(nav).toContain('mk-button--glass');
+    expect(nav).toContain('mk-arrow-chip');
+    expect(nav).not.toContain('mk-button--ink');
     expect(navSource).not.toContain('clientY <= 24');
   });
 
@@ -65,6 +70,22 @@ describe('marketing surface', () => {
     expect(hero).not.toContain('status/arch');
     expect(heroSource).not.toContain('mk-hero-video');
     expect(heroSource).not.toContain('ScrollTrigger');
+    // The stage follows the Aceternity "Hero With Background And Navbar" block (DESIGN (6).md):
+    // a painted dawn behind the copy, blueprint scale lines, and the ink action with its
+    // sunbeam dot-grid box — while the product capture waits full-width under the stage.
+    expect(hero).toContain('mk-hero-stage');
+    expect(hero).toContain('/marketing/hero-dawn.jpg');
+    expect(hero).toContain('mk-hero-scales');
+    expect(hero).toContain('mk-button--ink');
+    expect(hero).toContain('mk-dots');
+    const css = source('src/components/marketing/landing.css');
+    // The headline is set in Inter at the extracted display size, 96px on a 1.0 line.
+    expect(css).toMatch(/\.mk-hero-title \{[^}]*font-family: var\(--mk-sans\)/);
+    expect(css).toMatch(/\.mk-hero-title \{[^}]*font-size: clamp\(42px, 6\.6vw, 96px\)/);
+    expect(css).toContain('--mk-sunbeam: #ffb224');
+    // The navbar floats over the sky at the top and only earns its paper fill on scroll.
+    expect(css).toMatch(/\.mk-nav \{[^}]*background: transparent/);
+    expect(css).toMatch(/\.mk-nav--scrolled \{[^}]*background: var\(--mk-nav-bg\)/);
   });
 
   it('never repeats its own headline line, and describes or hides every image', () => {
@@ -367,8 +388,10 @@ describe('marketing surface', () => {
 
   it('keeps the marketing page on a plain surface rather than a drawn lattice', () => {
     const css = source('src/components/marketing/landing.css');
-    // The page paints one flat fill. There is no squared grid, no hero blueprint field and no
-    // masked survey rule on the closing band: colour and spacing separate sections, not checks.
+    // The page paints one flat fill. There is no squared grid and no masked survey rule on the
+    // closing band: colour and spacing separate sections, not checks. The hero stage's four
+    // scale lines are a frame, not a lattice — they are plain spans, never a tiled pattern,
+    // and the painted dawn is an <img>, so no pseudo-element field returns either.
     expect(css).toMatch(/\.mk \{[^}]*background-color: var\(--mk-bg\)/);
     expect(css).not.toContain('--mk-grid-size');
     expect(css).not.toContain('--mk-grid-line');

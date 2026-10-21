@@ -14,9 +14,10 @@ const NAV_ITEMS = [
 ];
 
 /**
- * A sticky navigation bar that behaves like the rest of the product: it stays where the visitor
- * left it, gains a hairline once the page scrolls, and swaps to a disclosure below 960px.
- * It never hides itself.
+ * A sticky navigation bar in the Aceternity hero-block manner: at the top of the page it floats
+ * transparently over the hero's dawn sky, and once the page scrolls it gains the paper fill,
+ * blur and hairline that keep it readable over every section below. It swaps to a disclosure
+ * below 960px. It never hides itself.
  */
 export function MarketingNav() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -68,7 +69,6 @@ export function MarketingNav() {
           <span>
             ARCH<span className="mk-brand-dot">.</span>
           </span>
-          <span className="mk-brand-sub">RESPONSE</span>
         </Link>
 
         <nav aria-label="Primary" className="mk-nav-links">
@@ -84,7 +84,7 @@ export function MarketingNav() {
             GitHub <LinkArrow />
           </a>
           <Link href="/login" className="mk-nav-link mk-nav-login">Log in</Link>
-          <Link href="/register" className="mk-button mk-button--small">Get started <LinkArrow direction="right" /></Link>
+          <Link href="/register" className="mk-button mk-button--small mk-button--glass">Get started <span className="mk-arrow-chip"><LinkArrow direction="right" /></span></Link>
           <button
             ref={menuButtonRef}
             type="button"
@@ -108,7 +108,7 @@ export function MarketingNav() {
           ))}
           <a href={GITHUB_REPO_URL} target="_blank" rel="noopener noreferrer" onClick={() => setMenuOpen(false)}>GitHub <LinkArrow /></a>
           <Link href="/login" onClick={() => setMenuOpen(false)}>Log in</Link>
-          <Link href="/register" className="mk-button mk-button--small" onClick={() => setMenuOpen(false)}>Get started</Link>
+          <Link href="/register" className="mk-button mk-button--small mk-button--glass" onClick={() => setMenuOpen(false)}>Get started <span className="mk-arrow-chip"><LinkArrow direction="right" /></span></Link>
         </div>
       </nav>
     </header>
