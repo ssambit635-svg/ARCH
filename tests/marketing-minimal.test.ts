@@ -25,7 +25,8 @@ describe('marketing surface', () => {
     for (const href of ['#product', '#workflow', '#engine', '#deploy', '/login', '/register']) {
       expect(nav).toContain(`href="${href}"`);
     }
-    // The bar stays put: no auto-hide state, no pointer sensor, no hidden theme switch.
+    // The bar starts visible — auto-hide is idle client behaviour, never the rendered state —
+    // and there is no hidden theme switch.
     expect(nav).not.toContain('mk-nav--hidden');
     expect(nav).not.toContain('mk-nav-sensor');
     expect(nav).not.toContain('Switch to light theme');
@@ -33,16 +34,23 @@ describe('marketing surface', () => {
     expect(nav).toMatch(/id="marketing-mobile-nav"[^>]*hidden=""/);
     expect(nav).toContain('aria-expanded="false"');
     expect(nav).toContain('aria-controls="marketing-mobile-nav"');
-    // Scrolling adds a hairline rather than moving the bar out of the way.
+    // Scrolling adds a hairline; idling away from the bar for 5s slides it out of the way,
+    // and reaching back to the top of the viewport (or focusing into it) returns it. Touch
+    // devices are exempt in both the component and the sheet — no hover, no wake-up.
     const navSource = source('src/components/marketing/nav.tsx');
+    const css = source('src/components/marketing/landing.css');
     expect(navSource).toContain('mk-nav--scrolled');
-    expect(navSource).not.toContain('AUTO_HIDE_MS');
+    expect(navSource).toContain('const AUTO_HIDE_MS = 5000');
+    expect(navSource).toContain('mk-nav--hidden');
+    expect(navSource).toContain("matchMedia('(hover: hover) and (pointer: fine)')");
+    expect(navSource).toContain('event.clientY <= WAKE_ZONE_PX');
+    expect(css).toMatch(/\.mk-nav--hidden \{[^}]*transform: translateY\(-100%\)/);
+    expect(css).toMatch(/@media \(hover: none\), \(pointer: coarse\) \{\s*\.mk-nav--hidden \{ transform: none;/);
     // One ink action per viewport: the hero owns the black dot-grid block, so the bar's own
     // action is the glass pill with the arrow chip — never a second copy of the hero button.
     expect(nav).toContain('mk-button--glass');
     expect(nav).toContain('mk-arrow-chip');
     expect(nav).not.toContain('mk-button--ink');
-    expect(navSource).not.toContain('clientY <= 24');
   });
 
   it('says what ARCH is in the hero and shows a real screen rather than an illustration', () => {
@@ -87,6 +95,19 @@ describe('marketing surface', () => {
     expect(css).toMatch(/\.mk-hero-title \{[^}]*font-family: var\(--mk-sans\)/);
     expect(css).toMatch(/\.mk-hero-title \{[^}]*font-size: clamp\(42px, 6\.6vw, 96px\)/);
     expect(css).toContain('--mk-sunbeam: #ffb224');
+    // Hovering the hero action swaps its halves: the dot box travels to the right edge while
+    // the label slides left on the padding swap — more than the box rotating in place.
+    expect(css).toContain('.mk-button--ink:hover .mk-dots,');
+    expect(css).toContain('left: calc(100% - 40px);');
+    expect(css).toContain('padding: 0 52px 0 20px');
+    // Below the hero the sections run a dawn journey of tints that hand off to each other, so
+    // the page keeps the hero's sky without repeating its background.
+    for (const tint of ['--mk-dawn-mist', '--mk-dawn-blush', '--mk-dawn-gold', '--mk-dawn-lilac']) {
+      expect(css).toContain(tint);
+    }
+    for (const band of ['mk-dawn--proof', 'mk-dawn--pillars', 'mk-dawn--workspace', 'mk-dawn--workflow', 'mk-dawn--control', 'mk-dawn--status', 'mk-dawn--deploy']) {
+      expect(css).toContain(band);
+    }
     // The navbar floats over the sky at the top and only earns its paper fill on scroll.
     expect(css).toMatch(/\.mk-nav \{[^}]*background: transparent/);
     expect(css).toMatch(/\.mk-nav--scrolled \{[^}]*background: var\(--mk-nav-bg\)/);

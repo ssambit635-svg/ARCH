@@ -13,23 +13,92 @@ const NAV_ITEMS = [
   { href: `${GITHUB_REPO_URL}/tree/main/docs`, label: 'Docs' },
 ];
 
+/** How long the pointer must stay away from the bar before it slides out of sight. */
+const AUTO_HIDE_MS = 5000;
+/** Pointer within this many px of the viewport top counts as reaching for the bar. */
+const WAKE_ZONE_PX = 80;
+
 /**
  * A sticky navigation bar in the Aceternity hero-block manner: at the top of the page it floats
  * transparently over the hero's dawn sky, and once the page scrolls it gains the paper fill,
  * blur and hairline that keep it readable over every section below. It swaps to a disclosure
- * below 960px. It never hides itself.
+ * below 960px.
+ *
+ * After AUTO_HIDE_MS with no engagement it slides away so the page can breathe, and it comes
+ * straight back when the visitor reaches for it: pointer over the bar or into the wake zone at
+ * the top of the viewport, keyboard focus landing inside it, or the mobile menu opening.
+ * Touch devices are exempt — with no hover there is no way to call it back, so it stays put.
  */
 export function MarketingNav() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [hidden, setHidden] = useState(false);
   const headerRef = useRef<HTMLElement>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hoveringRef = useRef(false);
+  const nearTopRef = useRef(false);
+  const focusRef = useRef(false);
+  const menuOpenRef = useRef(false);
+  const engagedRef = useRef(true);
+
+  const fineHover = () => window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+
+  /** Reconcile visibility with the four engagement signals; arm the countdown once per exit. */
+  const updateEngagement = () => {
+    const engaged = hoveringRef.current || nearTopRef.current || focusRef.current || menuOpenRef.current || (headerRef.current?.matches(':hover') ?? false);
+    if (engaged) {
+      engagedRef.current = true;
+      if (hideTimerRef.current) {
+        clearTimeout(hideTimerRef.current);
+        hideTimerRef.current = null;
+      }
+      setHidden(false);
+      return;
+    }
+    // Already counting down (or already hidden): moving the pointer around the page must not
+    // keep pushing the deadline back, or the bar would never leave.
+    if (!engagedRef.current) return;
+    engagedRef.current = false;
+    if (!fineHover()) return;
+    hideTimerRef.current = setTimeout(() => {
+      hideTimerRef.current = null;
+      setHidden(true);
+    }, AUTO_HIDE_MS);
+  };
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
     onScroll();
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    menuOpenRef.current = menuOpen;
+    updateEngagement();
+  }, [menuOpen]);
+
+  useEffect(() => {
+    const onPointerMove = (event: PointerEvent) => {
+      nearTopRef.current = event.clientY <= WAKE_ZONE_PX;
+      updateEngagement();
+    };
+    const onLeaveWindow = () => {
+      nearTopRef.current = false;
+      hoveringRef.current = false;
+      updateEngagement();
+    };
+    window.addEventListener('pointermove', onPointerMove, { passive: true });
+    document.documentElement.addEventListener('pointerleave', onLeaveWindow);
+    updateEngagement(); // arm the first countdown on load
+    return () => {
+      window.removeEventListener('pointermove', onPointerMove);
+      document.documentElement.removeEventListener('pointerleave', onLeaveWindow);
+      if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
+    };
+    // updateEngagement only touches refs and the stable setHidden, so this closure stays correct.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -53,7 +122,25 @@ export function MarketingNav() {
   return (
     <header
       ref={headerRef}
-      className={`mk-nav${scrolled ? ' mk-nav--scrolled' : ''}`}
+      className={`mk-nav${scrolled ? ' mk-nav--scrolled' : ''}${hidden ? ' mk-nav--hidden' : ''}`}
+      onPointerEnter={() => {
+        hoveringRef.current = true;
+        updateEngagement();
+      }}
+      onPointerLeave={() => {
+        hoveringRef.current = false;
+        updateEngagement();
+      }}
+      onFocus={() => {
+        focusRef.current = true;
+        updateEngagement();
+      }}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          focusRef.current = false;
+          updateEngagement();
+        }
+      }}
       onKeyDown={(event) => {
         if (event.key === 'Escape' && menuOpen) {
           setMenuOpen(false);

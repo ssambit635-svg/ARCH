@@ -37,7 +37,7 @@ const PILLARS = [
 /** Three claims about what happens to an alert, set as scannable cards rather than prose columns. */
 export function Pillars() {
   return (
-    <section id="capabilities" className="mk-section" aria-labelledby="pillars-title">
+    <section id="capabilities" className="mk-section mk-dawn--pillars" aria-labelledby="pillars-title">
       <div className="mk-container">
         <div className="mk-section-head">
           <div>

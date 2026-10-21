@@ -23,7 +23,7 @@ const CHECKS = [
  */
 export function StatusProof() {
   return (
-    <section className="mk-section mk-band--white" aria-labelledby="status-title">
+    <section className="mk-section mk-band--white mk-dawn--status" aria-labelledby="status-title">
       <div className="mk-container mk-status-grid">
         <div className="mk-status-copy">
           <p className="mk-eyebrow" data-mk-reveal>Where it ends</p>
