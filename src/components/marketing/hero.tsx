@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { DotGrid } from './dot-grid';
+import { GetStartedAction } from './get-started-action';
 import { LinkArrow } from './link-arrow';
 import { PRODUCT_VERSION } from '@/lib/brand';
 
@@ -38,7 +38,7 @@ export function Hero() {
         <div className="mk-container mk-hero-inner">
           <div className="mk-hero-copy">
             <p className="mk-eyebrow mk-hero-badge" data-mk-reveal>Early access · v{PRODUCT_VERSION}</p>
-            <h1 id="hero-title" className="mk-hero-title">
+            <h1 id="hero-title" className="mk-hero-title" data-mk-heading aria-label="Meet downtime’s ARCH-nemesis. Self-hosted. Human-reviewed AI.">
               Meet downtime’s<br />
               <span className="mk-hero-arch">ARCH</span>-nemesis.
               <span className="mk-hero-claim">Self-hosted. Human-reviewed AI.</span>
@@ -48,10 +48,7 @@ export function Hero() {
               Incident response for engineering teams — alerts, context and decisions in one workspace your team runs itself.
             </p>
             <div className="mk-actions" data-mk-reveal>
-              <Link href="/register" className="mk-button mk-button--ink">
-                <DotGrid />
-                Get started
-              </Link>
+              <GetStartedAction href="/register" label="Get started" className="mk-button mk-button--ink" />
               <Link href="#product" className="mk-text-link mk-hero-doclink">
                 See the workspace <LinkArrow direction="right" />
               </Link>

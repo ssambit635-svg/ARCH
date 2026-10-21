@@ -1,4 +1,5 @@
 import { MarketingMotion } from '@/components/marketing/gsap-reveal';
+import { SmoothScroll } from '@/components/marketing/smooth-scroll';
 import { MarketingNav } from '@/components/marketing/nav';
 import { Hero } from '@/components/marketing/hero';
 import { ProofStrip } from '@/components/marketing/proof';
@@ -19,6 +20,7 @@ import { SiteFooter } from '@/components/marketing/footer';
 export default function LandingPage() {
   return (
     <MarketingMotion>
+      <SmoothScroll />
       <a href="#main" className="mk-skip">
         Skip to content
       </a>

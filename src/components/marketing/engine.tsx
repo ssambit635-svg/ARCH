@@ -50,7 +50,7 @@ const DISCLOSURES = [
  */
 export function Engine() {
   return (
-    <section id="engine" className="mk-section mk-band--dark mk-on-dark mk-engine" aria-labelledby="engine-title">
+    <section id="engine" className="mk-section mk-band--dark mk-on-dark mk-engine mk-atmos mk-atmos--night" aria-labelledby="engine-title">
       <div className="mk-container mk-engine-grid">
         <div className="mk-engine-copy">
           <p className="mk-eyebrow" data-mk-reveal>The native engine</p>
@@ -79,7 +79,7 @@ export function Engine() {
             ))}
           </div>
 
-          <p className="mk-footnote">
+          <p className="mk-footnote" data-mk-reveal>
             Native inference does not call an AI vendor. Optional document fetching and configured
             integrations can still use the network.
           </p>

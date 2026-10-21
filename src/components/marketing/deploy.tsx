@@ -32,7 +32,7 @@ export function Deploy() {
   };
 
   return (
-    <section id="deploy" className="mk-section" aria-labelledby="deploy-title">
+    <section id="deploy" className="mk-section mk-atmos mk-atmos--dune mk-atmos--flip mk-atmos--high mk-atmos--faint" aria-labelledby="deploy-title">
       <div className="mk-container">
         <div className="mk-section-head">
           <div>

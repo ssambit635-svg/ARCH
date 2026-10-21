@@ -409,6 +409,39 @@ describe('marketing surface', () => {
     // No other decorative pattern is allowed onto the page either.
     expect(css).not.toMatch(/radial-gradient/);
   });
+
+  it('retires the sticky navbar after 5s of idle pointer time and wakes it on top-edge hover', () => {
+    const navSource = source('src/components/marketing/nav.tsx');
+    const css = source('src/components/marketing/landing.css');
+    expect(navSource).toContain('const IDLE_MS = 5000');
+    expect(navSource).toContain('const WAKE_ZONE_PX = 104');
+    expect(navSource).toContain('mk-nav--idle');
+    expect(css).toMatch(/\.mk-nav--idle \{[^}]*transform: translateY\(-115%\)/);
+  });
+
+  it('swaps the hero Get started action on hover and carries distinct atmospheric backgrounds and smooth scroll', () => {
+    const actionSource = source('src/components/marketing/get-started-action.tsx');
+    const smoothSource = source('src/components/marketing/smooth-scroll.tsx');
+    const hero = render(Hero);
+    const css = source('src/components/marketing/landing.css');
+
+    // Hero action wraps the sunbeam dot-grid and label in a measured swap choreography.
+    expect(hero).toContain('mk-action-label');
+    expect(hero).toContain('mk-dots');
+    expect(actionSource).toContain('textWidth + gap');
+    expect(actionSource).toContain('-(chipWidth + gap)');
+
+    // Five distinct atmospheric paintings rhyme with the hero dawn without repeating hero-dawn.jpg.
+    for (const file of ['atmos-mist.jpg', 'atmos-clouds.jpg', 'atmos-dunes.jpg', 'atmos-night.jpg', 'atmos-dusk.jpg']) {
+      expect(existsSync(`public/marketing/${file}`), `Missing atmosphere asset: ${file}`).toBe(true);
+      expect(css).toContain(`/marketing/${file}`);
+    }
+    expect(css).not.toMatch(/\.mk-atmos[^{]*\{[^}]*hero-dawn\.jpg/);
+
+    // Slow weighted wheel glide and masked heading reveals across the hero and every section.
+    expect(smoothSource).toContain('const EASE = 0.068');
+    expect(hero).toContain('data-mk-heading');
+  });
 });
 
 describe('product README', () => {
