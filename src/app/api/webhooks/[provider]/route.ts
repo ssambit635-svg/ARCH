@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from 'next/server';
-import { clientIp, fail } from '@/lib/api';
+import { clientIp, fail, readTextLimited } from '@/lib/api';
 import { ingest } from '@/server/services/webhook.service';
 
 type Context = { params: Promise<{ provider: string }> };
@@ -19,7 +19,9 @@ export const dynamic = 'force-dynamic';
 export async function POST(request: NextRequest, context: Context) {
   try {
     const { provider } = await context.params;
-    const rawBody = await request.text();
+    // Bounded read: an unauthenticated POST must not be able to buffer unbounded memory
+    // before the signature check or the rate limit gets a chance to reject it.
+    const rawBody = await readTextLimited(request);
 
     const result = await ingest({
       provider,
