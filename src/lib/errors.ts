@@ -11,6 +11,7 @@ export type ErrorCode =
   | 'NOT_FOUND'
   | 'CONFLICT'
   | 'RATE_LIMITED'
+  | 'PAYLOAD_TOO_LARGE'
   | 'SERVICE_UNAVAILABLE'
   | 'INTERNAL';
 
@@ -22,6 +23,7 @@ const STATUS_BY_CODE: Record<ErrorCode, number> = {
   NOT_FOUND: 404,
   CONFLICT: 409,
   RATE_LIMITED: 429,
+  PAYLOAD_TOO_LARGE: 413,
   INTERNAL: 500,
   SERVICE_UNAVAILABLE: 503,
 };
@@ -72,6 +74,10 @@ export class AppError extends Error {
   }
 
   /** A dependency we do not control (e.g. the AI provider) failed or timed out. */
+  static payloadTooLarge(message = 'Request body is too large.', details?: unknown): AppError {
+    return new AppError('PAYLOAD_TOO_LARGE', message, { details });
+  }
+
   static unavailable(message = 'A dependency is temporarily unavailable. Please try again.', details?: unknown): AppError {
     return new AppError('SERVICE_UNAVAILABLE', message, { details });
   }

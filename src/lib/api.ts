@@ -117,6 +117,59 @@ export async function readJson(request: Request): Promise<unknown> {
   }
 }
 
+/**
+ * Cap for request bodies on unauthenticated endpoints.
+ *
+ * Without this, `request.text()` / `request.json()` buffer whatever the client sends into
+ * memory before any validation or rate limit runs — a single request with a multi-gigabyte
+ * chunked body is enough to take the process down. 2 MB is generous for a webhook payload.
+ */
+export const MAX_UNAUTHENTICATED_BODY_BYTES = 2 * 1024 * 1024;
+
+/**
+ * Read a request body as text, refusing anything over `maxBytes`.
+ *
+ * The `content-length` header is checked first (cheap rejection), but it is attacker-supplied,
+ * so the stream itself is also counted: an absent or lying header cannot buy unlimited memory.
+ */
+export async function readTextLimited(request: Request, maxBytes = MAX_UNAUTHENTICATED_BODY_BYTES): Promise<string> {
+  const declared = request.headers.get('content-length');
+  if (declared !== null) {
+    const length = Number(declared);
+    if (Number.isFinite(length) && length > maxBytes) {
+      throw AppError.payloadTooLarge('Request body is too large.', { maxBytes });
+    }
+  }
+
+  if (!request.body) return '';
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        await reader.cancel().catch(() => {});
+        throw AppError.payloadTooLarge('Request body is too large.', { maxBytes });
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock?.();
+  }
+
+  const merged = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    merged.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(merged);
+}
+
 /** Like `readJson`, but an empty body is `{}` (for endpoints whose body is optional). */
 export async function readOptionalJson(request: Request): Promise<unknown> {
   const text = await request.text();

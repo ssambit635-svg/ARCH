@@ -117,10 +117,20 @@ Summarised here; full detail in
 - Passwords hashed with a strong adaptive algorithm; secrets only in environment variables; nothing
   sensitive logged or returned.
 - Immutable audit log of every mutation, written in the same transaction as the change.
-- Rate limiting on authentication and webhook endpoints; encryption in transit and at rest.
+- Rate limiting on authentication, webhook, bearer-token and public status-page endpoints;
+  encryption in transit and at rest.
+- Hardened response headers on every route (`next.config.ts`): a strict Content-Security-Policy
+  (no third-party origins, `object-src 'none'`, `frame-ancestors 'none'`), `X-Frame-Options: DENY`,
+  `X-Content-Type-Options: nosniff`, `Referrer-Policy`, `Permissions-Policy`, COOP, and HSTS in
+  production. The one remaining weakness is `script-src 'unsafe-inline'`, required for Next.js
+  inline hydration scripts until a nonce pipeline lands.
+- Bounded request bodies on unauthenticated POST endpoints (2 MB, enforced by streaming, so a
+  missing or forged `Content-Length` cannot bypass it) — prevents memory-exhaustion DoS.
 
 **Known gaps we disclose rather than hide:** no SOC 2 or ISO 27001 certification, no HIPAA support,
-no TOTP two-factor authentication until v1.2, and no self-hosted deployment option in v1.
+no TOTP two-factor authentication until v1.2, no self-hosted deployment option in v1, CSP still
+allows inline scripts (no nonce pipeline yet), and rate-limit counters are per-process rather than
+shared across instances.
 
 ---
 
