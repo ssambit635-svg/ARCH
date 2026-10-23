@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { z } from 'zod';
 import { ORG_COOKIE, requireUser, resolveOrganization } from '@/lib/session';
@@ -8,6 +9,7 @@ import { requirePermission } from '@/lib/permissions';
 import { isAppError } from '@/lib/errors';
 import {
   incidentCreateSchema,
+  incidentEventCreateSchema,
   incidentUpdateSchema,
   inviteMemberSchema,
   organizationUpdateSchema,
@@ -66,10 +68,24 @@ function fieldErrorsFrom(issues: readonly { path: string | readonly PropertyKey[
 }
 
 function toFailure(error: unknown): ActionResult {
-  if (isAppError(error)) {
-    return { ok: false, error: error.message, ...(error.issues ? { fieldErrors: fieldErrorsFrom(error.issues) } : {}) };
+  if (error instanceof z.ZodError) {
+    return {
+      ok: false,
+      error: 'Check the highlighted fields and try again.',
+      fieldErrors: fieldErrorsFrom(error.issues),
+    };
   }
-  console.error('[dashboard action] unhandled error', error instanceof Error ? error.name : 'unknown');
+  if (isAppError(error)) {
+    return {
+      ok: false,
+      error: error.message,
+      ...(error.issues ? { fieldErrors: fieldErrorsFrom(error.issues) } : {}),
+    };
+  }
+  console.error(
+    '[dashboard action] unhandled error',
+    error instanceof Error ? error.name : 'unknown',
+  );
   return { ok: false, error: 'Something went wrong. Please try again.' };
 }
 
@@ -92,6 +108,9 @@ export async function switchOrganizationAction(formData: FormData): Promise<void
   const store = await cookies();
   store.set(ORG_COOKIE, organization.id, { httpOnly: true, sameSite: 'lax', path: '/' });
   revalidatePath('/dashboard', 'layout');
+  // Resource URLs belong to the previous tenant. Redirect before rendering the new session's
+  // layout so switching from an incident or service cannot strand the user on a stale 404.
+  redirect('/dashboard');
 }
 
 export async function createOrganizationAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
@@ -332,15 +351,22 @@ export async function updateIncidentAction(_state: ActionResult | undefined, for
   }
 }
 
-export async function commentOnIncidentAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+export async function commentOnIncidentAction(
+  _state: ActionResult | undefined,
+  formData: FormData,
+): Promise<ActionResult> {
   try {
     const { user, organization } = await context();
     const incidentId = String(formData.get('incidentId') ?? '');
-    const body = String(formData.get('body') ?? '').trim();
+    const { body } = incidentEventCreateSchema.parse({ body: formData.get('body') });
     if (!incidentId) return { ok: false, error: 'Missing incident id.' };
-    if (body.length === 0) return { ok: false, error: 'Write something first.', fieldErrors: { body: 'Required.' } };
 
-    await addIncidentComment({ organizationId: organization.id, userId: user.id, incidentId, body });
+    await addIncidentComment({
+      organizationId: organization.id,
+      userId: user.id,
+      incidentId,
+      body,
+    });
     revalidatePath(`/dashboard/incidents/${incidentId}`);
     return { ok: true, message: 'Comment added.' };
   } catch (error) {
@@ -423,7 +449,10 @@ export async function publishStatusPageAction(_state: ActionResult | undefined, 
 
 // ---------------------------------------------------------------- webhooks
 
-export async function createWebhookEndpointAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+export async function createWebhookEndpointAction(
+  _state: ActionResult | undefined,
+  formData: FormData,
+): Promise<ActionResult> {
   try {
     const { user, organization } = await context();
     const input = await parse(webhookEndpointCreateSchema, formData);
@@ -437,21 +466,36 @@ export async function createWebhookEndpointAction(_state: ActionResult | undefin
     });
 
     revalidatePath('/dashboard/settings');
-    return { ok: true, message: `Endpoint created. Signing secret (shown once): ${result.secret}`, data: { secret: result.secret, url: result.url } };
+    return {
+      ok: true,
+      message: 'Endpoint created. Copy its one-time signing secret below.',
+      data: { secret: result.secret, url: result.url },
+    };
   } catch (error) {
     return toFailure(error);
   }
 }
 
-export async function rotateWebhookSecretAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+export async function rotateWebhookSecretAction(
+  _state: ActionResult | undefined,
+  formData: FormData,
+): Promise<ActionResult> {
   try {
     const { user, organization } = await context();
     const endpointId = String(formData.get('endpointId') ?? '');
     if (!endpointId) return { ok: false, error: 'Missing endpoint id.' };
 
-    const result = await rotateEndpointSecret({ organizationId: organization.id, userId: user.id, endpointId });
+    const result = await rotateEndpointSecret({
+      organizationId: organization.id,
+      userId: user.id,
+      endpointId,
+    });
     revalidatePath('/dashboard/settings');
-    return { ok: true, message: `New signing secret (shown once): ${result.secret}`, data: { secret: result.secret } };
+    return {
+      ok: true,
+      message: 'Signing secret rotated. Update your alert provider with the new value.',
+      data: { secret: result.secret },
+    };
   } catch (error) {
     return toFailure(error);
   }

@@ -17,12 +17,18 @@ export type IncidentRowData = {
 };
 
 /** Rich incident table row — shared by the dashboard overview and the incident list. */
-export function IncidentRow({ incident, showProject = true }: { incident: IncidentRowData; showProject?: boolean }) {
+export function IncidentRow({
+  incident,
+  showProject = true,
+}: {
+  incident: IncidentRowData;
+  showProject?: boolean;
+}) {
   return (
     <tr className="link-row group hover:bg-white/[0.025]">
-      <td className="max-w-0 px-4 py-3 first:pl-5">
+      <td className="workspace-incident-table-title px-4 py-3 first:pl-5">
         <Link href={`/dashboard/incidents/${incident.id}`} className="block min-w-0">
-          <span className="block truncate font-medium text-slate-100 group-hover:text-white group-hover:underline group-hover:decoration-indigo-400/60 group-hover:underline-offset-4">
+          <span className="block whitespace-normal break-words font-medium text-slate-100 group-hover:text-white group-hover:underline group-hover:decoration-indigo-400/60 group-hover:underline-offset-4">
             {incident.title}
           </span>
           <span className="mt-0.5 block truncate text-xs text-slate-500">
@@ -43,13 +49,17 @@ export function IncidentRow({ incident, showProject = true }: { incident: Incide
         {incident.assignedTo ? (
           <span className="flex items-center gap-2">
             <Avatar name={incident.assignedTo.name} email={incident.assignedTo.email} size="xs" />
-            <span className="max-w-28 truncate text-[13px] text-slate-300">{incident.assignedTo.name ?? incident.assignedTo.email}</span>
+            <span className="max-w-28 truncate text-[13px] text-slate-300">
+              {incident.assignedTo.name ?? incident.assignedTo.email}
+            </span>
           </span>
         ) : (
           <span className="text-[13px] text-slate-600">Unassigned</span>
         )}
       </td>
-      <td className="whitespace-nowrap px-4 py-3 text-[13px] tabular-nums text-slate-500 last:pr-5">{timeAgo(incident.updatedAt)}</td>
+      <td className="whitespace-nowrap px-4 py-3 text-[13px] tabular-nums text-slate-500 last:pr-5">
+        {timeAgo(incident.updatedAt)}
+      </td>
     </tr>
   );
 }

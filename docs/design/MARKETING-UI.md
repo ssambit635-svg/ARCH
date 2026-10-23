@@ -1,6 +1,6 @@
 # Marketing surface — UI specification
 
-**Owner:** Founders · **Last reviewed:** 2026-10-19 · **Code:** `src/components/marketing/`
+**Owner:** Founders · **Last reviewed:** 2026-10-23 · **Code:** `src/components/marketing/`
 
 This is the working specification for the public site. It replaces the loose design-tool exports
 that used to sit at the repository root (`DESIGN.md`, `SKILL.md` and their copies) with the rules
@@ -19,9 +19,9 @@ layout borrows the discipline of a documentation-heavy marketing page — genero
 12–16px panel language, pill actions, a restrained type scale — and keeps ARCH's own voice,
 display face and colour.
 
-The public surface is intentionally **not** the graphite console. A visitor meets the product inside
-a framed capture and inside a dark application window, so the page reads as a shopfront in front of
-a dark workshop.
+The public surface and signed-in workspace are independently scoped. Marketing demonstrations keep
+their fixed dark application windows; the real workspace supports persistent light and dark
+appearances. See [Signed-in workspace](WORKSPACE-UI.md) for the staged incident-first refresh.
 
 ## 2. Page order (the argument)
 
@@ -162,3 +162,11 @@ dark pill with an invisible label behind.
 4. Extend `tests/marketing-minimal.test.ts` with the behaviour that matters (state, labelling,
    honesty), not a snapshot.
 5. Keep scratch files out of git. If it is not shipped by the site, it does not belong in `public/`.
+
+## 11. Authentication hand-off
+
+`/login` and `/register` continue the public site's paper, painted dawn, ember accent and sunbeam
+submit mark in an independently scoped auth sheet. The forms do not load marketing scroll/motion
+code, and the dark incident sample is secondary to the form and hidden on narrow screens. Shared
+palette parity and accessible contrast are regression-tested. See [Authentication surface](AUTH-UI.md)
+for component states, keyboard behaviour, callback boundaries and the browser QA checklist.

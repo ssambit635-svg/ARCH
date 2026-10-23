@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { WorkspacePortal } from '@/components/shell/workspace-theme';
 
 export type ToastTone = 'success' | 'error' | 'info';
 
@@ -29,7 +29,10 @@ export function Toaster() {
       if (!detail?.message) return;
       idRef.current += 1;
       const id = idRef.current;
-      setItems((previous) => [...previous.slice(-3), { id, message: detail.message, tone: detail.tone ?? 'success' }]);
+      setItems((previous) => [
+        ...previous.slice(-3),
+        { id, message: detail.message, tone: detail.tone ?? 'success' },
+      ]);
       window.setTimeout(() => dismiss(id), 4200);
     };
     window.addEventListener(EVENT, onToast);
@@ -49,26 +52,33 @@ export function Toaster() {
     info: 'bg-indigo-400',
   };
 
-  return createPortal(
-    <div className="pointer-events-none fixed bottom-5 right-5 z-[80] flex w-80 flex-col gap-2" aria-live="polite">
-      {items.map((item) => (
-        <div
-          key={item.id}
-          className={`layer-shadow pointer-events-auto flex animate-slide-in-right items-start gap-2.5 rounded-xl border bg-abyss-850/95 px-4 py-3 text-sm text-slate-200 backdrop-blur ${tones[item.tone]}`}
-        >
-          <span className={`mt-1.5 size-2 shrink-0 rounded-full ${dots[item.tone]}`} aria-hidden />
-          <p className="min-w-0 flex-1 leading-snug">{item.message}</p>
-          <button
-            type="button"
-            onClick={() => dismiss(item.id)}
-            aria-label="Dismiss notification"
-            className="shrink-0 rounded p-0.5 text-slate-500 hover:text-slate-200"
+  return (
+    <WorkspacePortal>
+      <div
+        className="workspace-toast-stack pointer-events-none fixed bottom-5 right-5 z-[80] flex w-80 flex-col gap-2"
+        aria-live="polite"
+      >
+        {items.map((item) => (
+          <div
+            key={item.id}
+            className={`layer-shadow pointer-events-auto flex animate-slide-in-right items-start gap-2.5 rounded-xl border bg-abyss-850/95 px-4 py-3 text-sm text-slate-200 backdrop-blur ${tones[item.tone]}`}
           >
-            ✕
-          </button>
-        </div>
-      ))}
-    </div>,
-    document.body,
+            <span
+              className={`mt-1.5 size-2 shrink-0 rounded-full ${dots[item.tone]}`}
+              aria-hidden
+            />
+            <p className="min-w-0 flex-1 leading-snug">{item.message}</p>
+            <button
+              type="button"
+              onClick={() => dismiss(item.id)}
+              aria-label="Dismiss notification"
+              className="shrink-0 rounded p-0.5 text-slate-500 hover:text-slate-200"
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+      </div>
+    </WorkspacePortal>
   );
 }

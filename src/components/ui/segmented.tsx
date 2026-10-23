@@ -12,17 +12,15 @@ export function SegmentedControl({
   size?: 'sm' | 'md';
 }) {
   return (
-    <div
-      role="tablist"
-      aria-label="Filter"
-      className={`inline-flex max-w-full items-center gap-1 overflow-x-auto scroll-thin rounded-xl border border-white/[0.08] bg-abyss-900/80 p-1 ${size === 'sm' ? 'text-xs' : 'text-[13px]'}`}
+    <nav
+      aria-label="Incident views"
+      className={`workspace-segmented inline-flex max-w-full items-center gap-1 overflow-x-auto scroll-thin rounded-xl border border-white/[0.08] bg-abyss-900/80 p-1 ${size === 'sm' ? 'text-xs' : 'text-[13px]'}`}
     >
       {options.map((option) => (
         <Link
           key={option.label}
           href={option.href}
-          role="tab"
-          aria-selected={option.active}
+          aria-current={option.active ? 'page' : undefined}
           className={`flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition ${
             option.active
               ? 'bg-white/[0.09] text-white shadow-[0_1px_8px_rgb(0_0_0/0.4)] ring-1 ring-inset ring-ink-1000/10'
@@ -41,6 +39,6 @@ export function SegmentedControl({
           ) : null}
         </Link>
       ))}
-    </div>
+    </nav>
   );
 }

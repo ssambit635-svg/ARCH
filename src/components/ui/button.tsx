@@ -45,13 +45,13 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
     disabled,
     ...rest
   },
-  ref
+  ref,
 ) {
   return (
     <button
       ref={ref}
       disabled={disabled || loading}
-      className={`inline-flex items-center justify-center font-medium tracking-tight transition-all duration-150 select-none disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+      className={`workspace-button workspace-button--${variant} inline-flex items-center justify-center font-medium tracking-tight transition-all duration-150 select-none disabled:opacity-50 disabled:pointer-events-none cursor-pointer ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
       {...rest}
     >
       {loading ? (
@@ -88,7 +88,7 @@ export function ButtonLink({
     <Link
       href={href}
       prefetch={prefetch}
-      className={`inline-flex items-center justify-center font-medium tracking-tight transition-all duration-150 select-none ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+      className={`workspace-button workspace-button--${variant} inline-flex items-center justify-center font-medium tracking-tight transition-all duration-150 select-none ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
       {...rest}
     >
       {children}

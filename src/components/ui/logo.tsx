@@ -1,4 +1,5 @@
 import React from 'react';
+import { PRODUCT_VERSION } from '@/lib/brand';
 
 /**
  * ARCH Brand Logo & Mark.
@@ -51,20 +52,12 @@ export function Logo({
       />
       <span className="flex flex-col leading-none">
         <span className="inline-flex items-baseline gap-2">
-          <span
-            className={`arch-brand-name ${compact ? 'is-compact' : ''}`}
-          >
+          <span className={`arch-brand-name ${compact ? 'is-compact' : ''}`}>
             ARCH<span className="arch-brand-dot">.</span>
           </span>
-          <span className="arch-brand-version">
-            v1.1
-          </span>
+          <span className="arch-brand-version">v{PRODUCT_VERSION}</span>
         </span>
-        {subtitle && !compact && (
-          <span className="arch-brand-subtitle">
-            {subtitle}
-          </span>
-        )}
+        {subtitle && !compact && <span className="arch-brand-subtitle">{subtitle}</span>}
       </span>
     </span>
   );

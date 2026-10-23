@@ -14,7 +14,8 @@ import type { NextConfig } from 'next';
  *   back for full-fidelity stack traces when you have the headroom.
  */
 const devSourceMaps = process.env.ARCH_DEV_SOURCE_MAPS === 'true';
-const memorySafeDev = process.env.NODE_ENV === 'development' && !devSourceMaps;
+const isDevelopment = process.env.NODE_ENV === 'development';
+const memorySafeDev = isDevelopment && !devSourceMaps;
 const isProduction = process.env.NODE_ENV === 'production';
 
 /**
@@ -46,7 +47,7 @@ function contentSecurityPolicy(): string {
     'object-src': ["'none'"],
     'base-uri': ["'self'"],
     'form-action': ["'self'"],
-    'frame-ancestors': ["'none'"],
+    ...(!isDevelopment ? { 'frame-ancestors': ["'none'"] } : {}),
   };
   // Only over real TLS: `upgrade-insecure-requests` would otherwise break the http dev server.
   if (isProduction) directives['upgrade-insecure-requests'] = [];
@@ -58,14 +59,14 @@ function contentSecurityPolicy(): string {
 /**
  * Baseline security headers, applied to every response.
  *
- * `frame-ancestors 'none'` + `X-Frame-Options: DENY` kill clickjacking (the dashboard has
- * state-changing buttons); `nosniff` stops MIME confusion; HSTS is production-only so local http
- * development is not permanently pinned to https by the browser.
+ * `frame-ancestors 'none'` + `X-Frame-Options: DENY` kill clickjacking in production (omitted in
+ * development so preview iframes can embed the dev server); `nosniff` stops MIME confusion; HSTS
+ * is production-only so local http development is not permanently pinned to https by the browser.
  */
 const securityHeaders = [
   { key: 'Content-Security-Policy', value: contentSecurityPolicy() },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
-  { key: 'X-Frame-Options', value: 'DENY' },
+  ...(!isDevelopment ? [{ key: 'X-Frame-Options', value: 'DENY' }] : []),
   { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
   {
     key: 'Permissions-Policy',

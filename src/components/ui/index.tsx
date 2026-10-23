@@ -5,11 +5,7 @@ import type { IncidentSeverity, IncidentStatus, ServiceStatus } from '@/generate
 /** Presentational primitives. Server-safe: no hooks, no 'use client'. */
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return (
-    <div className={`arch-ui-card ${className}`}>
-      {children}
-    </div>
-  );
+  return <div className={`arch-ui-card ${className}`}>{children}</div>;
 }
 
 export function CardHeader({ title, description, action }: { title: ReactNode; description?: ReactNode; action?: ReactNode }) {
@@ -104,10 +100,20 @@ export function SeverityBadge({ severity }: { severity: IncidentSeverity }) {
   );
 }
 
-export function StatusBadge({ status, pulse = false }: { status: IncidentStatus; pulse?: boolean }) {
+export function StatusBadge({
+  status,
+  pulse = false,
+}: {
+  status: IncidentStatus;
+  pulse?: boolean;
+}) {
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${statusStyles[status]}`}>
-      {pulse && status !== 'RESOLVED' ? <span className="size-1.5 animate-pulse-dot rounded-full bg-current" aria-hidden /> : null}
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${statusStyles[status]}`}
+    >
+      {pulse && status !== 'RESOLVED' ? (
+        <span className="size-1.5 animate-pulse-dot rounded-full bg-current" aria-hidden />
+      ) : null}
       {status.charAt(0) + status.slice(1).toLowerCase()}
     </span>
   );
@@ -143,14 +149,32 @@ export function EmptyState({
   );
 }
 
-export function Table({ head, children }: { head: ReactNode[]; children: ReactNode }) {
+export function Table({
+  head,
+  children,
+  label = 'Data table',
+}: {
+  head: ReactNode[];
+  children: ReactNode;
+  label?: string;
+}) {
   return (
-    <div className="scroll-thin overflow-x-auto">
-      <table className="w-full border-collapse text-left text-sm">
+    <div
+      className="workspace-table-region scroll-thin overflow-x-auto"
+      role="region"
+      aria-label={label}
+      tabIndex={0}
+    >
+      <table className="arch-table w-full border-collapse text-left text-sm">
+        <caption className="sr-only">{label}</caption>
         <thead>
           <tr className="border-b border-white/[0.06] text-[11px] uppercase tracking-[0.08em] text-slate-500">
             {head.map((cell, index) => (
-              <th key={index} className="whitespace-nowrap px-4 py-2.5 font-medium first:pl-5 last:pr-5">
+              <th
+                key={index}
+                scope="col"
+                className="whitespace-nowrap px-4 py-2.5 font-medium first:pl-5 last:pr-5"
+              >
                 {cell}
               </th>
             ))}
@@ -193,14 +217,24 @@ export function Pagination({
   );
 }
 
-export function Alert({ tone, children }: { tone: 'error' | 'success' | 'info' | 'warning'; children: ReactNode }) {
+export function Alert({
+  tone,
+  children,
+}: {
+  tone: 'error' | 'success' | 'info' | 'warning';
+  children: ReactNode;
+}) {
   const tones = {
     error: 'border-rose-500/30 bg-rose-500/[0.08] text-rose-200',
     success: 'border-emerald-500/30 bg-emerald-500/[0.08] text-emerald-200',
     warning: 'border-amber-500/30 bg-amber-500/[0.08] text-amber-200',
     info: 'border-white/10 bg-white/[0.03] text-slate-300',
   } as const;
-  return <div className={`rounded-xl border px-4 py-3 text-sm leading-relaxed ${tones[tone]}`}>{children}</div>;
+  return (
+    <div className={`rounded-xl border px-4 py-3 text-sm leading-relaxed ${tones[tone]}`}>
+      {children}
+    </div>
+  );
 }
 
 export function DefinitionList({ items }: { items: { label: string; value: ReactNode }[] }) {
@@ -208,7 +242,9 @@ export function DefinitionList({ items }: { items: { label: string; value: React
     <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
       {items.map((item) => (
         <div key={item.label}>
-          <dt className="text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">{item.label}</dt>
+          <dt className="text-[11px] font-medium uppercase tracking-[0.08em] text-slate-500">
+            {item.label}
+          </dt>
           <dd className="mt-0.5 text-sm text-slate-200">{item.value}</dd>
         </div>
       ))}

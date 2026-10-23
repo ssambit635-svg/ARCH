@@ -1,10 +1,20 @@
 export function Skeleton({ className = '' }: { className?: string }) {
-  return <div aria-hidden="true" className={`skeleton-shimmer rounded-lg ${className}`} />;
+  return (
+    <div
+      aria-hidden="true"
+      className={`skeleton-shimmer min-w-0 max-w-full rounded-lg ${className}`}
+    />
+  );
 }
 
 export function PageSkeleton() {
   return (
-    <div className="animate-fade-in space-y-6" aria-label="Loading">
+    <div
+      className="workspace-page-skeleton min-w-0 max-w-full space-y-6"
+      role="status"
+      aria-label="Loading workspace"
+    >
+      <p className="workspace-muted text-sm">Loading workspace…</p>
       <div className="space-y-2">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-4 w-96" />

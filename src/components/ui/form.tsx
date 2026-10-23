@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { createContext, isValidElement, useContext, useEffect, useRef, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import type { ReactNode } from 'react';
 
@@ -8,6 +8,21 @@ import type { ReactNode } from 'react';
  * Form primitives. Every control has an explicit <label>, and errors are announced with
  * `role="alert"` so screen readers pick them up (a11y is not optional).
  */
+
+const FieldContext = createContext<{ id: string; describedBy?: string; invalid: boolean } | null>(
+  null,
+);
+const ValidationContext = createContext<Record<string, string>>({});
+
+export function FormValidation({
+  errors,
+  children,
+}: {
+  errors?: Record<string, string>;
+  children: ReactNode;
+}) {
+  return <ValidationContext.Provider value={errors ?? {}}>{children}</ValidationContext.Provider>;
+}
 
 export function Field({
   label,
@@ -24,32 +39,73 @@ export function Field({
   children: ReactNode;
   optional?: boolean;
 }) {
+  const errors = useContext(ValidationContext);
+  const name = isValidElement<{ name?: string }>(children) ? children.props.name : undefined;
+  const fieldName = name ?? htmlFor;
+  const message = error ?? (Object.hasOwn(errors, fieldName) ? errors[fieldName] : undefined);
+  const describedBy = message ? `${htmlFor}-error` : hint ? `${htmlFor}-hint` : undefined;
   return (
-    <div className="space-y-1.5">
-      <label className="flex items-baseline justify-between text-[13px] font-medium text-slate-200" htmlFor={htmlFor}>
-        {label}
-        {optional ? <span className="text-xs font-normal text-slate-500">Optional</span> : null}
-      </label>
-      {children}
-      {hint && !error ? (
-        <p className="text-xs leading-relaxed text-slate-500" id={`${htmlFor}-hint`}>
-          {hint}
-        </p>
-      ) : null}
-      {error ? (
-        <p className="text-xs text-rose-300" id={`${htmlFor}-error`} role="alert">
-          {error}
-        </p>
-      ) : null}
-    </div>
+    <FieldContext.Provider value={{ id: htmlFor, describedBy, invalid: Boolean(message) }}>
+      <div className="workspace-field space-y-1.5">
+        <label
+          className="flex items-baseline justify-between gap-2 text-[13px] font-medium text-slate-200"
+          htmlFor={htmlFor}
+        >
+          {label}
+          {optional ? <span className="text-xs font-normal text-slate-500">Optional</span> : null}
+        </label>
+        {children}
+        {hint && !message ? (
+          <p className="text-xs leading-relaxed text-slate-500" id={`${htmlFor}-hint`}>
+            {hint}
+          </p>
+        ) : null}
+        {message ? (
+          <p className="text-xs text-rose-300" id={`${htmlFor}-error`} role="alert">
+            {message}
+          </p>
+        ) : null}
+      </div>
+    </FieldContext.Provider>
   );
+}
+
+function useControlAccessibility(props: {
+  id?: string;
+  name?: string;
+  'aria-describedby'?: string;
+  'aria-invalid'?: React.AriaAttributes['aria-invalid'];
+}) {
+  const field = useContext(FieldContext);
+  const errors = useContext(ValidationContext);
+  return {
+    id: props.id ?? field?.id,
+    'aria-describedby':
+      [props['aria-describedby'], field?.describedBy].filter(Boolean).join(' ') || undefined,
+    'aria-invalid':
+      props['aria-invalid'] ??
+      (field?.invalid || (props.name && Object.hasOwn(errors, props.name) && errors[props.name])
+        ? true
+        : undefined),
+  };
 }
 
 const controlClass =
   'w-full rounded-xl border border-white/10 bg-abyss-950/70 px-3.5 py-2.5 text-sm text-slate-100 placeholder:text-slate-600 shadow-[0_1px_0_rgb(255_255_255/0.04)_inset] transition focus:border-indigo-500/60 focus:bg-abyss-950 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 disabled:cursor-not-allowed disabled:opacity-50';
 
-export function Input({ ref, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { ref?: React.Ref<HTMLInputElement> }) {
-  return <input ref={ref} {...props} className={`${controlClass} ${props.className ?? ''}`} />;
+export function Input({
+  ref,
+  ...props
+}: React.InputHTMLAttributes<HTMLInputElement> & { ref?: React.Ref<HTMLInputElement> }) {
+  const accessibility = useControlAccessibility(props);
+  return (
+    <input
+      ref={ref}
+      {...props}
+      {...accessibility}
+      className={`workspace-control ${controlClass} ${props.className ?? ''}`}
+    />
+  );
 }
 
 function EyeIcon({ off }: { off: boolean }) {
@@ -91,12 +147,34 @@ export function PasswordInput({ ref, ...props }: React.InputHTMLAttributes<HTMLI
   );
 }
 
-export function Textarea({ ref, ...props }: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { ref?: React.Ref<HTMLTextAreaElement> }) {
-  return <textarea ref={ref} {...props} className={`${controlClass} scroll-thin resize-y leading-relaxed ${props.className ?? ''}`} />;
+export function Textarea({
+  ref,
+  ...props
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { ref?: React.Ref<HTMLTextAreaElement> }) {
+  const accessibility = useControlAccessibility(props);
+  return (
+    <textarea
+      ref={ref}
+      {...props}
+      {...accessibility}
+      className={`workspace-control ${controlClass} scroll-thin resize-y leading-relaxed ${props.className ?? ''}`}
+    />
+  );
 }
 
-export function Select({ ref, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { ref?: React.Ref<HTMLSelectElement> }) {
-  return <select ref={ref} {...props} className={`${controlClass} ${props.className ?? ''}`} />;
+export function Select({
+  ref,
+  ...props
+}: React.SelectHTMLAttributes<HTMLSelectElement> & { ref?: React.Ref<HTMLSelectElement> }) {
+  const accessibility = useControlAccessibility(props);
+  return (
+    <select
+      ref={ref}
+      {...props}
+      {...accessibility}
+      className={`workspace-control ${controlClass} ${props.className ?? ''}`}
+    />
+  );
 }
 
 export function Checkbox(props: React.InputHTMLAttributes<HTMLInputElement>) {
@@ -114,17 +192,21 @@ export function SubmitButton({
   variant = 'primary',
   pendingLabel,
   size = 'md',
+  pending: actionPending,
 }: {
   children: ReactNode;
   variant?: 'primary' | 'secondary' | 'danger' | 'ai';
   pendingLabel?: string;
   size?: 'sm' | 'md';
+  pending?: boolean;
 }) {
-  const { pending } = useFormStatus();
+  const status = useFormStatus();
+  const pending = actionPending ?? status.pending;
   const variants = {
     primary:
       'bg-bone text-ink-1000 shadow-[0_10px_24px_-14px_rgb(0_0_0/0.9)] ring-1 ring-inset ring-ink-1000/10 hover:bg-white',
-    secondary: 'border border-white/10 bg-white/[0.04] text-slate-200 hover:border-white/20 hover:bg-white/[0.08]',
+    secondary:
+      'border border-white/10 bg-white/[0.04] text-slate-200 hover:border-white/20 hover:bg-white/[0.08]',
     danger:
       'bg-gradient-to-b from-rose-500 to-rose-600 text-white shadow-[0_4px_16px_-4px_rgb(244_63_94/0.6)] ring-1 ring-inset ring-ink-1000/10 hover:from-rose-400 hover:to-rose-500',
     ai: 'bg-gradient-to-r from-indigo-500/30 to-violet-500/30 text-violet-100 ring-1 ring-inset ring-violet-500/40 hover:from-indigo-500/40 hover:to-violet-500/40',
@@ -134,14 +216,27 @@ export function SubmitButton({
     <button
       type="submit"
       disabled={pending}
-      className={`inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${variants[variant]} ${
+      aria-busy={pending}
+      className={`workspace-submit workspace-submit--${variant} inline-flex items-center justify-center gap-2 rounded-xl font-medium transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 ${variants[variant]} ${
         size === 'sm' ? 'px-2.5 py-1.5 text-[13px]' : 'px-3.5 py-2 text-sm'
       }`}
     >
       {pending ? (
         <svg viewBox="0 0 16 16" className="size-4 animate-spin" fill="none" aria-hidden="true">
-          <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeOpacity="0.25" strokeWidth="2" />
-          <path d="M14.5 8A6.5 6.5 0 0 0 8 1.5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          <circle
+            cx="8"
+            cy="8"
+            r="6.5"
+            stroke="currentColor"
+            strokeOpacity="0.25"
+            strokeWidth="2"
+          />
+          <path
+            d="M14.5 8A6.5 6.5 0 0 0 8 1.5"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          />
         </svg>
       ) : null}
       {pending ? (pendingLabel ?? 'Working…') : children}
@@ -150,9 +245,19 @@ export function SubmitButton({
 }
 
 export function FormError({ message }: { message?: string | null }) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (message) ref.current?.focus();
+  }, [message]);
   if (!message) return null;
   return (
-    <div className="rounded-xl border border-rose-500/30 bg-rose-500/[0.08] px-3.5 py-2.5 text-sm leading-relaxed text-rose-200" role="alert">
+    <div
+      ref={ref}
+      tabIndex={-1}
+      data-form-error
+      className="rounded-xl border border-rose-500/30 bg-rose-500/[0.08] px-3.5 py-2.5 text-sm leading-relaxed text-rose-200"
+      role="alert"
+    >
       {message}
     </div>
   );

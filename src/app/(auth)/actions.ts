@@ -12,6 +12,7 @@ import { registerUser } from '@/server/services/auth.service';
 import { zodIssues } from '@/lib/api';
 import { isAppError } from '@/lib/errors';
 import { rateLimit } from '@/lib/rate-limit';
+import { safeAuthCallback } from '@/lib/auth-redirect';
 
 /**
  * Auth server actions.
@@ -80,12 +81,6 @@ function rethrowRedirect(error: unknown): void {
   if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) throw error;
 }
 
-function safeCallbackUrl(value: FormDataEntryValue | null): string {
-  const raw = typeof value === 'string' ? value : '';
-  // Only allow same-site paths — never an absolute URL from a query parameter.
-  return raw.startsWith('/') && !raw.startsWith('//') ? raw : '/dashboard';
-}
-
 function fieldErrorsFrom(issues: { path: readonly PropertyKey[]; message: string }[]): Record<string, string> {
   const result: Record<string, string> = {};
   for (const issue of issues) {
@@ -108,7 +103,7 @@ async function requestIp(): Promise<string | null> {
 }
 
 export async function loginAction(_state: AuthFormState, formData: FormData): Promise<AuthFormState> {
-  const callbackUrl = safeCallbackUrl(formData.get('callbackUrl'));
+  const callbackUrl = safeAuthCallback(formData.get('callbackUrl'));
   const parsed = loginSchema.safeParse({ email: formData.get('email'), password: formData.get('password') });
   if (!parsed.success) {
     return { error: 'Please check your email and password.', fieldErrors: fieldErrorsFrom(parsed.error.issues) };
@@ -154,7 +149,7 @@ export async function loginAction(_state: AuthFormState, formData: FormData): Pr
  * no-op instead of an AuthError deep inside the callback.
  */
 export async function githubLoginAction(formData: FormData): Promise<void> {
-  const callbackUrl = safeCallbackUrl(formData.get('callbackUrl'));
+  const callbackUrl = safeAuthCallback(formData.get('callbackUrl'));
   if (!(env.AUTH_GITHUB_ID && env.AUTH_GITHUB_SECRET)) redirect('/login');
   try {
     await signIn('github', { redirectTo: callbackUrl });
@@ -168,7 +163,7 @@ export async function githubLoginAction(formData: FormData): Promise<void> {
 }
 
 export async function registerAction(_state: AuthFormState, formData: FormData): Promise<AuthFormState> {
-  const callbackUrl = safeCallbackUrl(formData.get('callbackUrl'));
+  const callbackUrl = safeAuthCallback(formData.get('callbackUrl'));
   const parsed = registerSchema.safeParse({
     email: formData.get('email'),
     name: formData.get('name') || undefined,

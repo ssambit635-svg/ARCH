@@ -1,157 +1,166 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Kbd } from '@/components/ui/kbd';
 import { SeverityBadge } from '@/components/ui';
+import { Dialog } from '@/components/ui/dialog';
+import { Kbd } from '@/components/ui/kbd';
 
-export type PaletteEntry =
-  | { kind: 'page'; label: string; hint: string; href: string }
-  | { kind: 'incident'; label: string; hint: string; href: string; severity: 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW'; status: string }
-  | { kind: 'service'; label: string; hint: string; href: string; status: string }
-  | { kind: 'action'; label: string; hint: string; href: string };
+import {
+  fullIncidentSearchHref,
+  PALETTE_GROUPS,
+  workspaceSearchResults,
+} from '@/lib/workspace-search';
+export type { PaletteEntry } from '@/lib/workspace-search';
+import type { PaletteEntry } from '@/lib/workspace-search';
 
-/**
- * ⌘K command palette — jump to pages, incidents and services without touching the mouse.
- * Entries are rendered server-side into the shell; filtering happens locally.
- */
-export function CommandPalette({ open, onClose, entries }: { open: boolean; onClose: () => void; entries: PaletteEntry[] }) {
+export function CommandPalette({
+  open,
+  onClose,
+  entries,
+}: {
+  open: boolean;
+  onClose: () => void;
+  entries: PaletteEntry[];
+}) {
   const [query, setQuery] = useState('');
   const [index, setIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listId = useId();
   const router = useRouter();
-
-  const results = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    const filtered = q
-      ? entries.filter((entry) => `${entry.label} ${entry.hint}`.toLowerCase().includes(q))
-      : entries;
-    return filtered.slice(0, 12);
-  }, [query, entries]);
-
+  const results = useMemo(() => workspaceSearchResults(entries, query), [query, entries]);
+  const selectedIndex = Math.min(index, Math.max(0, results.length - 1));
   useEffect(() => {
     if (open) {
       setQuery('');
       setIndex(0);
-      window.setTimeout(() => inputRef.current?.focus(), 30);
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
     }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [open ]);
-
-  useEffect(() => setIndex(0), [query]);
-
-  if (!open) return null;
-
+  }, [open]);
+  useEffect(() => {
+    if (open)
+      document.getElementById(`${listId}-${selectedIndex}`)?.scrollIntoView({ block: 'nearest' });
+  }, [open, selectedIndex, listId, query]);
   const go = (href: string) => {
     onClose();
     router.push(href);
   };
-
-  const groups: { kind: PaletteEntry['kind']; title: string }[] = [
-    { kind: 'action', title: 'Actions' },
-    { kind: 'incident', title: 'Incidents' },
-    { kind: 'service', title: 'Services' },
-    { kind: 'page', title: 'Pages' },
-  ];
-
-  return createPortal(
-    <div
-      className="fixed inset-0 z-[70] flex items-start justify-center bg-black/70 px-4 pt-[12vh] backdrop-blur-sm animate-fade-in"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-      role="presentation"
+  const groups = PALETTE_GROUPS;
+  return (
+    <Dialog
+      open={open}
+      onClose={onClose}
+      title="Search workspace"
+      description="Jump to recent incidents, services, or any workspace page."
+      wide
+      position="top"
+      initialFocusRef={inputRef}
+      className="workspace-command-dialog"
     >
-      <div role="dialog" aria-modal="true" aria-label="Command palette" className="layer-shadow w-full max-w-xl animate-scale-in overflow-hidden rounded-2xl border border-white/10 bg-abyss-850">
-        <div className="flex items-center gap-3 border-b border-white/[0.07] px-4">
-          <svg viewBox="0 0 20 20" className="size-4 shrink-0 text-slate-500" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
-            <circle cx="9" cy="9" r="5.5" />
-            <path d="M13.5 13.5L17 17" />
-          </svg>
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'ArrowDown') {
-                event.preventDefault();
-                setIndex((i) => Math.min(i + 1, results.length - 1));
-              } else if (event.key === 'ArrowUp') {
-                event.preventDefault();
-                setIndex((i) => Math.max(i - 1, 0));
-              } else if (event.key === 'Enter') {
-                const hit = results[index];
-                if (hit) go(hit.href);
-              } else if (event.key === 'Escape') {
-                onClose();
-              }
-            }}
-            placeholder="Jump to an incident, service, or page…"
-            className="w-full bg-transparent py-3.5 text-sm text-slate-100 placeholder:text-slate-600 focus:outline-none"
-            aria-label="Search"
-          />
-          <Kbd>esc</Kbd>
-        </div>
-
-        <div className="scroll-thin max-h-80 overflow-y-auto p-2">
-          {results.length === 0 ? (
-            <p className="px-3 py-8 text-center text-sm text-slate-500">
-              Nothing matches “{query}”. Try an incident title, a service name, or a page.
-            </p>
-          ) : (
-            groups.map((group) => {
-              const items = results.filter((entry) => entry.kind === group.kind);
-              if (items.length === 0) return null;
-              return (
-                <div key={group.kind} className="mb-1">
-                  <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-600">{group.title}</p>
-                  {items.map((entry) => {
-                    const flatIndex = results.indexOf(entry);
-                    const selected = flatIndex === index;
-                    return (
-                      <button
-                        key={`${entry.kind}-${entry.href}-${entry.label}`}
-                        type="button"
-                        onClick={() => go(entry.href)}
-                        onMouseEnter={() => setIndex(flatIndex)}
-                        className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition ${selected ? 'bg-white/[0.07]' : ''}`}
-                      >
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-sm font-medium text-slate-100">{entry.label}</span>
-                          <span className="block truncate text-xs text-slate-500">{entry.hint}</span>
-                        </span>
-                        {entry.kind === 'incident' ? <SeverityBadge severity={entry.severity} /> : null}
-                        {entry.kind === 'service' ? (
-                          <span className="arch-mono text-[11px] text-slate-500">{entry.status}</span>
-                        ) : null}
-                        {selected ? <span className="text-xs text-slate-500">↵</span> : null}
-                      </button>
-                    );
-                  })}
-                </div>
+      <input
+        ref={inputRef}
+        role="combobox"
+        aria-label="Search workspace"
+        aria-expanded={true}
+        aria-autocomplete="list"
+        aria-controls={listId}
+        aria-activedescendant={results.length ? `${listId}-${selectedIndex}` : undefined}
+        value={query}
+        onChange={(event) => {
+          setQuery(event.target.value);
+          setIndex(0);
+        }}
+        onKeyDown={(event) => {
+          if (event.nativeEvent.isComposing || event.nativeEvent.keyCode === 229) return;
+          if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+            event.preventDefault();
+            if (results.length)
+              setIndex(
+                (selectedIndex + (event.key === 'ArrowDown' ? 1 : -1) + results.length) %
+                  results.length,
               );
-            })
-          )}
-        </div>
-
-        <div className="flex items-center gap-4 border-t border-white/[0.07] bg-white/[0.015] px-4 py-2.5 text-xs text-slate-500">
-          <span className="flex items-center gap-1.5">
-            <Kbd>↑</Kbd>
-            <Kbd>↓</Kbd> navigate
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Kbd>↵</Kbd> open
-          </span>
-          <span className="ml-auto arch-mono">ARCH ⌘K</span>
-        </div>
+          } else if (event.key === 'Enter' && !event.repeat) {
+            event.preventDefault();
+            const hit = results[selectedIndex];
+            if (hit) go(hit.href);
+            else if (query.trim()) go(fullIncidentSearchHref(query));
+          }
+        }}
+        placeholder="Search recent incidents, services, and pages…"
+        maxLength={200}
+        className="workspace-command-input"
+        autoComplete="off"
+        spellCheck={false}
+      />
+      <div
+        id={listId}
+        role="listbox"
+        aria-label="Search results"
+        className="workspace-command-results scroll-thin"
+      >
+        {groups.map((group) => {
+          const items = results.filter((entry) => entry.kind === group.kind);
+          if (!items.length) return null;
+          return (
+            <div key={group.kind} role="group" aria-label={group.title}>
+              <p className="workspace-command-group" aria-hidden="true">
+                {group.title}
+              </p>
+              {items.map((entry) => {
+                const flatIndex = results.indexOf(entry);
+                const selected = flatIndex === selectedIndex;
+                return (
+                  <button
+                    key={`${entry.kind}-${entry.href}`}
+                    id={`${listId}-${flatIndex}`}
+                    role="option"
+                    aria-selected={selected}
+                    type="button"
+                    tabIndex={-1}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => go(entry.href)}
+                    onMouseEnter={() => setIndex(flatIndex)}
+                    className={`workspace-command-option${selected ? ' is-selected' : ''}`}
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-medium">{entry.label}</span>
+                      <span className="workspace-muted block truncate text-xs">{entry.hint}</span>
+                    </span>
+                    {entry.kind === 'incident' ? <SeverityBadge severity={entry.severity} /> : null}
+                    {selected ? <span aria-hidden="true">↵</span> : null}
+                  </button>
+                );
+              })}
+            </div>
+          );
+        })}
       </div>
-    </div>,
-    document.body,
+      {!results.length ? (
+        <p className="workspace-search-empty" role="status">
+          No matches. Try a different incident title, service, or page name.
+        </p>
+      ) : null}
+      {query.trim() ? (
+        <div className="workspace-command-full-search">
+          <button type="button" onClick={() => go(fullIncidentSearchHref(query))}>
+            Search full incident history <span aria-hidden="true">→</span>
+          </button>
+          <p>Searches titles and descriptions across the incident list.</p>
+        </div>
+      ) : null}
+      <div className="workspace-command-help">
+        <span>
+          <Kbd>↑</Kbd> <Kbd>↓</Kbd> navigate
+        </span>
+        <span>
+          <Kbd>↵</Kbd> open
+        </span>
+        <span>
+          <Kbd>esc</Kbd> close
+        </span>
+        <span className="sr-only" aria-live="polite">
+          {results.length} result{results.length === 1 ? '' : 's'}
+        </span>
+      </div>
+    </Dialog>
   );
 }
