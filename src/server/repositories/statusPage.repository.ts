@@ -1,6 +1,15 @@
 import { db, type DbClient } from '@/lib/db';
 
 export const statusPageRepository = {
+  /** Deterministic, tenant-scoped shortcut to a real published page. Drafts are never linked as public. */
+  firstPublished(organizationId: string, client: DbClient = db) {
+    return client.statusPage.findFirst({
+      where: { organizationId, isPublished: true },
+      select: { slug: true, name: true },
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+  },
+
   list(organizationId: string, client: DbClient = db) {
     return client.statusPage.findMany({
       where: { organizationId },
@@ -31,7 +40,10 @@ export const statusPageRepository = {
   },
 
   slugTaken(slug: string, client: DbClient = db) {
-    return client.statusPage.findUnique({ where: { slug }, select: { id: true, organizationId: true } });
+    return client.statusPage.findUnique({
+      where: { slug },
+      select: { id: true, organizationId: true },
+    });
   },
 
   create(
@@ -44,7 +56,13 @@ export const statusPageRepository = {
   update(
     organizationId: string,
     id: string,
-    data: { name?: string; description?: string | null; isPublished?: boolean; publishedAt?: Date | null; slug?: string },
+    data: {
+      name?: string;
+      description?: string | null;
+      isPublished?: boolean;
+      publishedAt?: Date | null;
+      slug?: string;
+    },
     client: DbClient = db,
   ) {
     return client.statusPage.updateMany({ where: { id, organizationId }, data });

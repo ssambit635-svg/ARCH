@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCharacterShortcuts } from '@/components/ui/workspace-keyboard-preferences';
+import { isPageSearchShortcut } from '@/lib/workspace-shortcuts';
 import { AI_NAME } from '@/lib/brand';
 import { copyToClipboard } from '@/lib/copy-to-clipboard';
 import { Dialog } from '@/components/ui/dialog';
@@ -14,7 +16,7 @@ import { IconBook, IconChat, IconCopy, IconDownload, IconIncident, IconMemory, I
  * rename, delete, search), the transcript in the middle, follow-up chips under each answer, and a
  * composer that sends on Enter. Copy, export and "Try again" are one click away, the newest answer
  * reveals itself instead of appearing fully formed, and the shortcuts are the familiar ones
- * (`⌘/Ctrl+Shift+O` new chat, `⌘/Ctrl+K` search). Everything is stored server-side, so reloading the
+ * (`⌘/Ctrl+Shift+O` new chat, `/` local search outside text fields). Everything is stored server-side, so reloading the
  * page or coming back tomorrow shows exactly the same conversation.
  *
  * Answers come from ARCH's native engine only — no vendor API, no local LLM, no hybrid mode.
@@ -294,6 +296,7 @@ export function ArchChat({
   knowledgeChunks: number;
   servicesTracked: number;
 }) {
+  const characterShortcuts = useCharacterShortcuts();
   const [sessions, setSessions] = useState<Session[]>(initialSessions);
   const [activeId, setActiveId] = useState<string | null>(initialSessions[0]?.id ?? null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -517,16 +520,17 @@ export function ArchChat({
   // The shortcuts every chat product has: new chat, search, close.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.repeat || event.isComposing || event.keyCode === 229 || document.querySelector('[role="dialog"], [role="menu"]')) return;
       const modifier = event.metaKey || event.ctrlKey;
       if (modifier && event.shiftKey && event.key.toLowerCase() === 'o') {
         event.preventDefault();
         void newChat();
         return;
       }
-      if (modifier && event.key.toLowerCase() === 'k') {
+      if (characterShortcuts && isPageSearchShortcut(event)) {
         event.preventDefault();
         setListOpen(true);
-        searchRef.current?.focus();
+        requestAnimationFrame(() => searchRef.current?.focus());
         return;
       }
       if (event.key === 'Escape') {
@@ -539,7 +543,7 @@ export function ArchChat({
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [newChat]);
+  }, [newChat, characterShortcuts]);
 
   // ---------------- V9 memory panel ----------------
 
@@ -703,8 +707,9 @@ export function ArchChat({
             onChange={(event) => setFilter(event.target.value)}
             placeholder="Search conversations"
             aria-label="Search conversations"
+            aria-keyshortcuts={characterShortcuts ? '/' : undefined}
           />
-          <span className="arch-chat-search-shortcut" aria-hidden>⌘K</span>
+          {characterShortcuts ? <span className="arch-chat-search-shortcut" aria-hidden>/</span> : null}
         </label>
 
         <div className="arch-chat-history-list">

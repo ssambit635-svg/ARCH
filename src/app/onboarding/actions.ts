@@ -9,9 +9,17 @@ import { createOrganization } from '@/server/services/organization.service';
 import type { ActionResult } from '@/app/dashboard/actions';
 
 /** A newly signed-in OAuth (or password) user needs an organization before using the dashboard. */
-export async function createFirstOrganizationAction(_state: ActionResult | undefined, formData: FormData): Promise<ActionResult> {
+export async function createFirstOrganizationAction(
+  _state: ActionResult | undefined,
+  formData: FormData,
+): Promise<ActionResult> {
   const parsed = organizationCreateSchema.safeParse({ name: formData.get('name') });
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? 'Enter an organization name.' };
+  if (!parsed.success)
+    return {
+      ok: false,
+      error: 'Check your workspace name and try again.',
+      fieldErrors: { name: parsed.error.issues[0]?.message ?? 'Enter a workspace name.' },
+    };
 
   try {
     const user = await requireUser();
@@ -19,7 +27,10 @@ export async function createFirstOrganizationAction(_state: ActionResult | undef
     const store = await cookies();
     store.set(ORG_COOKIE, organization.id, { httpOnly: true, sameSite: 'lax', path: '/' });
   } catch (error) {
-    return { ok: false, error: isAppError(error) ? error.message : 'Could not create your organization.' };
+    return {
+      ok: false,
+      error: isAppError(error) ? error.message : 'Could not create your organization.',
+    };
   }
   redirect('/dashboard');
 }

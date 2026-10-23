@@ -1,7 +1,10 @@
 'use client';
 
-import { useActionState, useEffect, useRef, useState } from 'react';
-import { Textarea } from '@/components/ui/form';
+import { isTimelinePostShortcut } from '@/lib/workspace-shortcuts';
+import { useWorkspaceAction } from '@/components/ui/use-workspace-action';
+
+import { useEffect, useRef, useState } from 'react';
+import { FormError, Textarea } from '@/components/ui/form';
 import { toast } from '@/components/ui/toast';
 import { commentOnIncidentAction, type ActionResult } from '@/app/dashboard/actions';
 
@@ -13,7 +16,10 @@ const TEMPLATES = [
 
 /** Timeline comment composer with quick templates. Posts via commentOnIncidentAction. */
 export function CommentBox({ incidentId }: { incidentId: string }) {
-  const [state, action, pending] = useActionState<ActionResult | undefined, FormData>(commentOnIncidentAction, undefined);
+  const { state, formAction, pending, onSubmit } = useWorkspaceAction(
+    commentOnIncidentAction,
+    'Could not confirm the update. Your draft is still here. Refresh the timeline before trying again.',
+  );
   const [body, setBody] = useState('');
   const seen = useRef(state);
   const boxRef = useRef<HTMLTextAreaElement>(null);
@@ -30,7 +36,7 @@ export function CommentBox({ incidentId }: { incidentId: string }) {
   }, [state]);
 
   return (
-    <form action={action} className="space-y-3">
+    <form action={formAction} onSubmit={onSubmit} className="space-y-3" aria-busy={pending}>
       <input type="hidden" name="incidentId" value={incidentId} />
       <div className="overflow-hidden rounded-xl border border-white/10 bg-abyss-950/70 transition focus-within:border-indigo-500/60 focus-within:ring-2 focus-within:ring-indigo-500/20">
         <Textarea
@@ -38,13 +44,15 @@ export function CommentBox({ incidentId }: { incidentId: string }) {
           name="body"
           rows={3}
           required
+          maxLength={5000}
+          disabled={pending}
           value={body}
           onChange={(event) => setBody(event.target.value)}
           placeholder="Update responders and the audit trail…  (⌘/Ctrl + Enter to post)"
           aria-label="Timeline update"
           className="!border-0 !bg-transparent !shadow-none !ring-0"
           onKeyDown={(event) => {
-            if ((event.metaKey || event.ctrlKey) && event.key === 'Enter' && body.trim()) {
+            if (isTimelinePostShortcut(event.nativeEvent, pending, body)) {
               event.preventDefault();
               event.currentTarget.form?.requestSubmit();
             }
@@ -56,6 +64,7 @@ export function CommentBox({ incidentId }: { incidentId: string }) {
               <button
                 key={template.label}
                 type="button"
+                disabled={pending}
                 onClick={() => {
                   setBody((previous) => (previous ? previous : template.text));
                   boxRef.current?.focus();
@@ -75,11 +84,7 @@ export function CommentBox({ incidentId }: { incidentId: string }) {
           </button>
         </div>
       </div>
-      {state && !state.ok ? (
-        <p className="text-[13px] text-rose-300" role="alert">
-          {state.error}
-        </p>
-      ) : null}
+      {state && !state.ok ? <FormError message={state.error} /> : null}
     </form>
   );
 }

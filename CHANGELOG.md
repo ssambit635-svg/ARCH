@@ -15,6 +15,79 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Changed — comfortable developer workflows
+
+- Refined the signed-in workspace with quieter panels, readable text, compact lists and inline
+  save controls. The response queue now precedes summary metrics. Incident filters/search fit
+  phones, show removable selections, and avoid duplicate declaration actions.
+- Workspace search has one consistent Ctrl/⌘ K shortcut, balanced quick-switcher results and an
+  explicit full-history fallback. A discoverable keyboard guide adds contextual search and a
+  printable-shortcut opt-out for voice input, without interrupting typing or IME composition.
+- Settings have task-oriented local navigation, visible mobile sections, and section-specific
+  data loading. Unavailable permissions are not presented as empty configuration.
+- Invitations and token creation retain failed inputs. Webhook service choices stay within the
+  selected project, key rotation/deletion require confirmation, and invitation expiry uses UTC.
+  Copy controls preserve focus and report clipboard failure honestly.
+- Added a repeatable, privacy-conscious browser harness and regressions for the polished paths.
+  Both appearances, server permissions, token scopes, tenant boundaries, and human approval remain.
+
+### Security — one-time setup feedback (low severity; affected: 0.3.0)
+
+- Newly minted webhook signing secrets no longer appear in generic success toasts. Authorized
+  creators see masked, explicit one-time copy/reveal controls. API-token list state retains only
+  display metadata rather than retaining the raw creation token after dismissal. Existing
+  authorization, key storage, and signature verification are unchanged; no migration is needed.
+
+
+### Changed — an incident-first workspace, stage 1
+
+- The signed-in shell now leads with response workflows, with advanced tools kept discoverable
+  under a disclosure. Light and dark appearances follow the device by default and persist an
+  explicit choice. Public pages and authentication keep their independent appearance.
+- Rebuilt onboarding, overview, incident filtering/declaration, and the incident response view.
+  Phones get readable incident cards, a contained navigation drawer, named actions, and layouts
+  that fit narrow screens, including visible, announced loading states that cannot overflow their
+  container. The timeline and update composer come before optional assistance.
+- Overview health reflects recorded service states, including manual pins and empty workspaces,
+  rather than inventing uptime or on-call coverage. Older unresolved incidents remain in the
+  severity-prioritized response queue; resolution metrics use the resolution date. Snapshot
+  times and an explicit Refresh action replace misleading live-data claims.
+- Status shortcuts use the current workspace's real published page. Workspace switching returns
+  to the new overview rather than a previous tenant's resource URL. Project incident counts now
+  include unlinked incidents, and service history/total counts include resolved records correctly.
+- Keyboard focus stays contained and restores in dialogs and mobile navigation. Menus support
+  keyboard dismissal/navigation; scrollable regions, form controls, and retained tools have
+  clearer labels, focus indicators, and contrast in both appearances.
+- Failed validation or interrupted responses retain draft text **and** project/service/severity
+  selections. Pending controls prevent repeated submissions and lost in-flight edits. Unconfirmed
+  mutations are not automatically retried. Errors stay visible inline, including compact forms.
+- Incident assignment events show teammate names instead of raw IDs. Viewer routes show read-only
+  controls, creation honors project-scoped service choices, and public-visibility warnings explain
+  the existing status-page policy. Server permissions, tenant isolation, audit/outbox transactions,
+  and human approval for assistance remain authoritative.
+- Added UI/helper and real-database regressions and a staged workspace design/QA guide. Deeper
+  settings and individual advanced-tool redesigns remain later stages.
+
+### Changed — sign-in that feels like ARCH
+
+- Sign-in and registration now carry the landing page's warm paper, painted sky, ember accents
+  and sunbeam action into a focused authentication card. A labelled, interactive incident sample
+  sits alongside it on desktop; phones get the form without the extra marketing content.
+- Added welcoming copy, a consistent sign-in/create-account switch, setup help and real legal
+  links. GitHub appears only on instances where it is configured; there are no placeholder
+  provider or password-recovery buttons.
+- Password visibility, Caps Lock hints, a registration length indicator, disabled progress
+  buttons and focused, field-linked errors make retrying easier. Failed submissions retain typed
+  values in memory, not browser storage. Motion respects the reduced-motion preference.
+- Switching between sign-in and registration now preserves invitation destinations. Both pages
+  and their server actions reject unsafe callback URLs, including backslash/control-character
+  variants, and signed-in visitors return to their safe destination.
+- Removed the login page's unverified uptime, latency, AI-confidence and SHA-256 claims. The
+  incident window clearly identifies its data as illustrative and its assistance as a draft.
+- Development previews can be embedded without disabling production clickjacking protection or
+  HSTS. Regression tests cover this boundary, auth palette contrast, labels and safe redirects.
+
+
 ### Changed — a closing section that invites a click
 
 - The footer is now a full closing band in the incident.io mould: a serif headline over a drifting

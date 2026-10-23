@@ -2,7 +2,7 @@
   "name": "arch",
   "version": "0.3.0",
   "private": true,
-  "description": "ARCH \u2014 multi-tenant incident management + public status pages for developer teams.",
+  "description": "ARCH — multi-tenant incident management + public status pages for developer teams.",
   "type": "module",
   "engines": {
     "node": ">=20.19"
@@ -37,7 +37,8 @@
     "knowledge:fetch": "tsx scripts/arch-model/fetch-knowledge.mjs",
     "model:train": "tsx scripts/arch-model/train.ts",
     "model:eval": "tsx scripts/arch-model/eval.ts",
-    "model:export-finetune": "tsx scripts/arch-model/export-finetune.ts"
+    "model:export-finetune": "tsx scripts/arch-model/export-finetune.ts",
+    "audit:ui": "node scripts/audit-workspace-ui.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "2.11.3",
@@ -61,7 +62,9 @@
     "@types/pg": "8.23.1",
     "@types/react": "19.2.7",
     "@types/react-dom": "19.2.3",
+    "axe-core": "4.14.0",
     "embedded-postgres": "18.4.0-beta.17",
+    "playwright-core": "1.64.1",
     "prisma": "7.10.0",
     "tailwindcss": "4.3.3",
     "tsx": "4.23.15",

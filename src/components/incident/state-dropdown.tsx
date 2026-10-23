@@ -1,33 +1,29 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { IncidentStatus } from '@/generated/prisma/client';
 import { StatusBadge } from '@/components/ui';
-import { Textarea } from '@/components/ui/form';
+import { Field, FormError, Textarea } from '@/components/ui/form';
 import { Dialog } from '@/components/ui/dialog';
+import { usePopupMenu } from '@/components/ui/use-popup-menu';
 import { toast } from '@/components/ui/toast';
 import { updateIncidentAction } from '@/app/dashboard/actions';
 
-/** Legal transitions of the incident state machine, mirrored for display only — the server decides. */
 const NEXT: Record<IncidentStatus, { to: IncidentStatus; label: string; hint: string }[]> = {
   INVESTIGATING: [
-    { to: 'IDENTIFIED', label: 'Mark identified', hint: 'Root cause is known' },
-    { to: 'MONITORING', label: 'Mark monitoring', hint: 'Fix is in, watching recovery' },
-    { to: 'RESOLVED', label: 'Resolve', hint: 'Service fully recovered' },
+    { to: 'IDENTIFIED', label: 'Mark identified', hint: 'The cause is understood' },
+    { to: 'MONITORING', label: 'Mark monitoring', hint: 'A fix is in; watch for recovery' },
+    { to: 'RESOLVED', label: 'Resolve incident', hint: 'The service has recovered' },
   ],
   IDENTIFIED: [
-    { to: 'MONITORING', label: 'Mark monitoring', hint: 'Fix is in, watching recovery' },
-    { to: 'RESOLVED', label: 'Resolve', hint: 'Service fully recovered' },
+    { to: 'MONITORING', label: 'Mark monitoring', hint: 'A fix is in; watch for recovery' },
+    { to: 'RESOLVED', label: 'Resolve incident', hint: 'The service has recovered' },
   ],
-  MONITORING: [{ to: 'RESOLVED', label: 'Resolve', hint: 'Service fully recovered' }],
-  RESOLVED: [{ to: 'INVESTIGATING', label: 'Reopen', hint: 'The problem is back' }],
+  MONITORING: [{ to: 'RESOLVED', label: 'Resolve incident', hint: 'The service has recovered' }],
+  RESOLVED: [{ to: 'INVESTIGATING', label: 'Reopen incident', hint: 'The problem has returned' }],
 };
 
-/**
- * Incident state dropdown — the fastest legal transition is one click away.
- * Opens a small note dialog for context, then calls the update action.
- */
 export function IncidentStateDropdown({
   incidentId,
   status,
@@ -40,75 +36,89 @@ export function IncidentStateDropdown({
   const [open, setOpen] = useState(false);
   const [target, setTarget] = useState<{ to: IncidentStatus; label: string } | null>(null);
   const [note, setNote] = useState('');
+  const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
-  const ref = useRef<HTMLDivElement>(null);
+  const menu = usePopupMenu(open, setOpen);
+  const noteRef = useRef<HTMLTextAreaElement>(null);
   const router = useRouter();
-  const steps = NEXT[status];
-
-  useEffect(() => {
-    if (!open) return;
-    const onDown = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', onDown);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDown);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open ]);
-
+  const closeDialog = () => {
+    if (!pending) {
+      setTarget(null);
+      setNote('');
+      setError(null);
+    }
+  };
   const submit = () => {
-    if (!target) return;
+    if (!target || pending) return;
     const formData = new FormData();
     formData.set('incidentId', incidentId);
     formData.set('status', target.to);
     if (note.trim()) formData.set('message', note.trim());
-    setTarget(null);
-    setNote('');
-    setOpen(false);
+    setError(null);
     startTransition(async () => {
-      const result = await updateIncidentAction(undefined, formData);
-      if (result.ok) {
-        toast(result.message ?? 'Incident updated.', 'success');
-        router.refresh();
-      } else {
-        toast(result.error, 'error');
+      try {
+        const result = await updateIncidentAction(undefined, formData);
+        if (result.ok) {
+          setTarget(null);
+          setNote('');
+          toast(result.message ?? 'Incident updated.', 'success');
+          router.refresh();
+        } else setError(result.error);
+      } catch {
+        setError(
+          'Could not confirm the status change. Your note is still here; check the timeline before trying again.',
+        );
       }
     });
   };
-
-  if (!canWrite) return <StatusBadge status={status} pulse />;
-
+  if (!canWrite) return <StatusBadge status={status} />;
   return (
-    <div ref={ref} className="relative">
+    <div ref={menu.containerRef} className="relative">
       <button
+        ref={menu.triggerRef}
         type="button"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => setOpen(!open)}
+        onKeyDown={menu.onTriggerKeyDown}
+        aria-label={`Change status, ${status.charAt(0) + status.slice(1).toLowerCase()}`}
         aria-haspopup="menu"
         aria-expanded={open}
         disabled={pending}
-        className="group flex items-center gap-1.5 rounded-full transition hover:brightness-125 disabled:opacity-60"
+        className="workspace-status-trigger flex items-center gap-2"
         title="Change incident status"
       >
-        <StatusBadge status={status} pulse />
-        <svg viewBox="0 0 16 16" className="size-3.5 text-slate-500 transition group-hover:text-slate-300" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+        <StatusBadge status={status} />
+        <svg
+          viewBox="0 0 16 16"
+          className="size-3.5 text-slate-500"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          aria-hidden="true"
+        >
           <path d="M4 6l4 4 4-4" />
         </svg>
       </button>
-
       {open ? (
-        <div role="menu" aria-label="Change status" className="layer-shadow absolute left-0 top-full z-50 mt-2 w-64 animate-scale-in rounded-xl border border-white/10 bg-abyss-850 p-1.5">
-          {steps.map((step) => (
+        <div
+          ref={menu.menuRef}
+          role="menu"
+          aria-label="Change status"
+          className="workspace-status-menu layer-shadow absolute top-full z-50 mt-2 rounded-xl border border-white/10 bg-abyss-850 p-1.5"
+        >
+          {NEXT[status].map((step) => (
             <button
               key={step.to}
               type="button"
               role="menuitem"
-              onClick={() => setTarget(step)}
-              className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left transition hover:bg-white/[0.06]"
+              tabIndex={-1}
+              onClick={() => {
+                menu.close();
+                setTarget(step);
+                setNote('');
+                setError(null);
+              }}
+              className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-white/[0.06]"
             >
               <span>
                 <span className="block text-[13px] font-medium text-slate-100">{step.label}</span>
@@ -119,26 +129,39 @@ export function IncidentStateDropdown({
           ))}
         </div>
       ) : null}
-
       <Dialog
+        busy={pending}
         open={target !== null}
-        onClose={() => {
-          setTarget(null);
-          setNote('');
-        }}
-        title={target ? `${target.label}` : 'Update status'}
-        description="A short note lands on the timeline with the transition."
+        onClose={closeDialog}
+        title={target?.label ?? 'Update status'}
+        description="The transition is recorded on the timeline. Add a short note so your team knows what changed."
+        initialFocusRef={noteRef}
       >
-        <div className="space-y-4">
-          <Textarea rows={3} value={note} onChange={(event) => setNote(event.target.value)} placeholder="What changed for customers? (optional)" aria-label="Transition note" />
-          <div className="flex justify-end gap-2">
+        <div className="space-y-5" aria-busy={pending}>
+          <FormError message={error} />
+          <Field
+            label="Response update"
+            htmlFor="transition-note"
+            optional
+            hint="This note may appear on a linked public status page. Keep it customer-safe."
+          >
+            <Textarea
+              ref={noteRef}
+              id="transition-note"
+              rows={4}
+              maxLength={2000}
+              value={note}
+              onChange={(event) => setNote(event.target.value)}
+              disabled={pending}
+              placeholder="What changed, and what should your team do next?"
+            />
+          </Field>
+          <div className="flex justify-end gap-3">
             <button
               type="button"
-              onClick={() => {
-                setTarget(null);
-                setNote('');
-              }}
-              className="rounded-xl px-3.5 py-2 text-sm font-medium text-slate-400 transition hover:bg-white/[0.06] hover:text-slate-100"
+              onClick={closeDialog}
+              disabled={pending}
+              className="workspace-button workspace-button--secondary px-4 text-sm"
             >
               Cancel
             </button>
@@ -146,9 +169,9 @@ export function IncidentStateDropdown({
               type="button"
               onClick={submit}
               disabled={pending}
-              className="rounded-xl bg-bone px-3.5 py-2 text-sm font-medium text-ink-1000 transition hover:bg-white disabled:opacity-60"
+              className="workspace-button workspace-button--primary px-4 text-sm"
             >
-              {pending ? 'Updating…' : target?.label ?? 'Update'}
+              {pending ? 'Updating…' : (target?.label ?? 'Update')}
             </button>
           </div>
         </div>

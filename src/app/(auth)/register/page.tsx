@@ -1,26 +1,24 @@
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { currentUser } from '@/lib/session';
+import { safeAuthCallback } from '@/lib/auth-redirect';
 import { listOrganizations } from '@/server/services/organization.service';
 import { RegisterForm } from '@/components/auth/forms';
+import { registerAction } from '../actions';
 
 export const metadata: Metadata = { title: 'Create your account' };
 
-export default async function RegisterPage({ searchParams }: { searchParams: Promise<{ callbackUrl?: string }> }) {
-  const user = await currentUser();
-  if (user) redirect((await listOrganizations(user.id)).length ? '/dashboard' : '/onboarding');
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ callbackUrl?: string | string[] }>;
+}) {
   const { callbackUrl } = await searchParams;
-  const safeCallback = callbackUrl?.startsWith('/') && !callbackUrl.startsWith('//') ? callbackUrl : '/dashboard';
-
-  return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-semibold text-white">Create your ARCH account</h1>
-        <p className="mt-1 text-sm text-slate-400">
-          Two minutes to a status page and an on-call trail your auditors will like.
-        </p>
-      </div>
-      <RegisterForm callbackUrl={safeCallback} />
-    </div>
-  );
+  const safeCallback = safeAuthCallback(callbackUrl);
+  const user = await currentUser();
+  if (user) {
+    if (safeCallback !== '/dashboard') redirect(safeCallback);
+    redirect((await listOrganizations(user.id)).length ? '/dashboard' : '/onboarding');
+  }
+  return <RegisterForm callbackUrl={safeCallback} registerAction={registerAction} />;
 }

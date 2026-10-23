@@ -10,7 +10,10 @@ function mockClipboard(writeText = vi.fn().mockResolvedValue(undefined)) {
   return writeText;
 }
 
-function mockDocument({ allowed = true, copied = true }: { allowed?: boolean; copied?: boolean } = {}) {
+function mockDocument({
+  allowed = true,
+  copied = true,
+}: { allowed?: boolean; copied?: boolean } = {}) {
   const textarea = {
     value: '',
     style: {},
@@ -52,7 +55,9 @@ describe('copyToClipboard', () => {
   });
 
   it('falls back cleanly when the native clipboard rejects with NotAllowedError', async () => {
-    const writeText = mockClipboard().mockRejectedValue(new DOMException('Blocked', 'NotAllowedError'));
+    const writeText = mockClipboard().mockRejectedValue(
+      new DOMException('Blocked', 'NotAllowedError'),
+    );
     const { documentMock } = mockDocument();
 
     await expect(copyToClipboard('hello')).resolves.toBe(true);
@@ -61,10 +66,47 @@ describe('copyToClipboard', () => {
   });
 
   it('returns false without throwing when the fallback cannot copy', async () => {
-    const writeText = mockClipboard().mockRejectedValue(new DOMException('Blocked', 'NotAllowedError'));
+    const writeText = mockClipboard().mockRejectedValue(
+      new DOMException('Blocked', 'NotAllowedError'),
+    );
     const { documentMock } = mockDocument({ copied: false });
 
     await expect(copyToClipboard('hello')).resolves.toBe(false);
     expect(documentMock.execCommand).toHaveBeenCalledWith('copy');
+  });
+});
+
+describe('clipboard fallback focus', () => {
+  it.each([true, false])(
+    'restores the original connected control whether copy succeeds (%s) or not',
+    async (copied) => {
+      mockClipboard();
+      const { documentMock } = mockDocument({ allowed: false, copied });
+      const focus = vi.fn();
+      Object.defineProperty(documentMock, 'activeElement', { value: { isConnected: true, focus } });
+      await expect(copyToClipboard('test value')).resolves.toBe(copied);
+      expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    },
+  );
+  it('does not try to focus a control removed during the copy', async () => {
+    mockClipboard();
+    const { documentMock } = mockDocument({ allowed: false });
+    const focus = vi.fn();
+    Object.defineProperty(documentMock, 'activeElement', { value: { isConnected: false, focus } });
+    await expect(copyToClipboard('test value')).resolves.toBe(true);
+    expect(focus).not.toHaveBeenCalled();
+  });
+  it('never turns a focus-restoration exception into a failed clipboard operation', async () => {
+    mockClipboard();
+    const { documentMock } = mockDocument({ allowed: false });
+    Object.defineProperty(documentMock, 'activeElement', {
+      value: {
+        isConnected: true,
+        focus() {
+          throw new Error('Control disappeared');
+        },
+      },
+    });
+    await expect(copyToClipboard('test value')).resolves.toBe(true);
   });
 });

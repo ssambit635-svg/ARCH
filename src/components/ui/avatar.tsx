@@ -40,7 +40,10 @@ export function Avatar({
         textShadow: '0 1px 2px rgb(0 0 0 / 0.4)',
       }}
     >
-      {initialsOf(name, email)}
+      {/* The initials are a decorative graphic, not the parent button’s text label. */}
+      <svg width="100%" height="100%" aria-hidden="true" focusable="false">
+        <text x="50%" y="50%" textAnchor="middle" dominantBaseline="central" fill="currentColor">{initialsOf(name, email)}</text>
+      </svg>
     </span>
   );
 }

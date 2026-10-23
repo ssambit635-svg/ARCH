@@ -1,3 +1,5 @@
+import { CopyIncidentLink } from '@/components/incidents/copy-incident-link';
+import { WorkspaceRefresh } from '@/components/dashboard/workspace-refresh';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
@@ -7,17 +9,31 @@ import { listMembers } from '@/server/services/organization.service';
 import { listServices } from '@/server/services/project.service';
 import { isAppError } from '@/lib/errors';
 import { formatDateTime, formatDuration, timeAgo } from '@/lib/format';
-import { Card, CardBody, CardHeader, DefinitionList, SeverityBadge } from '@/components/ui';
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  DefinitionList,
+  SeverityBadge,
+  ServiceStatusBadge,
+} from '@/components/ui';
 import { Avatar } from '@/components/ui/avatar';
 import { IncidentTimeline } from '@/components/incidents/timeline';
-import { IncidentAssigneeForm, IncidentSeverityForm } from '@/components/incidents/incident-actions';
+import {
+  IncidentAssigneeForm,
+  IncidentSeverityForm,
+} from '@/components/incidents/incident-actions';
 import { IncidentStateDropdown } from '@/components/incident/state-dropdown';
 import { CommentBox } from '@/components/incident/comment-box';
 import { updateIncidentAction } from '@/app/dashboard/actions';
 import { ActionForm } from '@/components/dashboard/action-form';
 import { Field, Select } from '@/components/ui/form';
 import { CopilotPanel, type CopilotSuggestionView } from '@/components/incidents/copilot-panel';
-import { VerifiedFixPanel, type VerificationView, type RepoConnectionView } from '@/components/incidents/verified-fix-panel';
+import {
+  VerifiedFixPanel,
+  type VerificationView,
+  type RepoConnectionView,
+} from '@/components/incidents/verified-fix-panel';
 import { SimilarIncidentsPanel } from '@/components/incidents/similar-incidents';
 import { CorrelationPanel } from '@/components/incidents/correlation';
 import { AskArchPanel } from '@/components/incidents/ask-arch';
@@ -31,7 +47,11 @@ import { getIncidentBlastRadius } from '@/server/services/v6.service';
 
 export const dynamic = 'force-dynamic';
 
-export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}): Promise<Metadata> {
   const { id } = await params;
   return { title: `Incident ${id.slice(0, 8)}` };
 }
@@ -40,21 +60,38 @@ export default async function IncidentDetailPage({ params }: { params: Promise<{
   const { id } = await params;
   const { user, organization } = await requireDashboardContext();
 
-  const incident = await getIncident({ organizationId: organization.id, userId: user.id, incidentId: id }).catch((error: unknown) => {
+  const incident = await getIncident({
+    organizationId: organization.id,
+    userId: user.id,
+    incidentId: id,
+  }).catch((error: unknown) => {
     if (isAppError(error) && error.code === 'NOT_FOUND') return null;
     throw error;
   });
 
   if (!incident) notFound();
 
-  const [members, services, suggestions, verifications, repoConnections, blastRadius] = await Promise.all([
-    listMembers({ organizationId: organization.id, userId: user.id }),
-    listServices({ organizationId: organization.id, userId: user.id }),
-    listSuggestions({ organizationId: organization.id, userId: user.id, incidentId: incident.id }),
-    listVerifications({ organizationId: organization.id, userId: user.id, incidentId: incident.id }).catch(() => []),
-    listRepoConnections({ organizationId: organization.id, userId: user.id }).catch(() => []),
-    getIncidentBlastRadius({ organizationId: organization.id, userId: user.id, incidentId: incident.id }).catch(() => ({ affectedServices: [], relatedChanges: [], relatedIncidents: [] })),
-  ]);
+  const [members, services, suggestions, verifications, repoConnections, blastRadius] =
+    await Promise.all([
+      listMembers({ organizationId: organization.id, userId: user.id }),
+      listServices({ organizationId: organization.id, userId: user.id }),
+      listSuggestions({
+        organizationId: organization.id,
+        userId: user.id,
+        incidentId: incident.id,
+      }),
+      listVerifications({
+        organizationId: organization.id,
+        userId: user.id,
+        incidentId: incident.id,
+      }).catch(() => []),
+      listRepoConnections({ organizationId: organization.id, userId: user.id }).catch(() => []),
+      getIncidentBlastRadius({
+        organizationId: organization.id,
+        userId: user.id,
+        incidentId: incident.id,
+      }).catch(() => ({ affectedServices: [], relatedChanges: [], relatedIncidents: [] })),
+    ]);
 
   const memberName = (userId: string | null | undefined) => {
     if (!userId) return null;
@@ -81,7 +118,9 @@ export default async function IncidentDetailPage({ params }: { params: Promise<{
       ? {
           triage: {
             currentSeverity: incident.severity,
-            suggestedAssignee: memberName((suggestion.output as { assigneeId?: string }).assigneeId),
+            suggestedAssignee: memberName(
+              (suggestion.output as { assigneeId?: string }).assigneeId,
+            ),
             currentAssignee: memberName(incident.assignedToId),
           },
         }
@@ -90,7 +129,10 @@ export default async function IncidentDetailPage({ params }: { params: Promise<{
 
   const assignable = members
     .filter((member) => member.role !== 'VIEWER')
-    .map((member) => ({ id: member.userId, label: `${member.user.name ?? member.user.email} · ${member.role}` }));
+    .map((member) => ({
+      id: member.userId,
+      label: `${member.user.name ?? member.user.email} · ${member.role}`,
+    }));
 
   const verificationViews: VerificationView[] = verifications.map((v) => ({
     id: v.id,
@@ -103,8 +145,21 @@ export default async function IncidentDetailPage({ params }: { params: Promise<{
     durationMs: v.durationMs,
     createdAt: v.createdAt.toISOString(),
     createdAgo: timeAgo(v.createdAt),
-    repoConnection: v.repoConnection ? { id: v.repoConnection.id, fullName: v.repoConnection.fullName, pinnedCommitSha: v.repoConnection.pinnedCommitSha } : null,
-    pullRequest: v.pullRequest ? { id: v.pullRequest.id, externalUrl: v.pullRequest.externalUrl, branch: v.pullRequest.branch, status: v.pullRequest.status } : null,
+    repoConnection: v.repoConnection
+      ? {
+          id: v.repoConnection.id,
+          fullName: v.repoConnection.fullName,
+          pinnedCommitSha: v.repoConnection.pinnedCommitSha,
+        }
+      : null,
+    pullRequest: v.pullRequest
+      ? {
+          id: v.pullRequest.id,
+          externalUrl: v.pullRequest.externalUrl,
+          branch: v.pullRequest.branch,
+          status: v.pullRequest.status,
+        }
+      : null,
     suggestion: { id: v.suggestionId, type: 'CODE_FIX' },
     reproductionTest: v.reproductionTest ?? null,
     reproduction: v.reproduction as VerificationView['reproduction'],
@@ -121,170 +176,299 @@ export default async function IncidentDetailPage({ params }: { params: Promise<{
   }));
 
   const canWrite = roleHasPermission(organization.role, 'incident.write');
-  const open = incident.status !== 'RESOLVED';
+  const pendingDrafts = copilotSuggestions.filter(
+    (suggestion) => suggestion.status === 'PENDING',
+  ).length;
+  const memberNames = Object.fromEntries(
+    members.map((member) => [member.userId, member.user.name ?? member.user.email]),
+  );
 
   return (
     <div className="animate-rise">
-      {/* Workspace header */}
-      <div className="mb-6">
-        <Link href="/dashboard/incidents" className="mb-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-slate-500 transition hover:text-slate-200">
+      <div className="workspace-incident-breadcrumb-row">
+        <Link href="/dashboard/incidents" className="workspace-filter-reset">
           ← All incidents
         </Link>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="min-w-0 max-w-3xl">
-            <h1 className="text-balance text-2xl font-semibold tracking-tight text-white sm:text-[28px] sm:leading-tight">{incident.title}</h1>
-            <p className="mt-1.5 text-sm text-slate-400">
-              {incident.project.name}
-              {incident.service ? (
-                <>
-                  {' · '}
-                  <Link href={`/dashboard/services/${incident.service.id}`} className="text-indigo-400 transition hover:text-indigo-300 hover:underline">
-                    {incident.service.name}
-                  </Link>
-                </>
-              ) : null}
-              {' · '}opened {timeAgo(incident.startedAt)} by {incident.createdBy?.name ?? incident.createdBy?.email ?? incident.source.toLowerCase()}
-            </p>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2.5">
-            <SeverityBadge severity={incident.severity} />
-            <IncidentStateDropdown incidentId={incident.id} status={incident.status} canWrite={canWrite} />
-          </div>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
-          <span className="arch-mono">source: {incident.source}</span>
-          {incident.resolvedAt ? (
-            <span className="font-medium text-emerald-300">✓ resolved {timeAgo(incident.resolvedAt)}</span>
-          ) : (
-            <span className="font-medium text-amber-300">● open for {formatDuration(incident.startedAt)}</span>
-          )}
-          {incident.assignedTo ? (
-            <span className="flex items-center gap-1.5">
-              <Avatar name={incident.assignedTo.name} email={incident.assignedTo.email} size="xs" />
-              <span className="text-slate-400">{incident.assignedTo.name ?? incident.assignedTo.email}</span>
-            </span>
-          ) : (
-            <span className="text-slate-500">Unassigned</span>
-          )}
+        <div className="workspace-incident-utilities">
+          <WorkspaceRefresh refreshedAt={new Date().toISOString()} compact />
+          <CopyIncidentLink incidentId={incident.id} />
         </div>
       </div>
-
-      <div className="grid items-start gap-6 xl:grid-cols-3">
-        {/* Main column */}
-        <div className="space-y-6 xl:col-span-2">
-          {blastRadius.affectedServices.length > 0 ? (
-            <Card className="!border-rose-500/20">
-              <CardHeader title="Blast radius" description={`${blastRadius.affectedServices.length} service(s) in the dependency chain`} />
-              <CardBody>
-                <div className="flex flex-wrap gap-2">
-                  {blastRadius.affectedServices.map((service) => (
-                    <Link
-                      key={service.id}
-                      href={`/dashboard/services/${service.id}`}
-                      className="rounded-full bg-rose-500/10 px-2.5 py-1 text-xs font-medium text-rose-200 ring-1 ring-inset ring-rose-500/25 transition hover:bg-rose-500/20"
-                    >
-                      {service.name} · {service.status}
-                    </Link>
-                  ))}
-                </div>
-                {blastRadius.relatedChanges.length > 0 ? (
-                  <div className="mt-4 border-t border-white/[0.06] pt-3 text-sm text-slate-300">
-                    <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Recent changes before incident</p>
-                    {blastRadius.relatedChanges.slice(0, 5).map((change) => (
-                      <p key={change.id} className="py-1 text-[13px]">
-                        {change.title} <span className="text-xs text-slate-500">({change.type})</span>
-                      </p>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="mt-3 text-xs text-slate-500">No matching deployment changes found in the previous 7 days.</p>
-                )}
-              </CardBody>
-            </Card>
-          ) : null}
-
-          <CorrelationPanel incidentId={incident.id} />
-          <SimilarIncidentsPanel incidentId={incident.id} initialTitle={incident.title} />
-
-          <Card>
-            <CardHeader title="Response timeline" description="Every comment, status change and assignment, in order." />
-            <IncidentTimeline events={incident.events} />
-          </Card>
-
-          {canWrite && open ? (
-            <Card>
-              <CardHeader title="Add an update" description="Updates notify the responders and land in the audit trail." />
-              <CardBody>
-                <CommentBox incidentId={incident.id} />
-              </CardBody>
-            </Card>
-          ) : null}
-
-          <CopilotPanel
+      <div className="mb-6 flex flex-wrap items-start justify-between gap-5">
+        <div className="workspace-incident-title-block min-w-0 flex-1">
+          <p className="arch-page-eyebrow">
+            {incident.project.name}
+            {incident.service ? ` / ${incident.service.name}` : ''}
+          </p>
+          <h1>{incident.title}</h1>
+          <p className="mt-3 text-[13px] text-slate-400">
+            Opened {timeAgo(incident.startedAt)} by{' '}
+            {incident.createdBy?.name ?? incident.createdBy?.email ?? incident.source.toLowerCase()}
+            {' · '}
+            {incident.resolvedAt
+              ? `Resolved after ${formatDuration(incident.startedAt, incident.resolvedAt)}`
+              : `Open for ${formatDuration(incident.startedAt)}`}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <SeverityBadge severity={incident.severity} />
+          <IncidentStateDropdown
             incidentId={incident.id}
-            canGenerate={roleHasPermission(organization.role, 'copilot.generate')}
-            canReview={roleHasPermission(organization.role, 'copilot.review')}
-            config={copilotConfig()}
-            suggestions={copilotSuggestions}
-          />
-
-          <VerifiedFixPanel
-            incidentId={incident.id}
-            canGenerate={roleHasPermission(organization.role, 'copilot.generate')}
-            canApprove={roleHasPermission(organization.role, 'copilot.review')}
-            repoConnections={repoConnectionViews}
-            verifications={verificationViews}
+            status={incident.status}
+            canWrite={canWrite}
           />
         </div>
-
-        {/* Right rail */}
-        <div className="space-y-6 xl:sticky xl:top-[68px]">
-          <AskArchPanel incidentId={incident.id} />
-
+      </div>
+      <nav className="workspace-jump-links" aria-label="Incident sections">
+        <a href="#incident-timeline">Response timeline</a>
+        <a href="#incident-context">Related context</a>
+        <a href="#incident-assistance">
+          Assistance{pendingDrafts ? ` · ${pendingDrafts} to review` : ''}
+        </a>
+      </nav>
+      <div className="workspace-incident-layout">
+        <div className="workspace-incident-main">
+          {incident.description ? (
+            <Card className="workspace-incident-summary">
+              <CardHeader title="Impact & observations" />
+              <CardBody>
+                <p className="workspace-incident-description">{incident.description}</p>
+              </CardBody>
+            </Card>
+          ) : null}
+          <section
+            id="incident-timeline"
+            className="workspace-anchor"
+            aria-label="Response timeline"
+          >
+            <Card>
+              <CardHeader
+                title="Response timeline"
+                description="Your team’s updates, decisions, and status changes, oldest first."
+                action={
+                  canWrite ? (
+                    <a href="#incident-update" className="workspace-filter-reset">
+                      Add an update
+                    </a>
+                  ) : undefined
+                }
+              />
+              <IncidentTimeline events={incident.events} memberNames={memberNames} />
+            </Card>
+          </section>
+          {canWrite ? (
+            <section
+              id="incident-update"
+              className="workspace-anchor"
+              aria-label="Add a timeline update"
+            >
+              <Card>
+                <CardHeader
+                  title={
+                    incident.status === 'RESOLVED'
+                      ? 'Add a follow-up'
+                      : 'Keep your team in the loop'
+                  }
+                  description="Updates are recorded on the timeline and may appear on a linked public status page. Keep them customer-safe."
+                />
+                <CardBody>
+                  <CommentBox incidentId={incident.id} />
+                </CardBody>
+              </Card>
+            </section>
+          ) : (
+            <p className="workspace-inline-notice">
+              You have view-only access. A responder, admin, or owner can update this incident.
+            </p>
+          )}
+          <details id="incident-context" className="workspace-disclosure workspace-anchor">
+            <summary>Related services & incident history</summary>
+            <div className="workspace-disclosure-body">
+              {blastRadius.affectedServices.length ? (
+                <Card>
+                  <CardHeader
+                    title="Related services"
+                    description="Services in the dependency chain. Their recorded statuses do not establish the cause of this incident."
+                  />
+                  <CardBody>
+                    <div className="grid gap-2">
+                      {blastRadius.affectedServices.map((service) => (
+                        <Link
+                          key={service.id}
+                          href={`/dashboard/services/${service.id}`}
+                          className="workspace-service-item"
+                        >
+                          <strong>{service.name}</strong>
+                          <ServiceStatusBadge status={service.status} />
+                        </Link>
+                      ))}
+                    </div>
+                    {blastRadius.relatedChanges.length ? (
+                      <div className="mt-5 border-t border-white/10 pt-4">
+                        <h3 className="text-sm font-medium text-slate-200">
+                          Recent changes before this incident
+                        </h3>
+                        <p className="mt-1 text-xs text-slate-500">
+                          Context to investigate, not proof of causation.
+                        </p>
+                        {blastRadius.relatedChanges.slice(0, 5).map((change) => (
+                          <p key={change.id} className="mt-3 text-[13px] text-slate-300">
+                            {change.title}{' '}
+                            <span className="text-xs text-slate-500">
+                              ({change.type.toLowerCase()})
+                            </span>
+                          </p>
+                        ))}
+                      </div>
+                    ) : null}
+                  </CardBody>
+                </Card>
+              ) : (
+                <p className="workspace-assistance-note">
+                  No related services are configured for this incident.
+                </p>
+              )}
+              <CorrelationPanel incidentId={incident.id} />
+              <SimilarIncidentsPanel incidentId={incident.id} initialTitle={incident.title} />
+            </div>
+          </details>
+          <details
+            id="incident-assistance"
+            className="workspace-disclosure workspace-anchor"
+            open={pendingDrafts > 0}
+          >
+            <summary>
+              Drafts & response assistance
+              {pendingDrafts ? ` · ${pendingDrafts} awaiting review` : ''}
+            </summary>
+            <div className="workspace-disclosure-body">
+              <p className="workspace-assistance-note">
+                ARCH can help draft a summary, triage, or customer update. Check the evidence and
+                approve a draft before it changes the incident.
+              </p>
+              <CopilotPanel
+                incidentId={incident.id}
+                canGenerate={roleHasPermission(organization.role, 'copilot.generate')}
+                canReview={roleHasPermission(organization.role, 'copilot.review')}
+                config={copilotConfig()}
+                suggestions={copilotSuggestions}
+              />
+            </div>
+          </details>
+          <details className="workspace-disclosure">
+            <summary>Verified code fixes & pull requests</summary>
+            <div className="workspace-disclosure-body">
+              <p className="workspace-assistance-note">
+                Optional advanced workflow. A connected repository, sandbox verification, and a
+                person’s approval are required before opening a pull request. ARCH never merges or
+                deploys it.
+              </p>
+              <VerifiedFixPanel
+                incidentId={incident.id}
+                canGenerate={roleHasPermission(organization.role, 'fix.verify')}
+                canApprove={roleHasPermission(organization.role, 'fix.approve')}
+                repoConnections={repoConnectionViews}
+                verifications={verificationViews}
+              />
+            </div>
+          </details>
+        </div>
+        <aside className="workspace-incident-rail" aria-label="Incident ownership and details">
           <Card>
-            <CardHeader title="Triage" description="Severity, owner and service linkage." />
+            <CardHeader
+              title={canWrite ? 'Coordinate the response' : 'Response details'}
+              description={
+                canWrite
+                  ? 'Keep ownership, severity, and the affected service current.'
+                  : 'Your access is read-only.'
+              }
+            />
             <CardBody className="space-y-5">
-              <IncidentAssigneeForm incidentId={incident.id} assignedToId={incident.assignedToId} assignees={assignable} />
-              <IncidentSeverityForm incidentId={incident.id} severity={incident.severity} />
-              <ActionForm action={updateIncidentAction} submitLabel="Link service" variant="secondary">
-                <input type="hidden" name="incidentId" value={incident.id} />
-                <Field label="Service" htmlFor="serviceId">
-                  <Select id="serviceId" name="serviceId" defaultValue={incident.serviceId ?? ''}>
-                    <option value="">— none —</option>
-                    {services.map((service) => (
-                      <option key={service.id} value={service.id}>
-                        {service.project.name} / {service.name}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
-              </ActionForm>
+              {canWrite ? (
+                <>
+                  <IncidentAssigneeForm
+                    incidentId={incident.id}
+                    assignedToId={incident.assignedToId}
+                    assignees={assignable}
+                  />
+                  <IncidentSeverityForm incidentId={incident.id} severity={incident.severity} />
+                  <ActionForm
+                    action={updateIncidentAction}
+                    submitLabel="Update service"
+                    pendingLabel="Updating…"
+                    variant="secondary"
+                  >
+                    <input type="hidden" name="incidentId" value={incident.id} />
+                    <Field
+                      label="Affected service"
+                      htmlFor="serviceId"
+                      hint={`Services in ${incident.project.name}.`}
+                    >
+                      <Select
+                        id="serviceId"
+                        name="serviceId"
+                        defaultValue={incident.serviceId ?? ''}
+                      >
+                        <option value="">No service linked</option>
+                        {services
+                          .filter((service) => service.project.id === incident.projectId)
+                          .map((service) => (
+                            <option key={service.id} value={service.id}>
+                              {service.name}
+                            </option>
+                          ))}
+                      </Select>
+                    </Field>
+                  </ActionForm>
+                </>
+              ) : (
+                <DefinitionList
+                  items={[
+                    {
+                      label: 'Assigned to',
+                      value:
+                        incident.assignedTo?.name ?? incident.assignedTo?.email ?? 'Unassigned',
+                    },
+                    {
+                      label: 'Severity',
+                      value: incident.severity.charAt(0) + incident.severity.slice(1).toLowerCase(),
+                    },
+                    { label: 'Service', value: incident.service?.name ?? 'No service linked' },
+                  ]}
+                />
+              )}
             </CardBody>
           </Card>
-
           <Card>
-            <CardHeader title="Details" />
+            <CardHeader title="Incident record" />
             <CardBody>
               <DefinitionList
                 items={[
-                  { label: 'Incident id', value: <span className="arch-mono text-xs">{incident.id.slice(0, 8)}</span> },
                   { label: 'Project', value: incident.project.name },
-                  { label: 'Service', value: incident.service?.name ?? '—' },
+                  { label: 'Source', value: incident.source.toLowerCase() },
                   { label: 'Started', value: formatDateTime(incident.startedAt) },
-                  { label: 'Resolved', value: incident.resolvedAt ? formatDateTime(incident.resolvedAt) : '—' },
-                  { label: 'Duration', value: formatDuration(incident.startedAt, incident.resolvedAt) },
+                  {
+                    label: 'Resolved',
+                    value: incident.resolvedAt
+                      ? formatDateTime(incident.resolvedAt)
+                      : 'Not resolved',
+                  },
+                  {
+                    label: 'Duration at load',
+                    value: formatDuration(incident.startedAt, incident.resolvedAt),
+                  },
                   { label: 'Last update', value: formatDateTime(incident.updatedAt) },
                 ]}
               />
-              {incident.description ? (
-                <div className="mt-4 border-t border-white/[0.06] pt-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">Description</p>
-                  <p className="mt-1.5 whitespace-pre-wrap text-[13px] leading-relaxed text-slate-300">{incident.description}</p>
-                </div>
-              ) : null}
             </CardBody>
           </Card>
-        </div>
+          <details className="workspace-disclosure">
+            <summary>Ask ARCH about this incident</summary>
+            <div className="workspace-disclosure-body">
+              <AskArchPanel incidentId={incident.id} />
+            </div>
+          </details>
+        </aside>
       </div>
     </div>
   );

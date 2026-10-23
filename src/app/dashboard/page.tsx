@@ -1,277 +1,367 @@
+import { WorkspaceRefresh } from '@/components/dashboard/workspace-refresh';
 import Link from 'next/link';
 import type { Metadata } from 'next';
 import { requireDashboardContext } from '@/lib/session';
+import { roleHasPermission } from '@/lib/permissions';
 import { incidentRepository } from '@/server/repositories/incident.repository';
 import { serviceRepository } from '@/server/repositories/service.repository';
 import { auditRepository } from '@/server/repositories/audit.repository';
 import { organizationRepository } from '@/server/repositories/organization.repository';
-import { timeAgo } from '@/lib/format';
-import { AI_NAME } from '@/lib/brand';
-import { Badge, Card, CardBody, CardHeader, EmptyState, PageHeader, ServiceStatusBadge, Table } from '@/components/ui';
-import { Avatar } from '@/components/ui/avatar';
+import { projectRepository } from '@/server/repositories/project.repository';
+import { statusPageRepository } from '@/server/repositories/statusPage.repository';
+import { timeAgo, formatDateTime } from '@/lib/format';
+import { workspaceHealth, statusPageDestination } from '@/lib/workspace-view';
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  EmptyState,
+  PageHeader,
+  ServiceStatusBadge,
+} from '@/components/ui';
 import { ButtonLink } from '@/components/ui/button';
-import { AiBadge, SparkIcon } from '@/components/ui/logo';
-import { Sparkline } from '@/components/ui/sparkline';
-import { Stat } from '@/components/ui/stat';
-import { IncidentRow } from '@/components/incident/incident-row';
+import { Avatar } from '@/components/ui/avatar';
+import { IncidentCollection } from '@/components/incidents/incident-collection';
+import {
+  WorkspaceChecklist,
+  WorkspaceHealthBanner,
+  WorkspaceMetrics,
+} from '@/components/dashboard/workspace-overview';
 
 export const metadata: Metadata = { title: 'Overview' };
 export const dynamic = 'force-dynamic';
 
-function greeting(name: string | null): string {
-  const hour = new Date().getHours();
-  const part = hour < 5 ? 'Night shift' : hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
-  return name ? `${part}, ${name.split(' ')[0]}` : part;
-}
-
-function bucketByDay(dates: Date[], days = 14): number[] {
-  const buckets = new Array<number>(days).fill(0);
-  const now = Date.now();
-  for (const date of dates) {
-    const age = Math.floor((now - date.getTime()) / 86_400_000);
-    if (age >= 0 && age < days) buckets[days - 1 - age]! += 1;
-  }
-  return buckets;
-}
+const activityLabels: Record<string, string> = {
+  'incident.create': 'opened an incident',
+  'incident.comment': 'added a timeline update',
+  'incident.status_change': 'updated an incident status',
+  'incident.update': 'updated an incident',
+  'incident.reopen': 'reopened an incident',
+  'member.invite': 'invited a teammate',
+  'statuspage.publish': 'published a status page',
+  'statuspage.update': 'updated a status page',
+  'statuspage.create': 'created a status page',
+  'webhook.create': 'configured an alert webhook',
+  'organization.create': 'created the workspace',
+  'project.create': 'created a project',
+  'service.create': 'added a service',
+};
 
 export default async function DashboardOverview() {
   const { user, organization } = await requireDashboardContext();
-
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const [open, critical, resolvedThisWeek, services, members, recentIncidents, recentAudit, sparkSource] = await Promise.all([
+  const canWrite = roleHasPermission(organization.role, 'incident.write');
+  const canManageProjects = roleHasPermission(organization.role, 'project.manage');
+  const canReadAudit = roleHasPermission(organization.role, 'audit.read');
+  const canPublish = roleHasPermission(organization.role, 'statuspage.manage');
+  const [
+    open,
+    critical,
+    resolvedThisWeek,
+    services,
+    members,
+    openQueue,
+    recentIncidents,
+    recentAudit,
+    projects,
+    publishedPage,
+  ] = await Promise.all([
     incidentRepository.count(organization.id, { open: true }),
     incidentRepository.count(organization.id, { open: true, severity: 'CRITICAL' }),
-    incidentRepository.count(organization.id, { status: 'RESOLVED', resolvedSince: sevenDaysAgo }),
+    incidentRepository.count(organization.id, {
+      status: 'RESOLVED',
+      resolvedSince: new Date(Date.now() - 7 * 86_400_000),
+    }),
     serviceRepository.list(organization.id),
     organizationRepository.countMembers(organization.id),
-    incidentRepository.findRecent(organization.id, 6),
-    auditRepository.list(organization.id, {}, { skip: 0, take: 7 }),
-    incidentRepository.findRecent(organization.id, 40),
+    incidentRepository.findOpenForOverview(organization.id),
+    incidentRepository.findRecent(organization.id, 5),
+    canReadAudit
+      ? auditRepository.list(organization.id, {}, { skip: 0, take: 5 })
+      : Promise.resolve([]),
+    projectRepository.count(organization.id),
+    statusPageRepository.firstPublished(organization.id),
   ]);
-
-  const impacted = services.filter((service) => service.status === 'DEGRADED' || service.status === 'OUTAGE');
-  const openList = recentIncidents.filter((incident) => incident.status !== 'RESOLVED');
-  const allClear = open === 0;
-  const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const impacted = services.filter(
+    (service) => service.status === 'DEGRADED' || service.status === 'OUTAGE',
+  );
+  const health = workspaceHealth(open, services);
+  const status = statusPageDestination(publishedPage);
+  const needsSetup = projects === 0 || services.length === 0;
+  const quickActions = [
+    ...(canManageProjects
+      ? [{ label: 'Manage projects & services', href: '/dashboard/projects' }]
+      : []),
+    ...(roleHasPermission(organization.role, 'member.manage')
+      ? [{ label: 'Invite your team', href: '/dashboard/settings?tab=people' }]
+      : []),
+    ...(roleHasPermission(organization.role, 'webhook.manage')
+      ? [{ label: 'Connect alert webhooks', href: '/dashboard/settings?tab=integrations' }]
+      : []),
+    ...(canPublish ? [{ label: 'Manage status pages', href: '/dashboard/status' }] : []),
+  ];
+  const queue = open > 0 ? openQueue : recentIncidents;
 
   return (
     <div className="animate-rise">
       <PageHeader
-        eyebrow={`${organization.name} · ${today}`}
-        title={greeting(user.name)}
-        description={allClear ? 'All quiet. Here is the health of everything you own.' : `${open} incident${open === 1 ? '' : 's'} need${open === 1 ? 's' : ''} attention right now.`}
+        eyebrow={organization.name}
+        title={projects === 0 ? 'Set up your workspace' : 'Response overview'}
+        description={
+          projects === 0
+            ? 'A few small steps to give your team a shared place to respond.'
+            : 'Your incident queue, service health, and recent activity.'
+        }
         action={
           <>
-            <ButtonLink href={`/status/${organization.slug}`} prefetch={false} variant="secondary">
-              View status page
-            </ButtonLink>
-            <ButtonLink href="/dashboard/incidents/new" variant="danger">
-              + Declare incident
+            <WorkspaceRefresh refreshedAt={new Date().toISOString()} compact />
+            <ButtonLink
+              href={status.href}
+              prefetch={false}
+              variant="secondary"
+              target={status.public ? '_blank' : undefined}
+              rel={status.public ? 'noopener noreferrer' : undefined}
+            >
+              {status.public ? (
+                <>
+                  <span className="workspace-overview-public-verb">View </span>public status
+                </>
+              ) : (
+                'Status pages'
+              )}{' '}
+              <span aria-hidden="true">↗</span>
             </ButtonLink>
           </>
         }
       />
-
-      {/* Hero status banner */}
-      <div
-        className={`relative mb-6 overflow-hidden rounded-2xl border p-5 sm:p-6 ${
-          allClear
-            ? 'border-emerald-500/25 bg-gradient-to-r from-emerald-500/[0.1] via-abyss-850 to-abyss-850'
-            : 'border-rose-500/25 bg-gradient-to-r from-rose-500/[0.12] via-abyss-850 to-abyss-850'
-        }`}
-      >
-        <div className="flex flex-wrap items-center gap-4">
-          <span className={`grid size-12 shrink-0 place-items-center rounded-2xl text-xl ${allClear ? 'bg-emerald-500/15' : 'bg-rose-500/15'}`} aria-hidden>
-            {allClear ? '✓' : '!'}
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-lg font-semibold tracking-tight text-white">
-              {allClear ? 'All systems operational' : `${open} open incident${open === 1 ? '' : 's'} · ${impacted.length} service${impacted.length === 1 ? '' : 's'} impacted`}
-            </p>
-            <p className="mt-0.5 text-[13px] text-slate-400">
-              {services.length} service{services.length === 1 ? '' : 's'} across the organization · {members} member{members === 1 ? '' : 's'} on call
-            </p>
-          </div>
-          {!allClear && openList[0] ? (
-            <ButtonLink href={`/dashboard/incidents/${openList[0].id}`} variant="secondary" size="sm">
-              Jump to latest →
-            </ButtonLink>
+      <WorkspaceHealthBanner
+        health={health}
+        priorityHref={openQueue[0] ? `/dashboard/incidents/${openQueue[0].id}` : undefined}
+      />
+      <div className="workspace-overview-grid">
+        <div className="workspace-overview-main">
+          {needsSetup ? (
+            <Card>
+              <CardHeader
+                title="Start with your services"
+                description={
+                  canManageProjects
+                    ? 'Create a project, then add the services your team looks after.'
+                    : 'An owner or admin can finish the workspace setup.'
+                }
+              />
+              <CardBody>
+                <WorkspaceChecklist
+                  steps={[
+                    {
+                      title: 'Create your first project',
+                      description: 'Group related services and their incident history.',
+                      complete: projects > 0,
+                      ...(canManageProjects
+                        ? { href: '/dashboard/projects', action: 'Create project' }
+                        : {}),
+                    },
+                    {
+                      title: 'Add a service',
+                      description: 'Track the status of an API, website, or another system.',
+                      complete: services.length > 0,
+                      ...(canManageProjects
+                        ? { href: '/dashboard/projects', action: 'Add a service' }
+                        : {}),
+                    },
+                    {
+                      title: 'Publish a status page · optional',
+                      description:
+                        'Choose what your customers can see. Nothing is public until you publish.',
+                      complete: Boolean(publishedPage),
+                      ...(canPublish ? { href: '/dashboard/status', action: 'Set up a page' } : {}),
+                    },
+                  ]}
+                />
+              </CardBody>
+            </Card>
           ) : null}
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat
-          label="Open incidents"
-          value={open}
-          tone={open > 0 ? 'danger' : 'success'}
-          hint={open === 0 ? 'All clear — nothing burning' : critical > 0 ? `${critical} critical` : 'Unresolved right now'}
-          spark={<Sparkline points={bucketByDay(sparkSource.filter((i) => i.status !== 'RESOLVED').map((i) => i.startedAt))} stroke={open > 0 ? '#fb7185' : '#34d399'} />}
-        />
-        <Stat
-          label="Resolved · 7 days"
-          value={resolvedThisWeek}
-          tone="success"
-          hint="Closed out this week"
-          spark={<Sparkline points={bucketByDay(sparkSource.filter((i) => i.status === 'RESOLVED').map((i) => i.startedAt))} stroke="#34d399" />}
-        />
-        <Stat
-          label="Services impacted"
-          value={impacted.length}
-          tone={impacted.length > 0 ? 'warning' : 'success'}
-          hint={`${services.length} total · derived live`}
-          spark={<Sparkline points={bucketByDay(sparkSource.map((i) => i.startedAt))} stroke="#818cf8" />}
-        />
-        <Stat label="Responders" value={members} tone="neutral" hint="Members in this org" />
-      </div>
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-3">
-        {/* Open incidents */}
-        <div className="lg:col-span-2">
           <Card>
             <CardHeader
-              title={openList.length > 0 ? 'Needs attention' : 'Recent incidents'}
-              description={openList.length > 0 ? 'Open incidents, newest first.' : 'Newest first — click through for the full timeline.'}
+              title={open > 0 ? 'Response queue' : 'Recent incidents'}
+              description={
+                open > 0
+                  ? 'Open incidents, ordered by severity and then age.'
+                  : 'Your most recently created incidents.'
+              }
               action={
-                <Link className="text-[13px] font-medium text-indigo-400 transition hover:text-indigo-300" href="/dashboard/incidents">
-                  All incidents →
+                <Link
+                  className="workspace-filter-reset"
+                  href={open > 0 ? '/dashboard/incidents?open=true' : '/dashboard/incidents'}
+                >
+                  View all <span aria-hidden="true">→</span>
                 </Link>
               }
             />
-            {(openList.length > 0 ? openList : recentIncidents).length === 0 ? (
+            {queue.length ? (
+              <IncidentCollection incidents={queue} compact />
+            ) : (
               <CardBody>
                 <EmptyState
                   title="No incidents yet"
-                  description="When something breaks, declare an incident — or let a webhook do it for you."
-                  action={<ButtonLink href="/dashboard/incidents/new" variant="primary">Declare incident</ButtonLink>}
+                  description={
+                    projects === 0
+                      ? 'Create a project first. Then your team can declare an incident here or receive one from a configured alert.'
+                      : 'Your team’s incident history will appear here. Declare an incident when there is something to investigate.'
+                  }
+                  action={
+                    canWrite && projects > 0 ? (
+                      <ButtonLink href="/dashboard/incidents/new">Declare incident</ButtonLink>
+                    ) : canManageProjects && projects === 0 ? (
+                      <ButtonLink href="/dashboard/projects">Create a project</ButtonLink>
+                    ) : undefined
+                  }
                 />
               </CardBody>
-            ) : (
-              <Table head={['Incident', 'Severity', 'Status', 'Service', 'Assignee', 'Updated']}>
-                {(openList.length > 0 ? openList : recentIncidents).map((incident) => (
-                  <IncidentRow key={incident.id} incident={incident} />
-                ))}
-              </Table>
             )}
           </Card>
-
-          {/* Activity */}
-          <Card className="mt-6">
-            <CardHeader
-              title="Recent activity"
-              description="Audit trail — ADMIN and above see the full log."
-              action={
-                <Link className="text-[13px] font-medium text-indigo-400 transition hover:text-indigo-300" href="/dashboard/audit">
-                  Audit log →
-                </Link>
-              }
-            />
-            <CardBody className="space-y-1">
-              {recentAudit.length === 0 ? (
-                <p className="py-2 text-sm text-slate-400">Nothing recorded yet.</p>
-              ) : (
-                recentAudit.map((entry) => (
-                  <div key={entry.id} className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 transition hover:bg-white/[0.03]">
-                    <span className="flex min-w-0 items-center gap-2.5">
-                      <Avatar name={entry.actor?.name} email={entry.actor?.email} size="xs" />
-                      <span className="truncate text-[13px] text-slate-300">
-                        <span className="font-medium text-slate-200">{entry.actor?.name ?? entry.actor?.email ?? 'system'}</span>{' '}
-                        <span className="arch-mono text-xs text-slate-500">{entry.action}</span>
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-xs tabular-nums text-slate-500">{timeAgo(entry.createdAt)}</span>
-                  </div>
-                ))
-              )}
-            </CardBody>
-          </Card>
+          <WorkspaceMetrics
+            metrics={[
+              {
+                label: 'Open incidents',
+                value: open,
+                hint: critical
+                  ? `${critical} critical · review first`
+                  : 'Unresolved in this workspace',
+                ...(open > 0 ? { tone: 'danger' as const } : {}),
+                href: '/dashboard/incidents?open=true',
+              },
+              {
+                label: 'Services impacted',
+                value: impacted.length,
+                hint: `Of ${services.length} configured services`,
+                ...(impacted.length > 0 ? { tone: 'warning' as const } : {}),
+                href: '/dashboard/projects',
+              },
+              {
+                label: 'Resolved · 7 days',
+                value: resolvedThisWeek,
+                hint: 'Resolved in the past 7 days',
+                href: '/dashboard/incidents?status=RESOLVED',
+              },
+              {
+                label: 'Team members',
+                value: members,
+                hint: 'People in this workspace',
+                href: '/dashboard/settings?tab=people',
+              },
+            ]}
+          />
+          {canReadAudit ? (
+            <Card>
+              <CardHeader
+                title="Recent workspace activity"
+                description="The latest recorded changes. Full details are in the audit log."
+                action={
+                  <Link className="workspace-filter-reset" href="/dashboard/audit">
+                    Audit log <span aria-hidden="true">→</span>
+                  </Link>
+                }
+              />
+              <CardBody>
+                {recentAudit.length ? (
+                  <ul className="workspace-activity">
+                    {recentAudit.map((entry) => (
+                      <li key={entry.id}>
+                        <Avatar name={entry.actor?.name} email={entry.actor?.email} size="xs" />
+                        <div>
+                          <p>
+                            <strong>{entry.actor?.name ?? entry.actor?.email ?? 'System'}</strong>{' '}
+                            {activityLabels[entry.action] ?? entry.action.replace(/[._]/g, ' ')}
+                          </p>
+                          <time
+                            dateTime={entry.createdAt.toISOString()}
+                            title={formatDateTime(entry.createdAt)}
+                          >
+                            {timeAgo(entry.createdAt)}
+                          </time>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="workspace-assistance-note">No activity recorded yet.</p>
+                )}
+              </CardBody>
+            </Card>
+          ) : null}
         </div>
-
-        {/* Right rail */}
-        <div className="space-y-6">
+        <div className="workspace-overview-rail">
           <Card>
             <CardHeader
               title="Service health"
-              description="Live — derived from open incidents unless pinned."
+              description="Recorded statuses, derived from incidents unless pinned manually."
               action={
-                <Link className="text-[13px] font-medium text-indigo-400 transition hover:text-indigo-300" href="/dashboard/projects">
-                  All →
+                <Link className="workspace-filter-reset" href="/dashboard/projects">
+                  View all
                 </Link>
               }
             />
-            <CardBody className="space-y-1">
-              {services.length === 0 ? (
-                <p className="py-2 text-sm text-slate-400">
-                  No services yet.{' '}
-                  <Link className="text-indigo-400 hover:text-indigo-300" href="/dashboard/projects">
-                    Add one
-                  </Link>
-                  .
-                </p>
+            <CardBody>
+              {services.length ? (
+                [...services]
+                  .sort(
+                    (a, b) =>
+                      Number(b.status === 'OUTAGE' || b.status === 'DEGRADED') -
+                      Number(a.status === 'OUTAGE' || a.status === 'DEGRADED'),
+                  )
+                  .slice(0, 8)
+                  .map((service) => (
+                    <Link
+                      key={service.id}
+                      href={`/dashboard/services/${service.id}`}
+                      className="workspace-service-item"
+                    >
+                      <span>
+                        <strong>{service.name}</strong>
+                        <small>{service.project.name}</small>
+                      </span>
+                      <ServiceStatusBadge status={service.status} />
+                    </Link>
+                  ))
               ) : (
-                services.slice(0, 8).map((service) => (
-                  <Link
-                    key={service.id}
-                    href={`/dashboard/services/${service.id}`}
-                    className="flex items-center justify-between gap-3 rounded-xl px-2 py-2 transition hover:bg-white/[0.04]"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-sm font-medium text-slate-200">{service.name}</span>
-                      <span className="block truncate text-xs text-slate-500">{service.project.name}</span>
-                    </span>
-                    <ServiceStatusBadge status={service.status} />
-                  </Link>
-                ))
+                <p className="workspace-assistance-note">
+                  No services configured.{' '}
+                  {canManageProjects ? (
+                    <Link href="/dashboard/projects" className="workspace-filter-reset">
+                      Add your first service
+                    </Link>
+                  ) : (
+                    'Ask an owner or admin to add a service.'
+                  )}
+                </p>
               )}
             </CardBody>
           </Card>
-
-          {/* ARCH V1.1 */}
-          <div className="relative overflow-hidden rounded-2xl border border-violet-500/25 bg-gradient-to-br from-indigo-500/[0.12] via-abyss-850 to-violet-500/[0.08] p-5">
-            <div className="flex items-center justify-between">
-              <AiBadge />
-              <SparkIcon className="size-5 text-violet-400/60" />
-            </div>
-            <p className="mt-3 text-[15px] font-semibold tracking-tight text-white">Your on-call intelligence</p>
-            <p className="mt-1 text-[13px] leading-relaxed text-slate-400">
-              Triage, summaries, verified fixes and answers — generated on this server from your own incidents.
-            </p>
-            <div className="mt-4 flex gap-2">
-              <ButtonLink href="/dashboard/model" variant="ai" size="sm">
-                Open {AI_NAME}
-              </ButtonLink>
-              {openList[0] ? (
-                <ButtonLink href={`/dashboard/incidents/${openList[0].id}`} variant="secondary" size="sm">
-                  Ask about latest
-                </ButtonLink>
-              ) : null}
-            </div>
-          </div>
-
+          {quickActions.length ? (
+            <Card>
+              <CardHeader title="Workspace shortcuts" />
+              <CardBody className="workspace-quick-links">
+                {quickActions.map((action) => (
+                  <Link key={action.href} href={action.href}>
+                    {action.label}
+                    <span aria-hidden="true">↗</span>
+                  </Link>
+                ))}
+              </CardBody>
+            </Card>
+          ) : null}
           <Card>
-            <CardHeader title="Quick actions" />
-            <CardBody className="grid grid-cols-2 gap-2">
-              {[
-                { label: 'New project', href: '/dashboard/projects' },
-                { label: 'Invite member', href: '/dashboard/settings?tab=people' },
-                { label: 'Add webhook', href: '/dashboard/settings?tab=integrations' },
-                { label: 'Publish page', href: '/dashboard/status' },
-              ].map((action) => (
-                <Link
-                  key={action.label}
-                  href={action.href}
-                  className="rounded-xl border border-white/[0.07] bg-white/[0.02] px-3 py-2.5 text-[13px] font-medium text-slate-300 transition hover:border-indigo-500/40 hover:bg-indigo-500/[0.08] hover:text-white"
-                >
-                  {action.label}
-                </Link>
-              ))}
+            <CardHeader title="Need more context?" />
+            <CardBody>
+              <p className="workspace-assistance-note">
+                Ask about an incident, look up a runbook, or draft an update. Suggestions can be
+                wrong; your team reviews them before acting.
+              </p>
+              <Link href="/dashboard/chat" className="workspace-filter-reset mt-4 inline-block">
+                Ask ARCH <span aria-hidden="true">→</span>
+              </Link>
             </CardBody>
           </Card>
-
-          <div className="flex items-center justify-center gap-2 text-xs text-slate-600">
-            <Badge tone="neutral">Every write is audited</Badge>
-          </div>
         </div>
       </div>
     </div>

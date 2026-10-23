@@ -1,11 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { PRODUCT_VERSION } from '@/lib/brand';
+import type { PublishedStatusPage } from '@/lib/workspace-view';
+import { WorkspaceTheme, ThemeToggle } from './workspace-theme';
+import type { WorkspaceThemePreference } from './theme-preferences';
 import { Toaster } from '@/components/ui/toast';
 import { SidebarBrand, SidebarNav } from './sidebar';
 import { Topbar } from './topbar';
 import { CommandPalette, type PaletteEntry } from './command-palette';
+import { useCharacterShortcuts } from '@/components/ui/workspace-keyboard-preferences';
+import { ShortcutGuide } from './shortcut-guide';
+import { isShortcutHelpShortcut, isWorkspaceSearchShortcut } from '@/lib/workspace-shortcuts';
 import { isSidebarToggleShortcut, serializeSidebarPreference } from './sidebar-preferences';
 
 /**
@@ -16,7 +22,10 @@ export function Shell({
   children,
   organizations,
   currentOrg,
-  statusSlug,
+  statusPage,
+  canDeclareIncident,
+  canReadAudit,
+  initialTheme,
   user,
   role,
   openIncidents,
@@ -26,7 +35,10 @@ export function Shell({
   children: React.ReactNode;
   organizations: { id: string; name: string; role: string }[];
   currentOrg: string;
-  statusSlug: string;
+  statusPage: PublishedStatusPage;
+  canDeclareIncident: boolean;
+  canReadAudit: boolean;
+  initialTheme: WorkspaceThemePreference;
   user: { email: string; name: string | null };
   role: string;
   openIncidents: number;
@@ -36,7 +48,8 @@ export function Shell({
   const [menuOpen, setMenuOpen] = useState(false);
   const [desktopSidebarVisible, setDesktopSidebarVisible] = useState(initialSidebarVisible);
   const [paletteOpen, setPaletteOpen] = useState(false);
-  const pathname = usePathname();
+  const characterShortcuts = useCharacterShortcuts();
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const mobileNavigationRef = useRef<HTMLDivElement>(null);
   const returnFocusRef = useRef<HTMLElement | null>(null);
@@ -46,7 +59,10 @@ export function Shell({
     setDesktopSidebarVisible((visible) => {
       const nextVisible = !visible;
       try {
-        document.cookie = serializeSidebarPreference(nextVisible, window.location.protocol === 'https:');
+        document.cookie = serializeSidebarPreference(
+          nextVisible,
+          window.location.protocol === 'https:',
+        );
       } catch {
         // The navigation still works when browser cookie storage is unavailable.
       }
@@ -56,24 +72,40 @@ export function Shell({
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.keyCode === 229 ||
+        paletteOpen ||
+        menuOpen ||
+        shortcutsOpen ||
+        (event.target instanceof Element && event.target.closest('[role="dialog"], [role="menu"]'))
+      )
+        return;
       if (window.innerWidth >= 1024 && isSidebarToggleShortcut(event)) {
         event.preventDefault();
         toggleDesktopSidebar();
         return;
       }
-      if (menuOpen) return;
-
-      // The chat workspace uses ⌘K / Ctrl+K for conversation search; the clickable global search
-      // button remains available there for the command palette.
-      if (pathname === '/dashboard/chat') return;
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+      if (characterShortcuts && isShortcutHelpShortcut(event)) {
+        event.preventDefault();
+        setShortcutsOpen(true);
+        return;
+      }
+      if (isWorkspaceSearchShortcut(event)) {
         event.preventDefault();
         togglePalette();
       }
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [menuOpen, pathname, toggleDesktopSidebar, togglePalette]);
+  }, [
+    characterShortcuts,
+    menuOpen,
+    paletteOpen,
+    shortcutsOpen,
+    toggleDesktopSidebar,
+    togglePalette,
+  ]);
 
   // The mobile navigation is a real modal drawer: lock the page behind it, keep keyboard focus
   // inside, close on Escape, and return focus to the opener when the drawer closes.
@@ -85,15 +117,21 @@ export function Shell({
 
     const previousOverflow = document.body.style.overflow;
     const activeElement = document.activeElement;
-    returnFocusRef.current = activeElement instanceof HTMLElement ? activeElement : mobileMenuButtonRef.current;
+    returnFocusRef.current =
+      activeElement instanceof HTMLElement ? activeElement : mobileMenuButtonRef.current;
     document.body.style.overflow = 'hidden';
 
     const getFocusableElements = () =>
       Array.from(
         dialog.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])',
         ),
-      ).filter((element) => !element.closest('[aria-hidden="true"]'));
+      ).filter(
+        (element) =>
+          element.tabIndex >= 0 &&
+          element.getClientRects().length > 0 &&
+          !element.closest('[aria-hidden="true"]'),
+      );
 
     dialog.querySelector<HTMLElement>('[data-mobile-navigation-close]')?.focus();
 
@@ -143,17 +181,41 @@ export function Shell({
   }, []);
 
   return (
-    <div className="arch-product-shell relative min-h-screen">
+    <WorkspaceTheme
+      initialPreference={initialTheme}
+      className="arch-product-shell relative min-h-screen"
+    >
+      <a href="#workspace-main" className="workspace-skip-link">
+        Skip to workspace
+      </a>
       <div className="arch-product-backdrop" aria-hidden />
 
       {/* Desktop navigation can be fully hidden to give the active workspace more room. */}
       {desktopSidebarVisible ? (
-        <aside id="arch-desktop-navigation" className="arch-product-sidebar" aria-label="Workspace navigation">
+        <aside
+          id="arch-desktop-navigation"
+          className="arch-product-sidebar"
+          aria-label="Workspace navigation"
+        >
           <SidebarBrand />
-          <SidebarNav openIncidents={openIncidents} />
-          <div className="arch-sidebar-status">
-            <span className="arch-sidebar-status-dot" aria-hidden />
-            <span>ARCH · on-prem ready</span>
+          <SidebarNav canReadAudit={canReadAudit} openIncidents={openIncidents} />
+          <div className="workspace-sidebar-footer">
+            <ThemeToggle />
+            <button
+              type="button"
+              className="workspace-shortcut-trigger"
+              onClick={() => setShortcutsOpen(true)}
+              aria-haspopup="dialog"
+              aria-keyshortcuts={characterShortcuts ? '?' : undefined}
+            >
+              <span aria-hidden="true">⌨</span>Keyboard shortcuts{' '}
+              <span className="workspace-shortcut-trigger-key" aria-hidden="true">
+                {characterShortcuts ? '?' : 'Help'}
+              </span>
+            </button>
+            <p>
+              Early access <span aria-hidden="true">·</span> v{PRODUCT_VERSION}
+            </p>
           </div>
         </aside>
       ) : null}
@@ -176,7 +238,10 @@ export function Shell({
             tabIndex={-1}
             aria-hidden="true"
           />
-          <aside className="arch-product-sidebar arch-product-sidebar--mobile" aria-label="Workspace navigation">
+          <aside
+            className="arch-product-sidebar arch-product-sidebar--mobile"
+            aria-label="Workspace navigation"
+          >
             <button
               type="button"
               className="arch-mobile-navigation-close"
@@ -185,25 +250,43 @@ export function Shell({
               aria-label="Close navigation"
               title="Close navigation"
             >
-              <svg viewBox="0 0 20 20" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" aria-hidden>
+              <svg
+                viewBox="0 0 20 20"
+                className="size-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.7"
+                strokeLinecap="round"
+                aria-hidden
+              >
                 <path d="M5 5l10 10M15 5L5 15" />
               </svg>
             </button>
             <SidebarBrand onNavigate={() => setMenuOpen(false)} />
-            <SidebarNav openIncidents={openIncidents} onNavigate={() => setMenuOpen(false)} />
-            <div className="arch-sidebar-status">
-              <span className="arch-sidebar-status-dot" aria-hidden />
-              <span>ARCH · on-prem ready</span>
+            <SidebarNav
+              canReadAudit={canReadAudit}
+              openIncidents={openIncidents}
+              onNavigate={() => setMenuOpen(false)}
+            />
+            <div className="workspace-sidebar-footer">
+              <ThemeToggle />
+              <p>
+                Early access <span aria-hidden="true">·</span> v{PRODUCT_VERSION}
+              </p>
             </div>
           </aside>
         </div>
       ) : null}
 
-      <div className={`arch-product-main${desktopSidebarVisible ? ' arch-product-main--sidebar-visible' : ''}`}>
+      <div
+        inert={menuOpen}
+        className={`arch-product-main${desktopSidebarVisible ? ' arch-product-main--sidebar-visible' : ''}`}
+      >
         <Topbar
           organizations={organizations}
           currentOrg={currentOrg}
-          statusSlug={statusSlug}
+          statusPage={statusPage}
+          canDeclareIncident={canDeclareIncident}
           user={user}
           role={role}
           sidebarVisible={desktopSidebarVisible}
@@ -212,15 +295,25 @@ export function Shell({
           mobileMenuButtonRef={mobileMenuButtonRef}
           onMenu={() => setMenuOpen(true)}
           onSearch={() => setPaletteOpen(true)}
+          onShortcuts={() => setShortcutsOpen(true)}
         />
-        <main className="arch-product-content">{children}</main>
+        <main id="workspace-main" tabIndex={-1} className="arch-product-content">
+          {children}
+        </main>
         <footer className="arch-product-footer">
-          <p>Every write is audited <span aria-hidden>·</span> Status colors mean status — nothing else</p>
+          <p>
+            Self-hosted incident response <span aria-hidden>·</span> Assistance stays human-reviewed
+          </p>
         </footer>
       </div>
 
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} entries={paletteEntries} />
+      <CommandPalette
+        open={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        entries={paletteEntries}
+      />
+      <ShortcutGuide open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <Toaster />
-    </div>
+    </WorkspaceTheme>
   );
 }

@@ -26,7 +26,11 @@ export async function copyToClipboard(text: string): Promise<boolean> {
   if (typeof document === 'undefined') return false;
 
   try {
-    if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText && clipboardWriteAllowed()) {
+    if (
+      typeof navigator !== 'undefined' &&
+      navigator.clipboard?.writeText &&
+      clipboardWriteAllowed()
+    ) {
       await navigator.clipboard.writeText(text);
       return true;
     }
@@ -34,6 +38,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     // Clipboard permissions are commonly denied inside previews/iframes; try the legacy path.
   }
 
+  const previousFocus = document.activeElement as HTMLElement | null;
   let textarea: HTMLTextAreaElement | null = null;
   try {
     textarea = document.createElement('textarea');
@@ -60,5 +65,11 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     return false;
   } finally {
     textarea?.remove();
+    try {
+      if (previousFocus?.isConnected && typeof previousFocus.focus === 'function')
+        previousFocus.focus({ preventScroll: true });
+    } catch {
+      // Focus restoration must not turn a completed clipboard operation into an exception.
+    }
   }
 }

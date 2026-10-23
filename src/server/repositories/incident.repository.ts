@@ -37,7 +37,12 @@ function where(organizationId: string, filters: IncidentFilters = {}): Prisma.In
 }
 
 export const incidentRepository = {
-  list(organizationId: string, filters: IncidentFilters, pagination: { skip: number; take: number }, client: DbClient = db) {
+  list(
+    organizationId: string,
+    filters: IncidentFilters,
+    pagination: { skip: number; take: number },
+    client: DbClient = db,
+  ) {
     return client.incident.findMany({
       where: where(organizationId, filters),
       include: incidentInclude,
@@ -52,17 +57,37 @@ export const incidentRepository = {
   },
 
   countByStatus(organizationId: string, client: DbClient = db) {
-    return client.incident.groupBy({ by: ['status'], where: { organizationId }, _count: { _all: true } });
+    return client.incident.groupBy({
+      by: ['status'],
+      where: { organizationId },
+      _count: { _all: true },
+    });
+  },
+
+  /** Include project-level incidents with no service; a missing link must not hide an active response. */
+  countOpenByProjectAndService(organizationId: string, client: DbClient = db) {
+    return client.incident.groupBy({
+      by: ['projectId', 'serviceId'],
+      where: { organizationId, status: { not: 'RESOLVED' } },
+      _count: { _all: true },
+    });
   },
 
   /** Open incidents per assignee — Copilot triage uses it as a workload signal. */
-  async countOpenByAssignee(organizationId: string, client: DbClient = db): Promise<Map<string, number>> {
+  async countOpenByAssignee(
+    organizationId: string,
+    client: DbClient = db,
+  ): Promise<Map<string, number>> {
     const rows = await client.incident.groupBy({
       by: ['assignedToId'],
       where: { organizationId, status: { not: 'RESOLVED' }, assignedToId: { not: null } },
       _count: { _all: true },
     });
-    return new Map(rows.filter((row) => row.assignedToId).map((row) => [row.assignedToId as string, row._count._all]));
+    return new Map(
+      rows
+        .filter((row) => row.assignedToId)
+        .map((row) => [row.assignedToId as string, row._count._all]),
+    );
   },
 
   /** Incident counts per severity. `open: true` counts only unresolved ones (the live picture). */
@@ -91,14 +116,32 @@ export const incidentRepository = {
     });
   },
 
+  /** The response queue must include older open incidents even when many newer incidents are resolved. */
+  findOpenForOverview(organizationId: string, take = 6, client: DbClient = db) {
+    return client.incident.findMany({
+      where: { organizationId, status: { not: 'RESOLVED' } },
+      include: incidentInclude,
+      orderBy: [{ severity: 'desc' }, { startedAt: 'asc' }, { id: 'asc' }],
+      take,
+    });
+  },
+
   findRecent(organizationId: string, take: number, client: DbClient = db) {
-    return client.incident.findMany({ where: { organizationId }, include: incidentInclude, orderBy: { createdAt: 'desc' }, take });
+    return client.incident.findMany({
+      where: { organizationId },
+      include: incidentInclude,
+      orderBy: { createdAt: 'desc' },
+      take,
+    });
   },
 
   /** V6 - a specific set of incidents, still organization-scoped (cross-tenant ids are dropped). */
   findByIds(organizationId: string, ids: string[], client: DbClient = db) {
     if (ids.length === 0) return Promise.resolve([]);
-    return client.incident.findMany({ where: { organizationId, id: { in: ids } }, include: incidentInclude });
+    return client.incident.findMany({
+      where: { organizationId, id: { in: ids } },
+      include: incidentInclude,
+    });
   },
 
   /**
@@ -110,7 +153,11 @@ export const incidentRepository = {
       where: { organizationId, status: 'RESOLVED', startedAt: { gte: since } },
       include: {
         ...incidentInclude,
-        events: { select: { type: true, body: true }, orderBy: { createdAt: 'asc' as const }, take: 100 },
+        events: {
+          select: { type: true, body: true },
+          orderBy: { createdAt: 'asc' as const },
+          take: 100,
+        },
       },
       orderBy: { startedAt: 'desc' },
       take,
@@ -122,7 +169,12 @@ export const incidentRepository = {
    * timestamps, no relations, no timeline) so statistics can be computed without loading rows the
    * caller will never read — this is what the chat snapshot and the model page use.
    */
-  async resolveDurationsSince(organizationId: string, since: Date, take = 200, client: DbClient = db): Promise<number[]> {
+  async resolveDurationsSince(
+    organizationId: string,
+    since: Date,
+    take = 200,
+    client: DbClient = db,
+  ): Promise<number[]> {
     const rows = await client.incident.findMany({
       where: { organizationId, status: 'RESOLVED', resolvedAt: { gte: since } },
       select: { startedAt: true, resolvedAt: true },
@@ -131,7 +183,9 @@ export const incidentRepository = {
     });
     return rows
       .filter((row) => row.resolvedAt !== null)
-      .map((row) => Math.max(0, Math.round((row.resolvedAt!.getTime() - row.startedAt.getTime()) / 60_000)));
+      .map((row) =>
+        Math.max(0, Math.round((row.resolvedAt!.getTime() - row.startedAt.getTime()) / 60_000)),
+      );
   },
 
   /** Open incident previously created by the same alert source (alert-storm suppression). */
@@ -244,10 +298,16 @@ export const incidentRepository = {
     },
     client: DbClient = db,
   ) {
-    return client.incidentEvent.create({ data: { ...data, metadata: (data.metadata ?? undefined) as never } });
+    return client.incidentEvent.create({
+      data: { ...data, metadata: (data.metadata ?? undefined) as never },
+    });
   },
 
-  listEvents(incidentId: string, pagination: { skip: number; take: number }, client: DbClient = db) {
+  listEvents(
+    incidentId: string,
+    pagination: { skip: number; take: number },
+    client: DbClient = db,
+  ) {
     return client.incidentEvent.findMany({
       where: { incidentId },
       include: { author: { select: { id: true, name: true, email: true } } },

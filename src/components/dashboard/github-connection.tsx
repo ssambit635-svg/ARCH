@@ -85,12 +85,18 @@ export function GithubConnectionPanel({ config: initial }: { config: GithubConfi
       const payload = (await response.json()) as CheckResponse & { data?: CheckResponse };
       const data = payload.data ?? payload;
       if (!response.ok) {
-        setState({ phase: 'failed', message: data.error?.message ?? `GitHub check failed (HTTP ${response.status}).` });
+        setState({
+          phase: 'failed',
+          message: data.error?.message ?? `GitHub check failed (HTTP ${response.status}).`,
+        });
         return;
       }
       setState({ phase: 'done', data });
     } catch (error) {
-      setState({ phase: 'failed', message: error instanceof Error ? error.message : 'GitHub check failed.' });
+      setState({
+        phase: 'failed',
+        message: error instanceof Error ? error.message : 'GitHub check failed.',
+      });
     }
   }
 
@@ -104,13 +110,20 @@ export function GithubConnectionPanel({ config: initial }: { config: GithubConfi
       <div className="flex flex-wrap items-center gap-2">
         <h3 className="text-sm font-medium text-white">GitHub connection</h3>
         <Badge tone={tone}>{shown.mode === 'real' ? 'real PRs' : 'offline (mock)'}</Badge>
-        {shown.tokenConfigured ? <span className="arch-mono text-xs text-slate-500">{shown.tokenHint}</span> : <span className="text-xs text-slate-500">no token</span>}
-        {shown.tokenKind && shown.tokenKind !== 'missing' ? <span className="text-xs uppercase tracking-wide text-slate-500">{shown.tokenKind}</span> : null}
+        {shown.tokenConfigured ? (
+          <span className="arch-mono text-xs text-slate-500">{shown.tokenHint}</span>
+        ) : (
+          <span className="text-xs text-slate-500">no token</span>
+        )}
+        {shown.tokenKind && shown.tokenKind !== 'missing' ? (
+          <span className="text-xs uppercase tracking-wide text-slate-500">{shown.tokenKind}</span>
+        ) : null}
       </div>
 
       <p className="text-xs text-slate-400">{shown.reason}</p>
       <p className="text-xs text-slate-500">
-        API: <span className="arch-mono">{shown.baseUrl}</span> · timeout {shown.timeoutMs}ms · drafts {shown.openAsDraft ? 'on' : 'off'} · max {shown.maxFiles} files/PR
+        API: <span className="arch-mono">{shown.baseUrl}</span> · timeout {shown.timeoutMs}ms ·
+        drafts {shown.openAsDraft ? 'on' : 'off'} · max {shown.maxFiles} files/PR
       </p>
 
       <div className="flex flex-wrap items-end gap-2">
@@ -144,19 +157,27 @@ export function GithubConnectionPanel({ config: initial }: { config: GithubConfi
           type="button"
           onClick={() => void runCheck(true)}
           disabled={state.phase === 'checking'}
-          className="rounded-md bg-indigo-500 px-2.5 py-1 text-xs font-medium text-white hover:bg-indigo-400 disabled:opacity-50"
+          className="workspace-button workspace-button--primary rounded-md px-3 py-2 text-xs font-medium disabled:opacity-50"
         >
           Check repo access
         </button>
       </div>
 
-      {state.phase === 'checking' ? <p className="text-xs text-slate-400">Checking GitHub…</p> : null}
+      {state.phase === 'checking' ? (
+        <p className="text-xs text-slate-400">Checking GitHub…</p>
+      ) : null}
       {state.phase === 'failed' ? <p className="text-xs text-rose-300">{state.message}</p> : null}
 
       {check ? (
         <div className="space-y-1 rounded border border-white/[0.07] bg-abyss-850/90 p-3">
-          <p className={`text-xs ${check.ok ? 'text-emerald-300' : 'text-rose-300'}`}>{check.message}</p>
-          {check.scopes.length > 0 ? <p className="text-xs text-slate-500">scopes: <span className="arch-mono">{check.scopes.join(', ')}</span></p> : null}
+          <p className={`text-xs ${check.ok ? 'text-emerald-300' : 'text-rose-300'}`}>
+            {check.message}
+          </p>
+          {check.scopes.length > 0 ? (
+            <p className="text-xs text-slate-500">
+              scopes: <span className="arch-mono">{check.scopes.join(', ')}</span>
+            </p>
+          ) : null}
         </div>
       ) : null}
 
@@ -165,10 +186,14 @@ export function GithubConnectionPanel({ config: initial }: { config: GithubConfi
           <p className="text-xs text-slate-300">{repository.message}</p>
           <p className="text-xs text-slate-500">
             default branch <span className="arch-mono">{repository.defaultBranch}</span> · head{' '}
-            <span className="arch-mono">{repository.headSha.slice(0, 12)}</span> · {repository.isPrivate ? 'private' : 'public'}
-            {repository.archived ? ' · archived' : ''} · push {repository.permissionsKnown ? (repository.canPush ? 'allowed' : 'DENIED') : 'unknown'}
+            <span className="arch-mono">{repository.headSha.slice(0, 12)}</span> ·{' '}
+            {repository.isPrivate ? 'private' : 'public'}
+            {repository.archived ? ' · archived' : ''} · push{' '}
+            {repository.permissionsKnown ? (repository.canPush ? 'allowed' : 'DENIED') : 'unknown'}
           </p>
-          {repository.commitMessage ? <p className="text-xs text-slate-500">pinned commit: {repository.commitMessage}</p> : null}
+          {repository.commitMessage ? (
+            <p className="text-xs text-slate-500">pinned commit: {repository.commitMessage}</p>
+          ) : null}
         </div>
       ) : null}
     </div>
