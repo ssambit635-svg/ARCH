@@ -274,3 +274,35 @@ describe('response-first content and navigation', () => {
     expect(html).toContain('Add a service');
   });
 });
+
+describe('dashboard-only surface refinement', () => {
+  const refinement = css.slice(css.indexOf('/* Dashboard surface refinement:'));
+  it('keeps rounder panels local to the overview instead of changing every signed-in screen', () => {
+    expect(readFileSync('src/app/dashboard/page.tsx', 'utf8')).toContain(
+      'className="animate-rise workspace-overview"',
+    );
+    expect(refinement).toMatch(/\.workspace-overview\s*\{[^}]*--ws-overview-panel-radius:\s*12px/);
+    expect(refinement).toContain('--ws-overview-control-radius: 8px');
+    expect(refinement).toContain('.workspace-theme .workspace-overview .arch-ui-card,');
+    expect(refinement).toContain('.workspace-overview :is(.workspace-health, .workspace-stats)');
+    expect(refinement).not.toMatch(/(?:font-size|grid-template-columns|position|box-shadow):/);
+  });
+  it('uses a matching inset curve and existing semantic color for softly separated headers', () => {
+    expect(refinement).toContain(
+      '--ws-overview-inset-radius: calc(var(--ws-overview-panel-radius) - 1px)',
+    );
+    expect(refinement).toMatch(
+      /\.workspace-theme \.workspace-overview \.arch-ui-card-header\s*\{[^}]*border-radius:\s*var\(--ws-overview-inset-radius\) var\(--ws-overview-inset-radius\) 0 0;[^}]*background:\s*var\(--ws-soft\)/,
+    );
+    expect(refinement).not.toMatch(/#[0-9a-f]{3,8}/i);
+    expect(refinement).not.toMatch(/outline(?:-width)?:\s*(?:none|0)/);
+  });
+  it('removes nested shortcut boxes without removing comfortable touch targets', () => {
+    expect(refinement).toMatch(
+      /\.workspace-overview \.workspace-quick-links a\s*\{\s*border-color:\s*transparent/,
+    );
+    expect(refinement).toMatch(
+      /@media \(max-width:\s*760px\), \(pointer:\s*coarse\)\s*\{\s*\.workspace-overview \.workspace-quick-links a\s*\{\s*min-height:\s*44px/,
+    );
+  });
+});

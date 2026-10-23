@@ -308,3 +308,30 @@ on API failure, real endpoint creation and confirmed rotation/deletion, masked o
 copy with preserved focus, and actual READ-scoped token creation/dismissal/revocation. Dedicated
 fixtures were cleaned afterward; credential values were neither logged nor saved. Together with
 the seven read-only harness groups, this records 33 workflow groups, not a real-user study.
+
+## Dashboard surface refinement — 2026-10-23
+
+A deliberately small follow-up to the comfortable-developer pass, requested after visual review.
+The GitHub-inspired principle here is clear containment and quiet secondary actions, not copying
+its branding or replacing the application layout.
+
+- `.workspace-overview` is an opt-in page scope. Login, the shared shell, incident details,
+  settings, dialogs, and advanced workspaces do not receive these shape changes.
+- Main panels, health notices, and the summary strip use a 12px exterior radius. Header fills
+  use the matching 11px inset radius so no square fill interrupts a rounded border.
+- Dashboard actions and shortcut hover areas use an 8px radius. Headers use the existing
+  `--ws-soft` semantic surface in both appearances; no text/status colors change.
+- Existing columns and content order stay intact. Panel gaps consistently use 24px, while
+  secondary shortcuts lose their redundant inner boxes, not their hover/focus feedback.
+- Shortcut touch targets remain at least 44px on narrow screens and coarse pointers. Existing
+  card clipping, keyboard focus indicators, and reduced-motion behavior remain unchanged.
+
+Regression coverage lives in `tests/workspace-surface.test.ts`. Screenshot comparison and the
+read-only UI harness check the actual result; rounder corners alone are not a usability guarantee.
+
+Follow-up verification: Prisma generation, TypeScript checking, the optimized build, and all
+835 tests in 55 files passed. Development-preview before/after captures at 1440px light/dark,
+390px light, and 320px dark had no horizontal overflow or automated WCAG A/AA violations; the
+first incident position was unchanged. Shortcut keyboard focus remained visible and narrow-screen
+targets measured 44px. The read-only quick harness passed 20/20 route/theme/viewport checks and
+7/7 workflow groups with no runtime errors, console errors, accessibility findings, or overflow.

@@ -15,6 +15,13 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Changed — softer dashboard surfaces
+
+- Rounded the overview’s panels and matching inner headers, softened header backgrounds, and
+  removed redundant borders around secondary shortcuts. Consistent panel gaps add a little
+  breathing room without changing navigation, data, or response workflows. Both themes retain
+  their existing palette, and the adjustment is confined to the dashboard overview.
+
 ### Changed — comfortable developer workflows
 
 - Refined the signed-in workspace with quieter panels, readable text, compact lists and inline
