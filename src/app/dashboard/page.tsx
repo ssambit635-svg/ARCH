@@ -102,7 +102,7 @@ export default async function DashboardOverview() {
   const queue = open > 0 ? openQueue : recentIncidents;
 
   return (
-    <div className="animate-rise">
+    <div className="animate-rise workspace-overview">
       <PageHeader
         eyebrow={organization.name}
         title={projects === 0 ? 'Set up your workspace' : 'Response overview'}

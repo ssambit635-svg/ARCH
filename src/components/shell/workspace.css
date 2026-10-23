@@ -2363,3 +2363,34 @@
     white-space: normal;
   }
 }
+
+/* Dashboard surface refinement: softer containment, not a new layout or global theme. */
+.workspace-overview {
+  --ws-overview-panel-radius: 12px;
+  --ws-overview-inset-radius: calc(var(--ws-overview-panel-radius) - 1px);
+  --ws-overview-control-radius: 8px;
+}
+.workspace-theme .workspace-overview .arch-ui-card,
+.workspace-overview :is(.workspace-health, .workspace-stats) {
+  border-radius: var(--ws-overview-panel-radius);
+}
+.workspace-theme .workspace-overview .arch-ui-card-header {
+  border-radius: var(--ws-overview-inset-radius) var(--ws-overview-inset-radius) 0 0;
+  background: var(--ws-soft);
+}
+.workspace-overview
+  :is(.workspace-overview-grid, .workspace-overview-main, .workspace-overview-rail) {
+  gap: 24px;
+}
+.workspace-theme .workspace-overview .workspace-button,
+.workspace-overview .workspace-quick-links a {
+  border-radius: var(--ws-overview-control-radius);
+}
+.workspace-overview .workspace-quick-links a {
+  border-color: transparent;
+}
+@media (max-width: 760px), (pointer: coarse) {
+  .workspace-overview .workspace-quick-links a {
+    min-height: 44px;
+  }
+}
