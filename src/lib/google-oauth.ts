@@ -36,10 +36,23 @@ export function verifiedGoogleEmail(profile: unknown): string | null {
   return z.email().safeParse(email).success ? email : null;
 }
 
-export function googleProvider(clientId: string, clientSecret: string) {
+/**
+ * The Google provider.
+ *
+ * Two kinds of Google client exist for this flow:
+ *
+ * - **Web application** (a secret): the token endpoint wants the client secret, and it is sent.
+ * - **Single page application** (no secret): Google issues no secret for this client type and
+ *   the token endpoint accepts the client id alone when PKCE proves the request comes from the
+ *   client that started it. `client_secret` is then simply not sent.
+ *
+ * A secret is therefore optional here, and which kind of client it is decides whether one is
+ * used at all. A client id without a secret is not a misconfiguration: it is a public client.
+ */
+export function googleProvider(clientId: string, clientSecret?: string) {
   return Google({
     clientId,
-    clientSecret,
+    ...(clientSecret ? { clientSecret } : { client: { token_endpoint_auth_method: 'none' } }),
     /**
      * PKCE *and* the `state` parameter.
      *

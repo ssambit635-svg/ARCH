@@ -63,6 +63,46 @@ export function ensureEnvFile(root, options = {}) {
   return { created: true, path: envPath, providerLines: providerLines(contents) };
 }
 
+/**
+ * Set one variable in an environment file, leaving everything else exactly as it was.
+ *
+ * The value is quoted, so a secret with a `#` or a space cannot break the file.
+ */
+export function setEnvValue(envPath, key, value) {
+  const existing = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '';
+  const line = `${key}="${String(value ?? '')}"`;
+  const pattern = new RegExp(`^${key}=.*$`, 'm');
+  const contents = pattern.test(existing)
+    ? existing.replace(pattern, line)
+    : `${existing.replace(/\n*$/, '\n')}${line}\n`;
+  fs.writeFileSync(envPath, contents, { mode: 0o600 });
+  return line;
+}
+
+/**
+ * Which provider sign-ins this instance can actually use.
+ *
+ * Printed at startup, because "the button is there but the flow does not start" is a much easier
+ * problem to solve when the server says which credentials it is missing.
+ */
+/**
+ * @param {Record<string, string | undefined>} [env]
+ */
+export function providerStatus(env = process.env) {
+  const values = env;
+  const providers = [
+    { name: 'Google', id: 'AUTH_GOOGLE_ID', secret: 'AUTH_GOOGLE_SECRET' },
+    { name: 'GitHub', id: 'AUTH_GITHUB_ID', secret: 'AUTH_GITHUB_SECRET' },
+  ];
+  return providers.map(({ name, id: idVariable, secret: secretVariable }) => {
+    if (!env[idVariable]) return `${name}: not configured — set ${idVariable}`;
+    if (!env[secretVariable]) {
+      return `${name}: configured (public client — no ${secretVariable} needed)`;
+    }
+    return `${name}: configured`;
+  });
+}
+
 /** What to print after the file was created: where to paste the provider credentials. */
 export function explainEnvFile(result) {
   if (!result.created) return '';

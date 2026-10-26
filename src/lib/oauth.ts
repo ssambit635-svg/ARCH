@@ -58,8 +58,9 @@ export function oauthProviderName(id: OAuthProviderId): string {
 /**
  * The environment variables a provider needs before this instance can use it.
  *
- * Both halves are needed: a client id without a secret (or the other way round) is a
- * misconfiguration, not a half-enabled provider.
+ * GitHub needs both halves. Google needs a client id; the secret belongs to a client created
+ * as a *Web application* — a *Single page application* client has none and is protected by
+ * PKCE instead.
  */
 export const OAUTH_PROVIDER_ENV: Record<OAuthProviderId, readonly [string, string]> = {
   google: ['AUTH_GOOGLE_ID', 'AUTH_GOOGLE_SECRET'],
@@ -69,5 +70,8 @@ export const OAUTH_PROVIDER_ENV: Record<OAuthProviderId, readonly [string, strin
 /** The one line that tells an operator what to set for a provider this instance does not have. */
 export function oauthProviderSetupHint(id: OAuthProviderId): string {
   const [idVariable, secretVariable] = OAUTH_PROVIDER_ENV[id];
+  if (id === 'google') {
+    return `Add ${idVariable} to the environment (and ${secretVariable} for a Web application client), then restart.`;
+  }
   return `Add ${idVariable} and ${secretVariable} to the environment and restart.`;
 }

@@ -16,6 +16,7 @@
     "dev:all": "node scripts/dev.mjs",
     "worker": "tsx src/worker/main.ts",
     "setup": "node scripts/setup.mjs",
+    "oauth:google": "node scripts/oauth-google.mjs",
     "db:generate": "node scripts/prisma-cli.mjs generate",
     "db:migrate": "node scripts/db-migrate.mjs",
     "db:reset": "node scripts/db-migrate.mjs --reset",

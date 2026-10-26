@@ -23,18 +23,22 @@ export const PENDING_LINK_COOKIE = 'arch.oauth.link';
 /** Ten minutes: long enough to type a password, short enough not to follow someone later. */
 export const PENDING_LINK_MAX_AGE_SECONDS = 600;
 
-export type OAuthProviderCredentials = { clientId: string; clientSecret: string };
+export type OAuthProviderCredentials = { clientId: string; clientSecret?: string };
 
 /**
  * The credentials of a provider, or null when this instance has not configured it.
- * Both halves must be present: a client id without a secret (or the other way round) is a
- * misconfiguration, not a half-enabled provider.
+ *
+ * Google only needs a client id: a client created as a *Single page application* has no secret
+ * and is protected by PKCE instead (see `src/lib/google-oauth.ts`). GitHub's web flow still
+ * needs both halves — a client id without a secret is a misconfiguration, not a half-enabled
+ * provider.
  */
 export function oauthProviderCredentials(id: OAuthProviderId): OAuthProviderCredentials | null {
   if (id === 'google') {
-    return env.AUTH_GOOGLE_ID && env.AUTH_GOOGLE_SECRET
+    if (!env.AUTH_GOOGLE_ID) return null;
+    return env.AUTH_GOOGLE_SECRET
       ? { clientId: env.AUTH_GOOGLE_ID, clientSecret: env.AUTH_GOOGLE_SECRET }
-      : null;
+      : { clientId: env.AUTH_GOOGLE_ID };
   }
   return env.AUTH_GITHUB_ID && env.AUTH_GITHUB_SECRET
     ? { clientId: env.AUTH_GITHUB_ID, clientSecret: env.AUTH_GITHUB_SECRET }
@@ -74,9 +78,9 @@ export function oauthProviderAvailability(): OAuthProviderAvailability[] {
 export function createOAuthProviders() {
   return enabledOAuthProviders().map((id) => {
     const credentials = oauthProviderCredentials(id)!;
-    return id === 'google'
-      ? googleProvider(credentials.clientId, credentials.clientSecret)
-      : githubProvider(credentials.clientId, credentials.clientSecret);
+    if (id === 'google') return googleProvider(credentials.clientId, credentials.clientSecret);
+    // GitHub always has a secret: a client id alone is not a GitHub configuration.
+    return githubProvider(credentials.clientId, credentials.clientSecret!);
   });
 }
 

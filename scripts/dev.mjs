@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
 import { spawn, spawnSync } from 'node:child_process';
 import { startEmbeddedPostgres } from './lib/pg-embedded.mjs';
-import { ensureEnvFile, explainEnvFile } from './lib/env-file.mjs';
+import { ensureEnvFile, explainEnvFile, providerStatus } from './lib/env-file.mjs';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -22,6 +22,9 @@ const envFile = ensureEnvFile(root);
 process.stdout.write(explainEnvFile(envFile));
 
 dotenv.config({ override: true });
+
+// Which sign-in methods this instance can actually use, before anything else is started.
+for (const line of providerStatus()) process.stdout.write(`[dev] ${line}\n`);
 
 const port = process.env.PORT ?? '3000';
 const url = process.env.DATABASE_URL;

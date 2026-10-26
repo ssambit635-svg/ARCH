@@ -137,8 +137,10 @@ function loadEnv(): Env {
     if (Boolean(value.AUTH_GITHUB_ID) !== Boolean(value.AUTH_GITHUB_SECRET)) {
       throw new Error('GitHub sign-in needs both AUTH_GITHUB_ID and AUTH_GITHUB_SECRET in production.');
     }
-    if (Boolean(value.AUTH_GOOGLE_ID) !== Boolean(value.AUTH_GOOGLE_SECRET)) {
-      throw new Error('Google sign-in needs both AUTH_GOOGLE_ID and AUTH_GOOGLE_SECRET in production.');
+    // A Google client created as a *Single page application* has no secret and is protected by
+    // PKCE instead, so only the client id is required. A *Web application* client needs both.
+    if (!value.AUTH_GOOGLE_ID && value.AUTH_GOOGLE_SECRET) {
+      throw new Error('Google sign-in needs AUTH_GOOGLE_ID when AUTH_GOOGLE_SECRET is set in production.');
     }
     // A placeholder PAT would make every "Approve" fail mid-flight, after the human already clicked.
     if (isPlaceholderSecret(value.GITHUB_TOKEN)) {

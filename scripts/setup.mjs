@@ -14,7 +14,7 @@ import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import dotenv from 'dotenv';
 import { connectionFromEnv, portOpen, startEmbeddedPostgres } from './lib/pg-embedded.mjs';
-import { ensureEnvFile, explainEnvFile } from './lib/env-file.mjs';
+import { ensureEnvFile, explainEnvFile, providerStatus } from './lib/env-file.mjs';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 
@@ -24,6 +24,8 @@ process.stdout.write(explainEnvFile(envFile));
 
 // Loaded after the file exists, so the values above are the ones the app sees.
 dotenv.config();
+
+for (const line of providerStatus()) process.stdout.write(`[setup] ${line}\n`);
 
 const url = process.env.DATABASE_URL ?? '';
 if (!url) {
