@@ -21,22 +21,22 @@ describe('OAuth provider registry', () => {
     }
   });
 
-  it('enables a provider only when both halves of its credentials are present', async () => {
-    vi.stubEnv('AUTH_GOOGLE_ID', 'client-id');
-    vi.stubEnv('AUTH_GOOGLE_SECRET', '');
+  it('enables GitHub only when both halves of its credentials are present', async () => {
+    vi.stubEnv('AUTH_GITHUB_ID', 'client-id');
+    vi.stubEnv('AUTH_GITHUB_SECRET', '');
     vi.resetModules();
     const half = await import('@/lib/oauth-server');
-    expect(half.oauthProviderCredentials('google')).toBeNull();
-    expect(half.enabledOAuthProviders()).not.toContain('google');
+    expect(half.oauthProviderCredentials('github')).toBeNull();
+    expect(half.enabledOAuthProviders()).not.toContain('github');
 
-    vi.stubEnv('AUTH_GOOGLE_SECRET', 'client-secret');
+    vi.stubEnv('AUTH_GITHUB_SECRET', 'client-secret');
     vi.resetModules();
     const whole = await import('@/lib/oauth-server');
-    expect(whole.oauthProviderCredentials('google')).toEqual({
+    expect(whole.oauthProviderCredentials('github')).toEqual({
       clientId: 'client-id',
       clientSecret: 'client-secret',
     });
-    expect(whole.enabledOAuthProviders()).toContain('google');
+    expect(whole.enabledOAuthProviders()).toContain('github');
     vi.unstubAllEnvs();
     vi.resetModules();
   });
@@ -51,6 +51,36 @@ describe('OAuth provider registry', () => {
       { id: 'google', configured: false },
       { id: 'github', configured: false },
     ]);
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('lets a Google client work without a secret, the way a public client does', async () => {
+    vi.stubEnv('AUTH_GOOGLE_ID', 'client-id');
+    vi.stubEnv('AUTH_GOOGLE_SECRET', '');
+    vi.resetModules();
+    const module = await import('@/lib/oauth-server');
+    // A Google client created as a *Single page application* has no secret: PKCE replaces it.
+    expect(module.oauthProviderCredentials('google')).toEqual({ clientId: 'client-id' });
+    expect(module.enabledOAuthProviders()).toContain('google');
+    const provider = module.createOAuthProviders().find((entry) => entry.id === 'google');
+    expect(provider?.options?.client?.token_endpoint_auth_method).toBe('none');
+    expect(provider?.options?.clientSecret).toBeUndefined();
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('still sends the secret for a Google client that has one', async () => {
+    vi.stubEnv('AUTH_GOOGLE_ID', 'client-id');
+    vi.stubEnv('AUTH_GOOGLE_SECRET', 'client-secret');
+    vi.resetModules();
+    const module = await import('@/lib/oauth-server');
+    expect(module.oauthProviderCredentials('google')).toEqual({
+      clientId: 'client-id',
+      clientSecret: 'client-secret',
+    });
+    const provider = module.createOAuthProviders().find((entry) => entry.id === 'google');
+    expect(provider?.options?.clientSecret).toBe('client-secret');
     vi.unstubAllEnvs();
     vi.resetModules();
   });

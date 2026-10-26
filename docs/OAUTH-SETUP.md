@@ -17,20 +17,32 @@ is set up to use it. Nothing here is required to run ARCH: email and password al
 
 1. [Google Cloud console](https://console.cloud.google.com) → **APIs & Services** → **Credentials**
    → **Create credentials** → **OAuth client ID**.
-2. Application type: **Web application**.
+2. Application type — this decides whether a secret is needed:
+   - **Single page application**: Google issues **no client secret**. ARCH uses PKCE instead, so
+     only a client id is needed. This is the simplest setup and the one that survives a machine
+     that keeps losing its environment file, because the only value involved is public.
+   - **Web application**: Google issues a **client secret**, and the token endpoint wants it.
 3. **Authorized redirect URI**: `<your public URL>/api/auth/callback/google`
    (locally: `http://localhost:3000/api/auth/callback/google`).
-4. Create a **client secret** for that client.
-5. Put both values in the server environment:
+4. Put the values in the server environment — the one command writes them into the git-ignored
+   `.env` and prints the redirect URIs to register:
+
+   ```bash
+   npm run oauth:google -- --client-id="…apps.googleusercontent.com" --client-secret="…"
+   # a Single page application client needs no secret:
+   npm run oauth:google -- --client-id="…apps.googleusercontent.com"
+   ```
+
+   Or set them by hand:
 
    ```
    AUTH_GOOGLE_ID="…apps.googleusercontent.com"
-   AUTH_GOOGLE_SECRET="…"
+   AUTH_GOOGLE_SECRET="…"      # only for a Web application client
    ```
 
-   Locally that is the git-ignored `.env` file. `npm run dev` and `npm run setup` create it when
-   it is missing and print the exact line numbers to fill in, for example
-   `56: AUTH_GOOGLE_ID=""` — so the credentials land in the right place on the first try.
+   `npm run dev` and `npm run setup` create `.env` when it is missing and print the exact line
+   numbers to fill in, for example `56: AUTH_GOOGLE_ID=""` — so the credentials land in the right
+   place on the first try. `npm run oauth:google -- --show` prints what the instance is missing.
 
 ### GitHub
 
@@ -146,8 +158,10 @@ secret or password is ever written there. The last five events are visible under
 
 | Symptom | Cause |
 |---|---|
-| The button says "Not set up on this instance" | One half of the credentials is missing, the value is a placeholder, or the server was not restarted. Pressing it names the two variables to set. |
+| The button says "Not set up on this instance" | The client id is missing, the value is a placeholder, or the server was not restarted. Pressing it names the variables to set. |
+| "client_secret is missing" from Google | The client was created as a *Web application* but only the client id was set. Add `AUTH_GOOGLE_SECRET`, or create the client as a *Single page application* (no secret, PKCE instead). |
 | The button disappeared after a fresh clone, a wiped machine or a new sandbox | It does not: the buttons are always rendered. `.env` is git-ignored, so it is simply not there any more — `npm run dev` and `npm run setup` recreate it from `.env.example` with fresh secrets and print the line numbers to paste the credentials into. |
+| `redirect_uri_mismatch` in the preview | The preview host changes when the sandbox is recreated. `npm run oauth:google -- --show` prints the current one; add it to the client. |
 | "Access blocked — this app is still in testing" (Google) | The Google console is in *Testing* mode and your account is not listed under **Audience → Test users**. |
 | "Google hasn't verified this app" | Expected for a personal/dev client. It still works for accounts listed as test users. |
 | `redirect_uri_mismatch` | The redirect URI in the provider console does not match the URL the browser actually used. Check `AUTH_URL` and the host in the address bar. |

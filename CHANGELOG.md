@@ -40,6 +40,18 @@ Rules for this file:
   `.env.example` with freshly generated secrets (and `chmod 600`), print the exact line numbers
   where the Google and GitHub credentials belong, and never touch a file that already exists.
 
+### Added — Google sign-in without a client secret, and a one-command setup
+
+- **A Google client created as a *Single page application* now works with nothing but a client
+  id.** Google issues no secret for that client type, and ARCH uses PKCE instead, so the token
+  exchange sends the client id alone. A *Web application* client keeps using its secret, exactly
+  as before. Either way, `AUTH_GOOGLE_ID` is what an instance needs; `AUTH_GOOGLE_SECRET` is
+  only needed by the clients that have one.
+- **`npm run oauth:google` sets Google sign-in up in one command.** It writes the credentials
+  into the git-ignored `.env`, prints the exact redirect URIs to register in the Google console
+  (including the public host a preview is reachable at), and says what the instance is still
+  missing. `npm run oauth:google -- --show` only prints.
+
 ### Fixed — the provider buttons never disappear again
 
 - **"Continue with Google" and "Continue with GitHub" are now always on the sign-in and sign-up

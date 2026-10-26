@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { ensureEnvFile, explainEnvFile } from '../scripts/lib/env-file.mjs';
+import { ensureEnvFile, explainEnvFile, providerStatus, setEnvValue } from '../scripts/lib/env-file.mjs';
 
 /**
  * The environment file is git-ignored, so a fresh clone — or a wiped sandbox — has none. The
@@ -99,5 +99,48 @@ describe('the environment file', () => {
     const dir = workspace();
     fs.writeFileSync(path.join(dir, '.env'), 'AUTH_SECRET="mine"\n');
     expect(explainEnvFile(ensureEnvFile(dir))).toBe('');
+  });
+});
+
+describe('what the instance can do', () => {
+  it('says which provider sign-ins are configured', () => {
+    const status = providerStatus({ AUTH_GOOGLE_ID: 'client-id' });
+    expect(status.join(' ')).toContain('Google: configured (public client');
+    expect(status.join(' ')).toContain('GitHub: not configured — set AUTH_GITHUB_ID');
+  });
+
+  it('calls a provider with both halves configured', () => {
+    const status = providerStatus({ AUTH_GOOGLE_ID: 'id', AUTH_GOOGLE_SECRET: 'secret' });
+    expect(status.join(' ')).toContain('Google: configured');
+    expect(status.join(' ')).not.toContain('public client');
+  });
+});
+
+describe('setting one value in the environment file', () => {
+  it('adds a variable that is not there yet', () => {
+    const dir = workspace();
+    ensureEnvFile(dir);
+    const envPath = path.join(dir, '.env');
+    setEnvValue(envPath, 'AUTH_GOOGLE_ID', 'client-id');
+    expect(fs.readFileSync(envPath, 'utf8')).toContain('AUTH_GOOGLE_ID="client-id"');
+  });
+
+  it('replaces a value that is already there, and leaves everything else alone', () => {
+    const dir = workspace();
+    const envPath = path.join(dir, '.env');
+    fs.writeFileSync(envPath, 'AUTH_GOOGLE_ID="old"\nDATABASE_URL="postgresql://arch:arch@localhost:5432/arch"\n');
+    setEnvValue(envPath, 'AUTH_GOOGLE_ID', 'new');
+    const contents = fs.readFileSync(envPath, 'utf8');
+    expect(contents).toContain('AUTH_GOOGLE_ID="new"');
+    expect(contents).not.toContain('AUTH_GOOGLE_ID="old"');
+    expect(contents).toContain('DATABASE_URL="postgresql://arch:arch@localhost:5432/arch"');
+  });
+
+  it('keeps a secret with spaces and hashes intact', () => {
+    const dir = workspace();
+    const envPath = path.join(dir, '.env');
+    fs.writeFileSync(envPath, '');
+    setEnvValue(envPath, 'AUTH_GOOGLE_SECRET', 'a b#c');
+    expect(fs.readFileSync(envPath, 'utf8')).toContain('AUTH_GOOGLE_SECRET="a b#c"');
   });
 });
