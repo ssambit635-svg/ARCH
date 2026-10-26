@@ -37,6 +37,9 @@ Rules for this file:
 
 ### Security — provider sign-in
 
+- **Moderate** — Zod was updated to 4.6.7. Versions before 4.6.6 can exhaust memory while
+  validating an oversized constrained collection, which a large form or webhook payload could
+  trigger. `fast-uri` moved to 3.1.9 for the same reason (URL parsing hardening).
 - Only a **verified** email address becomes an ARCH identity: Google's ID token must carry
   `email_verified`, and GitHub's address must be a verified entry in `/user/emails`. An
   unverified address is refused and no account is created.
