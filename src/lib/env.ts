@@ -41,6 +41,14 @@ const envSchema = z.object({
   AUTH_SECRET: z.string().min(16, 'AUTH_SECRET must be at least 16 characters'),
   AUTH_SECRET_WEBHOOK: z.string().min(16, 'AUTH_SECRET_WEBHOOK must be at least 16 characters'),
   APP_URL: z.url().default('http://localhost:3000'),
+  /**
+   * The public base URL Auth.js builds its OAuth callback URLs from.
+   *
+   * Blank in development: Auth.js then uses the host the browser actually used, which is right
+   * for localhost and for a preview host. Set it in production when ARCH runs behind a proxy
+   * that rewrites the host, so the callback URL stays the one registered at the provider.
+   */
+  AUTH_URL: optionalTrimmed(),
   AUTH_GITHUB_ID: optionalTrimmed(),
   AUTH_GITHUB_SECRET: optionalTrimmed(),
   AUTH_GOOGLE_ID: optionalTrimmed(),
@@ -114,6 +122,10 @@ function loadEnv(): Env {
   }
 
   const value = parsed.data;
+
+  if (value.AUTH_URL && !z.url().safeParse(value.AUTH_URL).success) {
+    throw new Error(`AUTH_URL is not a valid URL: ${value.AUTH_URL}`);
+  }
 
   if (value.NODE_ENV === 'production') {
     if (value.AUTH_SECRET === value.AUTH_SECRET_WEBHOOK) {
