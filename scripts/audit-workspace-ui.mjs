@@ -191,12 +191,12 @@ try {
   page.on('pageerror', (error) => {
     report.runtimeErrors += 1;
     // Keep the message: "a page error happened" is not something anybody can act on.
-    report.runtimeErrorDetails.push(String(error?.message ?? error).slice(0, 300));
+    report.runtimeErrorDetails.push(`${page.url()} — ${String(error?.message ?? error).slice(0, 240)}`);
   });
   page.on('console', (message) => {
     if (message.type() === 'error') {
       report.consoleErrors += 1;
-      report.consoleErrorDetails.push(message.text().slice(0, 300));
+      report.consoleErrorDetails.push(`${page.url()} — ${message.text().slice(0, 240)}`);
     }
   });
   await page.goto(new URL('/login', base).href, { waitUntil: 'load' });

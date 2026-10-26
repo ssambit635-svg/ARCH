@@ -598,6 +598,16 @@
   display: grid;
   gap: 10px;
 }
+/* A provider this instance has no credentials for: the button stays, the truth is told. */
+.auth-surface .auth-oauth-entry {
+  display: grid;
+  gap: 6px;
+}
+.auth-surface .auth-oauth-hint {
+  color: var(--auth-subtle);
+  font-size: 11px;
+  text-align: center;
+}
 .auth-surface .auth-link-notice {
   display: grid;
   gap: 8px;

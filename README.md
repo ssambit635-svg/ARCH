@@ -112,9 +112,11 @@ client, connects to PostgreSQL (or starts the local fallback), applies migration
 Next.js. **No shared demo account is created.** Start `npm run worker` in another terminal if you
 want notification processing and scheduled model training.
 
-To offer **"Continue with Google"** or **"Continue with GitHub"** on the sign-in and sign-up
-screens, paste the provider credentials into `.env` — the startup output prints the exact line
-numbers to fill in — and restart. See [OAuth sign-in](docs/OAUTH-SETUP.md).
+**"Continue with Google"** and **"Continue with GitHub"** are always on the sign-in and sign-up
+screens. To make one work, paste the provider credentials into `.env` — the startup output prints
+the exact line numbers to fill in — and restart. An instance without credentials says so under
+the button and names the two variables when the button is pressed. See
+[OAuth sign-in](docs/OAUTH-SETUP.md).
 
 The embedded database is for development and testing only. Its default data directory is under `/tmp`, and its process stops with the dev command. Use persistent, managed PostgreSQL for staging and production.
 

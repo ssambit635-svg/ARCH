@@ -99,7 +99,7 @@ describe('public authentication surface', () => {
         callbackUrl: '/dashboard',
         loginAction: credentialsAction,
         oauthAction,
-        oauthProviders: ['github'],
+        oauthProviders: [{ id: 'github', configured: true }],
         oauthError: 'OAuth failed.',
         successMessage: 'Account created.',
       }),
@@ -111,9 +111,29 @@ describe('public authentication surface', () => {
     expect(html).toContain('Account created.');
     expect(html).toContain('role="status"');
     expect(html.match(/<form\b/g)).toHaveLength(2);
-    expect(source('src/app/(auth)/login/page.tsx')).toContain(
-      'oauthAction={oauthProviders.length > 0 ? oauthSignInAction : undefined}',
+    expect(source('src/app/(auth)/login/page.tsx')).toContain('oauthAction={oauthSignInAction}');
+  });
+
+  it('offers the provider buttons even on an instance without credentials, and says so', () => {
+    const html = renderToStaticMarkup(
+      createElement(LoginForm, {
+        callbackUrl: '/dashboard',
+        loginAction: credentialsAction,
+        oauthAction,
+        oauthProviders: [
+          { id: 'google', configured: false },
+          { id: 'github', configured: false },
+        ],
+      }),
     );
+    // The buttons are the feature. They are never hidden by a missing environment file.
+    expect(html).toContain('Continue with Google');
+    expect(html).toContain('Continue with GitHub');
+    expect(html).toContain('or use your email');
+    // An unconfigured provider says so instead of pretending to work.
+    expect(html).toContain('Not set up on this instance');
+    expect(html).toContain('aria-describedby="oauth-google-hint"');
+    expect(html).toContain('id="oauth-github-hint"');
   });
 
   it('offers every configured provider and explains a pending account link', () => {
@@ -122,7 +142,10 @@ describe('public authentication surface', () => {
         callbackUrl: '/dashboard',
         loginAction: credentialsAction,
         oauthAction,
-        oauthProviders: ['google', 'github'],
+        oauthProviders: [
+          { id: 'google', configured: true },
+          { id: 'github', configured: true },
+        ],
         linkProvider: 'google',
         cancelLinkAction,
       }),
@@ -189,7 +212,10 @@ describe('public authentication surface', () => {
       createElement(RegisterForm, {
         registerAction: credentialsAction,
         oauthAction,
-        oauthProviders: ['google', 'github'],
+        oauthProviders: [
+          { id: 'google', configured: true },
+          { id: 'github', configured: true },
+        ],
       }),
     );
     expect(html).toContain('aria-label="Sign up with Google"');
@@ -197,6 +223,21 @@ describe('public authentication surface', () => {
     expect(html).toContain('Continue with Google');
     expect(html).toContain('or use your email');
     expect(html).toContain('aria-label="Create an ARCH account"');
+  });
+
+  it('keeps the sign-up screen usable when a provider is pressed without credentials', () => {
+    const html = renderToStaticMarkup(
+      createElement(RegisterForm, {
+        registerAction: credentialsAction,
+        oauthAction,
+        oauthProviders: [{ id: 'google', configured: false }],
+        oauthError: 'Google sign-in is not set up on this instance.',
+      }),
+    );
+    expect(html).toContain('Continue with Google');
+    expect(html).toContain('Not set up on this instance');
+    expect(html).toContain('Google sign-in is not set up on this instance.');
+    expect(html).toContain('role="alert"');
   });
 
   it('shows one explicitly illustrative four-state preview with a roving tab stop', () => {

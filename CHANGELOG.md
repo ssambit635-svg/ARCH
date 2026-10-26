@@ -18,10 +18,9 @@ Rules for this file:
 ### Added — sign in with Google and GitHub
 
 - ARCH can now sign a person in with a **verified Google account** or a **verified GitHub
-  account** instead of a password. Each provider appears on the sign-in screen only when that
-  instance has configured it, so a self-hosted ARCH never shows a button that cannot work.
-  Set `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` or `AUTH_GITHUB_ID`/`AUTH_GITHUB_SECRET` and restart —
-  see `docs/OAUTH-SETUP.md`.
+  account** instead of a password. Set `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` or
+  `AUTH_GITHUB_ID`/`AUTH_GITHUB_SECRET` and restart — see `docs/OAUTH-SETUP.md`. A provider the
+  instance is not set up for says so instead of pretending to work.
 - Signing in with a provider that already owns the email address of an ARCH account no longer
   dead-ends. ARCH asks for the password, and links the provider as soon as the password is
   accepted — one step, with a "Skip for now" escape hatch. The account is never linked just
@@ -40,6 +39,18 @@ Rules for this file:
   though the feature was working. `npm run dev` and `npm run setup` now create the file from
   `.env.example` with freshly generated secrets (and `chmod 600`), print the exact line numbers
   where the Google and GitHub credentials belong, and never touch a file that already exists.
+
+### Fixed — the provider buttons never disappear again
+
+- **"Continue with Google" and "Continue with GitHub" are now always on the sign-in and sign-up
+  screens.** The buttons used to be hidden on an instance that had no credentials for that
+  provider — and because the credentials live in `.env`, which is git-ignored, a fresh clone, a
+  wiped machine or a new deployment lost them without a word. A missing button cannot be told
+  apart from a missing feature, so the button stays and the instance explains itself: an
+  unconfigured provider says "Not set up on this instance" underneath, and pressing it names the
+  two environment variables to set. Nothing else changed — the flow still requires a verified
+  address, still refuses to link an account on a matching email alone, and still records every
+  attempt.
 
 ### Security — provider sign-in
 

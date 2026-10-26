@@ -6,53 +6,11 @@ import { safeAuthCallback } from '@/lib/auth-redirect';
 import { LoginForm } from '@/components/auth/forms';
 import { ArrowIcon } from '@/components/auth/icons';
 import { cancelPendingLinkAction, loginAction, oauthLinkAction, oauthSignInAction } from '../actions';
-import { enabledOAuthProviders, readPendingOAuthLink } from '@/lib/oauth-server';
+import { oauthProviderAvailability, readPendingOAuthLink } from '@/lib/oauth-server';
+import { oauthErrorMessage } from '@/lib/oauth-messages';
 import { isOAuthProviderId, OAUTH_PROVIDERS, type OAuthProviderId } from '@/lib/oauth';
 
 export const metadata: Metadata = { title: 'Sign in' };
-
-/**
- * What went wrong, in the words of someone who just wants to get in.
- *
- * The provider is named when we know it: the Auth.js callback redirects carry it, and a waiting
- * link remembers it. Nothing here says whether an account exists — that would tell a stranger
- * which email addresses are registered.
- */
-function oauthErrorMessage(code: string | undefined, provider: OAuthProviderId | undefined): string | undefined {
-  if (!code) return undefined;
-  const name = provider ? OAUTH_PROVIDERS[provider].name : undefined;
-  switch (code) {
-    case 'OAuthAccountNotLinked':
-      return name
-        ? `An ARCH account already uses that email address. Sign in with your password and we will link ${name} in one step.`
-        : 'An ARCH account already uses that email address. Sign in with your password first, then link the provider in Settings.';
-    case 'AccessDenied':
-      return name
-        ? `${name} would not let this account in. Check that it has a verified email address, or sign in with your email and password.`
-        : 'That account was not allowed to sign in. Check that it has a verified email address, or sign in with your email and password.';
-    case 'OAuthProfileError':
-      return name
-        ? `${name} sign-in didn’t complete. Make sure the account has a verified email address, or sign in with your email and password.`
-        : 'That sign-in did not complete. Make sure the account has a verified email address, or sign in with your email and password.';
-    case 'account_mismatch':
-      return name
-        ? `That ${name} account uses a different email address than the account you signed in with, so nothing was changed. Sign in with the matching address to link them.`
-        : 'That provider account uses a different email address than the account you signed in with, so nothing was changed.';
-    case 'Configuration':
-      return `${name ?? 'This sign-in method'} is not available on this instance. Use your email and password, or contact your administrator.`;
-    case 'rate':
-      return 'Too many sign-in attempts just now. Please wait a moment and try again.';
-    case 'provider_unavailable':
-      return name
-        ? `${name} sign-in could not start — the provider could not be reached. Please try again in a moment, or sign in with your email and password.`
-        : 'That sign-in could not start — the provider could not be reached. Please try again in a moment, or sign in with your email and password.';
-    case 'google':
-    case 'github':
-      return `${name ?? 'That provider'} sign-in could not start. Try again, or sign in with your email and password.`;
-    default:
-      return 'Sign-in failed. Please try again, or sign in with your email and password.';
-  }
-}
 
 export default async function LoginPage({
   searchParams,
@@ -79,8 +37,10 @@ export default async function LoginPage({
   const safeCallback = rawCallback ? safeAuthCallback(rawCallback) : (pending?.callbackUrl ?? '/dashboard');
   if (user && !errorCode) redirect(safeCallback);
 
-  // Never advertise an OAuth provider that this self-hosted instance has not configured.
-  const oauthProviders = enabledOAuthProviders();
+  // Every provider ARCH knows is offered, configured or not: a missing "Continue with Google"
+  // is impossible to tell apart from a broken feature, so the button is always there and an
+  // unconfigured instance explains itself when the button is pressed.
+  const oauthProviders = oauthProviderAvailability();
   const oauthError = oauthErrorMessage(errorCode, providerCode ?? linkProvider);
 
   if (user) {
@@ -119,7 +79,7 @@ export default async function LoginPage({
     <LoginForm
       callbackUrl={safeCallback}
       loginAction={loginAction}
-      oauthAction={oauthProviders.length > 0 ? oauthSignInAction : undefined}
+      oauthAction={oauthSignInAction}
       oauthProviders={oauthProviders}
       oauthError={oauthError}
       successMessage={
