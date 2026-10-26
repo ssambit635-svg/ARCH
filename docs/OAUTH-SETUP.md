@@ -27,6 +27,10 @@ has credentials for it. Nothing here is required to run ARCH — email and passw
    AUTH_GOOGLE_SECRET="…"
    ```
 
+   Locally that is the git-ignored `.env` file. `npm run dev` and `npm run setup` create it when
+   it is missing and print the exact line numbers to fill in, for example
+   `56: AUTH_GOOGLE_ID=""` — so the credentials land in the right place on the first try.
+
 ### GitHub
 
 1. GitHub → **Settings** → **Developer settings** → **OAuth Apps** → **New OAuth App**.
@@ -142,6 +146,7 @@ secret or password is ever written there. The last five events are visible under
 | Symptom | Cause |
 |---|---|
 | The button does not appear | One half of the credentials is missing, the value is a placeholder, or the server was not restarted. |
+| The button disappeared after a fresh clone, a wiped machine or a new sandbox | `.env` is git-ignored, so it is simply not there any more. `npm run dev` and `npm run setup` recreate it from `.env.example` with fresh secrets and print the line numbers to paste the credentials into. |
 | "Access blocked — this app is still in testing" (Google) | The Google console is in *Testing* mode and your account is not listed under **Audience → Test users**. |
 | "Google hasn't verified this app" | Expected for a personal/dev client. It still works for accounts listed as test users. |
 | `redirect_uri_mismatch` | The redirect URI in the provider console does not match the URL the browser actually used. Check `AUTH_URL` and the host in the address bar. |

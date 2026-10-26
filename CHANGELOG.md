@@ -34,6 +34,12 @@ Rules for this file:
 - A sign-in that cannot be completed now says what to do — "that provider did not allow this
   account in", "an ARCH account already uses that email address" — instead of landing on a bare
   provider page.
+- **The provider buttons can no longer disappear because of a missing file.** `.env` is
+  git-ignored, so a fresh clone, a wiped machine or a new sandbox had no environment file at
+  all — and a sign-in screen without one quietly showed no "Continue with Google" button, even
+  though the feature was working. `npm run dev` and `npm run setup` now create the file from
+  `.env.example` with freshly generated secrets (and `chmod 600`), print the exact line numbers
+  where the Google and GitHub credentials belong, and never touch a file that already exists.
 
 ### Security — provider sign-in
 

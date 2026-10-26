@@ -30,6 +30,9 @@ const report = {
   consoleErrors: 0,
   screenshotFailures: 0,
   failures: [],
+  // What actually went wrong, so a failure can be acted on instead of guessed at.
+  runtimeErrorDetails: [],
+  consoleErrorDetails: [],
 };
 let browser;
 let page;
@@ -185,11 +188,16 @@ try {
   });
   page = await context.newPage();
   page.setDefaultTimeout(15000);
-  page.on('pageerror', () => {
+  page.on('pageerror', (error) => {
     report.runtimeErrors += 1;
+    // Keep the message: "a page error happened" is not something anybody can act on.
+    report.runtimeErrorDetails.push(String(error?.message ?? error).slice(0, 300));
   });
   page.on('console', (message) => {
-    if (message.type() === 'error') report.consoleErrors += 1;
+    if (message.type() === 'error') {
+      report.consoleErrors += 1;
+      report.consoleErrorDetails.push(message.text().slice(0, 300));
+    }
   });
   await page.goto(new URL('/login', base).href, { waitUntil: 'load' });
   await page.locator('#email').fill(email);
@@ -473,6 +481,8 @@ try {
         consoleErrors: report.consoleErrors,
         screenshotFailures: report.screenshotFailures,
         failures: report.failures,
+        runtimeErrorDetails: report.runtimeErrorDetails,
+        consoleErrorDetails: report.consoleErrorDetails,
       },
       null,
       2,

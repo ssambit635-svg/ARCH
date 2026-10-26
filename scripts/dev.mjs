@@ -7,16 +7,27 @@
  *
  * On a normal machine `docker compose up -d && npm run setup && npm run dev` is equivalent.
  */
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
-dotenv.config({ override: true });
 import { spawn, spawnSync } from 'node:child_process';
 import { startEmbeddedPostgres } from './lib/pg-embedded.mjs';
+import { ensureEnvFile, explainEnvFile } from './lib/env-file.mjs';
+
+const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+
+// Before anything reads the environment: make sure there is one to read. A missing file is
+// created with fresh secrets; an existing one is never touched.
+const envFile = ensureEnvFile(root);
+process.stdout.write(explainEnvFile(envFile));
+
+dotenv.config({ override: true });
 
 const port = process.env.PORT ?? '3000';
 const url = process.env.DATABASE_URL;
 
 if (!url) {
-  console.error('[dev] DATABASE_URL is not set — copy .env.example to .env first.');
+  console.error(`[dev] DATABASE_URL is not set — check ${envFile.path}.`);
   process.exit(1);
 }
 
