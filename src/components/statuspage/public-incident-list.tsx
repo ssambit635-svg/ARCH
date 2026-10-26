@@ -30,7 +30,7 @@ export function PublicIncidentList({ incidents }: { incidents: PublicIncident[] 
     return (
       <div className="rounded-2xl border border-white/[0.07] bg-white/[0.015] px-6 py-10 text-center">
         <p className="text-sm font-medium text-slate-200">No incidents in this period</p>
-        <p className="mt-1 text-[13px] text-slate-500">Everything has been running smoothly.</p>
+        <p className="mt-1 text-[13px] text-haze-400">Everything has been running smoothly.</p>
       </div>
     );
   }
@@ -46,7 +46,7 @@ export function PublicIncidentList({ incidents }: { incidents: PublicIncident[] 
               {statusLabel[incident.status]}
             </span>
           </div>
-          <p className="mt-1 text-xs text-slate-500">
+          <p className="mt-1 text-xs text-haze-400">
             {formatDateTime(incident.startedAt)}
             {incident.resolvedAt ? ` → ${formatDateTime(incident.resolvedAt)}` : ' → ongoing'}
           </p>
@@ -54,7 +54,7 @@ export function PublicIncidentList({ incidents }: { incidents: PublicIncident[] 
             <ol className="mt-4 space-y-3 border-l border-white/10 pl-4">
               {incident.updates.map((update) => (
                 <li key={update.id}>
-                  <p className="text-xs text-slate-500">{timeAgo(update.createdAt)}</p>
+                  <p className="text-xs text-haze-400">{timeAgo(update.createdAt)}</p>
                   <p className="mt-0.5 whitespace-pre-wrap text-[13px] leading-relaxed text-slate-300">{update.body ?? 'Status update.'}</p>
                 </li>
               ))}

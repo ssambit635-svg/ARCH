@@ -593,6 +593,41 @@
   border-color: var(--auth-fg);
   background: var(--auth-hover);
 }
+/* One provider per row: the marks stay readable and the buttons keep a 48px touch target. */
+.auth-surface .auth-oauth-group {
+  display: grid;
+  gap: 10px;
+}
+.auth-surface .auth-link-notice {
+  display: grid;
+  gap: 8px;
+  padding: 12px 13px;
+  border: 1px solid var(--auth-line);
+  border-radius: 9px;
+  background: var(--auth-surface-2);
+  color: var(--auth-muted);
+  font-size: 12px;
+  line-height: 1.65;
+}
+.auth-surface .auth-link-notice strong {
+  color: var(--auth-fg);
+  font-weight: 600;
+}
+.auth-surface .auth-link-skip {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--auth-fg);
+  font-size: 12px;
+  font-weight: 550;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.auth-surface .auth-link-skip:hover {
+  color: var(--auth-accent-strong);
+}
 
 /* The landing hero's ink action and sunbeam mark, not a new button palette. */
 .auth-surface .auth-submit-ink {

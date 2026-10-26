@@ -107,7 +107,7 @@ export default async function PublicStatusPage({ params }: { params: Promise<{ s
       <main className="relative mx-auto max-w-3xl px-5 py-10 sm:py-14">
         <header className="mb-8 flex items-center justify-between gap-4">
           <div className="min-w-0">
-            <p className="text-[13px] font-medium text-slate-500">{page.organization.name}</p>
+            <p className="text-[13px] font-medium text-haze-400">{page.organization.name}</p>
             <h1 className="mt-1 truncate text-2xl font-semibold tracking-tight text-white sm:text-3xl">{page.page.name}</h1>
             {page.page.description ? <p className="mt-1.5 text-sm text-slate-400">{page.page.description}</p> : null}
           </div>
@@ -125,7 +125,7 @@ export default async function PublicStatusPage({ params }: { params: Promise<{ s
             <span className={`size-2.5 rounded-full ${overall.dot} ${page.overallStatus === 'OPERATIONAL' ? '' : 'animate-pulse-dot'}`} aria-hidden />
             {overall.label}
           </p>
-          <p className="mt-1 text-xs tabular-nums text-slate-500">
+          <p className="mt-1 text-xs tabular-nums text-haze-400">
             Updated {timeAgo(page.generatedAt)} · {formatDateTime(page.generatedAt)}
           </p>
         </div>
@@ -135,7 +135,7 @@ export default async function PublicStatusPage({ params }: { params: Promise<{ s
         </section>
 
         <section className="mt-8" aria-labelledby="components">
-          <h2 id="components" className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+          <h2 id="components" className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-haze-400">
             Components
           </h2>
           {page.components.length === 0 ? (
@@ -148,7 +148,7 @@ export default async function PublicStatusPage({ params }: { params: Promise<{ s
                 <li key={component.id} className="flex items-center justify-between gap-4 px-5 py-3.5">
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium text-slate-100">{component.name}</p>
-                    {component.description ? <p className="mt-0.5 truncate text-xs text-slate-500">{component.description}</p> : null}
+                    {component.description ? <p className="mt-0.5 truncate text-xs text-haze-400">{component.description}</p> : null}
                   </div>
                   <PublicServiceBadge status={component.status} />
                 </li>
@@ -159,7 +159,7 @@ export default async function PublicStatusPage({ params }: { params: Promise<{ s
 
         {page.activeIncidents.length > 0 ? (
           <section className="mt-10" aria-labelledby="active">
-            <h2 id="active" className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+            <h2 id="active" className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-haze-400">
               Active incidents · {page.activeIncidents.length}
             </h2>
             <div className="space-y-4">
@@ -172,14 +172,14 @@ export default async function PublicStatusPage({ params }: { params: Promise<{ s
                       {incident.status.charAt(0) + incident.status.slice(1).toLowerCase()}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-haze-400">
                     Started {timeAgo(incident.startedAt)}
                     {incident.componentName ? ` · affecting ${incident.componentName}` : ''}
                   </p>
                   {incident.description ? <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-slate-300">{incident.description}</p> : null}
                   {incident.latestUpdate?.body ? (
                     <div className="mt-4 border-l-2 border-indigo-500/60 pl-3">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+                      <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-haze-400">
                         Latest update · {timeAgo(incident.latestUpdate.createdAt)}
                       </p>
                       <p className="mt-1 whitespace-pre-wrap text-sm leading-relaxed text-slate-200">{incident.latestUpdate.body}</p>
@@ -192,13 +192,13 @@ export default async function PublicStatusPage({ params }: { params: Promise<{ s
         ) : null}
 
         <section className="mt-10" aria-labelledby="history">
-          <h2 id="history" className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500">
+          <h2 id="history" className="mb-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-haze-400">
             Past incidents · last 90 days
           </h2>
           <PublicIncidentList incidents={page.history} />
         </section>
 
-        <footer className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] pt-5 text-xs text-slate-600">
+        <footer className="mt-12 flex flex-wrap items-center justify-between gap-3 border-t border-white/[0.06] pt-5 text-xs text-haze-400">
           <p>
             Status by <Link href="/" className="font-medium text-slate-400 transition hover:text-slate-200">ARCH</Link> · rendered {formatDateTime(page.generatedAt)}
           </p>

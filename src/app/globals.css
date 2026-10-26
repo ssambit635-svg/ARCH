@@ -31,6 +31,15 @@
   --color-ash-700: #262626;
   --color-ash-800: #1b1b1b;
 
+  /*
+   * Muted ink for customer-facing surfaces that sit directly on the abyss ramp
+   * (the public status page). Tailwind's slate-500 (#62748e) only reaches 4.25:1
+   * on ink-950 and 4.10:1 on abyss-850 — below the 4.5:1 AA threshold for body
+   * text. This tone keeps the same muted role and clears 5.5:1 on every
+   * surface the status page uses, so contrast survives a palette change.
+   */
+  --color-haze-400: #7f8da4;
+
   /* Named legacy surfaces used by existing product pages, now mapped to the same ramp. */
   --color-abyss-950: #000000;
   --color-abyss-900: #08090c;

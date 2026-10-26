@@ -322,7 +322,7 @@ async function main() {
     { organization: 'Acme Inc', role: 'VIEWER', email: 'viewer@arch.dev', password: DEMO_PASSWORD },
     { organization: 'Globex (separate tenant)', role: 'OWNER', email: 'globex@arch.dev', password: DEMO_PASSWORD },
   ]);
-  console.log(`[seed] public status page: /status/demo`);
+  console.log(`[seed] public status page: /status/${statusPage.slug}`);
   console.log(`[seed] webhook endpoint URL: /api/webhooks/grafana?endpoint=${webhook.endpoint.externalId}`);
   console.log(`[seed] webhook signing secret (shown once): ${webhook.secret}`);
   console.log(`[seed] pending invitation link: ${invitation.inviteUrl}`);
