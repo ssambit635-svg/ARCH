@@ -1,18 +1,25 @@
 'use server';
 
 import { AuthError } from 'next-auth';
-import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { signIn, signOut } from '@/lib/auth';
-import { isDatabaseReachable } from '@/lib/db';
+import { auth, signIn, signOut } from '@/lib/auth';
+import { db, isDatabaseReachable } from '@/lib/db';
 import { describeDatabaseError, safeErrorLog } from '@/lib/db-errors';
-import { env } from '@/lib/env';
 import { loginSchema, registerSchema } from '@/lib/validation';
 import { registerUser } from '@/server/services/auth.service';
 import { zodIssues } from '@/lib/api';
 import { isAppError } from '@/lib/errors';
 import { rateLimit } from '@/lib/rate-limit';
 import { safeAuthCallback } from '@/lib/auth-redirect';
+import { requestIp } from '@/lib/auth-request';
+import { isOAuthProviderId, type OAuthProviderId } from '@/lib/oauth';
+import {
+  clearPendingOAuthLink,
+  isOAuthProviderEnabled,
+  readPendingOAuthLink,
+  writeAutoLink,
+  writePendingOAuthLink,
+} from '@/lib/oauth-server';
 
 /**
  * Auth server actions.
@@ -76,9 +83,13 @@ async function databaseIsDown(): Promise<boolean> {
   return !(await isDatabaseReachable());
 }
 
-function rethrowRedirect(error: unknown): void {
+function isRedirectError(error: unknown): boolean {
   const digest = (error as { digest?: string } | null)?.digest;
-  if (typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT')) throw error;
+  return typeof digest === 'string' && digest.startsWith('NEXT_REDIRECT');
+}
+
+function rethrowRedirect(error: unknown): void {
+  if (isRedirectError(error)) throw error;
 }
 
 function fieldErrorsFrom(issues: { path: readonly PropertyKey[]; message: string }[]): Record<string, string> {
@@ -95,11 +106,56 @@ async function enforceFormRateLimit(key: string, limit: number, windowMs: number
   return result.ok ? null : `Too many attempts. Please wait ${result.retryAfterSeconds} seconds, then try again.`;
 }
 
-async function requestIp(): Promise<string | null> {
-  const requestHeaders = await headers();
-  const forwarded = requestHeaders.get('x-forwarded-for')?.split(',')[0]?.trim();
-  const ip = forwarded || requestHeaders.get('x-real-ip')?.trim();
-  return ip || null;
+/** Only a known provider id is accepted; anything else is treated as "not offered". */
+function parseProvider(value: FormDataEntryValue | null): OAuthProviderId | null {
+  return isOAuthProviderId(value) ? value : null;
+}
+
+/**
+ * Starting a provider sign-in is cheap for us and expensive for the provider, and it is the one
+ * auth endpoint that can be triggered without knowing an email address. Twenty starts a minute
+ * per IP is far above a real person's clicking speed and far below a script's.
+ */
+async function oauthStartAllowed(): Promise<boolean> {
+  const ip = await requestIp();
+  if (!ip) return true;
+  return rateLimit(`auth:oauth:ip:${ip}`, { limit: 20, windowMs: 60_000 }).ok;
+}
+
+/**
+ * Hand the browser over to the provider.
+ *
+ * Auth.js answers a failed start with its own error page — a raw "Server error" screen that
+ * says nothing about what to do. The URL it produced is inspected here so the person is sent
+ * back to ARCH's own sign-in screen with a message they can act on instead.
+ */
+async function startOAuthFlow(provider: OAuthProviderId, callbackUrl: string): Promise<void> {
+  let target: string;
+  try {
+    // `redirect: false` returns the destination instead of throwing it, so it can be inspected.
+    target = await signIn(provider, { redirectTo: callbackUrl, redirect: false });
+  } catch (error) {
+    rethrowRedirect(error);
+    // Auth.js already routes provider-side failures to /login?error=…; this catches the
+    // failures that happen before the redirect leaves our server (misconfiguration, etc.).
+    if (error instanceof AuthError) redirect(`/login?error=${provider}&provider=${provider}`);
+    throw error;
+  }
+  if (isAuthJsInternalUrl(target)) {
+    // The provider could not be reached, or its credentials are wrong.
+    await clearPendingOAuthLink();
+    redirect(`/login?error=provider_unavailable&provider=${provider}`);
+  }
+  redirect(target);
+}
+
+/** True for Auth.js' own pages (`/api/auth/…`), which are not part of ARCH's design. */
+function isAuthJsInternalUrl(target: string): boolean {
+  try {
+    return new URL(target, 'http://localhost').pathname.startsWith('/api/auth/');
+  } catch {
+    return false;
+  }
 }
 
 export async function loginAction(_state: AuthFormState, formData: FormData): Promise<AuthFormState> {
@@ -125,7 +181,12 @@ export async function loginAction(_state: AuthFormState, formData: FormData): Pr
     });
     return undefined;
   } catch (error) {
-    rethrowRedirect(error);
+    if (isRedirectError(error)) {
+      // The password was accepted. If a provider link was waiting for exactly this moment,
+      // finish it now instead of leaving the person with a half-linked account.
+      await continuePendingOAuthLink(parsed.data.email);
+      throw error;
+    }
     if (error instanceof AuthError) {
       if (error.type === 'CredentialsSignin') return { error: 'Invalid email or password.' };
       // Auth.js wraps whatever `authorize` threw (e.g. a missing users table) in `cause.err`.
@@ -143,23 +204,81 @@ export async function loginAction(_state: AuthFormState, formData: FormData): Pr
 }
 
 /**
- * "Continue with GitHub" — starts the OAuth flow. Same redirect discipline as `loginAction`:
- * Auth.js throws a redirect on success, and NEXT_REDIRECT must pass through untouched.
- * Guarded so a provider that is not configured (blank AUTH_GITHUB_ID/SECRET) fails as a clean
- * no-op instead of an AuthError deep inside the callback.
+ * Finish a provider link that was waiting for a password sign-in.
+ *
+ * The person tried "Continue with Google", an ARCH account already owned that email address, so
+ * Auth.js refused to link them automatically. They have now proved who they are with their
+ * password, so the provider can be attached to *this* session — one more click at the provider
+ * and they are in, with their account intact.
+ *
+ * The account that was signed in with is remembered alongside the link, and the provider
+ * identity has to match it before the two are joined. Without that check, a provider identity
+ * could be attached to whichever account happened to sign in on a shared browser.
  */
-export async function githubLoginAction(formData: FormData): Promise<void> {
+async function continuePendingOAuthLink(signedInEmail: string): Promise<void> {
+  const pending = await readPendingOAuthLink();
+  if (!pending || pending.reason !== 'existing') return;
+  if (!isOAuthProviderEnabled(pending.provider)) return;
+  const email = signedInEmail.trim().toLowerCase();
+  const account = await db.user.findUnique({ where: { email }, select: { id: true } });
+  if (!account) return;
+  await clearPendingOAuthLink();
+  await writeAutoLink({ provider: pending.provider, userId: account.id, email, strict: true });
+  await startOAuthFlow(pending.provider, pending.callbackUrl);
+}
+
+/**
+ * "Continue with Google" / "Continue with GitHub" on the sign-in screen.
+ *
+ * The attempt is remembered in a signed, short-lived cookie so that a refusal — "an ARCH account
+ * already uses that email" — can be finished with a single password sign-in instead of a detour
+ * through Settings.
+ */
+export async function oauthSignInAction(formData: FormData): Promise<void> {
+  const provider = parseProvider(formData.get('provider'));
+  if (!provider) redirect('/login');
   const callbackUrl = safeAuthCallback(formData.get('callbackUrl'));
-  if (!(env.AUTH_GITHUB_ID && env.AUTH_GITHUB_SECRET)) redirect('/login');
-  try {
-    await signIn('github', { redirectTo: callbackUrl });
-  } catch (error) {
-    rethrowRedirect(error);
-    // Auth.js already routes provider-side failures to /login?error=…; this catches the
-    // failures that happen before the redirect leaves our server (misconfiguration, etc.).
-    if (error instanceof AuthError) redirect('/login?error=github');
-    throw error;
+  if (!isOAuthProviderEnabled(provider)) redirect('/login');
+  if (!(await oauthStartAllowed())) {
+    redirect(`/login?error=rate&provider=${provider}`);
   }
+  await writePendingOAuthLink({ provider, callbackUrl, reason: 'attempt' });
+  await startOAuthFlow(provider, callbackUrl);
+}
+
+/**
+ * Attach a provider to the account that is already signed in (Settings → Sign-in methods).
+ *
+ * The person asked for this link themselves, so the provider's address does not have to match
+ * theirs — but the link may only ever attach to the account they are signed in as.
+ */
+export async function oauthLinkAction(formData: FormData): Promise<void> {
+  const provider = parseProvider(formData.get('provider'));
+  if (!provider) redirect('/dashboard/settings');
+  const session = await auth();
+  if (!session?.user?.id) redirect('/login');
+  if (!isOAuthProviderEnabled(provider)) redirect('/dashboard/settings');
+  const callbackUrl = safeAuthCallback(formData.get('callbackUrl') ?? '/dashboard/settings');
+  if (!(await oauthStartAllowed())) {
+    redirect(`/login?error=rate&provider=${provider}`);
+  }
+  await writePendingOAuthLink({ provider, callbackUrl, reason: 'attempt' });
+  await writeAutoLink({
+    provider,
+    userId: session.user.id,
+    email: (session.user.email ?? '').trim().toLowerCase(),
+    strict: false,
+  });
+  await startOAuthFlow(provider, callbackUrl);
+}
+
+/**
+ * "Not now" — drop a waiting provider link and carry on to the dashboard.
+ */
+export async function cancelPendingLinkAction(formData: FormData): Promise<void> {
+  await clearPendingOAuthLink();
+  const callbackUrl = safeAuthCallback(formData.get('callbackUrl'));
+  redirect(callbackUrl);
 }
 
 export async function registerAction(_state: AuthFormState, formData: FormData): Promise<AuthFormState> {

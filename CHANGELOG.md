@@ -15,6 +15,61 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Added — sign in with Google and GitHub
+
+- ARCH can now sign a person in with a **verified Google account** or a **verified GitHub
+  account** instead of a password. Each provider appears on the sign-in screen only when that
+  instance has configured it, so a self-hosted ARCH never shows a button that cannot work.
+  Set `AUTH_GOOGLE_ID`/`AUTH_GOOGLE_SECRET` or `AUTH_GITHUB_ID`/`AUTH_GITHUB_SECRET` and restart —
+  see `docs/OAUTH-SETUP.md`.
+- Signing in with a provider that already owns the email address of an ARCH account no longer
+  dead-ends. ARCH asks for the password, and links the provider as soon as the password is
+  accepted — one step, with a "Skip for now" escape hatch. The account is never linked just
+  because two email addresses happen to match.
+- The sign-up screen offers the same provider buttons, so a new workspace can be created with
+  one click instead of a form.
+- Settings → **Sign-in methods** now lists every configured provider, shows which ones are
+  connected, and offers a **Link** button for the ones that are not. **Recent sign-ins** shows
+  the last few authentication events on your own account.
+- A sign-in that cannot be completed now says what to do — "that provider did not allow this
+  account in", "an ARCH account already uses that email address" — instead of landing on a bare
+  provider page.
+
+### Security — provider sign-in
+
+- **Moderate** — Zod was updated to 4.6.7. Versions before 4.6.6 can exhaust memory while
+  validating an oversized constrained collection, which a large form or webhook payload could
+  trigger. `fast-uri` moved to 3.1.9 for the same reason (URL parsing hardening).
+- Only a **verified** email address becomes an ARCH identity: Google's ID token must carry
+  `email_verified`, and GitHub's address must be a verified entry in `/user/emails`. An
+  unverified address is refused and no account is created.
+- Provider callbacks now use **PKCE and the `state` parameter** together, so a callback that did
+  not start in this browser is refused.
+- OAuth access, refresh and ID tokens are still never written to the database: ARCH stores only
+  which provider account is linked.
+- A refused sign-in never reveals whether an email address is registered, and starting a provider
+  sign-in is rate limited per IP.
+- When a link continues automatically after a password sign-in, the provider's address must be
+  the address that was signed in with. A provider identity is never attached to a different
+  account, so a link cannot end up on somebody else's account on a shared browser.
+- Every provider sign-in and provider link is recorded in a new `auth_events` trail (provider,
+  event, IP address, user agent — no token, secret or password). If the trail cannot be written,
+  the sign-in still succeeds.
+
+### Fixed — the public status page on phones and for low-vision readers
+
+- The customer-facing status page no longer scrolls sideways on a phone. The 90-day uptime strip
+  now scrolls inside its own card instead of widening the page, and the scroller is reachable and
+  named for keyboard and screen-reader users.
+- Secondary text on the public status page — the organisation name, section headings, component
+  descriptions, timestamps, and the footer — now meets WCAG AA contrast (4.5:1). One muted ink
+  tone replaces the two that fell short (4.25:1 and 2.67:1) and keeps passing on every surface
+  the page uses. No wording, data, or status semantics changed.
+- The demo seed now prints the status-page URL it actually created, so the printed link resolves
+  instead of returning 404.
+- Opening a service no longer logs a failed request for the `/dashboard/services` segment; that
+  path now redirects to Projects & services.
+
 ### Changed — softer dashboard surfaces
 
 - Rounded the overview’s panels and matching inner headers, softened header backgrounds, and

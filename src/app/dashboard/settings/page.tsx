@@ -27,8 +27,10 @@ import { InviteModal } from '@/components/organization/invite-modal';
 import { MemberTable } from '@/components/organization/member-table';
 import { PermissionGate } from '@/components/permission/permission-gate';
 import { db } from '@/lib/db';
-import { env } from '@/lib/env';
-import { githubLoginAction } from '@/app/(auth)/actions';
+import { oauthLinkAction } from '@/app/(auth)/actions';
+import { enabledOAuthProviders } from '@/lib/oauth-server';
+import { OAUTH_PROVIDERS, isOAuthProviderId } from '@/lib/oauth';
+import { listAuthEvents } from '@/server/services/auth-event.service';
 import { Field, Input } from '@/components/ui/form';
 import {
   createWebhookEndpointAction,
@@ -64,15 +66,17 @@ export default async function SettingsPage({
   const canManageMembers = roleHasPermission(organization.role, 'member.manage');
   const canManageWebhooks = roleHasPermission(organization.role, 'webhook.manage');
   const canEditOrganization = roleHasPermission(organization.role, 'org.settings');
-  const githubEnabled = Boolean(env.AUTH_GITHUB_ID && env.AUTH_GITHUB_SECRET);
   const canReadWebhooks = roleHasPermission(organization.role, 'webhook.read');
-  const githubLinked =
-    tab === 'general' && githubEnabled
-      ? await db.account.findFirst({
-          where: { userId: user.id, provider: 'github' },
-          select: { id: true },
+  const oauthProviders = enabledOAuthProviders();
+  const linkedAccounts =
+    tab === 'general' && oauthProviders.length > 0
+      ? await db.account.findMany({
+          where: { userId: user.id, provider: { in: oauthProviders } },
+          select: { id: true, provider: true },
         })
-      : null;
+      : [];
+  const linkedProviders = new Set(linkedAccounts.map((account) => account.provider));
+  const recentSignIns = tab === 'general' ? await listAuthEvents(user.id, 5) : [];
 
   const [members, invitations, endpoints, projects, services] = await Promise.all([
     tab === 'people'
@@ -174,40 +178,95 @@ export default async function SettingsPage({
               <Card>
                 <CardHeader
                   title="Sign-in methods"
-                  description="GitHub OAuth is for logging in; the separate GitHub token on Repositories is for creating pull requests."
+                  description="Connect a provider so you can sign in without typing a password. The separate GitHub token on Repositories is for creating pull requests."
                 />
                 <CardBody className="space-y-3 text-sm text-slate-300">
-                  {!githubEnabled ? (
+                  {oauthProviders.length === 0 ? (
                     <p>
-                      GitHub sign-in is off. Add AUTH_GITHUB_ID and AUTH_GITHUB_SECRET to the server
-                      environment to enable it.
-                    </p>
-                  ) : githubLinked ? (
-                    <p className="flex items-center gap-2">
-                      <span className="grid size-6 place-items-center rounded-full bg-emerald-500/15 text-xs text-emerald-300">
-                        ✓
-                      </span>
-                      GitHub account linked. You can use Continue with GitHub on the sign-in page.
+                      No provider sign-in is enabled on this instance. Add AUTH_GOOGLE_ID and
+                      AUTH_GOOGLE_SECRET, or AUTH_GITHUB_ID and AUTH_GITHUB_SECRET, to the server
+                      environment to turn one on.
                     </p>
                   ) : (
-                    <>
-                      <p>
-                        Already using an email/password account? Link GitHub while signed in; we
-                        never link an account just because the email matches.
-                      </p>
-                      <form action={githubLoginAction}>
-                        <input type="hidden" name="callbackUrl" value="/dashboard/settings" />
-                        <button
-                          type="submit"
-                          className="rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08]"
-                        >
-                          Link GitHub account
-                        </button>
-                      </form>
-                    </>
+                    <ul className="space-y-3">
+                      {oauthProviders.map((provider) => {
+                        const name = OAUTH_PROVIDERS[provider].name;
+                        const linked = linkedProviders.has(provider);
+                        return (
+                          <li
+                            key={provider}
+                            className="flex flex-wrap items-center justify-between gap-3"
+                          >
+                            <span className="flex items-center gap-2">
+                              {linked ? (
+                                <span className="grid size-6 place-items-center rounded-full bg-emerald-500/15 text-xs text-emerald-300">
+                                  ✓
+                                </span>
+                              ) : null}
+                              {linked
+                                ? `${name} account linked. You can use “Continue with ${name}” on the sign-in page.`
+                                : `${name} is not connected to your account yet.`}
+                            </span>
+                            {!linked ? (
+                              <form action={oauthLinkAction}>
+                                <input type="hidden" name="provider" value={provider} />
+                                <input
+                                  type="hidden"
+                                  name="callbackUrl"
+                                  value="/dashboard/settings"
+                                />
+                                <button
+                                  type="submit"
+                                  className="rounded-xl border border-white/10 bg-white/[0.04] px-3.5 py-2 text-sm font-medium text-slate-200 transition hover:bg-white/[0.08]"
+                                >
+                                  Link {name} account
+                                </button>
+                              </form>
+                            ) : null}
+                          </li>
+                        );
+                      })}
+                    </ul>
                   )}
+                  <p className="text-xs text-slate-400">
+                    A provider is only connected after you sign in with your password. A matching
+                    email address on its own never links an account.
+                  </p>
                 </CardBody>
               </Card>
+
+              {recentSignIns.length > 0 ? (
+                <Card>
+                  <CardHeader
+                    title="Recent sign-ins"
+                    description="The last few authentication events recorded for your account."
+                  />
+                  <CardBody>
+                    <ul className="space-y-2 text-xs text-slate-400">
+                      {recentSignIns.map((event) => {
+                        const providerName = isOAuthProviderId(event.provider)
+                          ? OAUTH_PROVIDERS[event.provider].name
+                          : event.provider;
+                        return (
+                          <li
+                            key={event.id}
+                            className="flex flex-wrap items-center justify-between gap-2"
+                          >
+                            <span className="text-slate-300">
+                              {event.event === 'oauth_link'
+                                ? `Linked ${providerName}`
+                                : `Signed in with ${providerName}`}
+                            </span>
+                            <span>
+                              {formatDateTime(event.createdAt)} · {event.ip ?? 'unknown address'}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </CardBody>
+                </Card>
+              ) : null}
             </div>
           ) : null}
 

@@ -11,16 +11,32 @@ const dayTone: Record<string, string> = {
 export function UptimeBars({ days, uptimePercent }: { days: { date: string; state: 'up' | 'degraded' | 'outage' | 'maintenance' | 'none' }[]; uptimePercent: string }) {
   return (
     <div>
-      <div className="flex items-end gap-[3px]" role="img" aria-label={`${uptimePercent} uptime over the last ${days.length} days`}>
-        {days.map((day) => (
-          <span
-            key={day.date}
-            title={`${day.date} — ${day.state}`}
-            className={`h-8 w-full min-w-[3px] flex-1 rounded-[3px] transition hover:brightness-150 ${dayTone[day.state]}`}
-          />
-        ))}
+      {/*
+        Ninety 3px bars plus their 3px gaps need ~537px, so on a phone the strip cannot
+        fit its panel. It scrolls inside the card instead of widening the document, and the
+        scroller is focusable and named so it is reachable without a pointer.
+      */}
+      <div
+        className="overflow-x-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+        tabIndex={0}
+        role="group"
+        aria-label={`Daily uptime for the last ${days.length} days`}
+      >
+        <div
+          className="flex items-end gap-[3px]"
+          role="img"
+          aria-label={`${uptimePercent} uptime over the last ${days.length} days`}
+        >
+          {days.map((day) => (
+            <span
+              key={day.date}
+              title={`${day.date} — ${day.state}`}
+              className={`h-8 w-full min-w-[3px] flex-1 rounded-[3px] transition hover:brightness-150 ${dayTone[day.state]}`}
+            />
+          ))}
+        </div>
       </div>
-      <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+      <div className="mt-2 flex items-center justify-between text-xs text-haze-400">
         <span>{days.length} days ago</span>
         <span className="font-medium text-slate-300">{uptimePercent} uptime</span>
         <span>Today</span>

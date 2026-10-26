@@ -158,6 +158,7 @@ model User {
   updatedAt     DateTime  @updatedAt
 
   accounts          Account[]
+  authEvents        AuthEvent[]
   apiTokensCreated  ApiToken[]
   sessions          Session[]
   memberships       Membership[]
@@ -193,6 +194,26 @@ model Account {
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
+}
+
+/// Security trail for authentication events: an OAuth sign-in, a provider account being linked,
+/// or a sign-in being refused. Deliberately NOT tenant-scoped — an identity event can happen
+/// before a person belongs to any organization, and it must stay readable to whoever operates
+/// the instance. No token, secret or password is ever stored here.
+model AuthEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  provider  String
+  event     String
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([event, createdAt])
+  @@map("auth_events")
 }
 
 model Session {

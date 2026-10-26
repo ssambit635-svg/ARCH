@@ -35,15 +35,34 @@ export async function fetchVerifiedGithubProfile(accessToken: string, fetcher: t
   return { ...(user as GitHubProfile), email };
 }
 
+/**
+ * A GitHub identity ARCH could not verify never becomes a profile.
+ *
+ * Auth.js reacts to a failed profile lookup by sending the visitor to its own bare
+ * `/api/auth/signin` page — a dead end that is not part of ARCH's design. The route handler in
+ * `src/app/api/auth/[...nextauth]/route.ts` recognises that redirect and turns it into a real
+ * ARCH message instead.
+ */
 export function githubProvider(clientId: string, clientSecret: string) {
   return GitHub({
     clientId,
     clientSecret,
+    /**
+     * PKCE *and* the `state` parameter.
+     *
+     * Auth.js only enables PKCE by default. PKCE stops an intercepted authorization code from
+     * being replayed, but the `state` parameter is what the OAuth 2.0 security model asks for as
+     * well (RFC 6749 §10.12): it ties the callback to the exact request this browser started, so
+     * a callback that was not initiated here is refused. Both are cheap; both are used.
+     */
+    checks: ['pkce', 'state'],
     // GitHub.com OAuth is separate from GITHUB_API_BASE_URL (the server-side PR integration).
     userinfo: {
       url: 'https://api.github.com/user',
       async request({ tokens }: { tokens: { access_token?: string } }) {
         if (!tokens.access_token) throw new Error('GitHub OAuth token missing.');
+        // Throwing is the point: an identity we cannot verify must never become a profile.
+        // Auth.js ends the callback here, and the route handler turns it into a clear message.
         return fetchVerifiedGithubProfile(tokens.access_token);
       },
     },

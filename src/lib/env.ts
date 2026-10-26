@@ -43,6 +43,8 @@ const envSchema = z.object({
   APP_URL: z.url().default('http://localhost:3000'),
   AUTH_GITHUB_ID: optionalTrimmed(),
   AUTH_GITHUB_SECRET: optionalTrimmed(),
+  AUTH_GOOGLE_ID: optionalTrimmed(),
+  AUTH_GOOGLE_SECRET: optionalTrimmed(),
 
   WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS: z.coerce.number().int().positive().default(300),
 
@@ -123,6 +125,9 @@ function loadEnv(): Env {
     if (Boolean(value.AUTH_GITHUB_ID) !== Boolean(value.AUTH_GITHUB_SECRET)) {
       throw new Error('GitHub sign-in needs both AUTH_GITHUB_ID and AUTH_GITHUB_SECRET in production.');
     }
+    if (Boolean(value.AUTH_GOOGLE_ID) !== Boolean(value.AUTH_GOOGLE_SECRET)) {
+      throw new Error('Google sign-in needs both AUTH_GOOGLE_ID and AUTH_GOOGLE_SECRET in production.');
+    }
     // A placeholder PAT would make every "Approve" fail mid-flight, after the human already clicked.
     if (isPlaceholderSecret(value.GITHUB_TOKEN)) {
       throw new Error('Refusing to start in production with a placeholder GITHUB_TOKEN.');
@@ -134,6 +139,10 @@ function loadEnv(): Env {
 
   if (isPlaceholderSecret(value.AUTH_GITHUB_ID) || isPlaceholderSecret(value.AUTH_GITHUB_SECRET)) {
     throw new Error('GitHub OAuth credentials must not be placeholders. Leave both blank to disable sign-in.');
+  }
+
+  if (isPlaceholderSecret(value.AUTH_GOOGLE_ID) || isPlaceholderSecret(value.AUTH_GOOGLE_SECRET)) {
+    throw new Error('Google OAuth credentials must not be placeholders. Leave both blank to disable sign-in.');
   }
 
   // "real" is a promise that PRs are actually opened; fail at boot instead of at approval time.

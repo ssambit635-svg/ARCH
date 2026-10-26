@@ -36,11 +36,13 @@ on a sign-in route.
 1. Header: the public ARCH wordmark, current early-access version, documentation, and home link.
 2. Authentication card: decorative window chrome, route links styled as a mode switch, one `h1`,
    then the real form. Mode links use `aria-current="page"`, not fake tab semantics.
-3. Sign-in: email/password plus GitHub **only when the server supplies its configured action**.
-   There is no non-working SSO, magic-link, passkey, or password-reset button.
-4. Registration: email, optional name and organization, and a password with the real 10-character
-   minimum. An organization creates an owned team, not a public status page. No speculative slug
-   or `/status/{slug}` link is shown.
+3. Sign-in: email/password plus one button per **configured** provider (Google, GitHub),
+   rendered only when the server supplies its configured action. The provider marks are inline
+   SVG, so nothing is fetched from a third party. There is no non-working SSO, magic-link,
+   passkey, or password-reset button.
+4. Registration: the same provider buttons first, then email, optional name and organization,
+   and a password with the real 10-character minimum. An organization creates an owned team,
+   not a public status page. No speculative slug or `/status/{slug}` link is shown.
 5. Help: a native disclosure with account-access or local-setup guidance, plus a real docs link.
 6. Showcase: four selectable incident states, a sample timeline and a human-reviewable AI draft.
 7. Footer: privacy, terms, and security documentation. These links are not a certification or an
@@ -56,7 +58,8 @@ on a sign-in route.
 | Submitting | Action button is disabled, labelled with progress, and reports `aria-busy` |
 | Validation failure | Server summary receives focus; fields expose `aria-invalid` and point to their error text |
 | Invalid credentials | Clear retryable error, preserved email/password in component memory, re-enabled submit |
-| OAuth failure | An announced error; already signed-in users can return to Settings |
+| OAuth failure | An announced error that names the provider; already signed-in users can retry or return to Settings |
+| Provider link pending | After a provider refused because the address already has an ARCH account: a notice explains that the password sign-in will finish the link, with a "Skip for now" escape hatch |
 | Registration fallback | If auto sign-in fails, the existing `registered=1` success note explains what to do |
 | Password visibility | A real non-submit toggle reports its pressed state and controls the password input |
 | Caps Lock | A textual warning is shown when the keyboard reports the lock modifier |
@@ -78,10 +81,17 @@ Server pages pass server actions into the client forms. Validation, credential c
 limits, database diagnostics and session creation remain on the server. Typed credentials live
 only in component memory; never put them in browser storage or logs.
 
-`src/lib/auth-redirect.ts` is shared by both pages and all three sign-in/registration actions.
+`src/lib/auth-redirect.ts` is shared by both pages and all sign-in/registration actions.
 Only same-site paths survive; absolute/protocol-relative URLs, backslashes, control characters
 and non-string query input fall back to `/dashboard`. Switching modes preserves a safe callback,
 and an already signed-in visitor returns to it. Invitation tokens are not printed in page copy.
+
+Provider sign-in is a separate engine (`src/lib/oauth.ts`, `src/lib/oauth-server.ts`). The
+remembered "finish linking this provider" note is a signed, `httpOnly`, `SameSite=Lax` cookie with
+a ten-minute life — never a URL parameter, because the destination it carries can be a private
+invitation link. The Auth.js callback route (`src/app/api/auth/[...nextauth]/route.ts`) is
+wrapped so a refusal keeps its provider and destination, and so Auth.js' own bare sign-in page
+is replaced by ARCH's `/login` with a readable message.
 
 Authentication routes are marked `noindex, nofollow`. Development responses permit preview
 iframes; production retains `frame-ancestors 'none'`, `X-Frame-Options: DENY`, HSTS and the no-eval

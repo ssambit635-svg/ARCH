@@ -10,7 +10,8 @@ import { AI_NAME, GITHUB_REPO_URL, PRODUCT_VERSION } from '@/lib/brand';
 // Actions are passed by the server pages, not imported by the form UI. No Auth.js/request mocks
 // or database mutations are needed to render and test the complete public authentication surface.
 const credentialsAction = async () => undefined;
-const githubAction = async () => {};
+const oauthAction = async () => {};
+const cancelLinkAction = async () => {};
 const source = (path: string) => readFileSync(path, 'utf8');
 const css = source('src/components/auth/auth.css');
 const tokensFrom = (block: string) =>
@@ -92,12 +93,13 @@ describe('public authentication surface', () => {
     expect(html).not.toContain('/forgot-password');
   });
 
-  it('only displays GitHub when the page supplies its configured server action', () => {
+  it('only displays a provider when the page supplies its configured server action', () => {
     const html = renderToStaticMarkup(
       createElement(LoginForm, {
         callbackUrl: '/dashboard',
         loginAction: credentialsAction,
-        githubAction,
+        oauthAction,
+        oauthProviders: ['github'],
         oauthError: 'OAuth failed.',
         successMessage: 'Account created.',
       }),
@@ -110,8 +112,31 @@ describe('public authentication surface', () => {
     expect(html).toContain('role="status"');
     expect(html.match(/<form\b/g)).toHaveLength(2);
     expect(source('src/app/(auth)/login/page.tsx')).toContain(
-      'githubEnabled ? githubLoginAction : undefined',
+      'oauthAction={oauthProviders.length > 0 ? oauthSignInAction : undefined}',
     );
+  });
+
+  it('offers every configured provider and explains a pending account link', () => {
+    const html = renderToStaticMarkup(
+      createElement(LoginForm, {
+        callbackUrl: '/dashboard',
+        loginAction: credentialsAction,
+        oauthAction,
+        oauthProviders: ['google', 'github'],
+        linkProvider: 'google',
+        cancelLinkAction,
+      }),
+    );
+    expect(html).toContain('aria-label="Sign in with Google"');
+    expect(html).toContain('aria-label="Sign in with GitHub"');
+    expect(html).toContain('Continue with Google');
+    expect(html).toContain('Continue with GitHub');
+    expect(html).toContain('we will link your Google account');
+    expect(html).toContain('Skip for now');
+    // One form per provider plus the credentials form plus the skip form.
+    expect(html.match(/<form\b/g)).toHaveLength(4);
+    expect(html).toContain('name="provider" value="google"');
+    expect(html).toContain('name="provider" value="github"');
   });
 
   it.each(['login', 'register'] as const)(
@@ -157,6 +182,21 @@ describe('public authentication surface', () => {
       expect(tag).not.toContain('required');
     }
     expect(html).not.toMatch(/Workspace slug|\/status\/|strong password|strength/i);
+  });
+
+  it('offers the configured providers on the sign-up screen too', () => {
+    const html = renderToStaticMarkup(
+      createElement(RegisterForm, {
+        registerAction: credentialsAction,
+        oauthAction,
+        oauthProviders: ['google', 'github'],
+      }),
+    );
+    expect(html).toContain('aria-label="Sign up with Google"');
+    expect(html).toContain('aria-label="Sign up with GitHub"');
+    expect(html).toContain('Continue with Google');
+    expect(html).toContain('or use your email');
+    expect(html).toContain('aria-label="Create an ARCH account"');
   });
 
   it('shows one explicitly illustrative four-state preview with a roving tab stop', () => {

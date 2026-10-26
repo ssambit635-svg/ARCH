@@ -1,5 +1,9 @@
 # GitHub OAuth: ab kya karna hai (bina local machine clone kiye)
 
+> **Canonical guide:** [`docs/OAUTH-SETUP.md`](OAUTH-SETUP.md) covers Google *and* GitHub
+> sign-in end to end — setup, the linking rules, and the security model. This file keeps the
+> operational notes that are specific to this repository and its history.
+
 **Current state (2026-09-26):** GitHub repo private hai. `main` ke ek commit mein root
 `.env` track ho gaya tha; usmein `AUTH_SECRET` aur `AUTH_SECRET_WEBHOOK` the, OAuth **Client ID**
 tha lekin OAuth **Client Secret blank** tha. Is branch ne `.env` ko tracking se hataya, local
