@@ -1,20 +1,33 @@
 #!/usr/bin/env node
 /**
  * One-command developer setup:
- *   1. make sure PostgreSQL is reachable (Docker-managed or embedded fallback)
- *   2. generate the Prisma client
- *   3. apply migrations
- *   4. seed disposable demo data only when ARCH_SEED_DEMO=true and SEED_PASSWORD is set
+ *   1. create the environment file if it is missing (fresh secrets, never overwriting yours)
+ *   2. make sure PostgreSQL is reachable (Docker-managed or embedded fallback)
+ *   3. generate the Prisma client
+ *   4. apply migrations
+ *   5. seed disposable demo data only when ARCH_SEED_DEMO=true and SEED_PASSWORD is set
  *
  *   npm run setup
  */
-import 'dotenv/config';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import dotenv from 'dotenv';
 import { connectionFromEnv, portOpen, startEmbeddedPostgres } from './lib/pg-embedded.mjs';
+import { ensureEnvFile, explainEnvFile } from './lib/env-file.mjs';
+
+const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+
+// Before anything reads the environment: make sure there is one to read.
+const envFile = ensureEnvFile(root);
+process.stdout.write(explainEnvFile(envFile));
+
+// Loaded after the file exists, so the values above are the ones the app sees.
+dotenv.config();
 
 const url = process.env.DATABASE_URL ?? '';
 if (!url) {
-  console.error('[setup] DATABASE_URL is not set — copy .env.example to .env first.');
+  console.error(`[setup] DATABASE_URL is not set — check ${envFile.path}.`);
   process.exit(1);
 }
 

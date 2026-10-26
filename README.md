@@ -75,20 +75,29 @@ For authorized local development, use **Node.js 20.19+** and npm. Node.js 22 is 
 git clone https://github.com/ssambit635-svg/ARCH.git
 cd ARCH
 npm ci
+```
+
+### 2. Get your environment file
+
+`.env` is git-ignored, because it holds secrets. `npm run dev` and `npm run setup` create it for
+you from `.env.example`, with **freshly generated** `AUTH_SECRET` and `AUTH_SECRET_WEBHOOK` values
+and a `chmod 600` permission — and they never touch a file that already exists, so your own
+credentials are safe. To see what a fresh file looks like, or to start from a copy of your own:
+
+```bash
 cp .env.example .env
 chmod 600 .env
 ```
 
-### 2. Configure your environment
-
-Generate **two different secrets** and set them as `AUTH_SECRET` and `AUTH_SECRET_WEBHOOK` in your local `.env`:
+If you copy it yourself, replace the two placeholder secrets with different values:
 
 ```bash
 openssl rand -base64 32
 openssl rand -base64 32
 ```
 
-The example already contains a local `DATABASE_URL` and `APP_URL`. Leave GitHub OAuth credentials blank unless you are enabling that integration. Do not commit `.env` or reuse production secrets locally.
+The example already contains a local `DATABASE_URL` and `APP_URL`. Do not commit `.env` or reuse
+production secrets locally.
 
 ### 3. Start ARCH
 
@@ -98,7 +107,14 @@ npm run dev
 
 Open **[localhost:3000](http://localhost:3000)** and create an account at **`/register`**.
 
-The development command generates the Prisma client, connects to PostgreSQL (or starts the local fallback), applies migrations, and starts Next.js. **No shared demo account is created.** Start `npm run worker` in another terminal if you want notification processing and scheduled model training.
+The development command creates the environment file if it is missing, generates the Prisma
+client, connects to PostgreSQL (or starts the local fallback), applies migrations, and starts
+Next.js. **No shared demo account is created.** Start `npm run worker` in another terminal if you
+want notification processing and scheduled model training.
+
+To offer **"Continue with Google"** or **"Continue with GitHub"** on the sign-in and sign-up
+screens, paste the provider credentials into `.env` — the startup output prints the exact line
+numbers to fill in — and restart. See [OAuth sign-in](docs/OAUTH-SETUP.md).
 
 The embedded database is for development and testing only. Its default data directory is under `/tmp`, and its process stops with the dev command. Use persistent, managed PostgreSQL for staging and production.
 
