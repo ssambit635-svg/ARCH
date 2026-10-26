@@ -1,8 +1,9 @@
 # OAuth sign-in (Google and GitHub)
 
 ARCH can sign a person in with a verified **Google** or **GitHub** account instead of a
-password. Both providers are optional: a provider only appears on `/login` when this instance
-has credentials for it. Nothing here is required to run ARCH — email and password always work.
+password. The provider buttons are always on the sign-in and sign-up screens — a missing button
+cannot be told apart from a missing environment file — and each one says whether this instance
+is set up to use it. Nothing here is required to run ARCH: email and password always work.
 
 - **Code:** `src/lib/oauth.ts` (registry), `src/lib/oauth-server.ts` (wiring + pending link),
   `src/lib/google-oauth.ts`, `src/lib/github-oauth.ts`, `src/lib/auth.ts` (Auth.js config)
@@ -145,8 +146,8 @@ secret or password is ever written there. The last five events are visible under
 
 | Symptom | Cause |
 |---|---|
-| The button does not appear | One half of the credentials is missing, the value is a placeholder, or the server was not restarted. |
-| The button disappeared after a fresh clone, a wiped machine or a new sandbox | `.env` is git-ignored, so it is simply not there any more. `npm run dev` and `npm run setup` recreate it from `.env.example` with fresh secrets and print the line numbers to paste the credentials into. |
+| The button says "Not set up on this instance" | One half of the credentials is missing, the value is a placeholder, or the server was not restarted. Pressing it names the two variables to set. |
+| The button disappeared after a fresh clone, a wiped machine or a new sandbox | It does not: the buttons are always rendered. `.env` is git-ignored, so it is simply not there any more — `npm run dev` and `npm run setup` recreate it from `.env.example` with fresh secrets and print the line numbers to paste the credentials into. |
 | "Access blocked — this app is still in testing" (Google) | The Google console is in *Testing* mode and your account is not listed under **Audience → Test users**. |
 | "Google hasn't verified this app" | Expected for a personal/dev client. It still works for accounts listed as test users. |
 | `redirect_uri_mismatch` | The redirect URI in the provider console does not match the URL the browser actually used. Check `AUTH_URL` and the host in the address bar. |

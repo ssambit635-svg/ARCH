@@ -6,7 +6,7 @@ import { useFormStatus } from 'react-dom';
 import type { KeyboardEvent, ReactNode, Ref } from 'react';
 import type { AuthFormState } from '@/app/(auth)/actions';
 import { GITHUB_REPO_URL } from '@/lib/brand';
-import { OAUTH_PROVIDERS, type OAuthProviderId } from '@/lib/oauth';
+import { OAUTH_PROVIDERS, type OAuthProviderAvailability, type OAuthProviderId } from '@/lib/oauth';
 import { ArrowIcon, CheckIcon, EyeIcon, PlusIcon, SpinnerIcon, SunbeamMark } from './icons';
 
 type CredentialsAction = (state: AuthFormState, formData: FormData) => Promise<AuthFormState>;
@@ -201,14 +201,75 @@ function AuthSubmitButton({
   );
 }
 
-function OAuthSubmitButton({ provider }: { provider: OAuthProviderId }) {
+function OAuthSubmitButton({
+  provider,
+  configured,
+}: {
+  provider: OAuthProviderId;
+  /** False when this instance has no credentials for the provider yet. */
+  configured: boolean;
+}) {
   const { pending } = useFormStatus();
   const { name, buttonLabel } = OAUTH_PROVIDERS[provider];
   return (
-    <button type="submit" disabled={pending} aria-busy={pending} className="auth-oauth-button">
+    <button
+      type="submit"
+      disabled={pending}
+      aria-busy={pending}
+      aria-describedby={configured ? undefined : `oauth-${provider}-hint`}
+      className="auth-oauth-button"
+    >
       {pending ? <SpinnerIcon /> : <ProviderMark provider={provider} />}
       <span aria-live="polite">{pending ? `Connecting to ${name}…` : buttonLabel}</span>
     </button>
+  );
+}
+
+/**
+ * The provider buttons.
+ *
+ * They are always rendered, even on an instance that has no credentials for that provider: a
+ * person who cannot see "Continue with Google" cannot tell a missing feature from a missing
+ * environment file. An unconfigured provider says so underneath the button and explains what
+ * to set when it is pressed.
+ */
+function OAuthProviderButtons({
+  providers,
+  action,
+  callbackUrl,
+  mode,
+}: {
+  providers: OAuthProviderAvailability[];
+  action: OAuthAction;
+  callbackUrl: string;
+  mode: 'login' | 'register';
+}) {
+  return (
+    <>
+      <div className="auth-oauth-group">
+        {providers.map(({ id, configured }) => (
+          <div key={id} className="auth-oauth-entry">
+            <form
+              action={action}
+              aria-label={`Sign ${mode === 'login' ? 'in' : 'up'} with ${OAUTH_PROVIDERS[id].name}`}
+            >
+              <input type="hidden" name="provider" value={id} />
+              <input type="hidden" name="callbackUrl" value={callbackUrl} />
+              <input type="hidden" name="mode" value={mode} />
+              <OAuthSubmitButton provider={id} configured={configured} />
+            </form>
+            {configured ? null : (
+              <p className="auth-oauth-hint" id={`oauth-${id}-hint`}>
+                Not set up on this instance
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+      <div className="auth-divider" aria-hidden="true">
+        or use your email
+      </div>
+    </>
   );
 }
 
@@ -297,7 +358,7 @@ export function LoginForm({
   callbackUrl: string;
   loginAction: CredentialsAction;
   oauthAction?: OAuthAction;
-  oauthProviders?: OAuthProviderId[];
+  oauthProviders?: OAuthProviderAvailability[];
   oauthError?: string;
   successMessage?: string;
   /** A provider whose link is waiting for this password sign-in. */
@@ -341,21 +402,13 @@ export function LoginForm({
             ) : null}
           </div>
         ) : null}
-        {oauthAction && oauthProviders.length > 0 ? (
-          <>
-            <div className="auth-oauth-group">
-              {oauthProviders.map((provider) => (
-                <form key={provider} action={oauthAction} aria-label={`Sign in with ${OAUTH_PROVIDERS[provider].name}`}>
-                  <input type="hidden" name="provider" value={provider} />
-                  <input type="hidden" name="callbackUrl" value={callbackUrl} />
-                  <OAuthSubmitButton provider={provider} />
-                </form>
-              ))}
-            </div>
-            <div className="auth-divider" aria-hidden="true">
-              or use your email
-            </div>
-          </>
+        {oauthAction ? (
+          <OAuthProviderButtons
+            providers={oauthProviders}
+            action={oauthAction}
+            callbackUrl={callbackUrl}
+            mode="login"
+          />
         ) : null}
 
         <form
@@ -406,11 +459,13 @@ export function RegisterForm({
   registerAction,
   oauthAction,
   oauthProviders = [],
+  oauthError,
 }: {
   callbackUrl?: string;
   registerAction: CredentialsAction;
   oauthAction?: OAuthAction;
-  oauthProviders?: OAuthProviderId[];
+  oauthProviders?: OAuthProviderAvailability[];
+  oauthError?: string;
 }) {
   const [state, action, pending] = useActionState<AuthFormState, FormData>(
     registerAction,
@@ -433,21 +488,14 @@ export function RegisterForm({
         <CallbackNotice callbackUrl={callbackUrl} />
       </div>
       <div className="auth-form-stack">
-        {oauthAction && oauthProviders.length > 0 ? (
-          <>
-            <div className="auth-oauth-group">
-              {oauthProviders.map((provider) => (
-                <form key={provider} action={oauthAction} aria-label={`Sign up with ${OAUTH_PROVIDERS[provider].name}`}>
-                  <input type="hidden" name="provider" value={provider} />
-                  <input type="hidden" name="callbackUrl" value={callbackUrl} />
-                  <OAuthSubmitButton provider={provider} />
-                </form>
-              ))}
-            </div>
-            <div className="auth-divider" aria-hidden="true">
-              or use your email
-            </div>
-          </>
+        <AuthAlert message={oauthError} tone="error" />
+        {oauthAction ? (
+          <OAuthProviderButtons
+            providers={oauthProviders}
+            action={oauthAction}
+            callbackUrl={callbackUrl}
+            mode="register"
+          />
         ) : null}
         <form
           action={action}

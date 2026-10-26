@@ -21,6 +21,13 @@ export type OAuthProviderDescriptor = {
   purpose: string;
 };
 
+/**
+ * A provider and whether this instance can actually use it.
+ *
+ * Lives here, not in the server module, because the sign-in form is a client component.
+ */
+export type OAuthProviderAvailability = { id: OAuthProviderId; configured: boolean };
+
 export const OAUTH_PROVIDERS: Record<OAuthProviderId, OAuthProviderDescriptor> = {
   google: {
     id: 'google',
@@ -46,4 +53,21 @@ export function isOAuthProviderId(value: unknown): value is OAuthProviderId {
 
 export function oauthProviderName(id: OAuthProviderId): string {
   return OAUTH_PROVIDERS[id].name;
+}
+
+/**
+ * The environment variables a provider needs before this instance can use it.
+ *
+ * Both halves are needed: a client id without a secret (or the other way round) is a
+ * misconfiguration, not a half-enabled provider.
+ */
+export const OAUTH_PROVIDER_ENV: Record<OAuthProviderId, readonly [string, string]> = {
+  google: ['AUTH_GOOGLE_ID', 'AUTH_GOOGLE_SECRET'],
+  github: ['AUTH_GITHUB_ID', 'AUTH_GITHUB_SECRET'],
+};
+
+/** The one line that tells an operator what to set for a provider this instance does not have. */
+export function oauthProviderSetupHint(id: OAuthProviderId): string {
+  const [idVariable, secretVariable] = OAUTH_PROVIDER_ENV[id];
+  return `Add ${idVariable} and ${secretVariable} to the environment and restart.`;
 }

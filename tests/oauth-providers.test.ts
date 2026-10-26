@@ -40,6 +40,20 @@ describe('OAuth provider registry', () => {
     vi.unstubAllEnvs();
     vi.resetModules();
   });
+
+  it('offers every provider on the sign-in screen, configured or not', async () => {
+    vi.stubEnv('AUTH_GOOGLE_ID', '');
+    vi.stubEnv('AUTH_GOOGLE_SECRET', '');
+    vi.resetModules();
+    const module = await import('@/lib/oauth-server');
+    // The button is always there: a hidden button cannot be told apart from a missing feature.
+    expect(module.oauthProviderAvailability()).toEqual([
+      { id: 'google', configured: false },
+      { id: 'github', configured: false },
+    ]);
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
 });
 
 describe('Google identity rules', () => {

@@ -129,7 +129,11 @@ async function oauthStartAllowed(): Promise<boolean> {
  * says nothing about what to do. The URL it produced is inspected here so the person is sent
  * back to ARCH's own sign-in screen with a message they can act on instead.
  */
-async function startOAuthFlow(provider: OAuthProviderId, callbackUrl: string): Promise<void> {
+async function startOAuthFlow(
+  provider: OAuthProviderId,
+  callbackUrl: string,
+  returnTo: '/login' | '/register' = '/login',
+): Promise<void> {
   let target: string;
   try {
     // `redirect: false` returns the destination instead of throwing it, so it can be inspected.
@@ -138,13 +142,13 @@ async function startOAuthFlow(provider: OAuthProviderId, callbackUrl: string): P
     rethrowRedirect(error);
     // Auth.js already routes provider-side failures to /login?error=…; this catches the
     // failures that happen before the redirect leaves our server (misconfiguration, etc.).
-    if (error instanceof AuthError) redirect(`/login?error=${provider}&provider=${provider}`);
+    if (error instanceof AuthError) redirect(`${returnTo}?error=${provider}&provider=${provider}`);
     throw error;
   }
   if (isAuthJsInternalUrl(target)) {
     // The provider could not be reached, or its credentials are wrong.
     await clearPendingOAuthLink();
-    redirect(`/login?error=provider_unavailable&provider=${provider}`);
+    redirect(`${returnTo}?error=provider_unavailable&provider=${provider}`);
   }
   redirect(target);
 }
@@ -238,12 +242,17 @@ export async function oauthSignInAction(formData: FormData): Promise<void> {
   const provider = parseProvider(formData.get('provider'));
   if (!provider) redirect('/login');
   const callbackUrl = safeAuthCallback(formData.get('callbackUrl'));
-  if (!isOAuthProviderEnabled(provider)) redirect('/login');
+  // The screen the person came from, so the answer lands where they asked the question.
+  const returnTo = formData.get('mode') === 'register' ? '/register' : '/login';
+  if (!isOAuthProviderEnabled(provider)) {
+    // The button is always offered; an instance without credentials says exactly what to set.
+    redirect(`${returnTo}?error=provider_not_configured&provider=${provider}`);
+  }
   if (!(await oauthStartAllowed())) {
-    redirect(`/login?error=rate&provider=${provider}`);
+    redirect(`${returnTo}?error=rate&provider=${provider}`);
   }
   await writePendingOAuthLink({ provider, callbackUrl, reason: 'attempt' });
-  await startOAuthFlow(provider, callbackUrl);
+  await startOAuthFlow(provider, callbackUrl, returnTo);
 }
 
 /**

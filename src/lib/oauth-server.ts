@@ -4,7 +4,7 @@ import { safeAuthCallback } from './auth-redirect';
 import { env, isProduction } from './env';
 import { githubProvider } from './github-oauth';
 import { googleProvider, isVerifiedGoogleProfile } from './google-oauth';
-import { isOAuthProviderId, OAUTH_PROVIDER_IDS, type OAuthProviderId } from './oauth';
+import { isOAuthProviderId, OAUTH_PROVIDER_IDS, type OAuthProviderAvailability, type OAuthProviderId } from './oauth';
 
 /**
  * Server-side half of the OAuth engine.
@@ -48,6 +48,20 @@ export function isOAuthProviderEnabled(id: OAuthProviderId): boolean {
 /** The providers this instance may offer, in the order they are shown on the sign-in screen. */
 export function enabledOAuthProviders(): OAuthProviderId[] {
   return OAUTH_PROVIDER_IDS.filter(isOAuthProviderEnabled);
+}
+
+/** A provider and whether this instance can actually use it. */
+export type { OAuthProviderAvailability } from './oauth';
+
+/**
+ * Every provider ARCH knows, and whether this instance has credentials for it.
+ *
+ * The sign-in screen offers all of them either way: a person who sees no "Continue with Google"
+ * cannot tell a broken feature from a missing environment file, so the button is always there
+ * and the click explains what an unconfigured instance would need.
+ */
+export function oauthProviderAvailability(): OAuthProviderAvailability[] {
+  return OAUTH_PROVIDER_IDS.map((id) => ({ id, configured: isOAuthProviderEnabled(id) }));
 }
 
 /**
