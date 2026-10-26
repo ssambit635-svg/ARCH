@@ -56,6 +56,16 @@ Rules for this file:
   event, IP address, user agent — no token, secret or password). If the trail cannot be written,
   the sign-in still succeeds.
 
+### Fixed — a sign-in that starts without depending on a third-party lookup
+
+- Starting a Google sign-in no longer waits for Google to answer a metadata request first. The
+  authorization endpoint is named in ARCH itself, so the "Continue with Google" button sends the
+  person to Google immediately, even when that lookup is slow or briefly unavailable. The
+  returned identity is still verified against Google's own signing keys.
+- New setting `AUTH_URL` pins the public address the OAuth callback is built from. Set it in
+  production when ARCH runs behind a proxy, so the callback address always matches the one
+  registered at the provider.
+
 ### Fixed — the public status page on phones and for low-vision readers
 
 - The customer-facing status page no longer scrolls sideways on a phone. The 90-day uptime strip

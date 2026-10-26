@@ -49,8 +49,23 @@ export function googleProvider(clientId: string, clientSecret: string) {
      * a callback that was not initiated here is refused. Both are cheap; both are used.
      */
     checks: ['pkce', 'state'],
+    /**
+     * The authorization endpoint is written down instead of being looked up.
+     *
+     * Left to itself, Auth.js fetches Google's OpenID Connect discovery document every time
+     * somebody starts a sign-in — one more network call that can be slow, rate limited, or
+     * simply unavailable, and the sign-in fails before it has even started. Google's endpoint
+     * is stable and documented, so it is named here.
+     *
+     * The ID token is still verified against Google's real signing keys (JWKS) on the way
+     * back, and the token exchange still happens against Google itself — naming the endpoint
+     * changes nothing about what is trusted.
+     */
     authorization: {
+      url: 'https://accounts.google.com/o/oauth2/v2/auth',
       params: {
+        // Only what ARCH actually needs: who the person is, and whether Google verified it.
+        scope: 'openid profile email',
         // People often own more than one Google account: let them choose instead of guessing.
         prompt: 'select_account',
       },

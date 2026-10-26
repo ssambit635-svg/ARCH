@@ -47,6 +47,45 @@ Restart the server. "Continue with Google" / "Continue with GitHub" appear on `/
 > host for the redirect URI and reconfigure the provider when that host changes. A stable staging
 > domain is better than a rotating preview host.
 
+### The consent screen (this is the step people miss)
+
+Google calls the first screen "the OAuth consent screen". Until it is filled in, the sign-in
+either refuses everybody ("Access blocked — this app is still in testing") or asks for scopes the
+app never uses.
+
+1. **Google Auth Platform → Audience** (older console: *APIs & Services → OAuth consent screen*).
+2. **User type: External.** App name, support email and developer contact email.
+3. **Test users → Add users → your own Google account.** In *Testing* mode only these accounts
+   may sign in. Without this, the sign-in fails before it starts.
+4. **Data Access:** keep the default scopes (`email`, `profile`, `openid`) — those are exactly the
+   ones ARCH asks for, and nothing more.
+5. For a public deployment, switch the audience to **Production** and complete Google's
+   verification. A personal/dev client is fine for a private instance.
+
+ARCH only ever asks Google for `openid profile email`, never for Drive, Calendar or Gmail.
+
+### Production
+
+| What | Value |
+|---|---|
+| `APP_URL` | `https://arch.example.com` — links in emails and invitations |
+| `AUTH_URL` | `https://arch.example.com` — the origin the OAuth callback is built from |
+| Redirect URI at the provider | `https://arch.example.com/api/auth/callback/google` |
+
+`AUTH_URL` is what makes the callback URL predictable behind a proxy. Without it Auth.js uses
+whatever host the browser sent, which is right on localhost but can be rewritten in production —
+and a callback URL that does not match the registered one is refused by the provider.
+
+The server must be able to reach the provider itself:
+
+| Provider | Hosts the server calls |
+|---|---|
+| Google | `accounts.google.com` (discovery), `oauth2.googleapis.com` (token), `www.googleapis.com` (signing keys) |
+| GitHub | `github.com` (token + profile) |
+
+If it cannot, ARCH says "that provider could not be reached" and changes nothing — it never
+falls back to a weaker sign-in.
+
 ## 2. How the flow behaves
 
 | Situation | What happens |
@@ -103,7 +142,11 @@ secret or password is ever written there. The last five events are visible under
 | Symptom | Cause |
 |---|---|
 | The button does not appear | One half of the credentials is missing, the value is a placeholder, or the server was not restarted. |
-| `redirect_uri_mismatch` | The redirect URI in the provider console does not match the URL the browser actually used. |
+| "Access blocked — this app is still in testing" (Google) | The Google console is in *Testing* mode and your account is not listed under **Audience → Test users**. |
+| "Google hasn't verified this app" | Expected for a personal/dev client. It still works for accounts listed as test users. |
+| `redirect_uri_mismatch` | The redirect URI in the provider console does not match the URL the browser actually used. Check `AUTH_URL` and the host in the address bar. |
+| "could not be reached" | The server cannot reach the provider. Check the outbound firewall for `accounts.google.com`, `oauth2.googleapis.com`, `www.googleapis.com`. |
+| `invalid_client` | The client secret is wrong or was rotated without updating the server environment. |
 | "would not let this account in" | The provider account has no verified email address. |
 | "An ARCH account already uses that email address" | Expected. Sign in with the password; ARCH links the provider right after. |
 | The person lands on `/api/auth/signin` | A provider handed back an identity ARCH could not verify. The route handler rewrites this to `/login` with a readable message; if you still see it, the Auth.js callback route was replaced. |

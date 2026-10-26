@@ -70,6 +70,16 @@ describe('Google identity rules', () => {
     const provider = googleProvider('client-id', 'client-secret');
     expect(provider.options?.authorization?.params?.prompt).toBe('select_account');
     expect(provider.options?.authorization?.params?.access_type).toBeUndefined();
+    expect(provider.options?.authorization?.params?.scope).toBe('openid profile email');
+  });
+
+  it('names Google’s authorization endpoint, so starting a sign-in needs no lookup', () => {
+    const provider = googleProvider('client-id', 'client-secret');
+    // Without an explicit endpoint, Auth.js fetches Google's discovery document on every
+    // sign-in — one more request that can be slow or unavailable, and the sign-in dies before
+    // it has even started.
+    expect(provider.options?.authorization?.url).toBe('https://accounts.google.com/o/oauth2/v2/auth');
+    expect(provider.issuer).toBe('https://accounts.google.com');
   });
 });
 
