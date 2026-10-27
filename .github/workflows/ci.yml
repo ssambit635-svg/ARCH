@@ -2,12 +2,20 @@ name: CI
 on:
   push:
   pull_request:
+
+# Least privilege: the workflow only needs to read the repo. Prevents a compromised
+# dependency or step from pushing code, creating releases, or editing issues.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      # Actions are pinned to full commit SHAs (supply-chain hardening). The tag comment
+      # records the version. Dependabot (github-actions ecosystem) can bump these pins.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
           node-version: '22'
           cache: npm
@@ -28,7 +36,7 @@ jobs:
           APP_URL: http://localhost:3000
       - run: npm test
       - run: npm audit --omit=dev --audit-level=high
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.12'
       - run: pip install -e clients/python pytest && pytest clients/python/tests
