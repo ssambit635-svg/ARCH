@@ -167,6 +167,7 @@ model User {
   incidentEvents    IncidentEvent[]
   auditLogs         AuditLog[]
   notifications     Notification[]
+  welcomeEmail      WelcomeEmail?
   invitationsSent   Invitation[]    @relation("InvitationInviter")
   aiSuggestionsCreated  AiSuggestion[] @relation("AiSuggestionCreator")
   aiSuggestionsReviewed AiSuggestion[] @relation("AiSuggestionReviewer")
@@ -618,6 +619,28 @@ model Notification {
   @@index([status, createdAt])
   @@index([organizationId, createdAt])
   @@map("notifications")
+}
+
+/// Account-scoped transactional outbox, not tenant-owned: signup can precede membership.
+/// One welcome per user. No public listing/replay endpoint; deletion cascades with the user.
+model WelcomeEmail {
+  userId        String             @id
+  toEmail       String
+  subject       String
+  body          String
+  html          String
+  status        NotificationStatus @default(PENDING)
+  attempts      Int                @default(0)
+  lastError     String?
+  nextAttemptAt DateTime           @default(now())
+  sentAt        DateTime?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@map("welcome_emails")
 }
 
 // ---------- ARCH Copilot (V2) ----------

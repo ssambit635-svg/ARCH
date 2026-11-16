@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Auth, type AuthConfig } from '@auth/core';
 import { encode } from '@auth/core/jwt';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { env } from '@/lib/env';
 import { authAdapter } from '@/lib/auth-adapter';
 import { githubProvider } from '@/lib/github-oauth';
 import { db, resetDatabase } from './helpers/db';
@@ -94,8 +95,9 @@ async function oauthRoundTrip(params: { email: string; githubId: number; verifie
 }
 
 describe('GitHub OAuth end-to-end (simulated GitHub, real DB and Auth.js)', () => {
-  beforeEach(resetDatabase);
-  afterEach(() => vi.unstubAllGlobals());
+  const previousWelcomeFlag = env.FEATURE_WELCOME_EMAIL;
+  beforeEach(async () => { await resetDatabase(); env.FEATURE_WELCOME_EMAIL = true; });
+  afterEach(() => { vi.unstubAllGlobals(); env.FEATURE_WELCOME_EMAIL = previousWelcomeFlag; });
 
   it('creates a verified new user, stores only the provider id, and issues a local-user JWT', async () => {
     const email = `oauth-new-${randomUUID()}@example.com`;
@@ -104,12 +106,15 @@ describe('GitHub OAuth end-to-end (simulated GitHub, real DB and Auth.js)', () =
     expect(location).toBe(`${origin}/dashboard`);
     const user = await db.user.findUniqueOrThrow({ where: { email }, include: { accounts: true } });
     expect(user.emailVerified).not.toBeNull();
+    expect(await db.welcomeEmail.count({ where: { userId: user.id } })).toBe(1);
     expect(session.user.id).toBe(user.id);
     expect(user.accounts).toHaveLength(1);
     expect(user.accounts[0]?.providerAccountId).toBe(String(githubId));
     expect(user.accounts[0]?.access_token).toBeNull();
     expect(user.accounts[0]?.refresh_token).toBeNull();
     expect(fetchMock).toHaveBeenCalledWith('https://api.github.com/user/emails', expect.anything());
+    await oauthRoundTrip({ email, githubId });
+    expect(await db.welcomeEmail.count()).toBe(1);
   });
 
   it('refuses a matching password email unless the owner explicitly links while signed in', async () => {
@@ -127,6 +132,7 @@ describe('GitHub OAuth end-to-end (simulated GitHub, real DB and Auth.js)', () =
 
     const subsequent = await oauthRoundTrip({ email, githubId });
     expect(subsequent.session.user.id).toBe(user.id);
+    expect(await db.welcomeEmail.count()).toBe(0);
   });
 
   it('rejects an unverified GitHub email even if it is public on the profile', async () => {
@@ -134,5 +140,6 @@ describe('GitHub OAuth end-to-end (simulated GitHub, real DB and Auth.js)', () =
     const result = await oauthRoundTrip({ email, githubId: 800003, verified: false });
     expect(result.location).not.toBe(`${origin}/dashboard`);
     expect(await db.user.findUnique({ where: { email } })).toBeNull();
+    expect(await db.welcomeEmail.count()).toBe(0);
   });
 });

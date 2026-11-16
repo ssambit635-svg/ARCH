@@ -15,6 +15,25 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Added — one-time signup welcome email
+
+- New email/password, Google, and GitHub accounts can receive a branded HTML welcome with the
+  ARCH logo, a workspace link, and a plain-text fallback. Returning sign-ins/provider links do
+  not enqueue another welcome. No email API call is made during signup.
+- Welcome emails are opt-in (`FEATURE_WELCOME_EMAIL=false` by default). Account creation and
+  the account-scoped welcome outbox commit together, including signup before organization
+  membership. A unique user key prevents duplicate enqueue; deleting an account deletes its row.
+- The worker delivers welcome mail with per-row locks, stable Resend idempotency keys, and up
+  to three attempts with delayed retry. The flag also pauses pending welcome delivery. This is
+  not OTP/email verification and does not automatically send to existing accounts.
+- `npm run email:check -- --to you@example.com --welcome` sends an explicit template test;
+  without `--to`, nothing is sent. Domain verification, a running worker, and provider allowance
+  are still needed for real recipients. See `docs/engineering/WELCOME-EMAIL-SETUP.md`.
+- Deployment: apply the new welcome-email migration before enabling the flag. On Render Free
+  without Shell/pre-deploy support, `npm run db:migrate && npm start` can be used as the start
+  command. This release does not provision any domain, paid worker, or cloud resource.
+
+
 ### Fixed — notification delivery and deployment safety
 
 - Concurrent notification workers now lock each pending row during send/acknowledgement rather

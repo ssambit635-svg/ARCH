@@ -61,3 +61,6 @@ services:
         sync: false
       - key: EMAIL_FROM
         sync: false
+      # Opt-in on BOTH web and worker after sender verification (default is off).
+      - key: FEATURE_WELCOME_EMAIL
+        sync: false

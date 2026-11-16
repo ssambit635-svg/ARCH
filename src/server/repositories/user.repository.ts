@@ -13,6 +13,10 @@ export const userRepository = {
     return client.user.create({ data: { ...data, email: data.email.toLowerCase() } });
   },
 
+  createOAuth(data: { email: string; name?: string | null; image?: string | null; emailVerified?: Date | null }, client: DbClient) {
+    return client.user.create({ data: { ...data, email: data.email.trim().toLowerCase() } });
+  },
+
   count(client: DbClient = db) {
     return client.user.count();
   },

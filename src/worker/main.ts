@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { dispatchWelcomeEmails } from '@/server/services/welcome-email.service';
 import { dispatchPendingNotifications } from '@/server/services/notification.service';
 import { processTrainingJobs, retrainStaleModels } from '@/server/services/archModel.service';
 import { getEmailAdapter } from '@/server/adapters/email';
@@ -51,7 +52,11 @@ async function tick(): Promise<number> {
   if (result.processed > 0) {
     log(`processed=${result.processed} sent=${result.sent} retried=${result.retried} failed=${result.failed}`);
   }
-  return result.processed;
+  const welcome = await dispatchWelcomeEmails({ limit: BATCH_SIZE, shouldStop: () => stopping });
+  if (welcome.processed > 0) {
+    log(`welcome processed=${welcome.processed} sent=${welcome.sent} retried=${welcome.retried} failed=${welcome.failed}`);
+  }
+  return result.processed + welcome.processed;
 }
 
 async function maybeRetrainModels(): Promise<void> {

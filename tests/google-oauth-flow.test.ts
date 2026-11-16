@@ -2,6 +2,7 @@ import { createSign, generateKeyPairSync, randomUUID } from 'node:crypto';
 import { Auth, type AuthConfig } from '@auth/core';
 import { encode } from '@auth/core/jwt';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { env } from '@/lib/env';
 import { authAdapter } from '@/lib/auth-adapter';
 import { googleProvider } from '@/lib/google-oauth';
 import { isVerifiedOAuthIdentity } from '@/lib/oauth-server';
@@ -166,8 +167,9 @@ async function oauthRoundTrip(params: {
 }
 
 describe('Google OAuth end-to-end (simulated Google, real DB and Auth.js)', () => {
-  beforeEach(resetDatabase);
-  afterEach(() => vi.unstubAllGlobals());
+  const previousWelcomeFlag = env.FEATURE_WELCOME_EMAIL;
+  beforeEach(async () => { await resetDatabase(); env.FEATURE_WELCOME_EMAIL = true; });
+  afterEach(() => { vi.unstubAllGlobals(); env.FEATURE_WELCOME_EMAIL = previousWelcomeFlag; });
 
   it('creates a verified new user, stores only the provider id, and issues a local-user JWT', async () => {
     const email = `google-new-${randomUUID()}@example.com`;
@@ -175,6 +177,7 @@ describe('Google OAuth end-to-end (simulated Google, real DB and Auth.js)', () =
     expect(location).toBe(`${origin}/dashboard`);
     const user = await db.user.findUniqueOrThrow({ where: { email }, include: { accounts: true } });
     expect(user.emailVerified).not.toBeNull();
+    expect(await db.welcomeEmail.count({ where: { userId: user.id } })).toBe(1);
     expect(session.user.id).toBe(user.id);
     expect(user.accounts).toHaveLength(1);
     expect(user.accounts[0]?.provider).toBe('google');
@@ -183,6 +186,8 @@ describe('Google OAuth end-to-end (simulated Google, real DB and Auth.js)', () =
     expect(user.accounts[0]?.access_token).toBeNull();
     expect(user.accounts[0]?.refresh_token).toBeNull();
     expect(user.accounts[0]?.id_token).toBeNull();
+    await oauthRoundTrip({ email, subject: 'google-1001' });
+    expect(await db.welcomeEmail.count()).toBe(1);
   });
 
   it('uses PKCE and a state parameter, and never asks Google for more than sign-in', async () => {
@@ -201,6 +206,7 @@ describe('Google OAuth end-to-end (simulated Google, real DB and Auth.js)', () =
     expect(result.location).not.toBe(`${origin}/dashboard`);
     expect(result.location).toContain('error=AccessDenied');
     expect(await db.user.findUnique({ where: { email } })).toBeNull();
+    expect(await db.welcomeEmail.count()).toBe(0);
     expect(await db.account.count({ where: { provider: 'google' } })).toBe(0);
   });
 
@@ -219,5 +225,6 @@ describe('Google OAuth end-to-end (simulated Google, real DB and Auth.js)', () =
 
     const subsequent = await oauthRoundTrip({ email, subject: 'google-2002' });
     expect(subsequent.session.user.id).toBe(user.id);
+    expect(await db.welcomeEmail.count()).toBe(0);
   });
 });

@@ -3,6 +3,10 @@
 ARCH remains early access. These changes harden delivery; they do not certify production
 readiness, uptime, security, or deliverability. No cloud resources are provisioned by this guide.
 
+For first-signup HTML welcome emails and step-by-step domain verification, see
+[Welcome email setup](WELCOME-EMAIL-SETUP.md). Welcome is opt-in and requires migrations plus a
+running worker; it is not login OTP or email verification.
+
 ## What changed
 
 - Release migration processes serialize with a PostgreSQL advisory lock, with bounded connection

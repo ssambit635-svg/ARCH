@@ -34,6 +34,7 @@ export default defineConfig({
       APP_URL: 'http://localhost:3000',
       LOG_LEVEL: 'error',
       EMAIL_PROVIDER: '',
+      FEATURE_WELCOME_EMAIL: 'false',
       // Copilot always runs against the mock provider in tests; the short timeout keeps the
       // timeout/retry test fast.
       AI_PROVIDER: 'mock',

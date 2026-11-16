@@ -5,6 +5,7 @@ import { AppError } from '@/lib/errors';
 import { userRepository } from '../repositories/user.repository';
 import { organizationRepository } from '../repositories/organization.repository';
 import { uniqueOrganizationSlug } from './slug.service';
+import { enqueueWelcomeEmail } from './welcome-email.service';
 import { writeAudit } from '@/lib/audit';
 
 /**
@@ -55,6 +56,7 @@ async function createAccount(params: { email: string; name: string | null; passw
   const { email, name, passwordHash, organizationName } = params;
   return db.$transaction(async (tx) => {
     const user = await userRepository.create({ email, name, passwordHash }, tx);
+    await enqueueWelcomeEmail(user, tx);
     if (!organizationName) return { user, organization: null };
 
     const slug = await uniqueOrganizationSlug(organizationName, tx);
@@ -78,4 +80,13 @@ async function createAccount(params: { email: string; name: string | null; passw
 
 export async function userExists(email: string) {
   return Boolean(await userRepository.findByEmail(email));
+}
+
+/** Auth.js adapter creation only: an existing login/link never invokes this path. */
+export function createOAuthUser(data: { email: string; name?: string | null; image?: string | null; emailVerified?: Date | null }) {
+  return db.$transaction(async (tx) => {
+    const user = await userRepository.createOAuth(data, tx);
+    await enqueueWelcomeEmail(user, tx);
+    return user;
+  });
 }

@@ -98,3 +98,6 @@ See [Email and operations](EMAIL-AND-OPERATIONS.md) for the free-tier Resend tes
 requirements, the optional **paid** `render-worker.yaml` blueprint, and release/backup checks.
 Production workers now refuse console email instead of silently marking undelivered messages SENT.
 Changes in Arena must reach your deployed Git branch; they do not modify a Windows ZIP download.
+
+For one-time signup welcome emails (off by default), free-tier template tests, and DNS/domain
+verification instructions, see [Welcome email setup](WELCOME-EMAIL-SETUP.md).

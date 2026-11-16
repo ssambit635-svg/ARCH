@@ -8,7 +8,7 @@ import { validateEmailConfig } from '@/lib/email-config';
  * lifecycle, retries and audit trail are exercised exactly as in production, nothing leaves the
  * machine. Set EMAIL_PROVIDER=resend and EMAIL_API_KEY to send for real.
  */
-export type EmailMessage = { to: string; subject: string; body: string; idempotencyKey?: string };
+export type EmailMessage = { to: string; subject: string; body: string; html?: string; idempotencyKey?: string };
 
 export interface EmailAdapter {
   readonly name: string;
@@ -50,7 +50,7 @@ export class ResendEmailAdapter implements EmailAdapter {
           'Content-Type': 'application/json',
           ...(message.idempotencyKey ? { 'Idempotency-Key': message.idempotencyKey } : {}),
         },
-        body: JSON.stringify({ from: this.from, to: [message.to], subject: message.subject, text: message.body }),
+        body: JSON.stringify({ from: this.from, to: [message.to], subject: message.subject, text: message.body, ...(message.html ? { html: message.html } : {}) }),
         signal: AbortSignal.timeout(15_000),
       });
     } catch (error) {

@@ -57,6 +57,8 @@ const envSchema = z.object({
 
   WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS: z.coerce.number().int().positive().default(300),
 
+  // Opt in only after verifying the sender/domain and arranging worker delivery.
+  FEATURE_WELCOME_EMAIL: booleanish.default(false),
   EMAIL_PROVIDER: optionalTrimmed(),
   EMAIL_API_KEY: optionalTrimmed(),
   EMAIL_FROM: z.string().trim().default('ARCH <notifications@localhost>'),
