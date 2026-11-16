@@ -14,6 +14,7 @@
     "build:deploy": "node scripts/deploy-build.mjs",
     "start": "next start --hostname 0.0.0.0",
     "dev:all": "node scripts/dev.mjs",
+    "email:check": "tsx scripts/email-check.ts",
     "worker": "tsx src/worker/main.ts",
     "setup": "node scripts/setup.mjs",
     "oauth:google": "node scripts/oauth-google.mjs",

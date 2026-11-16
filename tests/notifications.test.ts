@@ -36,6 +36,46 @@ describe('notification outbox', () => {
     await resetDatabase();
   });
 
+  it('leaves pending notifications untouched when shutdown is requested', async () => {
+    const tenant = await tenantWithResponder();
+    await db.notification.create({ data: {
+      organizationId: tenant.organization.id, recipientId: tenant.responder.id,
+      reason: 'MEMBER_INVITED', subject: 'Shutdown test', body: 'Test',
+    } });
+    const adapter = fakeAdapter('ok');
+    const result = await dispatchPendingNotifications({ adapter, shouldStop: () => true });
+    expect(result.processed).toBe(0);
+    expect(adapter.sent).toHaveLength(0);
+    expect((await db.notification.findFirstOrThrow()).attempts).toBe(0);
+  });
+
+  it('does not send the same pending row from overlapping workers', async () => {
+    const tenant = await tenantWithResponder();
+    await db.notification.create({ data: {
+      organizationId: tenant.organization.id, recipientId: tenant.responder.id,
+      reason: 'MEMBER_INVITED', subject: 'Concurrency test', body: 'Test',
+    } });
+    let started!: () => void;
+    const sending = new Promise<void>((resolve) => { started = resolve; });
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const sent: EmailMessage[] = [];
+    const adapter: EmailAdapter = { name: 'gated', async send(message) {
+      sent.push(message);
+      started();
+      await gate;
+    } };
+    const first = dispatchPendingNotifications({ adapter });
+    await sending;
+    try {
+      const second = await dispatchPendingNotifications({ adapter });
+      expect(second.processed).toBe(0);
+      expect(sent).toHaveLength(1);
+      expect(sent[0]?.idempotencyKey).toMatch(/^arch-notification\//);
+    } finally { release(); await first; }
+    expect((await db.notification.findFirstOrThrow()).status).toBe('SENT');
+  });
+
   it('marks a notification SENT and records the recipient', async () => {
     const tenant = await tenantWithResponder();
     await createIncident({

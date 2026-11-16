@@ -182,25 +182,37 @@ export type DispatchResult = { processed: number; sent: number; retried: number;
  * Drain the outbox. Called by the worker process (`npm run worker`) — never by a request handler.
  * A failure retries up to 3 attempts, then the row is marked FAILED so operators can see it.
  */
-export async function dispatchPendingNotifications(options: { limit?: number; adapter?: EmailAdapter } = {}): Promise<DispatchResult> {
+export async function dispatchPendingNotifications(options: { limit?: number; adapter?: EmailAdapter; shouldStop?: () => boolean } = {}): Promise<DispatchResult> {
   const adapter = options.adapter ?? getEmailAdapter();
   const pending = await notificationRepository.listPending(options.limit ?? 20);
   const result: DispatchResult = { processed: 0, sent: 0, retried: 0, failed: 0 };
 
   for (const notification of pending) {
-    result.processed += 1;
-    try {
-      await adapter.send({ to: notification.recipient.email, subject: notification.subject, body: notification.body });
-      await notificationRepository.markSent(notification.id);
-      result.sent += 1;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      const attemptsAfterThis = notification.attempts + 1;
-      const retryable = isRetryableEmailError(error) && attemptsAfterThis < 3;
-      await notificationRepository.markFailed(notification.id, message, { retryable });
-      if (retryable) result.retried += 1;
-      else result.failed += 1;
-      console.warn(`[notifications] delivery failed (${adapter.name}) attempt=${attemptsAfterThis} retry=${retryable}: ${message}`);
+    if (options.shouldStop?.()) break;
+    const outcome = await notificationRepository.withPendingLock(notification.id, async (client, attempts) => {
+      try {
+        await adapter.send({
+          to: notification.recipient.email,
+          subject: notification.subject,
+          body: notification.body,
+          idempotencyKey: `arch-notification/${notification.id}`,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        const attemptsAfterThis = attempts + 1;
+        const retryable = isRetryableEmailError(error) && attemptsAfterThis < 3;
+        await notificationRepository.markFailed(notification.id, message, { retryable }, client);
+        console.warn(`[notifications] delivery failed (${adapter.name}) attempt=${attemptsAfterThis} retry=${retryable}`);
+        return retryable ? 'retried' as const : 'failed' as const;
+      }
+      // Do not treat a DB acknowledgement failure as a provider rejection: roll back
+      // and resend later with the same provider idempotency key.
+      await notificationRepository.markSent(notification.id, client);
+      return 'sent' as const;
+    });
+    if (outcome) {
+      result.processed += 1;
+      result[outcome] += 1;
     }
   }
 

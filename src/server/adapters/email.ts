@@ -1,4 +1,5 @@
 import { env } from '@/lib/env';
+import { validateEmailConfig } from '@/lib/email-config';
 
 /**
  * Email adapter.
@@ -7,7 +8,7 @@ import { env } from '@/lib/env';
  * lifecycle, retries and audit trail are exercised exactly as in production, nothing leaves the
  * machine. Set EMAIL_PROVIDER=resend and EMAIL_API_KEY to send for real.
  */
-export type EmailMessage = { to: string; subject: string; body: string };
+export type EmailMessage = { to: string; subject: string; body: string; idempotencyKey?: string };
 
 export interface EmailAdapter {
   readonly name: string;
@@ -44,7 +45,11 @@ export class ResendEmailAdapter implements EmailAdapter {
     try {
       response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
-        headers: { Authorization: `Bearer ${this.apiKey}`, 'Content-Type': 'application/json' },
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+          ...(message.idempotencyKey ? { 'Idempotency-Key': message.idempotencyKey } : {}),
+        },
         body: JSON.stringify({ from: this.from, to: [message.to], subject: message.subject, text: message.body }),
         signal: AbortSignal.timeout(15_000),
       });
@@ -55,33 +60,28 @@ export class ResendEmailAdapter implements EmailAdapter {
       throw wrapped;
     }
 
+    // We only need the HTTP status; discard bodies without retaining provider/customer data.
+    await response.body?.cancel().catch(() => undefined);
     if (!response.ok) {
-      const detail = redactProviderError(await response.text().catch(() => ''));
       // 429/5xx are worth retrying; 4xx other than 429 are permanent.
       const retryable = response.status === 429 || response.status >= 500;
-      const error = new Error(`Resend responded ${response.status}: ${detail.slice(0, 300)}`);
+      const error = new Error(`Resend delivery failed (HTTP ${response.status})`);
       (error as Error & { retryable?: boolean }).retryable = retryable;
       throw error;
     }
   }
 }
 
-function redactProviderError(text: string): string {
-  return text.replace(/Bearer\s+\S+/gi, 'Bearer [redacted]').replace(/re_[A-Za-z0-9]{8,}/g, '[redacted-key]');
-}
-
 export function getEmailAdapter(): EmailAdapter {
+  validateEmailConfig(env);
   const provider = env.EMAIL_PROVIDER?.trim().toLowerCase();
-  if (!provider || provider === 'console') return new ConsoleEmailAdapter();
-  if (provider === 'resend') {
-    if (!env.EMAIL_API_KEY?.trim()) {
-      console.warn('[email] EMAIL_PROVIDER=resend but EMAIL_API_KEY is empty — falling back to the console adapter.');
-      return new ConsoleEmailAdapter();
+  if (!provider || provider === 'console') {
+    if (env.NODE_ENV === 'production') {
+      throw new Error('Production email delivery is disabled. Configure EMAIL_PROVIDER=resend, EMAIL_API_KEY and EMAIL_FROM before starting the notification worker.');
     }
-    return new ResendEmailAdapter(env.EMAIL_API_KEY, env.EMAIL_FROM);
+    return new ConsoleEmailAdapter();
   }
-  console.warn(`[email] Unknown EMAIL_PROVIDER="${env.EMAIL_PROVIDER}" — falling back to the console adapter.`);
-  return new ConsoleEmailAdapter();
+  return new ResendEmailAdapter(env.EMAIL_API_KEY!, env.EMAIL_FROM);
 }
 
 export function isRetryableEmailError(error: unknown): boolean {

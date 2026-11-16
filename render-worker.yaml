@@ -1,0 +1,35 @@
+# OPTIONAL blueprint for a SEPARATE PAID Render Background Worker.
+# Do not apply unless you accept Render's worker charges. Free email != free compute.
+# Copy the SAME database, app URL, and two auth secrets as the existing web service.
+# Keep email credentials in Render's secret manager, never in this file.
+services:
+  - type: worker
+    name: arch-worker
+    runtime: node
+    region: singapore
+    plan: starter
+    branch: main
+    autoDeployTrigger: commit
+    buildCommand: npm ci --include=dev && npm run db:generate
+    startCommand: npm run worker
+    envVars:
+      - key: NODE_VERSION
+        value: 22.22.3
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false
+      - key: APP_URL
+        sync: false
+      - key: AUTH_SECRET
+        sync: false
+      - key: AUTH_SECRET_WEBHOOK
+        sync: false
+      - key: EMAIL_PROVIDER
+        value: resend
+      - key: EMAIL_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: ARCH_MODEL_RETRAIN_MINUTES
+        value: '60'

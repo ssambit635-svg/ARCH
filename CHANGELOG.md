@@ -15,6 +15,28 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Fixed — notification delivery and deployment safety
+
+- Concurrent notification workers now lock each pending row during send/acknowledgement rather
+  than sending the same row in parallel. Resend retries carry a stable idempotency key; delivery
+  remains at-least-once, not an exactly-once guarantee.
+- Unknown email providers, missing Resend API keys and invalid sender addresses fail clearly.
+  Production workers refuse console delivery instead of recording undelivered email as SENT.
+  Web-only deployments can still leave email disabled; configure it before starting the worker.
+- Worker shutdown finishes the active notification and stops claiming more before disconnecting.
+  Invalid polling/batch settings are rejected rather than creating a tight loop.
+- Security (low): provider error bodies are no longer stored/logged by the Resend adapter, and
+  notification failure logs omit error text, reducing accidental disclosure of recipient content.
+- New embedded development clusters explicitly use UTF8, preventing Windows locale defaults
+  from breaking Unicode migrations. The Windows database stop command locates the correct package
+  and executable. Existing clusters are not modified, reset or deleted.
+- Release migrations now serialize with a database advisory lock, close connections on failure,
+  enforce connection/lock timeouts, and refuse `--reset` when NODE_ENV is production.
+- Added `npm run email:check` (no send by default), an optional paid Render worker blueprint,
+  a pre-deploy migration command, and a free-tier email/operations handoff guide at
+  `docs/engineering/EMAIL-AND-OPERATIONS.md`. Historical migration checksums are preserved.
+
+
 ### Added — sign in with Google and GitHub
 
 - ARCH can now sign a person in with a **verified Google account** or a **verified GitHub
