@@ -38,6 +38,13 @@ describe('Resend delivery', () => {
     expect(init.headers).toMatchObject({ 'Idempotency-Key': message.idempotencyKey });
     expect(JSON.parse(init.body as string)).not.toHaveProperty('idempotencyKey');
   });
+  it('includes both HTML and plain text when provided', async () => {
+    const fetcher = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }));
+    await adapter.send({ ...message, html: '<h1>Welcome</h1>' });
+    const body = JSON.parse(fetcher.mock.calls[0]![1]!.body as string);
+    expect(body.html).toBe('<h1>Welcome</h1>');
+    expect(body.text).toBe(message.body);
+  });
   it.each([[429, true], [503, true], [400, false], [401, false]])('classifies HTTP %s without logging provider content', async (status, retryable) => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('private-recipient@example.com secret-token', { status: status as number }));
     const error = await adapter.send(message).catch((error: unknown) => error);

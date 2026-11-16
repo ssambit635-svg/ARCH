@@ -33,3 +33,6 @@ services:
         sync: false
       - key: ARCH_MODEL_RETRAIN_MINUTES
         value: '60'
+      # Must match the web setting. Blank/unset keeps welcome emails disabled.
+      - key: FEATURE_WELCOME_EMAIL
+        sync: false

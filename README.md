@@ -257,3 +257,6 @@ Legal documents in `docs/legal` are drafts and contain entity placeholders. They
 For Resend's restricted free-tier test, verified-domain delivery, the optional paid Render worker,
 and backup/release checks, see [Email and operations](docs/engineering/EMAIL-AND-OPERATIONS.md).
 Production workers require real email configuration; console output is not email delivery.
+
+Optional first-signup welcome mail (HTML + plain text) is disabled until configured. See
+[Welcome email and domain verification](docs/engineering/WELCOME-EMAIL-SETUP.md).
