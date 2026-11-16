@@ -8,6 +8,7 @@ deploy sits on "building" for a long time, the log almost always answers why in 
 | Setting | Value |
 | --- | --- |
 | Build Command | `npm ci --include=dev && npm run build:deploy` |
+| Pre-deploy Command | `npm run db:migrate` (supported paid plan) |
 | Start Command | `npm start` |
 | Health Check Path | `/api/health` |
 
@@ -57,7 +58,7 @@ Set these in the Render dashboard (or let the blueprint prompt for them):
 | `NODE_VERSION` | `22.22.3` (any 20.19+ works) |
 | `NEXT_TELEMETRY_DISABLED` | `1` |
 
-Optional integrations (`GITHUB_TOKEN`, `GITHUB_OWNER`, `GITHUB_REPO`, SMTP) stay unset until they
+Optional integrations (`GITHUB_TOKEN`, `GITHUB_OWNER`, `GITHUB_REPO`, Resend) stay unset until they
 are actually configured; see `.env.example`.
 
 ## Database
@@ -90,3 +91,10 @@ Deploy it as a Render **Background Worker** with the same environment variables 
 2. `/register` creates a workspace (the schema is applied).
 3. `/` renders the marketing page — this is the fastest check that the CSS bundle and fonts shipped.
 4. `npm run smoke:api` against the deployed origin exercises the API and tenant-isolation paths.
+
+## Email and production handoff
+
+See [Email and operations](EMAIL-AND-OPERATIONS.md) for the free-tier Resend test, sender-domain
+requirements, the optional **paid** `render-worker.yaml` blueprint, and release/backup checks.
+Production workers now refuse console email instead of silently marking undelivered messages SENT.
+Changes in Arena must reach your deployed Git branch; they do not modify a Windows ZIP download.

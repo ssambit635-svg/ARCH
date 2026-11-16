@@ -35,7 +35,7 @@ async function ensureDatabase(url) {
   // Usual case — and the only one on managed Postgres (Neon, Supabase, Render, Railway, RDS…): the
   // database already exists. Keep URL parameters (apart from legacy SSL mode aliases, which
   // are normalized to verify-full) and avoid the `postgres` maintenance database.
-  const probe = new pg.Client({ connectionString: url });
+  const probe = new pg.Client({ connectionString: url, connectionTimeoutMillis: 10_000 });
   try {
     await probe.connect();
     await probe.end();
@@ -52,43 +52,33 @@ async function ensureDatabase(url) {
   const database = parsed.pathname.replace(/^\//, '');
   const adminUrl = new URL(url);
   adminUrl.pathname = '/postgres';
-  const admin = new pg.Client({ connectionString: adminUrl.toString() });
+  const admin = new pg.Client({ connectionString: adminUrl.toString(), connectionTimeoutMillis: 10_000 });
   await admin.connect();
   const { rowCount } = await admin.query('SELECT 1 FROM pg_database WHERE datname = $1', [database]);
   if (rowCount === 0) {
-    await admin.query(`CREATE DATABASE "${database}"`);
+    await admin.query(`CREATE DATABASE "${database.replaceAll('"', '""')}"`);
     console.log(`[migrate] created database ${database}`);
   }
   await admin.end();
 }
 
 async function main() {
+  if (reset && process.env.NODE_ENV === 'production') {
+    throw new Error('Refusing --reset in production. Use a reviewed restore/recovery procedure.');
+  }
   if (!targetUrl) throw new Error('DATABASE_URL is not set (copy .env.example to .env).');
   await ensureDatabase(targetUrl);
 
-  const client = new pg.Client({ connectionString: targetUrl });
+  const client = new pg.Client({ connectionString: targetUrl, connectionTimeoutMillis: 10_000 });
   await client.connect();
+  try {
+    // Session lock serializes release processes, including the migration-history check.
+    // It is released by client.end(), even if a migration fails.
+    await client.query("SET lock_timeout = '60s'");
+    await client.query('SELECT pg_advisory_lock(727053842)');
 
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS "_prisma_migrations" (
-      "id" VARCHAR(36) NOT NULL PRIMARY KEY,
-      "checksum" VARCHAR(64) NOT NULL,
-      "finished_at" TIMESTAMPTZ,
-      "migration_name" VARCHAR(255) NOT NULL,
-      "logs" TEXT,
-      "rolled_back_at" TIMESTAMPTZ,
-      "started_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-      "applied_steps_count" INTEGER NOT NULL DEFAULT 0
-    )
-  `);
-
-  if (reset) {
-    console.log('[migrate] --reset: dropping schema public');
-    await client.query('DROP SCHEMA IF EXISTS public CASCADE');
-    await client.query('CREATE SCHEMA public');
-    await client.query('DROP TABLE IF EXISTS "_prisma_migrations"');
     await client.query(`
-      CREATE TABLE "_prisma_migrations" (
+      CREATE TABLE IF NOT EXISTS "_prisma_migrations" (
         "id" VARCHAR(36) NOT NULL PRIMARY KEY,
         "checksum" VARCHAR(64) NOT NULL,
         "finished_at" TIMESTAMPTZ,
@@ -99,56 +89,76 @@ async function main() {
         "applied_steps_count" INTEGER NOT NULL DEFAULT 0
       )
     `);
-  }
 
-  const applied = new Set(
-    (await client.query('SELECT migration_name FROM "_prisma_migrations" WHERE rolled_back_at IS NULL')).rows.map(
-      (row) => row.migration_name,
-    ),
-  );
-
-  const migrations = fs
-    .readdirSync(migrationsDir, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => entry.name)
-    .sort();
-
-  let count = 0;
-  for (const name of migrations) {
-    if (applied.has(name)) continue;
-    const file = path.join(migrationsDir, name, 'migration.sql');
-    const sql = fs.readFileSync(file, 'utf8');
-    const checksum = crypto.createHash('sha256').update(sql).digest('hex');
-    process.stdout.write(`[migrate] applying ${name} ... `);
-    try {
-      await client.query('BEGIN');
-      await client.query(sql);
-      await client.query(
-        `INSERT INTO "_prisma_migrations"
-           ("id", "checksum", "finished_at", "migration_name", "applied_steps_count")
-         VALUES ($1, $2, now(), $3, 1)`,
-        [crypto.randomUUID(), checksum, name],
-      );
-      await client.query('COMMIT');
-      console.log('ok');
-      count += 1;
-    } catch (error) {
-      await client.query('ROLLBACK').catch(() => undefined);
-      console.log('FAILED');
-      throw error;
+    if (reset) {
+      console.log('[migrate] --reset: dropping schema public');
+      await client.query('DROP SCHEMA IF EXISTS public CASCADE');
+      await client.query('CREATE SCHEMA public');
+      await client.query('DROP TABLE IF EXISTS "_prisma_migrations"');
+      await client.query(`
+        CREATE TABLE "_prisma_migrations" (
+          "id" VARCHAR(36) NOT NULL PRIMARY KEY,
+          "checksum" VARCHAR(64) NOT NULL,
+          "finished_at" TIMESTAMPTZ,
+          "migration_name" VARCHAR(255) NOT NULL,
+          "logs" TEXT,
+          "rolled_back_at" TIMESTAMPTZ,
+          "started_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+          "applied_steps_count" INTEGER NOT NULL DEFAULT 0
+        )
+      `);
     }
-  }
 
-  const { rows } = await client.query('SELECT count(*)::int AS total FROM "_prisma_migrations" WHERE rolled_back_at IS NULL');
-  await client.end();
-  console.log(
-    count === 0
-      ? `[migrate] up to date (${rows[0].total} migration${rows[0].total === 1 ? '' : 's'} applied)`
-      : `[migrate] applied ${count} migration${count === 1 ? '' : 's'} (${rows[0].total} total)`,
-  );
+    const applied = new Set(
+      (await client.query('SELECT migration_name FROM "_prisma_migrations" WHERE rolled_back_at IS NULL')).rows.map(
+        (row) => row.migration_name,
+      ),
+    );
+
+    const migrations = fs
+      .readdirSync(migrationsDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name)
+      .sort();
+
+    let count = 0;
+    for (const name of migrations) {
+      if (applied.has(name)) continue;
+      const file = path.join(migrationsDir, name, 'migration.sql');
+      const sql = fs.readFileSync(file, 'utf8');
+      const checksum = crypto.createHash('sha256').update(sql).digest('hex');
+      process.stdout.write(`[migrate] applying ${name} ... `);
+      try {
+        await client.query('BEGIN');
+        await client.query(sql);
+        await client.query(
+          `INSERT INTO "_prisma_migrations"
+             ("id", "checksum", "finished_at", "migration_name", "applied_steps_count")
+           VALUES ($1, $2, now(), $3, 1)`,
+          [crypto.randomUUID(), checksum, name],
+        );
+        await client.query('COMMIT');
+        console.log('ok');
+        count += 1;
+      } catch (error) {
+        await client.query('ROLLBACK').catch(() => undefined);
+        console.log('FAILED');
+        throw error;
+      }
+    }
+
+    const { rows } = await client.query('SELECT count(*)::int AS total FROM "_prisma_migrations" WHERE rolled_back_at IS NULL');
+    console.log(
+      count === 0
+        ? `[migrate] up to date (${rows[0].total} migration${rows[0].total === 1 ? '' : 's'} applied)`
+        : `[migrate] applied ${count} migration${count === 1 ? '' : 's'} (${rows[0].total} total)`,
+    );
+  } finally {
+    await client.end();
+  }
 }
 
 main().catch((error) => {
   console.error(`[migrate] ${error instanceof Error ? error.message : String(error)}`);
-  process.exitCode = 1;
+  process.exit(1);
 });

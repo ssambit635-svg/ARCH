@@ -14,6 +14,8 @@ services:
     branch: main
     autoDeployTrigger: commit
     buildCommand: npm ci --include=dev && npm run build:deploy
+    # Apply schema changes before starting the new web version (Starter or above).
+    preDeployCommand: npm run db:migrate
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
@@ -39,4 +41,23 @@ services:
       - key: GITHUB_OWNER
         sync: false
       - key: GITHUB_REPO
+        sync: false
+      # OAuth sign-in providers. Set these in the Render dashboard (Environment tab).
+      # Leave blank to keep sign-in disabled for that provider.
+      - key: AUTH_GITHUB_ID
+        sync: false
+      - key: AUTH_GITHUB_SECRET
+        sync: false
+      - key: AUTH_GOOGLE_ID
+        sync: false
+      - key: AUTH_GOOGLE_SECRET
+        sync: false
+      - key: AUTH_URL
+        sync: false
+      # Optional real email. Blank disables delivery; it does not send from the web process.
+      - key: EMAIL_PROVIDER
+        sync: false
+      - key: EMAIL_API_KEY
+        sync: false
+      - key: EMAIL_FROM
         sync: false

@@ -251,3 +251,9 @@ Legal documents in `docs/legal` are drafts and contain entity placeholders. They
 ---
 
 <p align="center"><sub>ARCH · A little less noise. A little more headspace.</sub></p>
+
+### Production email and worker handoff
+
+For Resend's restricted free-tier test, verified-domain delivery, the optional paid Render worker,
+and backup/release checks, see [Email and operations](docs/engineering/EMAIL-AND-OPERATIONS.md).
+Production workers require real email configuration; console output is not email delivery.

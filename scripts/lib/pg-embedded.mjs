@@ -45,14 +45,10 @@ export function dataDirFor(port) {
 
 /** Directory holding the embedded `initdb` / `postgres` / `pg_ctl` binaries, if installed. */
 export function pgBinDir() {
-  const platform = process.platform === 'darwin' ? 'darwin' : process.platform;
+  const platform = process.platform === 'win32' ? 'windows' : process.platform;
   const arch = process.arch === 'arm64' ? 'arm64' : process.arch === 'ia32' ? 'ia32' : 'x64';
   const dir = path.join(
-    process.cwd(),
-    'node_modules',
-    `@embedded-postgres/${platform}-${arch}`,
-    'native',
-    'bin',
+    process.cwd(), 'node_modules', `@embedded-postgres/${platform}-${arch}`, 'native', 'bin',
   );
   return fs.existsSync(dir) ? dir : null;
 }
@@ -106,6 +102,8 @@ export async function startEmbeddedPostgres({ quiet = false, port, database } = 
     password: conn.password,
     port: resolvedPort,
     persistent: true,
+    // Windows locale defaults may otherwise create a WIN1252 cluster.
+    initdbFlags: ['--encoding=UTF8', '--locale=C'],
     onLog: (message) => {
       if (!quiet && /\b(ready to accept connections|shut down|FATAL)\b/.test(message)) {
         log(message.trim() + '\n');
@@ -145,7 +143,7 @@ export function stopEmbeddedPostgres({ port } = {}) {
   const dataDir = dataDirFor(port ?? conn.port);
   const bin = pgBinDir();
   if (!bin) throw new Error('embedded-postgres binaries not found — run `npm install` first.');
-  const result = spawnSync(path.join(bin, 'pg_ctl'), ['-D', dataDir, 'stop', '-m', 'fast'], {
+  const result = spawnSync(path.join(bin, process.platform === 'win32' ? 'pg_ctl.exe' : 'pg_ctl'), ['-D', dataDir, 'stop', '-m', 'fast'], {
     stdio: 'inherit',
   });
   return result.status === 0;

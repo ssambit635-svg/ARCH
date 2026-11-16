@@ -15,8 +15,9 @@ import { env } from '@/lib/env';
  *   npm run worker -- --once    # single pass (cron / one-shot deploy step)
  *   POLL_INTERVAL_MS=1000 npm run worker
  *
- * It is safe to run more than one instance: a row is only marked SENT after the adapter accepted
- * it, and each attempt is recorded (attempts, lastError) for operators.
+ * Concurrent dispatchers skip locked rows. Resend receives a stable per-notification
+ * idempotency key to reduce duplicates after a send succeeds but the DB commit fails.
+ * Delivery is at-least-once, not an exactly-once guarantee.
  *
  * V3: it also runs the ARCH model training pipeline. Retraining is a background job, never part
  * of a web request: the dashboard/API enqueue rows in `arch_model_jobs`, this worker claims them,
@@ -26,8 +27,15 @@ import { env } from '@/lib/env';
  * last training. Training is CPU-only and takes well under a second per organization.
  */
 
-const POLL_INTERVAL_MS = Number(process.env.POLL_INTERVAL_MS ?? 5000);
-const BATCH_SIZE = Number(process.env.WORKER_BATCH_SIZE ?? 20);
+function positiveInteger(name: string, fallback: number, max: number): number {
+  const value = Number(process.env[name] ?? fallback);
+  if (!Number.isSafeInteger(value) || value < 1 || value > max) {
+    throw new Error(`${name} must be an integer between 1 and ${max}`);
+  }
+  return value;
+}
+const POLL_INTERVAL_MS = positiveInteger('POLL_INTERVAL_MS', 5000, 300_000);
+const BATCH_SIZE = positiveInteger('WORKER_BATCH_SIZE', 20, 100);
 const once = process.argv.includes('--once');
 
 const RETRAIN_INTERVAL_MS = env.ARCH_MODEL_RETRAIN_MINUTES * 60_000;
@@ -39,7 +47,7 @@ function log(message: string) {
 }
 
 async function tick(): Promise<number> {
-  const result = await dispatchPendingNotifications({ limit: BATCH_SIZE });
+  const result = await dispatchPendingNotifications({ limit: BATCH_SIZE, shouldStop: () => stopping });
   if (result.processed > 0) {
     log(`processed=${result.processed} sent=${result.sent} retried=${result.retried} failed=${result.failed}`);
   }
@@ -70,15 +78,15 @@ async function main() {
       `arch-model retrain=${RETRAIN_INTERVAL_MS ? `${env.ARCH_MODEL_RETRAIN_MINUTES}min` : 'off'} · env=${env.NODE_ENV}`,
   );
 
-  const shutdown = async (signal: string) => {
+  let wake: (() => void) | undefined;
+  const shutdown = (signal: string) => {
     if (stopping) return;
     stopping = true;
-    log(`${signal} received — draining and exiting`);
-    await db.$disconnect().catch(() => undefined);
-    process.exit(0);
+    log(`${signal} received — finishing the current pass before disconnecting`);
+    wake?.();
   };
-  process.on('SIGINT', () => void shutdown('SIGINT'));
-  process.on('SIGTERM', () => void shutdown('SIGTERM'));
+  process.once('SIGINT', () => shutdown('SIGINT'));
+  process.once('SIGTERM', () => shutdown('SIGTERM'));
 
   if (once) {
     const processed = await tick();
@@ -95,14 +103,20 @@ async function main() {
       // The worker must survive a database blip: log and try again on the next tick.
       console.error(`[worker] tick failed: ${error instanceof Error ? error.message : String(error)}`);
     }
+    if (stopping) break;
     try {
       await maybeRetrainModels();
       await processModelJobs();
     } catch (error) {
       console.error(`[worker] arch-model training failed: ${error instanceof Error ? error.message : String(error)}`);
     }
-    await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+    if (!stopping) await new Promise<void>((resolve) => {
+      const timer = setTimeout(() => { wake = undefined; resolve(); }, POLL_INTERVAL_MS);
+      wake = () => { clearTimeout(timer); wake = undefined; resolve(); };
+    });
   }
+  await db.$disconnect();
+  log('stopped');
 }
 
 main().catch(async (error) => {

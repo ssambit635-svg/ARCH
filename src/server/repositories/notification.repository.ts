@@ -17,7 +17,7 @@ export const notificationRepository = {
     return client.notification.createMany({ data: rows });
   },
 
-  /** Worker claim step: oldest pending notifications first. */
+  /** Candidates only; withPendingLock must claim each row before sending. */
   listPending(limit: number, client: DbClient = db) {
     return client.notification.findMany({
       where: { status: 'PENDING', attempts: { lt: 3 } },
@@ -25,6 +25,23 @@ export const notificationRepository = {
       orderBy: { createdAt: 'asc' },
       take: limit,
     });
+  },
+
+  /**
+   * Hold one row lock through delivery + acknowledgement. Other workers skip it.
+   * A crash rolls back the claim. Provider idempotency handles the send/commit gap.
+   * Keep the provider deadline below this transaction's 25-second deadline.
+   */
+  withPendingLock<T>(id: string, deliver: (client: DbClient, attempts: number) => Promise<T>): Promise<T | null> {
+    return db.$transaction(async (client) => {
+      const rows = await client.$queryRaw<{ id: string; attempts: number }[]>`
+        SELECT id, attempts FROM notifications
+        WHERE id = ${id} AND status = 'PENDING' AND attempts < 3
+        FOR UPDATE SKIP LOCKED
+      `;
+      if (!rows.length) return null;
+      return deliver(client, rows[0]!.attempts);
+    }, { timeout: 25_000 });
   },
 
   markSent(id: string, client: DbClient = db) {

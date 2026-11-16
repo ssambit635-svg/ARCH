@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import dotenv from 'dotenv';
+import { validateEmailConfig } from './email-config';
 
 if (process.env.NODE_ENV !== 'test') {
   // Hosting/CI secret-manager variables win over a local .env, never the other way around.
@@ -56,9 +57,9 @@ const envSchema = z.object({
 
   WEBHOOK_TIMESTAMP_TOLERANCE_SECONDS: z.coerce.number().int().positive().default(300),
 
-  EMAIL_PROVIDER: z.string().optional(),
-  EMAIL_API_KEY: z.string().optional(),
-  EMAIL_FROM: z.string().default('ARCH <notifications@localhost>'),
+  EMAIL_PROVIDER: optionalTrimmed(),
+  EMAIL_API_KEY: optionalTrimmed(),
+  EMAIL_FROM: z.string().trim().default('ARCH <notifications@localhost>'),
 
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   ERROR_TRACKING_DSN: z.string().optional(),
@@ -122,6 +123,7 @@ function loadEnv(): Env {
   }
 
   const value = parsed.data;
+  validateEmailConfig(value);
 
   if (value.AUTH_URL && !z.url().safeParse(value.AUTH_URL).success) {
     throw new Error(`AUTH_URL is not a valid URL: ${value.AUTH_URL}`);
