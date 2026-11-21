@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: '#workflow', label: 'Workflow' },
   { href: '#engine', label: 'Native engine' },
   { href: '#deploy', label: 'Self-host' },
+  { href: '/download', label: 'Download ARCH' },
   { href: `${GITHUB_REPO_URL}/tree/main/docs`, label: 'Docs' },
 ];
 

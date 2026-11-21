@@ -15,6 +15,17 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Added — visible Windows and Linux app installation
+
+- Added a public `/download` page with Windows/Linux install buttons, browser-prompt handling,
+  platform-specific fallback steps, and a browser-workspace alternative. No account is needed
+  to see installation options. Native `.exe`/AppImage downloads are not provided or implied.
+- Added Download ARCH to the homepage navigation, hero and footer, plus a Windows/Linux link
+  from the workspace install panel. The installation entry point is no longer footer-only.
+- Preserved the existing PWA privacy policy: no private-data cache, no offline editing, and no
+  claim that installation removes server cold starts. See `docs/engineering/INSTALLABLE-APP.md`.
+
+
 ### Added — installable app and workspace comfort
 
 - ARCH can be installed as a PWA in supporting browsers, using the same hosted account and
