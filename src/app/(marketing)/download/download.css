@@ -1,0 +1,36 @@
+.download-page { min-height:100dvh; background:#f6f4ef; color:#252724; font-family:var(--font-inter),sans-serif; }
+.download-header,.download-main,.download-footer { width:min(1080px,calc(100% - 48px)); margin-inline:auto; }
+.download-header { display:flex; justify-content:space-between; align-items:center; min-height:92px; gap:24px; border-bottom:1px solid #dedbd3; }
+.download-brand { display:flex; align-items:center; gap:10px; font-weight:750; letter-spacing:.12em; }
+.download-brand img { border-radius:9px; }
+.download-header nav { display:flex; gap:24px; font-size:13px; }
+.download-page a { color:inherit; text-decoration:none; }
+.download-page a:hover { text-decoration:underline; text-underline-offset:4px; }
+.download-page :is(a,button,summary):focus-visible { outline:2px solid #a43419; outline-offset:5px; }
+.download-intro { max-width:760px; padding:76px 0 40px; }
+.download-eyebrow { font-size:11px; text-transform:uppercase; letter-spacing:.16em; color:#9d351d; }
+.download-intro h1 { margin:20px 0 24px; font-family:var(--font-inter),sans-serif; font-size:clamp(36px,5.8vw,64px); line-height:1.08; font-weight:560; letter-spacing:-.055em; }
+.download-intro h1 span { color:#77786e; }
+.download-intro > p:not(.download-eyebrow) { max-width:590px; font-size:17px; line-height:1.75; color:#555d56; }
+.download-badge { display:inline-block; margin-top:24px; padding:7px 11px; border:1px solid #d8dace; border-radius:6px; font-size:11px; color:#46613f; background:#edf1e7; }
+.download-platforms { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:24px; }
+.download-card { padding:32px; border:1px solid #dedbd3; border-radius:18px; background:#fff; box-shadow:0 2px 3px #392b1704; }
+.download-platform-mark { display:grid; place-items:center; width:56px; height:56px; border-radius:14px; border:1px solid #e5e3dc; color:#333b37; background:#f8f7f3; }
+.download-platform-mark svg { width:28px; height:28px; }
+.download-card h2 { margin:28px 0 10px; font-size:24px; font-weight:550; letter-spacing:-.025em; }
+.download-card > p { min-height:48px; color:#62675d; font-size:14px; line-height:1.7; }
+.download-card button { display:flex; width:100%; align-items:center; justify-content:space-between; gap:12px; min-height:48px; margin:24px 0 12px; padding:12px 18px; border:1px solid #252724; border-radius:9px; background:#252724; color:#fff; font:inherit; font-size:14px; font-weight:550; cursor:pointer; }
+.download-card button:hover { background:#42483f; }
+.download-method { color:#6b6e65; font-size:12px; }
+.download-card details { margin-top:24px; border-top:1px solid #e8e7e1; padding-top:18px; font-size:13px; color:#555d56; line-height:1.8; }
+.download-card summary { cursor:pointer; color:#343c35; }
+.download-notice { min-height:58px; margin:24px 0 48px; padding:16px 20px; border-left:2px solid #ad4628; font-size:13px; line-height:1.8; color:#555d56; }
+.download-expectations { display:grid; grid-template-columns:1fr 1.2fr; gap:64px; padding:40px 0 56px; border-top:1px solid #dedbd3; }
+.download-expectations h2 { font-size:25px; line-height:1.3; font-weight:550; letter-spacing:-.03em; }
+.download-expectations p,.download-expectations li { font-size:14px; line-height:1.8; color:#555d56; }
+.download-expectations a { display:inline-block; margin-top:24px; font-size:14px; font-weight:600; }
+.download-expectations ul { list-style:none; padding:0; margin:0; }
+.download-expectations li + li { margin-top:18px; }
+.download-expectations strong { font-weight:600; color:#343c35; }
+.download-footer { display:flex; justify-content:space-between; gap:20px; padding:24px 0; border-top:1px solid #dedbd3; font-size:12px; color:#62675d; }
+@media(max-width:640px) { .download-header,.download-main,.download-footer { width:calc(100% - 32px); } .download-header nav { gap:16px; } .download-intro { padding-top:48px; } .download-platforms,.download-expectations { grid-template-columns:1fr; } .download-expectations { gap:28px; } .download-card { padding:24px; } .download-footer { flex-direction:column; } }

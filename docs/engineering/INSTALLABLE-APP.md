@@ -4,6 +4,18 @@ ARCH can be installed from a supported browser as a Progressive Web App. It is t
 workspace in its own app-like window, not a separate native .exe, APK, app-store build, or local
 copy of your backend. The normal website continues to work. No paid service is provisioned.
 
+## Visible download entry points
+
+The public homepage navigation (desktop/mobile), hero and footer link to `/download`, available
+without signing in. That page has **Install for Windows** and **Install for Linux** buttons,
+platform-specific browser-menu steps, and a Continue in browser link. The workspace install
+panel also links there. When the browser provides `beforeinstallprompt`, either platform button
+opens that browser prompt; otherwise it displays the selected platform's instructions. Installation
+always targets the device/browser being used, not a remote operating system.
+
+There are no `.exe`, `.msi`, `.AppImage`, `.deb` or `.rpm` releases yet. The download page explicitly
+identifies the app as a browser-installed PWA and does not offer fake binary download links.
+
 ## Install after deployment
 
 1. Open your deployed ARCH website over HTTPS and sign in. Let the page finish loading so its

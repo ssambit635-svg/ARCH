@@ -62,6 +62,7 @@ export function SiteFooter() {
           <section className="mk-footer-meta-col">
             <h3>Product</h3>
             <ul>
+              <li><Link href="/download">Download ARCH — Windows &amp; Linux</Link></li>
               <li><Link href="/register">Get started</Link></li>
               <li><Link href="/login">Open your workspace</Link></li>
               <li><a href={`${GITHUB_REPO_URL}/blob/main/docs/product/FEATURES.md`} target="_blank" rel="noreferrer">Features</a></li>

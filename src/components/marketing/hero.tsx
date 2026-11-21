@@ -49,6 +49,7 @@ export function Hero() {
             </p>
             <div className="mk-actions" data-mk-reveal>
               <GetStartedAction href="/register" label="Get started" className="mk-button mk-button--ink" />
+              <Link href="/download" className="mk-button">Download ARCH <LinkArrow direction="right" /></Link>
               <Link href="#product" className="mk-text-link mk-hero-doclink">
                 See the workspace <LinkArrow direction="right" />
               </Link>

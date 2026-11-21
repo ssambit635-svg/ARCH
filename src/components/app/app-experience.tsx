@@ -62,6 +62,10 @@ export function AppExperience({ children }: { children: ReactNode }) {
   return <AppContext.Provider value={{ prompt, installed, offline, update, install }}>{children}</AppContext.Provider>;
 }
 
+export function useAppInstallation() {
+  return useContext(AppContext);
+}
+
 export function InstallApp() {
   const app = useContext(AppContext);
   return (
@@ -70,6 +74,7 @@ export function InstallApp() {
       <div className="workspace-install-panel">
         <strong>{app.installed ? 'Your workspace, installed.' : 'A quieter home for your workspace.'}</strong>
         <p>Use ARCH in its own window with the same account and features.</p>
+        <a href="/download">Windows &amp; Linux installation →</a>
         {app.prompt && !app.installed ? <button type="button" onClick={() => void app.install()}>Install app</button> : null}
         {!app.installed ? <p>Chrome / Edge: browser menu → Install ARCH or Install this site as an app. iPhone / iPad: Safari → Share → Add to Home Screen. Options depend on your browser.</p> : null}
         <p>The opening screen can load offline after setup. Live incidents and sign-in still need a connection; installation does not remove server cold starts.</p>
