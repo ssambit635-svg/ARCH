@@ -14,6 +14,7 @@
 | Team roles | **4**: owner, admin, responder, and viewer. |
 | Incident steps | **4**: investigating, identified, monitoring, and resolved. Incidents can be reopened. |
 | Service states | **4**: operational, degraded, outage, and maintenance. |
+| Installable app | Optional PWA with a cached public opening screen. Live data remains online-only; installation does not eliminate server cold starts. |
 | How it runs | A self-hosted web app with PostgreSQL. A separate worker handles background email and model-training jobs. |
 | Welcome email | Optional one-time HTML/plain-text welcome on new password or OAuth account creation. Off by default; requires a configured sender and worker. Not login OTP or email verification. |
 | AI test result | The model guide reports about **77%** accuracy when sorting **342 public incident write-ups into 22 types** in an offline test. This is a narrow test—not an overall AI score or a promise about results on your team's incidents. Refresh the public corpus with `npm run model:fetch-public`, then rerun `npm run model:eval` before publishing this number. |

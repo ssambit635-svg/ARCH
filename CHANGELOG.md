@@ -15,6 +15,28 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Added — installable app and workspace comfort
+
+- ARCH can be installed as a PWA in supporting browsers, using the same hosted account and
+  features. Includes app icons, a standalone opening screen, bounded reconnect attempts and
+  platform-specific install help in the workspace footer. No native installer or paid service.
+- Only public opening-screen assets are cached. Private dashboard documents, auth/API results,
+  RSC payloads and writes are never stored by the service worker. Unreachable dashboard document
+  navigations get a public connection screen; offline editing is not supported. Installation
+  does not eliminate backend cold starts or promise 24/7 availability.
+- Workspace spacing can be Comfortable or Compact, remembered as a display-only cookie without
+  changing the existing theme/navigation. Added offline guidance, touch-size install controls
+  and safe-area padding for standalone windows. Updates never force-reload unsaved forms.
+- See `docs/engineering/INSTALLABLE-APP.md` for deployment, installation, privacy and limitations.
+
+### Security — dependency patches
+
+- Updated Next.js from 16.4.2 to 16.4.6 to address published moderate-severity advisories affecting
+  the old release. Overrode Prisma config's vulnerable Effect 3.20.0 with patched 3.22.1 to address
+  its high-severity TemplateLiteral regular-expression denial of service advisory. No Prisma
+  major-version downgrade. Application-specific exploitability was not asserted by the audit.
+
+
 ### Added — one-time signup welcome email
 
 - New email/password, Google, and GitHub accounts can receive a branded HTML welcome with the
