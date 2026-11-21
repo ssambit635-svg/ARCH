@@ -1,18 +1,17 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 
-type InstallPrompt = Event & {
-  prompt(): Promise<void>;
-  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
-};
+import { createInstallController, type AppInstallPrompt as InstallPrompt, type AppInstallOutcome } from '@/lib/app-installation';
+
 const AppContext = createContext<{
   prompt: InstallPrompt | null; installed: boolean; offline: boolean; update: boolean;
-  install: () => Promise<void>;
-}>({ prompt: null, installed: false, offline: false, update: false, install: async () => {} });
+  install: () => Promise<AppInstallOutcome>;
+}>({ prompt: null, installed: false, offline: false, update: false, install: async () => 'unavailable' });
 
 /** Public-asset-only worker. No registration in dev; failures never block web navigation. */
 export function AppExperience({ children }: { children: ReactNode }) {
+  const controller = useRef(createInstallController());
   const [prompt, setPrompt] = useState<InstallPrompt | null>(null);
   const [installed, setInstalled] = useState(false);
   const [offline, setOffline] = useState(false);
@@ -21,8 +20,8 @@ export function AppExperience({ children }: { children: ReactNode }) {
     const display = window.matchMedia('(display-mode: standalone)');
     const syncDisplay = () => setInstalled(display.matches || Boolean((navigator as Navigator & { standalone?: boolean }).standalone));
     const syncNetwork = () => setOffline(!navigator.onLine);
-    const capture = (event: Event) => { event.preventDefault(); setPrompt(event as InstallPrompt); };
-    const installedEvent = () => { setInstalled(true); setPrompt(null); };
+    const capture = (event: Event) => { event.preventDefault(); controller.current.capture(event as InstallPrompt); setPrompt(event as InstallPrompt); };
+    const installedEvent = () => { controller.current.clear(); setInstalled(true); setPrompt(null); };
     syncDisplay(); syncNetwork();
     display.addEventListener('change', syncDisplay);
     window.addEventListener('online', syncNetwork);
@@ -33,13 +32,19 @@ export function AppExperience({ children }: { children: ReactNode }) {
     let registration: ServiceWorkerRegistration | undefined;
     let installing: ServiceWorker | null = null;
     const changed = () => { if (!disposed && installing?.state === 'installed' && navigator.serviceWorker.controller) setUpdate(true); };
-    const found = () => { installing = registration?.installing ?? null; installing?.addEventListener('statechange', changed); };
+    const found = () => {
+      installing?.removeEventListener('statechange', changed);
+      installing = registration?.installing ?? null;
+      installing?.addEventListener('statechange', changed);
+      changed();
+    };
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator && window.isSecureContext) {
       navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).then((reg) => {
         if (disposed) return;
         registration = reg;
         if (reg.waiting) setUpdate(true);
         reg.addEventListener('updatefound', found);
+        found();
       }).catch(() => { /* Browser install UI remains available; the website must still work. */ });
     }
     return () => {
@@ -53,12 +58,12 @@ export function AppExperience({ children }: { children: ReactNode }) {
       installing?.removeEventListener('statechange', changed);
     };
   }, []);
-  async function install() {
-    if (!prompt) return;
-    try { await prompt.prompt(); await prompt.userChoice; }
-    catch { /* Use the browser menu if its prompt cannot open. */ }
-    finally { setPrompt(null); }
+  async function install(): Promise<AppInstallOutcome> {
+    // Clear rendered availability immediately; controller also guards same-tick duplicate clicks.
+    setPrompt(null);
+    return controller.current.install();
   }
+
   return <AppContext.Provider value={{ prompt, installed, offline, update, install }}>{children}</AppContext.Provider>;
 }
 
