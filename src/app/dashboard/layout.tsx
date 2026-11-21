@@ -1,9 +1,11 @@
+import { readWorkspaceDensity, WORKSPACE_DENSITY_COOKIE } from '@/components/shell/density-preferences';
 import { cookies } from 'next/headers';
 import type { Metadata, Viewport } from 'next';
 import { roleHasPermission } from '@/lib/permissions';
 import { statusPageRepository } from '@/server/repositories/statusPage.repository';
 import { readWorkspaceTheme, WORKSPACE_THEME_COOKIE } from '@/components/shell/theme-preferences';
 import '@/components/shell/workspace.css';
+import '@/components/app/app-experience.css';
 import { redirect } from 'next/navigation';
 import { requireUser, resolveOrganization } from '@/lib/session';
 import { isSidebarVisible, SIDEBAR_PREFERENCE_COOKIE } from '@/components/shell/sidebar-preferences';
@@ -149,6 +151,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       openIncidents={openIncidents}
       paletteEntries={paletteEntries}
       initialSidebarVisible={initialSidebarVisible}
+      initialDensity={readWorkspaceDensity(cookieStore.get(WORKSPACE_DENSITY_COOKIE)?.value)}
     >
       {children}
     </Shell>

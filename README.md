@@ -260,3 +260,10 @@ Production workers require real email configuration; console output is not email
 
 Optional first-signup welcome mail (HTML + plain text) is disabled until configured. See
 [Welcome email and domain verification](docs/engineering/WELCOME-EMAIL-SETUP.md).
+
+### Install ARCH as an app
+
+Supported browsers can install ARCH into its own window. The workspace footer has **Install
+ARCH** instructions and **Comfortable / Compact** spacing. Only public opening-screen assets
+are cached; live incidents and sign-in still need the server. Installation does not remove
+Render Free cold starts. See [installable app setup and privacy](docs/engineering/INSTALLABLE-APP.md).
