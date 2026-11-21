@@ -1,0 +1,28 @@
+/* Installed-app comfort: preserve the existing palette/layout, improve the quiet chrome. */
+.workspace-install { position: relative; max-width: 440px; text-align: left; font-size: 12px; color: var(--ws-muted); }
+.workspace-install summary { display: inline-flex; min-height: 36px; align-items: center; padding: 6px 10px; border: 1px solid var(--ws-line); border-radius: 8px; cursor: pointer; color: var(--ws-text); background: var(--ws-surface); list-style: none; }
+.workspace-install summary::-webkit-details-marker { display: none; }
+.workspace-install summary::before { content: '+'; margin-right: 8px; color: var(--ws-accent); }
+.workspace-install[open] summary::before { content: '−'; }
+.workspace-install-panel { margin-top: 12px; padding: 18px; border: 1px solid var(--ws-line); border-radius: 12px; background: var(--ws-surface); box-shadow: var(--ws-shadow); line-height: 1.7; }
+.workspace-install-panel strong { display: block; color: var(--ws-text); font-size: 14px; font-weight: 600; }
+.workspace-install-panel p { margin: 10px 0 0; }
+.workspace-install-panel button { min-height: 40px; margin-top: 14px; padding: 8px 16px; border: 1px solid var(--ws-action); border-radius: 8px; color: var(--ws-on-action); background: var(--ws-action); cursor: pointer; }
+.workspace-connection-notice { margin: 16px 24px 0; padding: 12px 16px; border: 1px solid var(--ws-control); border-radius: 10px; background: var(--ws-soft); color: var(--ws-text); font-size: 13px; line-height: 1.6; }
+@media (display-mode: standalone) {
+  .workspace-theme .arch-product-content { padding-bottom: max(32px, env(safe-area-inset-bottom)); }
+  .workspace-theme .arch-product-footer { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+}
+@media (pointer: coarse) {
+  .workspace-install summary, .workspace-install-panel button { min-height: 44px; }
+}
+.workspace-app-tools { display: flex; align-items: flex-start; flex-wrap: wrap; gap: 12px 20px; margin-bottom: 12px; }
+.workspace-density-control { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; color: var(--ws-muted); font-size: 12px; }
+.workspace-density-control select { min-height: 36px; padding: 6px 28px 6px 10px; border: 1px solid var(--ws-control); border-radius: 8px; color: var(--ws-text); background: var(--ws-surface); font: inherit; }
+.workspace-theme.workspace-density-comfortable :is(.workspace-button, .workspace-submit, .workspace-control) { min-height: 40px; }
+.workspace-theme.workspace-density-comfortable .arch-table td { padding-top: 14px; padding-bottom: 14px; }
+.workspace-theme.workspace-density-comfortable .arch-ui-card { box-shadow: 0 1px 2px #00000008; }
+@media (pointer: coarse) {
+  .workspace-density-control select { min-height: 44px; }
+}
+.workspace-theme .workspace-install-panel p { font-size: 13px; line-height: 1.7; letter-spacing: normal; }

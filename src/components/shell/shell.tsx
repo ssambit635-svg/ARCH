@@ -1,6 +1,8 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { serializeWorkspaceDensity, type WorkspaceDensity } from './density-preferences';
+import { InstallApp, WorkspaceConnectionNotice } from '@/components/app/app-experience';
 import { PRODUCT_VERSION } from '@/lib/brand';
 import type { PublishedStatusPage } from '@/lib/workspace-view';
 import { WorkspaceTheme, ThemeToggle } from './workspace-theme';
@@ -31,6 +33,7 @@ export function Shell({
   openIncidents,
   paletteEntries,
   initialSidebarVisible,
+  initialDensity = 'comfortable',
 }: {
   children: React.ReactNode;
   organizations: { id: string; name: string; role: string }[];
@@ -44,7 +47,9 @@ export function Shell({
   openIncidents: number;
   paletteEntries: PaletteEntry[];
   initialSidebarVisible: boolean;
+  initialDensity?: WorkspaceDensity;
 }) {
+  const [density, setDensity] = useState(initialDensity);
   const [menuOpen, setMenuOpen] = useState(false);
   const [desktopSidebarVisible, setDesktopSidebarVisible] = useState(initialSidebarVisible);
   const [paletteOpen, setPaletteOpen] = useState(false);
@@ -183,7 +188,7 @@ export function Shell({
   return (
     <WorkspaceTheme
       initialPreference={initialTheme}
-      className="arch-product-shell relative min-h-screen"
+      className={`arch-product-shell relative min-h-screen workspace-density-${density}`}
     >
       <a href="#workspace-main" className="workspace-skip-link">
         Skip to workspace
@@ -297,10 +302,24 @@ export function Shell({
           onSearch={() => setPaletteOpen(true)}
           onShortcuts={() => setShortcutsOpen(true)}
         />
+        <WorkspaceConnectionNotice />
         <main id="workspace-main" tabIndex={-1} className="arch-product-content">
           {children}
         </main>
         <footer className="arch-product-footer">
+          <div className="workspace-app-tools">
+            <InstallApp />
+            <label className="workspace-density-control">Spacing
+              <select value={density} onChange={(event) => {
+                const next = event.target.value === 'compact' ? 'compact' : 'comfortable';
+                setDensity(next);
+                try { document.cookie = serializeWorkspaceDensity(next, window.location.protocol === 'https:'); } catch { /* Still works for this visit. */ }
+              }}>
+                <option value="comfortable">Comfortable</option>
+                <option value="compact">Compact</option>
+              </select>
+            </label>
+          </div>
           <p>
             Self-hosted incident response <span aria-hidden>·</span> Assistance stays human-reviewed
           </p>

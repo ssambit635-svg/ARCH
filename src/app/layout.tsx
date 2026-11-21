@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
+import { AppExperience } from '@/components/app/app-experience';
 
 /**
  * Fonts are self-hosted (OFL-1.1, see `src/app/fonts/*.txt`) per the Vengeance UI design system:
@@ -70,6 +71,9 @@ export const metadata: Metadata = {
   description:
     'A focused response workspace for engineering teams. Alerts, context, and human-reviewed assistance on your own infrastructure.',
   applicationName: 'ARCH',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: { capable: true, title: 'ARCH', statusBarStyle: 'default' },
+  icons: { icon: '/app/icon-192.png', apple: '/app/apple-touch-icon.png' },
   keywords: [
     'incident response',
     'incident management',
@@ -96,8 +100,9 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#ffffff',
-  colorScheme: 'light',
+  themeColor: '#151718',
+  colorScheme: 'dark light',
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -108,7 +113,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       suppressHydrationWarning
     >
       <body className="min-h-screen flex flex-col bg-[#050608] text-[#f4f4f5] antialiased selection:bg-[#c7c7c7] selection:text-[#050608]">
-        {children}
+        <AppExperience>{children}</AppExperience>
       </body>
     </html>
   );
