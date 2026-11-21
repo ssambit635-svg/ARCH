@@ -15,6 +15,21 @@ Rules for this file:
 
 ## [Unreleased]
 
+### Fixed — app installation and reconnect reliability
+
+- Installation now distinguishes accepted/cancelled prompts, prevents reuse of single-use browser
+  prompts, and disables both platform buttons while the browser is deciding. Failed prompts show
+  browser-menu instructions rather than implying a successful install.
+- The opening screen cancels requests/retry waits when hidden, offline or leaving the page. Late
+  responses cannot redirect a cancelled session or reset a newer reconnect attempt. Readiness now
+  requires a successful JSON database-health response, not just an HTTP 200 error/login page.
+- Public app caching rejects wrong media types, partial/redirected and private/no-store responses.
+  Failed installs clean up their partial new cache. Storage denial/eviction no longer blocks online
+  navigation, and unavailable dashboard pages still get a generic public fallback.
+- Added 207 regression cases and an anonymous Chromium smoke command for install outcomes,
+  offline privacy, mobile navigation, responsive layout and automated accessibility checks in CI.
+  See `docs/engineering/APP-QUALITY-REVIEW.md` for scope, verification and remaining manual checks.
+
 ### Added — visible Windows and Linux app installation
 
 - Added a public `/download` page with Windows/Linux install buttons, browser-prompt handling,

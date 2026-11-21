@@ -36,6 +36,16 @@ jobs:
           APP_URL: http://localhost:3000
       - run: npm test
       - run: npm audit --omit=dev --audit-level=high
+      - name: Install Chromium for anonymous app smoke checks
+        run: npx playwright-core install --with-deps chromium
+      - name: Check install, offline, responsive and accessible app flows
+        run: npm run smoke:app -- --start-server
+        env:
+          DATABASE_URL: postgresql://arch:arch@localhost:55433/arch_test
+          AUTH_SECRET: ci-secret-value-that-is-long-enough
+          AUTH_SECRET_WEBHOOK: ci-webhook-secret-value-long-enough
+          APP_URL: http://localhost:3000
+          NEXT_TELEMETRY_DISABLED: '1'
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: '3.12'

@@ -1,36 +1,10 @@
 import { readFileSync, existsSync } from 'node:fs';
-import { runInNewContext } from 'node:vm';
 import { createElement as h } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { InstallApp } from '@/components/app/app-experience';
 
-const source = readFileSync('public/sw.js', 'utf8');
-function worker() {
-  const handlers: Record<string, (event: any) => void> = {};
-  const store = new Map<string, Response>();
-  const put = vi.fn(async (path: string, response: Response) => { store.set(path, response); });
-  const fetcher = vi.fn(async () => new Response('network', { status: 200 }));
-  const caches = {
-    open: vi.fn(async () => ({ put })),
-    keys: vi.fn(async () => ['arch-public-app-old', 'unrelated-app']),
-    delete: vi.fn(async () => true),
-    match: vi.fn(async (path: string) => store.get(path)?.clone()),
-  };
-  const self = { location: { origin: 'https://arch.example.com' }, clients: { claim: vi.fn() }, addEventListener(name: string, fn: (event: any) => void) { handlers[name] = fn; } };
-  class PublicRequest extends Request {
-    constructor(input: string, init: RequestInit) { super(new URL(input, self.location.origin), init); }
-  }
-  runInNewContext(source, { self, caches, fetch: fetcher, Request: PublicRequest, Response, URL, AbortController, setTimeout, clearTimeout });
-  return { handlers, store, caches, fetcher, put, self };
-}
-function request(path: string, mode = 'cors', method = 'GET', origin = 'https://arch.example.com') {
-  return { url: new URL(path, origin).href, method, mode };
-}
-function event(req: ReturnType<typeof request>) {
-  let response: Promise<Response> | undefined;
-  return { request: req, respondWith(value: Promise<Response>) { response = value; }, response: () => response };
-}
+import { serviceWorkerHarness as worker, swRequest as request, swEvent as event, workerSource as source, assetResponse } from './helpers/service-worker';
 
 describe('installable app privacy boundary', () => {
   it('prepares only explicit public files without sending cookies', async () => {
@@ -60,7 +34,7 @@ describe('installable app privacy boundary', () => {
     }
   });
   it('serves the cached opening screen without contacting the backend', async () => {
-    const w = worker(); w.store.set('/app/launch.html', new Response('public opening screen'));
+    const w = worker(); w.store.set('/app/launch.html', assetResponse('/app/launch.html', 'public opening screen'));
     const e = event(request('/app/launch.html', 'navigate')); w.handlers.fetch!(e);
     expect(await (await e.response())?.text()).toBe('public opening screen');
     expect(w.fetcher).not.toHaveBeenCalled();
@@ -72,7 +46,7 @@ describe('installable app privacy boundary', () => {
     expect(w.put).not.toHaveBeenCalled();
   });
   it.each(['reject', 'server-error'])('uses only the public fallback when navigation fails: %s', async (failure) => {
-    const w = worker(); w.store.set('/app/offline.html', new Response('public fallback'));
+    const w = worker(); w.store.set('/app/offline.html', assetResponse('/app/offline.html', 'public fallback'));
     if (failure === 'reject') w.fetcher.mockRejectedValue(new Error('offline'));
     else w.fetcher.mockResolvedValue(new Response('private server error', { status: 503 }));
     const e = event(request('/dashboard/incidents/secret', 'navigate')); w.handlers.fetch!(e);
